@@ -385,6 +385,47 @@ tr:hover td{background:rgba(243,230,204,.55)}
   .hero-title{font-size:26px}
   .sc-grid{grid-template-columns:1fr 1fr}
 }
+
+/* ── FLOATING CTA ─────────────────────────────────────────────── */
+.fab {
+  position:fixed; bottom:32px; right:32px; z-index:500;
+  display:flex; flex-direction:column; align-items:flex-end; gap:10px;
+}
+.fab-btn {
+  display:flex; align-items:center; gap:10px;
+  background:linear-gradient(135deg,var(--gold),var(--amber));
+  color:var(--ink); border:none; border-radius:50px;
+  padding:14px 24px; cursor:pointer;
+  font-family:'Raleway',sans-serif; font-size:15px; font-weight:800;
+  box-shadow:0 6px 28px rgba(196,118,26,.55);
+  transition:all .2s; white-space:nowrap;
+  letter-spacing:.2px;
+}
+.fab-btn:hover { transform:translateY(-3px) scale(1.03); box-shadow:0 10px 36px rgba(196,118,26,.65); filter:brightness(1.07); }
+.fab-btn svg   { width:20px; height:20px; flex-shrink:0; }
+.fab-pulse {
+  position:absolute; inset:-4px; border-radius:50px;
+  border:2px solid var(--gold); opacity:0;
+  animation:pulse 2.2s ease-out infinite;
+  pointer-events:none;
+}
+.fab-sub {
+  background:var(--ink); color:rgba(255,255,255,.75);
+  font-family:'Lora',serif; font-style:italic;
+  font-size:13px; padding:6px 14px; border-radius:20px;
+  box-shadow:0 3px 14px rgba(18,6,0,.35);
+  animation:fi .4s ease .6s both;
+}
+@keyframes pulse {
+  0%   { transform:scale(1);    opacity:.7; }
+  70%  { transform:scale(1.12); opacity:0;  }
+  100% { opacity:0; }
+}
+@media(max-width:600px){
+  .fab { bottom:20px; right:16px; }
+  .fab-btn { font-size:13.5px; padding:12px 18px; }
+  .fab-sub { display:none; }
+}
 `;
 
 const Ic = {
@@ -1146,6 +1187,18 @@ export default function App() {
             }
           </div>
         </div>
+      </div>
+
+      {/* ── Floating CTA Button ── */}
+      <div className="fab">
+        <div style={{position:"relative"}}>
+          <div className="fab-pulse"/>
+          <button className="fab-btn" onClick={()=>{nav("inventory");setTimeout(()=>{const btn=document.querySelector(".btn-g");if(btn)btn.click()},300);}}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            Start Building Your Inventory
+          </button>
+        </div>
+        <div className="fab-sub">✨ Free to get started — no credit card needed</div>
       </div>
     </>
   );
