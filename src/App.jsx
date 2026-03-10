@@ -644,18 +644,15 @@ function Dashboard({items,org,goInventory}){
             <p>Rent or buy costumes, props, lighting and more from programs in your community.</p>
           </div>
         </div>
-        {/* Showcase */}
-        <div className="sh"><h2>Marketplace Highlights</h2><p>Sample of what you'll find from programs across the community.</p></div>
-        <div className="sc-grid" style={{marginBottom:36}}>
-          {SHOWCASE.map((it,i)=>{
-            const cls=it.badge==="For Rent"?"bd-rent":it.badge==="For Sale"?"bd-sale":"bd-both";
-            return(
-              <div key={i} className="sc-card">
-                <div className="sc-img"><img src={usp(it.img,400,200)} alt={it.name} loading="lazy"/><div className="sc-img-fade"/><span className={`sc-badge ${cls}`}>{it.badge}</span></div>
-                <div className="sc-body"><div className="sc-cat">{CAT[it.cat]?.label}</div><div className="sc-name">{it.name}</div><div className="sc-price">{it.price}</div></div>
-              </div>
-            );
-          })}
+        {/* Marketplace Highlights — populated by real listings */}
+        <div className="sh"><h2>Marketplace Highlights</h2><p>Items listed for rent or sale by programs in your community will appear here.</p></div>
+        <div style={{background:"var(--parch)",border:"2px dashed var(--border)",borderRadius:"var(--rl)",padding:"40px 32px",textAlign:"center",marginBottom:36}}>
+          <div style={{fontSize:44,marginBottom:12}}>🏪</div>
+          <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:8}}>No Listings Yet</h3>
+          <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 18px"}}>When you or other programs list items for rent or sale on the Marketplace, they'll be showcased here for the whole community to discover.</p>
+          <button className="btn btn-g" onClick={()=>nav("marketplace")} style={{display:"inline-flex",alignItems:"center",gap:7}}>
+            <span>Browse Marketplace</span>
+          </button>
         </div>
         {/* Category gallery */}
         <div className="sh"><h2>Browse by Category</h2><p>Click any category to explore your inventory.</p></div>
@@ -676,7 +673,7 @@ function Dashboard({items,org,goInventory}){
           <div className="img-div-fade"/>
           <div className="img-div-text">
             <h3>Every Seat Filled. Every Prop Accounted For.</h3>
-            <p>Theatre4u keeps your whole programme organised from rehearsal to curtain call.</p>
+            <p>Theatre4u keeps your whole program organized from rehearsal to curtain call.</p>
           </div>
         </div>
         {/* Bar chart */}
