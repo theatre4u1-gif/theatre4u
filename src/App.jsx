@@ -18,11 +18,11 @@ const BG = {
   settings:    "photo-1516450360452-9312f5e86fc7",
 };
 const CAT_IMG = {
-  costumes:"photo-1558618666-fcd25c85cd64", props:"photo-1513364776144-60967b0f800f",
-  sets:"photo-1460723237483-7a6dc9d0b212",  lighting:"photo-1514525253161-7a46d19cd819",
+  costumes:"photo-1509631179647-0177331693ae", props:"photo-1530026405186-ed1f139313f",
+  sets:"photo-1507924538820-ede94a04019d",  lighting:"photo-1514525253161-7a46d19cd819",
   sound:"photo-1598488035139-bdbb2231ce04",  scripts:"photo-1481627834876-b7833e8f5570",
-  makeup:"photo-1487412720507-e7ab37603c6f", furniture:"photo-1555041469-a586c61ea9bc",
-  fabrics:"photo-1558769132-cb1aea458c5e",   tools:"photo-1504148455328-c376907d081c",
+  makeup:"photo-1503236823255-94609f598e71", furniture:"photo-1555041469-a586c61ea9bc",
+  fabrics:"photo-1518998053901-5348d3961a04",   tools:"photo-1504148455328-c376907d081c",
   effects:"photo-1516450360452-9312f5e86fc7",other:"photo-1492684223066-81342ee5ff30",
 };
 const SHOWCASE = [
@@ -629,7 +629,7 @@ function Dashboard({items,org,goInventory}){
         <div className="sh"><h2>From the Stage</h2><p>A glimpse of what arts programs are cataloging and sharing nationwide.</p></div>
         <div className="mosaic" style={{marginBottom:32}}>
           <div className="mc big"><img src={usp("photo-1503095396549-807759245b35",800,400)} alt="Grand Theatre" loading="lazy"/><div className="mc-lbl">Grand Stage Interiors</div></div>
-          <div className="mc"><img src={usp("photo-1558618666-fcd25c85cd64",400,200)} alt="Costumes" loading="lazy"/><div className="mc-lbl">Costumes</div></div>
+          <div className="mc"><img src={usp("photo-1509631179647-0177331693ae",400,200)} alt="Costumes" loading="lazy"/><div className="mc-lbl">Costumes</div></div>
           <div className="mc"><img src={usp("photo-1514525253161-7a46d19cd819",400,200)} alt="Lighting" loading="lazy"/><div className="mc-lbl">Stage Lighting</div></div>
           <div className="mc"><img src={usp("photo-1516450360452-9312f5e86fc7",400,200)} alt="Effects" loading="lazy"/><div className="mc-lbl">Special Effects</div></div>
           <div className="mc"><img src={usp("photo-1598488035139-bdbb2231ce04",400,200)} alt="Sound" loading="lazy"/><div className="mc-lbl">Sound Equipment</div></div>
