@@ -18,11 +18,11 @@ const BG = {
   settings:    "photo-1516450360452-9312f5e86fc7",
 };
 const CAT_IMG = {
-  costumes:"photo-1509631179647-0177331693ae", props:"photo-1503095396549-807759245b35",
+  costumes:"photo-1509631179647-0177331693ae", props:"photo-1578662996442-48f60103fc96",
   sets:"photo-1507924538820-ede94a04019d",  lighting:"photo-1514525253161-7a46d19cd819",
   sound:"photo-1598488035139-bdbb2231ce04",  scripts:"photo-1481627834876-b7833e8f5570",
-  makeup:"photo-1526045612212-70caf35c14df", furniture:"photo-1555041469-a586c61ea9bc",
-  fabrics:"photo-1567942712661-82b9b407abbf",   tools:"photo-1504148455328-c376907d081c",
+  makeup:"photo-1560066984-138daaa0d8fb", furniture:"photo-1555041469-a586c61ea9bc",
+  fabrics:"photo-1598899134739-24c46f58b8c0",   tools:"photo-1504148455328-c376907d081c",
   effects:"photo-1516450360452-9312f5e86fc7",other:"photo-1492684223066-81342ee5ff30",
 };
 const SHOWCASE = [
