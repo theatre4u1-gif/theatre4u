@@ -1246,7 +1246,13 @@ function AuthScreen({onAuth}){
             {loading?"Please wait…":mode==="login"?"Sign In →":"Create Free Account →"}
           </button>
           {mode==="login"&&<button onClick={resetPass} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:"var(--faint)",fontSize:12.5,cursor:"pointer",fontFamily:"'Raleway',sans-serif",textDecoration:"underline"}}>Forgot password?</button>}
-          {mode==="signup"&&<p style={{fontSize:12,color:"var(--faint)",textAlign:"center",marginTop:14,lineHeight:1.5}}>Free to start — no credit card needed.<br/>By signing up you agree to our Terms of Service.</p>}
+          {mode==="signup"&&<p style={{fontSize:12,color:"var(--faint)",textAlign:"center",marginTop:14,lineHeight:1.6}}>
+  Free to start — no credit card needed.<br/>
+  By creating an account you agree to our{" "}
+  <a href="/terms" target="_blank" rel="noreferrer" style={{color:"var(--gold)",textDecoration:"underline"}}>Terms of Service</a>
+  {" "}and{" "}
+  <a href="/privacy" target="_blank" rel="noreferrer" style={{color:"var(--gold)",textDecoration:"underline"}}>Privacy Policy</a>.
+</p>}
         </div>
         <p style={{textAlign:"center",color:"rgba(255,255,255,.25)",fontSize:12,marginTop:20}}>theatre4u.org — Built for the arts community 🎭</p>
       </div>
@@ -1398,6 +1404,11 @@ export default function App() {
                   <button className="btn btn-sm btn-full" style={{background:"rgba(139,26,42,.25)",borderColor:"rgba(139,26,42,.3)",color:"rgba(255,255,255,.45)",fontSize:12}} onClick={signOut}>
                     Sign Out
                   </button>
+                </div>
+                <div style={{display:"flex",gap:10,justifyContent:"center",marginTop:10}}>
+                  <a href="/terms" target="_blank" rel="noreferrer" style={{fontSize:10,color:"rgba(255,255,255,.25)",textDecoration:"none"}}>Terms</a>
+                  <span style={{color:"rgba(255,255,255,.15)"}}>·</span>
+                  <a href="/privacy" target="_blank" rel="noreferrer" style={{fontSize:10,color:"rgba(255,255,255,.25)",textDecoration:"none"}}>Privacy</a>
                 </div>
               </div>
             </div>
