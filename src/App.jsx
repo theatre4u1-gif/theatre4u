@@ -89,6 +89,23 @@ function resizeImg(file,maxW=560,q=0.78){
   });
 }
 
+// Upload a file to Supabase Storage and return the public URL
+async function uploadPhoto(file, userId) {
+  try {
+    // Resize first to keep file sizes small
+    const dataUrl = await resizeImg(file, 800, 0.82);
+    // Convert base64 dataURL to a Blob
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    // Unique filename: userId/timestamp.jpg
+    const path = userId + "/" + Date.now() + ".jpg";
+    const { error } = await SB.storage.from("item-photos").upload(path, blob, { contentType: "image/jpeg", upsert: false });
+    if (error) { console.error("Upload error:", error); return null; }
+    const { data } = SB.storage.from("item-photos").getPublicUrl(path);
+    return data.publicUrl;
+  } catch(e) { console.error("uploadPhoto failed:", e); return null; }
+}
+
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Lora:ital,wght@0,500;0,600;1,400;1,500&family=Raleway:wght@500;600;700;800&display=swap');
 :root{
@@ -458,7 +475,7 @@ function Modal({title,onClose,children,footer}){
   );
 }
 
-function ItemForm({item,onSave,onCancel,submitId}){
+function ItemForm({item,onSave,onCancel,submitId,userId}){
   const blank={name:"",category:"costumes",condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,avail:"In Stock",img:null,tags:[]};
   const[f,setF]=useState(item||blank);
   const[ti,setTi]=useState("");
@@ -481,7 +498,11 @@ function ItemForm({item,onSave,onCancel,submitId}){
   const showSale=f.mkt==="For Sale"||f.mkt==="Rent or Sale";
   const handlePhoto=async e=>{
     const file=e.target.files?.[0];if(!file)return;
-    setUpl(true);const data=await resizeImg(file);upd("img",data);setUpl(false);
+    setUpl(true);
+    const url = userId ? await uploadPhoto(file, userId) : await resizeImg(file);
+    if(url) upd("img", url);
+    else alert("Photo upload failed. Please try again.");
+    setUpl(false);
     if(fr.current)fr.current.value="";
   };
   const addTag=()=>{const t=ti.trim().toLowerCase();if(t&&!(f.tags||[]).includes(t))upd("tags",[...(f.tags||[]),t]);setTi("");};
@@ -679,7 +700,7 @@ function Dashboard({items,org,goInventory}){
   );
 }
 
-function Inventory({items,onAdd,onEdit,onDelete}){
+function Inventory({items,onAdd,onEdit,onDelete,userId}){
   const[search,setSrch]=useState("");const[catF,setCatF]=useState("all");
   const[condF,setCondF]=useState("all");const[availF,setAvailF]=useState("all");
   const[mktF,setMktF]=useState("all");const[view,setView]=useState("grid");
@@ -790,11 +811,11 @@ function Inventory({items,onAdd,onEdit,onDelete}){
       </div>
       {modal==="a"&&(<Modal title="Add New Item" onClose={()=>setModal(null)}
           footer={<><button className="btn btn-o" onClick={()=>setModal(null)}>Cancel</button><button className="btn btn-g" id="form-save-btn">Add Item</button></>}>
-          <ItemForm onSave={handleSave} onCancel={()=>setModal(null)} submitId="form-save-btn"/>
+          <ItemForm onSave={handleSave} onCancel={()=>setModal(null)} submitId="form-save-btn" userId={userId}/>
         </Modal>)}
       {modal==="e"&&active&&(<Modal title="Edit Item" onClose={()=>setModal(null)}
           footer={<><button className="btn btn-o" onClick={()=>setModal(null)}>Cancel</button><button className="btn btn-g" id="form-save-btn">Save Changes</button></>}>
-          <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} submitId="form-save-btn"/>
+          <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} submitId="form-save-btn" userId={userId}/>
         </Modal>)}
       {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} onEdit={()=>setModal("e")} onDelete={id=>{onDelete(id);setModal(null);setActive(null)}}/></Modal>}
     </div>
@@ -1354,7 +1375,7 @@ export default function App() {
                 </div>
               : <div className="fin">
                   {page==="dashboard"   && <Dashboard   items={items} org={org} goInventory={()=>nav("inventory")}/>}
-                  {page==="inventory"   && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del}/>}
+                  {page==="inventory"   && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id}/>}
                   {page==="marketplace" && <Marketplace items={items} org={org}/>}
                   {page==="reports"     && <Reports     items={items}/>}
                   {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed}/>}
