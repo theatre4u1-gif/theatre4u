@@ -465,17 +465,18 @@ function ItemForm({item,onSave,onCancel,submitId}){
   const[upl,setUpl]=useState(false);
   const fr=useRef();
   const upd=(k,v)=>setF(p=>({...p,[k]:v}));
-  // Wire external submit button in modal footer
+  // Keep a ref always pointing at latest form state so the footer button works
+  const fRef=useRef(f);
+  useEffect(()=>{fRef.current=f;},[f]);
   useEffect(()=>{
     if(!submitId) return;
     const btn=document.getElementById(submitId);
     if(!btn) return;
-    const handler=()=>{ if(f.name.trim()) onSave(f); };
-    btn.addEventListener('click',handler);
+    const handler=()=>{ const cur=fRef.current; if(cur.name.trim()) onSave(cur); };
+    btn.onclick=handler;
     btn.disabled=!f.name.trim();
     btn.style.opacity=f.name.trim()?'1':'.42';
-    return()=>btn.removeEventListener('click',handler);
-  },[f,submitId,onSave]);
+  },[f.name,submitId,onSave]);
   const showRent=f.mkt==="For Rent"||f.mkt==="Rent or Sale";
   const showSale=f.mkt==="For Sale"||f.mkt==="Rent or Sale";
   const handlePhoto=async e=>{
@@ -1226,12 +1227,14 @@ export default function App() {
   // ── CRUD ─────────────────────────────────────────────────────────────────
   const add = useCallback(async(item)=>{
     const row={...item,org_id:user.id};
-    const{data}=await SB.from("items").insert(row).select().single();
+    const{data,error}=await SB.from("items").insert(row).select().single();
+    if(error){ alert("Could not save item: "+error.message); console.error(error); return; }
     if(data) setItems(p=>[data,...p]);
   },[user]);
 
   const edit = useCallback(async(item)=>{
-    const{data}=await SB.from("items").update(item).eq("id",item.id).select().single();
+    const{data,error}=await SB.from("items").update(item).eq("id",item.id).select().single();
+    if(error){ alert("Could not update item: "+error.message); console.error(error); return; }
     if(data) setItems(p=>p.map(x=>x.id===item.id?data:x));
   },[]);
 
