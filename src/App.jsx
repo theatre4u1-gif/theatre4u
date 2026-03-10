@@ -8,10 +8,7 @@ const SB = createClient(
 );
 const uid  = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 const fmt$ = n  => "$" + Number(n || 0).toFixed(2);
-const usp  = (id, w=900, h=500) =>
-  id.startsWith("photo-") && id.length < 25
-    ? `https://images.unsplash.com/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=82`
-    : `https://images.unsplash.com/photos/${id.replace("photo-","")}?w=${w}&h=${h}&fit=crop&auto=format&q=82`;
+const usp=(id,w=900,h=500)=>id.length>20?`https://images.unsplash.com/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=82`:`https://images.unsplash.com/photos/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=82`;
 
 const BG = {
   dashboard:   "photo-1503095396549-807759245b35",
