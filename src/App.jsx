@@ -1,13 +1,11 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const DB = {
-  async load(key, fb) {
-    try { const r = await window.storage.get(key); return r ? JSON.parse(r.value) : fb; } catch { return fb; }
-  },
-  async save(key, data) {
-    try { await window.storage.set(key, JSON.stringify(data)); } catch {}
-  },
-};
+// ── Supabase ──────────────────────────────────────────────────────────────────
+const SB = createClient(
+  "https://ldmmphwivnnboyhlxipl.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA"
+);
 const uid  = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 const fmt$ = n  => "$" + Number(n || 0).toFixed(2);
 const usp  = (id, w=900, h=500) =>
@@ -1068,34 +1066,180 @@ function Settings({ org, setOrg, onSeed }) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// AUTH SCREENS
+// ══════════════════════════════════════════════════════════════════════════════
+function AuthScreen({onAuth}){
+  const[mode,setMode]=useState("login");
+  const[email,setEmail]=useState("");
+  const[pass,setPass]=useState("");
+  const[orgName,setOrgName]=useState("");
+  const[err,setErr]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[done,setDone]=useState(false);
+
+  const submit=async()=>{
+    setErr("");setLoading(true);
+    try{
+      if(mode==="signup"){
+        if(!orgName.trim()){setErr("Please enter your organisation name.");setLoading(false);return;}
+        const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName}}});
+        if(error)throw error;
+        if(data.user){
+          // create org row
+          await SB.from("orgs").insert({id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:""});
+          setDone(true);
+        }
+      } else {
+        const{data,error}=await SB.auth.signInWithPassword({email,password:pass});
+        if(error)throw error;
+        onAuth(data.user);
+      }
+    }catch(e){setErr(e.message||"Something went wrong.");}
+    setLoading(false);
+  };
+
+  const resetPass=async()=>{
+    if(!email){setErr("Enter your email above first.");return;}
+    await SB.auth.resetPasswordForEmail(email,{redirectTo:"https://theatre4u.org"});
+    setErr("Password reset email sent — check your inbox.");
+  };
+
+  if(done) return(
+    <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+      <style>{CSS}</style>
+      <div style={{background:"var(--cream)",borderRadius:16,padding:"48px 40px",maxWidth:440,width:"100%",textAlign:"center",boxShadow:"0 12px 48px rgba(0,0,0,.4)"}}>
+        <div style={{fontSize:52,marginBottom:12}}>🎭</div>
+        <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:28,color:"var(--ink)",marginBottom:8}}>Check your email!</h2>
+        <p style={{color:"var(--muted)",fontSize:15,lineHeight:1.6,marginBottom:24}}>We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account and get started.</p>
+        <button className="btn btn-o" onClick={()=>{setDone(false);setMode("login");}}>Back to Login</button>
+      </div>
+    </div>
+  );
+
+  return(
+    <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:24,position:"relative",overflow:"hidden"}}>
+      <style>{CSS}</style>
+      <img src={usp(BG.dashboard,1400,900)} alt="" style={{position:"fixed",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.18,filter:"sepia(.6)",pointerEvents:"none"}}/>
+      <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:440}}>
+        {/* Logo */}
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{fontSize:52,marginBottom:6}}>🎭</div>
+          <div style={{fontFamily:"'Abril Fatface',display",fontSize:36,color:"var(--gold)",letterSpacing:1}}>Theatre4u</div>
+          <div style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:15,color:"rgba(255,255,255,.5)",marginTop:2}}>Inventory & Marketplace</div>
+        </div>
+        {/* Card */}
+        <div style={{background:"var(--cream)",borderRadius:16,padding:"36px 36px 32px",boxShadow:"0 16px 56px rgba(0,0,0,.5)"}}>
+          {/* Tabs */}
+          <div style={{display:"flex",borderBottom:"2px solid var(--linen)",marginBottom:24,gap:2}}>
+            {["login","signup"].map(m=>(
+              <button key={m} onClick={()=>{setMode(m);setErr("");}} style={{flex:1,background:"none",border:"none",borderBottom:`3px solid ${mode===m?"var(--gold)":"transparent"}`,padding:"8px 0 10px",fontFamily:"'Raleway',sans-serif",fontWeight:800,fontSize:14,color:mode===m?"var(--amber)":"var(--faint)",cursor:"pointer",textTransform:"uppercase",letterSpacing:1,marginBottom:-2,transition:"all .2s"}}>
+                {m==="login"?"Sign In":"Create Account"}
+              </button>
+            ))}
+          </div>
+          {/* Fields */}
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            {mode==="signup"&&(
+              <div>
+                <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Organisation Name</label>
+                <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High Drama Dept." style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--linen)",borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"'Raleway',sans-serif",color:"var(--ink)",outline:"none",boxSizing:"border-box"}}
+                  onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--linen)"}/>
+              </div>
+            )}
+            <div>
+              <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Email</label>
+              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@school.edu" style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--linen)",borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"'Raleway',sans-serif",color:"var(--ink)",outline:"none",boxSizing:"border-box"}}
+                onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--linen)"}
+                onKeyDown={e=>e.key==="Enter"&&submit()}/>
+            </div>
+            <div>
+              <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Password</label>
+              <input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder={mode==="signup"?"Min. 6 characters":"••••••••"} style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--linen)",borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"'Raleway',sans-serif",color:"var(--ink)",outline:"none",boxSizing:"border-box"}}
+                onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--linen)"}
+                onKeyDown={e=>e.key==="Enter"&&submit()}/>
+            </div>
+          </div>
+          {err&&<div style={{marginTop:12,padding:"9px 12px",background:err.includes("sent")?"rgba(38,94,42,.1)":"rgba(139,26,42,.08)",border:`1px solid ${err.includes("sent")?"rgba(38,94,42,.3)":"rgba(139,26,42,.2)"}`,borderRadius:7,fontSize:13,color:err.includes("sent")?"var(--green)":"var(--red)"}}>{err}</div>}
+          <button className="btn btn-g btn-full" style={{marginTop:20,padding:"12px",fontSize:15,letterSpacing:.3}} onClick={submit} disabled={loading}>
+            {loading?"Please wait…":mode==="login"?"Sign In →":"Create Free Account →"}
+          </button>
+          {mode==="login"&&<button onClick={resetPass} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:"var(--faint)",fontSize:12.5,cursor:"pointer",fontFamily:"'Raleway',sans-serif",textDecoration:"underline"}}>Forgot password?</button>}
+          {mode==="signup"&&<p style={{fontSize:12,color:"var(--faint)",textAlign:"center",marginTop:14,lineHeight:1.5}}>Free to start — no credit card needed.<br/>By signing up you agree to our Terms of Service.</p>}
+        </div>
+        <p style={{textAlign:"center",color:"rgba(255,255,255,.25)",fontSize:12,marginTop:20}}>theatre4u.org — Built for the arts community 🎭</p>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // APP ROOT
 // ══════════════════════════════════════════════════════════════════════════════
 export default function App() {
+  const [user,setUser]     = useState(null);
   const [items,setItems]   = useState([]);
   const [org,setOrg]       = useState({name:"",type:"",email:"",phone:"",location:"",bio:""});
   const [page,setPage]     = useState("dashboard");
   const [mob,setMob]       = useState(false);
   const [loaded,setLoaded] = useState(false);
+  const [authChk,setAuthChk] = useState(false);
 
+  // ── Auth listener ────────────────────────────────────────────────────────
   useEffect(()=>{
-    (async()=>{
-      const si = await DB.load("t4u-items", null);
-      const so = await DB.load("t4u-org",   null);
-      if(si) setItems(si);
-      if(so) setOrg(so);
-      setLoaded(true);
-    })();
+    SB.auth.getSession().then(({data:{session}})=>{
+      setUser(session?.user||null);
+      setAuthChk(true);
+    });
+    const{data:{subscription}}=SB.auth.onAuthStateChange((_,session)=>{
+      setUser(session?.user||null);
+      if(!session) { setItems([]); setOrg({name:"",type:"",email:"",phone:"",location:"",bio:""}); setLoaded(false); }
+    });
+    return()=>subscription.unsubscribe();
   },[]);
 
-  useEffect(()=>{ if(loaded) DB.save("t4u-items",items); },[items,loaded]);
-  useEffect(()=>{ if(loaded) DB.save("t4u-org",org);     },[org,loaded]);
+  // ── Load data once logged in ─────────────────────────────────────────────
+  useEffect(()=>{
+    if(!user) return;
+    (async()=>{
+      const{data:orgData}=await SB.from("orgs").select("*").eq("id",user.id).single();
+      if(orgData) setOrg(orgData);
+      const{data:itemData}=await SB.from("items").select("*").eq("org_id",user.id).order("added",{ascending:false});
+      if(itemData) setItems(itemData);
+      setLoaded(true);
+    })();
+  },[user]);
 
-  const add  = useCallback(i  => setItems(p=>[i,...p]),                  []);
-  const edit = useCallback(i  => setItems(p=>p.map(x=>x.id===i.id?i:x)),[]);
-  const del  = useCallback(id => setItems(p=>p.filter(x=>x.id!==id)),    []);
-  const seed = useCallback(()  => setItems(p=>[...p,...makeSamples()]),    []);
-  const nav  = p => { setPage(p); setMob(false); };
+  // ── CRUD ─────────────────────────────────────────────────────────────────
+  const add = useCallback(async(item)=>{
+    const row={...item,org_id:user.id};
+    const{data}=await SB.from("items").insert(row).select().single();
+    if(data) setItems(p=>[data,...p]);
+  },[user]);
 
+  const edit = useCallback(async(item)=>{
+    const{data}=await SB.from("items").update(item).eq("id",item.id).select().single();
+    if(data) setItems(p=>p.map(x=>x.id===item.id?data:x));
+  },[]);
+
+  const del = useCallback(async(id)=>{
+    await SB.from("items").delete().eq("id",id);
+    setItems(p=>p.filter(x=>x.id!==id));
+  },[]);
+
+  const seed = useCallback(async()=>{
+    const samples=makeSamples().map(i=>({...i,org_id:user.id}));
+    const{data}=await SB.from("items").insert(samples).select();
+    if(data) setItems(p=>[...data,...p]);
+  },[user]);
+
+  const saveOrg = useCallback(async(o)=>{
+    setOrg(o);
+    await SB.from("orgs").upsert({...o,id:user.id});
+  },[user]);
+
+  const signOut = async()=>{ await SB.auth.signOut(); };
+
+  const nav = p => { setPage(p); setMob(false); };
   const isDesk = typeof window !== "undefined" && window.innerWidth > 900;
   const listed = items.filter(i=>i.mkt!=="Not Listed").length;
 
@@ -1107,6 +1251,18 @@ export default function App() {
     { id:"settings",    label:"Settings",    ico:Ic.settings},
   ];
   const TITLES = { dashboard:"Dashboard", inventory:"Inventory", marketplace:"Marketplace", reports:"Reports", settings:"Settings" };
+
+  // ── Auth gate ────────────────────────────────────────────────────────────
+  if(!authChk) return(
+    <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexDirection:"column"}}>
+      <style>{CSS}</style>
+      <div style={{fontSize:52}}>🎭</div>
+      <div style={{fontFamily:"'Abril Fatface',display",fontSize:22,color:"var(--gold)"}}>Loading Theatre4u…</div>
+      <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
+    </div>
+  );
+
+  if(!user) return <AuthScreen onAuth={u=>{setUser(u);}}/>;
 
   return (
     <>
@@ -1151,9 +1307,14 @@ export default function App() {
 
               <div className="sb-foot">
                 {org.name&&<div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.35)",marginBottom:8,textTransform:"uppercase",letterSpacing:1.5}}>🏛 {org.name}</div>}
-                <button className="btn btn-o btn-sm btn-full" style={{color:"rgba(255,255,255,.45)",borderColor:"rgba(255,255,255,.1)",fontSize:12}} onClick={()=>nav("settings")}>
-                  <span style={{width:13,height:13,display:"flex"}}>{Ic.settings}</span>Settings
-                </button>
+                <div style={{display:"flex",gap:6,flexDirection:"column"}}>
+                  <button className="btn btn-o btn-sm btn-full" style={{color:"rgba(255,255,255,.45)",borderColor:"rgba(255,255,255,.1)",fontSize:12}} onClick={()=>nav("settings")}>
+                    <span style={{width:13,height:13,display:"flex"}}>{Ic.settings}</span>Settings
+                  </button>
+                  <button className="btn btn-sm btn-full" style={{background:"rgba(139,26,42,.25)",borderColor:"rgba(139,26,42,.3)",color:"rgba(255,255,255,.45)",fontSize:12}} onClick={signOut}>
+                    Sign Out
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1162,14 +1323,11 @@ export default function App() {
         {mob && !isDesk && <div className="mob-overlay" onClick={()=>setMob(false)}/>}
 
         <div className="main">
-          {/* Gold stripe */}
           <div style={{height:3,background:"linear-gradient(90deg,var(--gold),var(--amber),var(--gilt) 55%,transparent 82%)",flexShrink:0}}/>
-          {/* Topbar */}
           <div className="topbar">
             <button className="menu-btn" onClick={()=>setMob(!mob)}>{mob?Ic.x:Ic.menu}</button>
             <span className="topbar-title">{TITLES[page]}</span>
           </div>
-          {/* Content */}
           <div className="scroll-area" onClick={()=>mob&&setMob(false)}>
             {!loaded
               ? <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:18,color:"var(--faint)"}}>
@@ -1182,24 +1340,34 @@ export default function App() {
                   {page==="inventory"   && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del}/>}
                   {page==="marketplace" && <Marketplace items={items} org={org}/>}
                   {page==="reports"     && <Reports     items={items}/>}
-                  {page==="settings"    && <Settings    org={org} setOrg={setOrg} onSeed={seed}/>}
+                  {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed}/>}
                 </div>
             }
           </div>
         </div>
       </div>
 
-      {/* ── Floating CTA Button ── */}
-      <div className="fab">
+      {/* ── Floating CTA ── */}
+      {!loaded&&<div className="fab">
         <div style={{position:"relative"}}>
           <div className="fab-pulse"/>
-          <button className="fab-btn" onClick={()=>{nav("inventory");setTimeout(()=>{const btn=document.querySelector(".btn-g");if(btn)btn.click()},300);}}>
+          <button className="fab-btn" onClick={()=>nav("inventory")}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
             Start Building Your Inventory
           </button>
         </div>
         <div className="fab-sub">✨ Free to get started — no credit card needed</div>
-      </div>
+      </div>}
+      {loaded&&<div className="fab">
+        <div style={{position:"relative"}}>
+          <div className="fab-pulse"/>
+          <button className="fab-btn" onClick={()=>{nav("inventory");setTimeout(()=>{const btn=document.querySelector(".btn-g");if(btn)btn.click();},300);}}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            Start Building Your Inventory
+          </button>
+        </div>
+        <div className="fab-sub">✨ Free to get started — no credit card needed</div>
+      </div>}
     </>
   );
 }
