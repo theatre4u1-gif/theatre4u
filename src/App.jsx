@@ -898,6 +898,16 @@ function Reports({ items }) {
   const availData = AVAIL.map(a=>({l:a,n:items.filter(i=>i.avail===a).length})).filter(a=>a.n>0);
   const mktData   = MKT.map(s=>({l:s,n:items.filter(i=>i.mkt===s).length})).filter(m=>m.n>0);
   const maxN = n => Math.max(1,n);
+  const locData = Object.entries(
+    items.reduce((acc,i)=>{
+      const loc=i.location||"Unassigned";
+      if(!acc[loc]) acc[loc]={count:0,qty:0,items:[]};
+      acc[loc].count++;
+      acc[loc].qty+=(i.qty||1);
+      acc[loc].items.push(i);
+      return acc;
+    },{})
+  ).sort((a,b)=>b[1].qty-a[1].qty);
 
   const csv = () => {
     const h=["Name","Category","Condition","Size","Qty","Location","Availability","Market","Rent","Sale","Tags","Notes","ID","Added"];
@@ -928,7 +938,7 @@ function Reports({ items }) {
 
       <div style={{padding:"24px 36px 48px",position:"relative",zIndex:1}}>
         <div className="tabs">
-          {[["overview","Overview"],["condition","Condition"],["availability","Availability"],["market","Marketplace"]].map(([t,l])=>(
+          {[["overview","Overview"],["condition","Condition"],["availability","Availability"],["market","Marketplace"],["location","Locations"]].map(([t,l])=>(
             <button key={t} className={`tab ${tab===t?"on":""}`} onClick={()=>setTab(t)}>{l}</button>
           ))}
         </div>
@@ -997,6 +1007,43 @@ function Reports({ items }) {
                 <span className="bar-cnt">{m.n}</span>
               </div>
             ))}
+          </div>
+        )}
+
+        {tab==="location"&&(
+          <div className="card card-p">
+            <div className="sh"><h2>Items by Location</h2><p>Where everything is stored across your facility.</p></div>
+            {locData.length===0
+              ? <p style={{color:"var(--muted)",textAlign:"center",padding:24}}>No items yet.</p>
+              : locData.map(([loc,data])=>(
+                <div key={loc} style={{marginBottom:24}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,paddingBottom:6,borderBottom:"1px solid var(--border)"}}>
+                    <span style={{fontSize:18}}>📍</span>
+                    <span style={{fontFamily:"'Abril Fatface',display",fontSize:17}}>{loc}</span>
+                    <span style={{marginLeft:"auto",background:"var(--linen)",borderRadius:20,padding:"2px 10px",fontSize:12,fontWeight:700,color:"var(--muted)"}}>{data.qty} item{data.qty!==1?"s":""}</span>
+                  </div>
+                  <div className="tw">
+                    <table>
+                      <thead><tr><th>Item</th><th>Category</th><th>Condition</th><th>Qty</th><th>Availability</th></tr></thead>
+                      <tbody>
+                        {data.items.map(item=>{
+                          const cat=CAT[item.category]||CAT.other;
+                          return(
+                            <tr key={item.id}>
+                              <td style={{fontWeight:700}}>{item.name}</td>
+                              <td>{cat.icon} {cat.label}</td>
+                              <td>{item.condition}</td>
+                              <td style={{fontWeight:800}}>{item.qty}</td>
+                              <td><span style={{padding:"2px 8px",borderRadius:10,fontSize:11,fontWeight:700,background:item.avail==="In Stock"?"rgba(76,175,80,.15)":"rgba(66,165,245,.15)",color:item.avail==="In Stock"?"#2e7d32":"#1565c0"}}>{item.avail}</span></td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))
+            }
           </div>
         )}
       </div>
