@@ -1055,7 +1055,7 @@ function Settings({ org, setOrg, onSeed }) {
   const [f,setF]       = useState(org);
   const [saved,setSaved] = useState(false);
   const upd = (k,v) => setF(p=>({...p,[k]:v}));
-  const save = () => { setOrg(f); setSaved(true); setTimeout(()=>setSaved(false),2200); };
+  const save = async() => { await setOrg(f); setSaved(true); setTimeout(()=>setSaved(false),2200); };
 
   return(
     <div style={{position:"relative"}}>
