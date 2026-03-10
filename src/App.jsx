@@ -582,7 +582,7 @@ function Dashboard({items,org,goInventory}){
           <div className="hero-body">
             <div className="hero-eyebrow">🎭 Theatre Inventory & Marketplace</div>
             <h1 className="hero-title">{org.name?`Welcome,\n${org.name}`:"Welcome to\nTheatre4u"}</h1>
-            <p className="hero-sub">Everything your programme owns — catalogued, photographed, and ready to share with the wider arts community.</p>
+            <p className="hero-sub">Everything your program owns — cataloged, photographed, and ready to share with the wider arts community.</p>
           </div>
           <div className="hero-bar"/>
         </div>
@@ -597,7 +597,7 @@ function Dashboard({items,org,goInventory}){
           ))}
         </div>
         {/* Mosaic */}
-        <div className="sh"><h2>From the Stage</h2><p>A glimpse of what arts programs are cataloguing and sharing nationwide.</p></div>
+        <div className="sh"><h2>From the Stage</h2><p>A glimpse of what arts programs are cataloging and sharing nationwide.</p></div>
         <div className="mosaic" style={{marginBottom:32}}>
           <div className="mc big"><img src={usp("photo-1503095396549-807759245b35",800,400)} alt="Grand Theatre" loading="lazy"/><div className="mc-lbl">Grand Stage Interiors</div></div>
           <div className="mc"><img src={usp("photo-1558618666-fcd25c85cd64",400,200)} alt="Costumes" loading="lazy"/><div className="mc-lbl">Costumes</div></div>
@@ -611,11 +611,11 @@ function Dashboard({items,org,goInventory}){
           <div className="img-div-fade"/>
           <div className="img-div-text">
             <h3>The Theatre Marketplace</h3>
-            <p>Rent or buy costumes, props, lighting and more from programmes in your community.</p>
+            <p>Rent or buy costumes, props, lighting and more from programs in your community.</p>
           </div>
         </div>
         {/* Showcase */}
-        <div className="sh"><h2>Marketplace Highlights</h2><p>Sample of what you'll find from programmes across the community.</p></div>
+        <div className="sh"><h2>Marketplace Highlights</h2><p>Sample of what you'll find from programs across the community.</p></div>
         <div className="sc-grid" style={{marginBottom:36}}>
           {SHOWCASE.map((it,i)=>{
             const cls=it.badge==="For Rent"?"bd-rent":it.badge==="For Sale"?"bd-sale":"bd-both";
@@ -729,7 +729,7 @@ function Inventory({items,onAdd,onEdit,onDelete}){
         )}
         <div style={{fontSize:13,fontWeight:700,color:"var(--faint)",marginBottom:12}}>{filtered.length} item{filtered.length!==1?"s":""}</div>
         {view==="grid"&&(paged.length===0
-          ?<div className="empty"><div className="empty-ico">🎭</div><h3>No Items Found</h3><p>{items.length===0?"Add your first item to build your catalogue.":"Try adjusting search or filters."}</p>{items.length===0&&<button className="btn btn-g" onClick={()=>{setActive(null);setModal("a")}}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add First Item</button>}</div>
+          ?<div className="empty"><div className="empty-ico">🎭</div><h3>No Items Found</h3><p>{items.length===0?"Add your first item to build your catalog.":"Try adjusting search or filters."}</p>{items.length===0&&<button className="btn btn-g" onClick={()=>{setActive(null);setModal("a")}}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add First Item</button>}</div>
           :<div className="inv-grid">
               {paged.map(item=>{
                 const cat=CAT[item.category]||CAT.other;
@@ -812,7 +812,7 @@ function Marketplace({items,org}){
           <div className="hero-body">
             <div className="hero-eyebrow">🏪 Community Exchange</div>
             <h1 className="hero-title" style={{fontSize:46}}>The Marketplace</h1>
-            <p className="hero-sub">Rent or buy costumes, props, lighting, sound and more from programmes near you. Give assets a second life.</p>
+            <p className="hero-sub">Rent or buy costumes, props, lighting, sound and more from programs near you. Give assets a second life.</p>
           </div>
           <div className="hero-bar"/>
         </div>
@@ -885,7 +885,7 @@ function Reports({ items }) {
           <div className="hero-body">
             <div className="hero-eyebrow">📊 Analytics</div>
             <h1 className="hero-title" style={{fontSize:44}}>Reports</h1>
-            <p className="hero-sub">Breakdowns, condition tracking, and data exports for your programme.</p>
+            <p className="hero-sub">Breakdowns, condition tracking, and data exports for your program.</p>
           </div>
           <div style={{position:"absolute",bottom:24,right:30,zIndex:2}}>
             <button className="btn btn-g" onClick={csv}><span style={{width:14,height:14,display:"flex"}}>{Ic.dl}</span>Export CSV</button>
@@ -989,7 +989,7 @@ function Settings({ org, setOrg, onSeed }) {
           <div className="hero-body">
             <div className="hero-eyebrow">⚙️ Configuration</div>
             <h1 className="hero-title" style={{fontSize:44}}>Settings</h1>
-            <p className="hero-sub">{f.name||"Your programme"} — manage your profile and data.</p>
+            <p className="hero-sub">{f.name||"Your program"} — manage your profile and data.</p>
           </div>
           <div className="hero-bar"/>
         </div>
@@ -999,9 +999,9 @@ function Settings({ org, setOrg, onSeed }) {
 
         {/* Org Profile */}
         <div className="card card-p" style={{marginBottom:20}}>
-          <div className="sh"><h2>Organisation Profile</h2><p>This information appears on your marketplace listings.</p></div>
+          <div className="sh"><h2>Organization Profile</h2><p>This information appears on your marketplace listings.</p></div>
           <div className="fg2">
-            <div className="fg fu"><label className="fl">Organisation Name</label><input className="fi" value={f.name||""} onChange={e=>upd("name",e.target.value)} placeholder="e.g. Lincoln High Drama Dept"/></div>
+            <div className="fg fu"><label className="fl">Organization Name</label><input className="fi" value={f.name||""} onChange={e=>upd("name",e.target.value)} placeholder="e.g. Lincoln High Drama Dept"/></div>
             <div className="fg">
               <label className="fl">Type</label>
               <select className="fs" value={f.type||""} onChange={e=>upd("type",e.target.value)}>
@@ -1012,7 +1012,7 @@ function Settings({ org, setOrg, onSeed }) {
             <div className="fg"><label className="fl">Email</label><input className="fi" type="email" value={f.email||""} onChange={e=>upd("email",e.target.value)} placeholder="drama@school.edu"/></div>
             <div className="fg"><label className="fl">Phone</label><input className="fi" value={f.phone||""} onChange={e=>upd("phone",e.target.value)} placeholder="(555) 123-4567"/></div>
             <div className="fg"><label className="fl">City / Location</label><input className="fi" value={f.location||""} onChange={e=>upd("location",e.target.value)} placeholder="Portland, OR"/></div>
-            <div className="fg fu"><label className="fl">About Your Programme</label><textarea className="ft" value={f.bio||""} onChange={e=>upd("bio",e.target.value)} placeholder="Tell others about your programme…"/></div>
+            <div className="fg fu"><label className="fl">About Your Program</label><textarea className="ft" value={f.bio||""} onChange={e=>upd("bio",e.target.value)} placeholder="Tell others about your program…"/></div>
           </div>
           <div style={{display:"flex",gap:10,alignItems:"center",marginTop:18,paddingTop:14,borderTop:"1.5px solid var(--border)"}}>
             <button className="btn btn-p" onClick={save}><span style={{width:14,height:14,display:"flex"}}>{Ic.check}</span>Save Profile</button>
@@ -1022,12 +1022,12 @@ function Settings({ org, setOrg, onSeed }) {
 
         {/* Plans */}
         <div className="card card-p" style={{marginBottom:20}}>
-          <div className="sh"><h2>Plans</h2><p>Choose the right plan for your programme.</p></div>
+          <div className="sh"><h2>Plans</h2><p>Choose the right plan for your program.</p></div>
           <div className="pricing-grid">
             {[
               { name:"Free",   price:"$0",  per:"/forever",   desc:"Perfect for getting started.",        hot:false, feats:["Up to 50 items","Basic marketplace","CSV export","QR labels"] },
-              { name:"Pro",    price:"$12", per:"/month",     desc:"For active programmes & companies.",  hot:true,  feats:["Unlimited items","Priority marketplace","Photo storage 5GB","Analytics dashboard","Email support"] },
-              { name:"District",price:"$49",per:"/month",    desc:"Multiple schools, one platform.",     hot:false, feats:["Unlimited programmes","Shared inventory pool","Admin controls","White-label option","Dedicated support"] },
+              { name:"Pro",    price:"$12", per:"/month",     desc:"For active programs & companies.",  hot:true,  feats:["Unlimited items","Priority marketplace","Photo storage 5GB","Analytics dashboard","Email support"] },
+              { name:"District",price:"$49",per:"/month",    desc:"Multiple schools, one platform.",     hot:false, feats:["Unlimited programs","Shared inventory pool","Admin controls","White-label option","Dedicated support"] },
             ].map(p=>(
               <div key={p.name} className={`pricing-card${p.hot?" hot":""}`}>
                 <div className="pname">{p.name}</div>
@@ -1081,7 +1081,7 @@ function AuthScreen({onAuth}){
     setErr("");setLoading(true);
     try{
       if(mode==="signup"){
-        if(!orgName.trim()){setErr("Please enter your organisation name.");setLoading(false);return;}
+        if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
         const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName}}});
         if(error)throw error;
         if(data.user){
@@ -1141,7 +1141,7 @@ function AuthScreen({onAuth}){
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             {mode==="signup"&&(
               <div>
-                <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Organisation Name</label>
+                <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Organization Name</label>
                 <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High Drama Dept." style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--linen)",borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"'Raleway',sans-serif",color:"var(--ink)",outline:"none",boxSizing:"border-box"}}
                   onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--linen)"}/>
               </div>
