@@ -266,6 +266,7 @@ body{font-family:'Raleway',sans-serif;-webkit-font-smoothing:antialiased}
 .modal-hd{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);background:var(--parch);border-radius:var(--rl) var(--rl) 0 0}
 .modal-hd h2{font-family:'Abril Fatface',display;font-size:23px;color:var(--ink)}
 .modal-bd{padding:24px;overflow-y:auto;flex:1}
+.modal-ft{padding:16px 24px;border-top:2px solid var(--linen);background:var(--parch);border-radius:0 0 var(--rl) var(--rl);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
 
 /* Form */
 .fg2{display:grid;grid-template-columns:1fr 1fr;gap:15px}
@@ -444,25 +445,37 @@ const Ic = {
   cam:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>,
 };
 
-function Modal({title,onClose,children}){
+function Modal({title,onClose,children,footer}){
   useEffect(()=>{const h=e=>e.key==="Escape"&&onClose();window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h)},[onClose]);
   return(
     <div className="overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="modal" onClick={e=>e.stopPropagation()}>
         <div className="modal-hd"><h2>{title}</h2><button className="ico-btn" onClick={onClose}>{Ic.x}</button></div>
         <div className="modal-bd">{children}</div>
+        {footer&&<div className="modal-ft">{footer}</div>}
       </div>
     </div>
   );
 }
 
-function ItemForm({item,onSave,onCancel}){
+function ItemForm({item,onSave,onCancel,submitId}){
   const blank={name:"",category:"costumes",condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,avail:"In Stock",img:null,tags:[]};
   const[f,setF]=useState(item||blank);
   const[ti,setTi]=useState("");
   const[upl,setUpl]=useState(false);
   const fr=useRef();
   const upd=(k,v)=>setF(p=>({...p,[k]:v}));
+  // Wire external submit button in modal footer
+  useEffect(()=>{
+    if(!submitId) return;
+    const btn=document.getElementById(submitId);
+    if(!btn) return;
+    const handler=()=>{ if(f.name.trim()) onSave(f); };
+    btn.addEventListener('click',handler);
+    btn.disabled=!f.name.trim();
+    btn.style.opacity=f.name.trim()?'1':'.42';
+    return()=>btn.removeEventListener('click',handler);
+  },[f,submitId,onSave]);
   const showRent=f.mkt==="For Rent"||f.mkt==="Rent or Sale";
   const showSale=f.mkt==="For Sale"||f.mkt==="Rent or Sale";
   const handlePhoto=async e=>{
@@ -498,12 +511,7 @@ function ItemForm({item,onSave,onCancel}){
       <div className="fg"/>
       {showRent&&<div className="fg"><label className="fl">Rental / week ($)</label><input className="fi" type="number" min="0" step="0.01" value={f.rent} onChange={e=>upd("rent",parseFloat(e.target.value)||0)}/></div>}
       {showSale&&<div className="fg"><label className="fl">Sale Price ($)</label><input className="fi" type="number" min="0" step="0.01" value={f.sale} onChange={e=>upd("sale",parseFloat(e.target.value)||0)}/></div>}
-      <div className="fg fu" style={{display:"flex",gap:8,justifyContent:"flex-end",paddingTop:16,borderTop:"1.5px solid var(--border)",marginTop:6}}>
-        <button className="btn btn-o" onClick={onCancel}>Cancel</button>
-        <button className="btn btn-p" disabled={!f.name.trim()} style={!f.name.trim()?{opacity:.42}:{}} onClick={()=>onSave(f)}>
-          <span style={{width:15,height:15,display:"flex"}}>{Ic.check}</span>{item?"Save Changes":"Add Item"}
-        </button>
-      </div>
+
     </div>
   );
 }
@@ -779,8 +787,14 @@ function Inventory({items,onAdd,onEdit,onDelete}){
         )}
         <Pager total={filtered.length} page={pg} per={PP} onPage={setPg}/>
       </div>
-      {modal==="a"&&<Modal title="Add New Item" onClose={()=>setModal(null)}><ItemForm onSave={handleSave} onCancel={()=>setModal(null)}/></Modal>}
-      {modal==="e"&&active&&<Modal title="Edit Item" onClose={()=>setModal(null)}><ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)}/></Modal>}
+      {modal==="a"&&(<Modal title="Add New Item" onClose={()=>setModal(null)}
+          footer={<><button className="btn btn-o" onClick={()=>setModal(null)}>Cancel</button><button className="btn btn-g" id="form-save-btn">Add Item</button></>}>
+          <ItemForm onSave={handleSave} onCancel={()=>setModal(null)} submitId="form-save-btn"/>
+        </Modal>)}
+      {modal==="e"&&active&&(<Modal title="Edit Item" onClose={()=>setModal(null)}
+          footer={<><button className="btn btn-o" onClick={()=>setModal(null)}>Cancel</button><button className="btn btn-g" id="form-save-btn">Save Changes</button></>}>
+          <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} submitId="form-save-btn"/>
+        </Modal>)}
       {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} onEdit={()=>setModal("e")} onDelete={id=>{onDelete(id);setModal(null);setActive(null)}}/></Modal>}
     </div>
   );
