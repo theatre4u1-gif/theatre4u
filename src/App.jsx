@@ -1104,9 +1104,9 @@ function Settings({ org, setOrg, onSeed }) {
           <div className="sh"><h2>Plans</h2><p>Choose the right plan for your program.</p></div>
           <div className="pricing-grid">
             {[
-              { name:"Free",   price:"$0",  per:"/forever",   desc:"Perfect for getting started.",        hot:false, feats:["Up to 50 items","Basic marketplace","CSV export","QR labels"] },
-              { name:"Pro",    price:"$12", per:"/month",     desc:"For active programs & companies.",  hot:true,  feats:["Unlimited items","Priority marketplace","Photo storage 5GB","Analytics dashboard","Email support"] },
-              { name:"District",price:"$49",per:"/month",    desc:"Multiple schools, one platform.",     hot:false, feats:["Unlimited programs","Shared inventory pool","Admin controls","White-label option","Dedicated support"] },
+              { name:"Free",    price:"$0",  per:"/forever", desc:"Perfect for getting started.",       hot:false, link:null,     btn:"Current Plan",  feats:["Up to 50 items","Basic marketplace","CSV export","QR labels"] },
+              { name:"Pro",     price:"$12", per:"/month",   desc:"For active programs & companies.",   hot:true,  link:"https://buy.stripe.com/test_8x26oJ3vhcvy1Wi7eq9sk00", btn:"Get Pro →",     feats:["Unlimited items","Priority marketplace","Photo storage 5GB","Analytics dashboard","Email support"] },
+              { name:"District",price:"$49", per:"/month",   desc:"Multiple schools, one platform.",    hot:false, link:"https://buy.stripe.com/test_8x2cN79TF67a0SebuG9sk01", btn:"Get District →", feats:["Unlimited programs","Shared inventory pool","Admin controls","White-label option","Dedicated support"] },
             ].map(p=>(
               <div key={p.name} className={`pricing-card${p.hot?" hot":""}`}>
                 <div className="pname">{p.name}</div>
@@ -1118,7 +1118,10 @@ function Settings({ org, setOrg, onSeed }) {
                     {ft}
                   </div>
                 ))}
-                <button className={`btn btn-full ${p.hot?"btn-g":"btn-o"}`} style={{marginTop:16}}>{p.hot?"Get Pro":"Learn More"}</button>
+                {p.link
+                  ? <a href={p.link} target="_blank" rel="noreferrer" className={`btn btn-full ${p.hot?"btn-g":"btn-o"}`} style={{marginTop:16,textDecoration:"none",display:"flex",justifyContent:"center"}}>{p.btn}</a>
+                  : <button className="btn btn-full btn-o" style={{marginTop:16,opacity:.5,cursor:"default"}} disabled>{p.btn}</button>
+                }
               </div>
             ))}
           </div>
