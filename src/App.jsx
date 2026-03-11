@@ -1293,18 +1293,12 @@ function AuthScreen({onAuth}){
             {loading?"Please wait…":mode==="login"?"Sign In →":"Create Free Account →"}
           </button>
           {mode==="login"&&<button onClick={resetPass} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:"var(--faint)",fontSize:12.5,cursor:"pointer",fontFamily:"'Raleway',sans-serif",textDecoration:"underline"}}>Forgot password?</button>}
-          {mode==="signup"&&<p style={{fontSize:12,color:"var(--faint)",textAlign:"center",marginTop:14,lineHeight:1.6}}>
-  Free to start — no credit card needed.<br/>
-  By creating an account you agree to our{" "}
-  <span onClick={()=>setLegal("terms")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Terms of Service</span>
-  {" "}and{" "}
-  <span onClick={()=>setLegal("privacy")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Privacy Policy</span>.
-</p>}
-{legal==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegal(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
-{legal==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegal(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
+          {mode==="signup"&&<p style={{fontSize:12,color:"var(--faint)",textAlign:"center",marginTop:14,lineHeight:1.6}}>Free to start — no credit card needed.<br/>By creating an account you agree to our <span onClick={()=>setLegal("terms")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Terms of Service</span> and <span onClick={()=>setLegal("privacy")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Privacy Policy</span>.</p>}
         </div>
         <p style={{textAlign:"center",color:"rgba(255,255,255,.25)",fontSize:12,marginTop:20}}>theatre4u.org — Built for the arts community 🎭</p>
       </div>
+      {legal==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegal(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
+      {legal==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegal(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
     </div>
   );
 }
