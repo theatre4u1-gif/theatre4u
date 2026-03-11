@@ -1,266 +1,452 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-const currency = (n) => "$" + Number(n || 0).toFixed(2);
+// ── Supabase ──────────────────────────────────────────────────────────────────
+const SB = createClient(
+  "https://ldmmphwivnnboyhlxipl.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA"
+);
+const uid  = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
+const fmt$ = n  => "$" + Number(n || 0).toFixed(2);
+const usp=(id,w=900,h=500)=>`https://images.unsplash.com/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=82`;
 
-// â”€â”€â”€ Storage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const DB = {
-  async load(key, fallback) {
-    try { const r = await window.storage.get(key); return r ? JSON.parse(r.value) : fallback; } catch { return fallback; }
-  },
-  async save(key, data) {
-    try { await window.storage.set(key, JSON.stringify(data)); } catch (e) { console.warn("Storage save failed", e); }
-  },
+const BG = {
+  dashboard:   "photo-1503095396549-807759245b35",
+  inventory:   "photo-1560179707-f14e90ef3623",
+  marketplace: "photo-1514525253161-7a46d19cd819",
+  reports:     "photo-1504196606672-aef5c9cefc92",
+  settings:    "photo-1516450360452-9312f5e86fc7",
 };
+const CAT_IMG = {
+  costumes:"photo-1509631179647-0177331693ae", props:"photo-1578662996442-48f60103fc96",
+  sets:"photo-1507924538820-ede94a04019d",  lighting:"photo-1514525253161-7a46d19cd819",
+  sound:"photo-1598488035139-bdbb2231ce04",  scripts:"photo-1481627834876-b7833e8f5570",
+  makeup:"photo-1560066984-138daaa0d8fb", furniture:"photo-1555041469-a586c61ea9bc",
+  fabrics:"photo-1598899134739-24c46f58b8c0",   tools:"photo-1504148455328-c376907d081c",
+  effects:"photo-1516450360452-9312f5e86fc7",other:"photo-1492684223066-81342ee5ff30",
+};
+const SHOWCASE = [
+  {img:"photo-1558618666-fcd25c85cd64",name:"Victorian Ball Gown",  cat:"costumes", price:"$25/wk", badge:"For Rent"},
+  {img:"photo-1558769132-cb1aea458c5e",name:"Grand Stage Drape",    cat:"fabrics",  price:"$60/wk", badge:"For Rent"},
+  {img:"photo-1516450360452-9312f5e86fc7",name:"Fog Machine Pro",   cat:"effects",  price:"$20/wk", badge:"For Rent"},
+  {img:"photo-1513364776144-60967b0f800f",name:"Period Prop Set",   cat:"props",    price:"$45",    badge:"For Sale"},
+  {img:"photo-1514525253161-7a46d19cd819",name:"LED Par Can Array", cat:"lighting", price:"$12/wk", badge:"Rent or Sale"},
+  {img:"photo-1598488035139-bdbb2231ce04",name:"Shure Wireless Mic",cat:"sound",    price:"$18/wk", badge:"For Rent"},
+];
 
-// â”€â”€â”€ QR Code Generator (pure canvas) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const QR = (() => {
-  function generatePattern(text) {
-    const hash = [];
-    for (let i = 0; i < 21 * 21; i++) {
-      let h = 0;
-      for (let j = 0; j < text.length; j++) {
-        h = ((h << 5) - h + text.charCodeAt(j) + i * 7) | 0;
-      }
-      hash.push(Math.abs(h) % 3 === 0);
-    }
-    return hash;
-  }
+const CATS = [
+  {id:"costumes", label:"Costumes",       icon:"👗",color:"#b5174f"},
+  {id:"props",    label:"Props",           icon:"🎭",color:"#6a1b8a"},
+  {id:"sets",     label:"Sets & Scenery",  icon:"🏛️",color:"#1554a0"},
+  {id:"lighting", label:"Lighting",        icon:"💡",color:"#d35400"},
+  {id:"sound",    label:"Sound",           icon:"🔊",color:"#27723a"},
+  {id:"scripts",  label:"Scripts & Music", icon:"📜",color:"#b83208"},
+  {id:"makeup",   label:"Makeup & Wigs",   icon:"💄",color:"#a0144e"},
+  {id:"furniture",label:"Stage Furniture", icon:"🪑",color:"#5d3a1a"},
+  {id:"fabrics",  label:"Fabrics & Drapes",icon:"🧵",color:"#5c1a8a"},
+  {id:"tools",    label:"Tools",           icon:"🔧",color:"#374549"},
+  {id:"effects",  label:"Special Effects", icon:"✨",color:"#00695c"},
+  {id:"other",    label:"Other",           icon:"📦",color:"#4a2e1a"},
+];
+const CAT   = Object.fromEntries(CATS.map(c=>[c.id,c]));
+const CONDS = ["New","Excellent","Good","Fair","Poor","For Parts"];
+const SIZES = ["XS","S","M","L","XL","XXL","One Size","N/A"];
+const AVAIL = ["In Stock","In Use","Checked Out","Being Repaired","Lost","Retired"];
+const MKT   = ["Not Listed","For Rent","For Sale","Rent or Sale"];
 
-  function toDataURL(text, size = 200) {
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d");
-    const grid = 21;
-    const cell = size / (grid + 4);
-    const offset = (size - cell * grid) / 2;
+function makeSamples(){
+  return [
+    {name:"Victorian Ball Gown – Blue",   category:"costumes", condition:"Good",     size:"M",       qty:1, location:"Costume Closet A",notes:"Used in A Christmas Carol 2024",mkt:"For Rent",   rent:25,sale:0, avail:"In Stock",tags:["period","formal"],img:null},
+    {name:"Pirate Hat Collection (6 pc)", category:"costumes", condition:"Fair",     size:"One Size",qty:6, location:"Costume Closet B",notes:"Assorted styles",              mkt:"Not Listed", rent:0, sale:0, avail:"In Stock",tags:["adventure"],      img:null},
+    {name:"Wireless Mic – Shure SM58",    category:"sound",    condition:"Excellent",size:"N/A",     qty:4, location:"Sound Booth",     notes:"4 channels, wireless",         mkt:"For Rent",   rent:15,sale:0, avail:"In Stock",tags:["audio"],          img:null},
+    {name:"LED Par Can RGBW 54×3W",       category:"lighting", condition:"New",      size:"N/A",     qty:12,location:"Lighting Storage",notes:"DMX controllable",             mkt:"Rent or Sale",rent:10,sale:85,avail:"In Stock",tags:["dmx","led"],      img:null},
+    {name:"Wooden Throne Chair",          category:"furniture",condition:"Good",     size:"N/A",     qty:1, location:"Scene Shop",      notes:"Gold painted, red velvet",     mkt:"For Rent",   rent:30,sale:0, avail:"In Stock",tags:["royalty"],         img:null},
+    {name:"Fog Machine 1000W",            category:"effects",  condition:"Good",     size:"N/A",     qty:2, location:"Effects Cage",    notes:"Includes remote",              mkt:"For Rent",   rent:20,sale:0, avail:"In Stock",tags:["atmosphere"],      img:null},
+    {name:"Romeo & Juliet Scripts (30)",  category:"scripts",  condition:"Fair",     size:"N/A",     qty:30,location:"Library",        notes:"Director annotated",            mkt:"For Sale",   rent:0, sale:5, avail:"In Stock",tags:["shakespeare"],     img:null},
+    {name:"Forest Backdrop Flat 8×12ft",  category:"sets",     condition:"Good",     size:"N/A",     qty:2, location:"Scene Shop",      notes:"Painted muslin on frame",      mkt:"For Rent",   rent:40,sale:0, avail:"In Stock",tags:["outdoor"],         img:null},
+    {name:"Ben Nye Master Makeup Kit",    category:"makeup",   condition:"Good",     size:"N/A",     qty:3, location:"Dressing Room 1", notes:"Full spectrum",                mkt:"Not Listed", rent:0, sale:0, avail:"In Stock",tags:["professional"],    img:null},
+    {name:"Foam Rubber Swords (8 pc)",    category:"props",    condition:"Fair",     size:"N/A",     qty:8, location:"Props Table",     notes:"Safe for stage combat",        mkt:"For Sale",   rent:0, sale:12,avail:"In Stock",tags:["combat"],          img:null},
+  ].map(i=>({...i,id:uid(),added:new Date().toISOString()}));
+}
 
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, size, size);
-
-    const pattern = generatePattern(text);
-    ctx.fillStyle = "#1a1520";
-
-    const drawFinder = (x, y) => {
-      ctx.fillStyle = "#1a1520";
-      ctx.fillRect(offset + x * cell, offset + y * cell, 7 * cell, 7 * cell);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(offset + (x + 1) * cell, offset + (y + 1) * cell, 5 * cell, 5 * cell);
-      ctx.fillStyle = "#1a1520";
-      ctx.fillRect(offset + (x + 2) * cell, offset + (y + 2) * cell, 3 * cell, 3 * cell);
-    };
-    drawFinder(0, 0);
-    drawFinder(14, 0);
-    drawFinder(0, 14);
-
-    ctx.fillStyle = "#1a1520";
-    for (let i = 0; i < grid; i++) {
-      for (let j = 0; j < grid; j++) {
-        if ((i < 8 && j < 8) || (i < 8 && j >= 13) || (i >= 13 && j < 8)) continue;
-        if (pattern[i * grid + j]) {
-          ctx.fillRect(offset + j * cell, offset + i * cell, cell, cell);
-        }
-      }
-    }
-
-    ctx.fillStyle = "#d4a843";
-    ctx.fillRect(offset + 9 * cell, offset + 9 * cell, 3 * cell, 3 * cell);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(offset + 9.5 * cell, offset + 9.5 * cell, 2 * cell, 2 * cell);
-    ctx.fillStyle = "#d4a843";
-    ctx.fillRect(offset + 10 * cell, offset + 10 * cell, cell, cell);
-
-    return canvas.toDataURL();
-  }
-
-  return { toDataURL };
-})();
-
-// â”€â”€â”€ Image Compression â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function compressImage(file, maxWidth = 400, quality = 0.7) {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        let w = img.width, h = img.height;
-        if (w > maxWidth) { h = (maxWidth / w) * h; w = maxWidth; }
-        canvas.width = w;
-        canvas.height = h;
-        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL("image/jpeg", quality));
+function resizeImg(file,maxW=560,q=0.78){
+  return new Promise(res=>{
+    const r=new FileReader();
+    r.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        const c=document.createElement("canvas");
+        let w=img.width,h=img.height;
+        if(w>maxW){h=Math.round((maxW/w)*h);w=maxW;}
+        c.width=w;c.height=h;
+        c.getContext("2d").drawImage(img,0,0,w,h);
+        res(c.toDataURL("image/jpeg",q));
       };
-      img.src = e.target.result;
+      img.src=e.target.result;
     };
-    reader.readAsDataURL(file);
+    r.readAsDataURL(file);
   });
 }
 
-// â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const CATEGORIES = [
-  { id: "costumes", label: "Costumes", icon: "\u{1F457}", color: "#c2185b" },
-  { id: "props", label: "Props", icon: "\u{1F3AD}", color: "#7b1fa2" },
-  { id: "sets", label: "Sets & Scenery", icon: "\u{1F3D7}\uFE0F", color: "#1565c0" },
-  { id: "lighting", label: "Lighting", icon: "\u{1F4A1}", color: "#f9a825" },
-  { id: "sound", label: "Sound Equipment", icon: "\u{1F50A}", color: "#2e7d32" },
-  { id: "scripts", label: "Scripts & Music", icon: "\u{1F4DC}", color: "#d84315" },
-  { id: "makeup", label: "Makeup & Wigs", icon: "\u{1F484}", color: "#ad1457" },
-  { id: "furniture", label: "Stage Furniture", icon: "\u{1FA91}", color: "#4e342e" },
-  { id: "fabrics", label: "Fabrics & Drapes", icon: "\u{1F9F5}", color: "#6a1b9a" },
-  { id: "tools", label: "Tools & Hardware", icon: "\u{1F527}", color: "#546e7a" },
-  { id: "effects", label: "Special Effects", icon: "\u2728", color: "#00838f" },
-  { id: "other", label: "Other", icon: "\u{1F4E6}", color: "#757575" },
-];
-const CAT_MAP = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
-const CONDITIONS = ["New", "Excellent", "Good", "Fair", "Poor", "For Parts"];
-const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "One Size", "N/A"];
-const AVAILABILITY = ["In Stock", "In Use", "Checked Out", "Being Repaired", "Lost", "Retired"];
-const MARKET_STATUS = ["Not Listed", "For Rent", "For Sale", "Rent or Sale"];
-
-function seedItems() {
-  return [
-    { name: "Victorian Ball Gown - Blue", category: "costumes", condition: "Good", size: "M", quantity: 1, location: "Costume Closet A", notes: "Used in A Christmas Carol 2024", marketStatus: "For Rent", rentalPrice: 25, salePrice: 0, availability: "In Stock", images: [], tags: ["period", "formal"] },
-    { name: "Pirate Hat Collection (6pc)", category: "costumes", condition: "Fair", size: "One Size", quantity: 6, location: "Costume Closet B", notes: "Assorted styles", marketStatus: "Not Listed", rentalPrice: 0, salePrice: 0, availability: "In Stock", images: [], tags: ["adventure"] },
-    { name: "Wireless Handheld Mic - Shure", category: "sound", condition: "Excellent", size: "N/A", quantity: 4, location: "Sound Booth", notes: "SM58 compatible, 4 channels", marketStatus: "For Rent", rentalPrice: 15, salePrice: 0, availability: "In Stock", images: [], tags: ["audio"] },
-    { name: "LED Par Can RGBW 54x3W", category: "lighting", condition: "New", size: "N/A", quantity: 12, location: "Lighting Storage", notes: "DMX controllable", marketStatus: "Rent or Sale", rentalPrice: 10, salePrice: 85, availability: "In Stock", images: [], tags: ["dmx", "led"] },
-    { name: "Wooden Throne Chair", category: "furniture", condition: "Good", size: "N/A", quantity: 1, location: "Scene Shop", notes: "Gold painted, red velvet", marketStatus: "For Rent", rentalPrice: 30, salePrice: 0, availability: "In Stock", images: [], tags: ["royalty"] },
-    { name: "Fog Machine 1000W", category: "effects", condition: "Good", size: "N/A", quantity: 2, location: "Effects Cage", notes: "Includes remote", marketStatus: "For Rent", rentalPrice: 20, salePrice: 0, availability: "In Stock", images: [], tags: ["atmosphere"] },
-    { name: "Romeo and Juliet Scripts (30)", category: "scripts", condition: "Fair", size: "N/A", quantity: 30, location: "Library", notes: "Director annotated", marketStatus: "For Sale", rentalPrice: 0, salePrice: 5, availability: "In Stock", images: [], tags: ["shakespeare"] },
-    { name: "Black Velvet Main Drape 20x40", category: "fabrics", condition: "Excellent", size: "N/A", quantity: 1, location: "Fly Loft", notes: "Flame retardant", marketStatus: "Not Listed", rentalPrice: 0, salePrice: 0, availability: "In Use", images: [], tags: ["main stage"] },
-    { name: "Ben Nye Master Makeup Kit", category: "makeup", condition: "Good", size: "N/A", quantity: 3, location: "Dressing Room 1", notes: "Full spectrum", marketStatus: "Not Listed", rentalPrice: 0, salePrice: 0, availability: "In Stock", images: [], tags: ["professional"] },
-    { name: "Forest Backdrop Flat 8x12ft", category: "sets", condition: "Good", size: "N/A", quantity: 2, location: "Scene Shop", notes: "Painted muslin on frame", marketStatus: "For Rent", rentalPrice: 40, salePrice: 0, availability: "In Stock", images: [], tags: ["outdoor"] },
-    { name: "DeWalt Cordless Drill 20V", category: "tools", condition: "Good", size: "N/A", quantity: 2, location: "Tool Cabinet", notes: "With charger and bits", marketStatus: "Not Listed", rentalPrice: 0, salePrice: 0, availability: "In Stock", images: [], tags: ["power tool"] },
-    { name: "Foam Rubber Swords (8pc)", category: "props", condition: "Fair", size: "N/A", quantity: 8, location: "Props Table", notes: "Safe for stage combat", marketStatus: "For Sale", rentalPrice: 0, salePrice: 12, availability: "In Stock", images: [], tags: ["combat"] },
-  ].map(i => ({ ...i, id: uid(), dateAdded: new Date().toISOString() }));
+// Upload a file to Supabase Storage and return the public URL
+async function uploadPhoto(file, userId) {
+  try {
+    // Resize first to keep file sizes small
+    const dataUrl = await resizeImg(file, 800, 0.82);
+    // Convert base64 dataURL to a Blob
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    // Unique filename: userId/timestamp.jpg
+    const path = userId + "/" + Date.now() + ".jpg";
+    const { error } = await SB.storage.from("item-photos").upload(path, blob, { contentType: "image/jpeg", upsert: false });
+    if (error) { console.error("Upload error:", error); return null; }
+    const { data } = SB.storage.from("item-photos").getPublicUrl(path);
+    return data.publicUrl;
+  } catch(e) { console.error("uploadPhoto failed:", e); return null; }
 }
 
-// â”€â”€â”€ Icons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const I = {
-  search: (s=18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>,
-  plus: (s=18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>,
-  edit: (s=18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
-  trash: (s=18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
-  x: (s=18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12"/></svg>,
-  menu: (s=18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>,
-  home: (s=18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>,
-  box: (s=18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>,
-  store: (s=18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/><path d="m3 9 2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/><path d="M12 3v6"/></svg>,
-  settings: (s=18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>,
-  chart: (s=18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>,
-  filter: (s=18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
-  check: (s=18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,
-  download: (s=18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
-  camera: (s=18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>,
-  qr: (s=18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><path d="M21 14h-3v3"/><path d="M21 21h-3v-3"/></svg>,
-  print: (s=18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>,
-  tag: (s=18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
-  scan: (s=18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>,
-};
-
-// â”€â”€â”€ CSS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap');
-:root{--bg:#0d0b11;--bg2:#15121b;--bg3:#1d1925;--bg3h:#252131;--bgi:#110f18;--bd:#282333;--bdl:#38324a;--t1:#ede8df;--t2:#9b93a8;--t3:#685f76;--gold:#d4a843;--goldd:#a37f2c;--red:#c2185b;--grn:#4caf50;--blu:#42a5f5;--sh:0 4px 24px rgba(0,0,0,.4);--r:10px;--rs:6px;--tr:.2s ease}
-*{margin:0;padding:0;box-sizing:border-box}
-html,body,#root{height:100%;background:var(--bg);color:var(--t1);font-family:'DM Sans',sans-serif;font-size:14px}
-::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
-.app{display:flex;height:100vh;overflow:hidden}
-.side{width:228px;min-width:228px;background:var(--bg2);border-right:1px solid var(--bd);display:flex;flex-direction:column;z-index:100;transition:transform .3s,opacity .3s}
-.side.mh{transform:translateX(-100%);opacity:0;position:absolute;height:100%}.side.ms{transform:translateX(0);opacity:1;position:absolute;height:100%}
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-.scroll{flex:1;overflow-y:auto;padding:22px 26px}
-.logo{padding:20px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px}
-.logo-i{width:38px;height:38px;background:linear-gradient(135deg,var(--gold),var(--goldd));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
-.logo-t{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--gold)}.logo-s{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:2px;margin-top:1px}
-.nav{padding:12px 9px;flex:1;overflow-y:auto}
-.nlbl{font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--t3);padding:9px 11px 3px}
-.ni{display:flex;align-items:center;gap:8px;padding:8px 11px;border-radius:var(--rs);color:var(--t2);cursor:pointer;transition:all var(--tr);font-size:13px;font-weight:500;margin-bottom:1px;border:1px solid transparent}
-.ni:hover{background:var(--bg3);color:var(--t1)}.ni.a{background:linear-gradient(135deg,rgba(212,168,67,.12),rgba(212,168,67,.04));color:var(--gold);border-color:rgba(212,168,67,.2)}
-.ni .c{margin-left:auto;background:var(--bg);padding:1px 6px;border-radius:9px;font-size:10px;color:var(--t3)}
-.top{display:flex;align-items:center;gap:12px;padding:12px 26px;border-bottom:1px solid var(--bd);background:var(--bg2);flex-shrink:0}
-.top h1{font-family:'Playfair Display',serif;font-size:20px;font-weight:700}
-.mmb{display:none;background:none;border:none;color:var(--t2);cursor:pointer;padding:3px}
-.srch{position:relative;display:flex;align-items:center}.srch svg{position:absolute;left:10px;color:var(--t3);pointer-events:none}
-.srch input{background:var(--bgi);border:1px solid var(--bd);border-radius:var(--r);padding:7px 11px 7px 34px;color:var(--t1);font-size:13px;width:240px;outline:none;transition:border var(--tr);font-family:'DM Sans',sans-serif}
-.srch input:focus{border-color:var(--gold)}.srch input::placeholder{color:var(--t3)}
-.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 15px;border-radius:var(--rs);font-size:13px;font-weight:600;cursor:pointer;transition:all var(--tr);border:1px solid transparent;font-family:'DM Sans',sans-serif;white-space:nowrap}
-.bp{background:linear-gradient(135deg,var(--gold),var(--goldd));color:#1a1200;border:none}.bp:hover{filter:brightness(1.1);transform:translateY(-1px)}
-.bs{background:var(--bg3);border-color:var(--bd);color:var(--t1)}.bs:hover{border-color:var(--bdl);background:var(--bg3h)}
-.bd{background:rgba(194,24,91,.12);border-color:rgba(194,24,91,.25);color:var(--red)}.bd:hover{background:rgba(194,24,91,.22)}
-.bsm{padding:5px 10px;font-size:12px}
-.bi{padding:6px;background:none;border:1px solid var(--bd);color:var(--t2);border-radius:var(--rs);cursor:pointer;display:flex;align-items:center;transition:all var(--tr)}.bi:hover{border-color:var(--bdl);color:var(--t1)}
-.cg{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
-.sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:22px}
-.cd{background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:16px;transition:all var(--tr)}.cd:hover{border-color:var(--bdl);transform:translateY(-1px);box-shadow:var(--sh)}
-.sc{text-align:center}.sc .si{font-size:24px;margin-bottom:5px}.sc .sv{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--gold)}.sc .sl{font-size:11px;color:var(--t3);margin-top:2px}
-.ic{cursor:pointer;position:relative;overflow:hidden}
-.ic-img{width:100%;height:130px;border-radius:var(--rs);overflow:hidden;margin-bottom:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--t3)}
-.ic-img img{width:100%;height:100%;object-fit:cover}
-.ich{display:flex;align-items:flex-start;gap:9px;margin-bottom:8px}
-.icc{width:34px;height:34px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
-.ict{font-weight:600;font-size:13.5px;line-height:1.3}.ics{font-size:11px;color:var(--t3);margin-top:1px}
-.icm{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
-.mt{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;background:var(--bg);border-radius:3px;font-size:10px;color:var(--t2);white-space:nowrap}
-.icf{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:9px;border-top:1px solid var(--bd)}
-.mb{padding:2px 8px;border-radius:14px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
-.mb.r{background:rgba(66,165,245,.14);color:var(--blu)}.mb.s{background:rgba(76,175,80,.14);color:var(--grn)}.mb.b{background:rgba(212,168,67,.14);color:var(--gold)}.mb.n{background:rgba(107,100,120,.08);color:var(--t3)}
-.pr{font-weight:600;font-size:13px;color:var(--gold)}
-.mov{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;display:flex;align-items:center;justify-content:center;padding:14px;animation:fi .15s ease}
-.modal{background:var(--bg2);border:1px solid var(--bd);border-radius:14px;width:100%;max-width:640px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 8px 48px rgba(0,0,0,.5);animation:su .2s ease}
-.mh{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--bd)}.mh h2{font-family:'Playfair Display',serif;font-size:18px}
-.mb2{padding:20px;overflow-y:auto;flex:1}
-.fg2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.fg{display:flex;flex-direction:column;gap:4px}.fg.fu{grid-column:1/-1}
-.fl{font-size:10.5px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:1px}
-.fi,.fs,.ft{background:var(--bgi);border:1px solid var(--bd);border-radius:var(--rs);padding:8px 10px;color:var(--t1);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border var(--tr)}
-.fi:focus,.fs:focus,.ft:focus{border-color:var(--gold)}.ft{resize:vertical;min-height:60px}.fs{cursor:pointer}.fs option{background:var(--bg2)}
-.pa{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}
-.pt{width:72px;height:72px;border-radius:var(--rs);overflow:hidden;position:relative;border:1px solid var(--bd);flex-shrink:0}
-.pt img{width:100%;height:100%;object-fit:cover}
-.pt .pr2{position:absolute;top:2px;right:2px;width:18px;height:18px;background:rgba(0,0,0,.7);border:none;color:#fff;border-radius:50%;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
-.pt:hover .pr2{opacity:1}
-.pad{width:72px;height:72px;border:2px dashed var(--bd);border-radius:var(--rs);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);transition:all var(--tr);gap:1px;font-size:9px}
-.pad:hover{border-color:var(--gold);color:var(--gold)}
-.qrc{display:flex;align-items:center;gap:16px;padding:14px;background:var(--bg);border-radius:var(--r);border:1px solid var(--bd)}
-.qrc img{border-radius:var(--rs);flex-shrink:0}
-.dsec{margin-bottom:20px}.dsec h3{font-family:'Playfair Display',serif;font-size:14px;margin-bottom:9px;padding-bottom:6px;border-bottom:1px solid var(--bd)}
-.dr{display:flex;padding:6px 0}.drl{width:140px;color:var(--t3);font-size:12px;flex-shrink:0}.drv{font-size:13px}
-.pg{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-.pg img{width:90px;height:90px;border-radius:var(--rs);object-fit:cover;border:1px solid var(--bd);cursor:pointer}
-.lb{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:2000;display:flex;align-items:center;justify-content:center;cursor:pointer}
-.lb img{max-width:90vw;max-height:90vh;border-radius:var(--r)}
-.tw{overflow-x:auto;border:1px solid var(--bd);border-radius:var(--r)}
-table{width:100%;border-collapse:collapse}
-th{background:var(--bg3);padding:9px 12px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--t3);text-align:left;font-weight:600;white-space:nowrap;position:sticky;top:0}
-td{padding:9px 12px;border-top:1px solid var(--bd);font-size:13px;vertical-align:middle}
-tr:hover td{background:rgba(255,255,255,.015)}
-.vt{display:flex;border:1px solid var(--bd);border-radius:var(--rs);overflow:hidden}
-.vt button{background:none;border:none;color:var(--t3);padding:5px 12px;cursor:pointer;font-size:12px;transition:all var(--tr);font-family:'DM Sans',sans-serif;font-weight:500}
-.vt button.a{background:var(--gold);color:#1a1200}.vt button:not(.a):hover{background:var(--bg3);color:var(--t1)}
-.tabs{display:flex;gap:2px;border-bottom:1px solid var(--bd);margin-bottom:16px}
-.tab{background:none;border:none;padding:8px 14px;font-size:13px;font-weight:500;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;transition:all var(--tr);font-family:'DM Sans',sans-serif}
-.tab.a{color:var(--gold);border-bottom-color:var(--gold)}.tab:hover:not(.a){color:var(--t2)}
-.cb{display:flex;align-items:center;gap:9px;padding:7px 0}.cbi{font-size:17px;width:26px;text-align:center}.cbl{font-size:12.5px;width:120px;color:var(--t2)}
-.cbt{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden}.cbf{height:100%;border-radius:3px;transition:width .5s ease}.cbc{font-size:12.5px;font-weight:600;width:32px;text-align:right}
-.fp{background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:12px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:9px;align-items:flex-end}
-.fp label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--t3);font-weight:600;display:block;margin-bottom:2px}
-.fp select,.fp input{background:var(--bgi);border:1px solid var(--bd);border-radius:var(--rs);padding:5px 8px;color:var(--t1);font-size:12px;outline:none;font-family:'DM Sans',sans-serif}
-.pgn{display:flex;align-items:center;justify-content:center;gap:5px;padding:16px 0}
-.pgn button{background:var(--bg3);border:1px solid var(--bd);color:var(--t2);padding:4px 11px;border-radius:var(--rs);cursor:pointer;font-size:12px;transition:all var(--tr);font-family:'DM Sans',sans-serif}
-.pgn button:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}.pgn button:disabled{opacity:.3;cursor:not-allowed}.pgn button.a{background:var(--gold);color:#1a1200;border-color:var(--gold)}
-.emp{text-align:center;padding:44px 18px}.emp .ei{font-size:40px;margin-bottom:12px;opacity:.5}.emp h3{font-family:'Playfair Display',serif;font-size:17px;margin-bottom:5px}.emp p{color:var(--t3);font-size:12.5px;margin-bottom:14px}
-.sov{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
-@keyframes fi{from{opacity:0}to{opacity:1}}@keyframes su{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-.fin{animation:fi .3s ease}
-@media(max-width:900px){.side{position:absolute;height:100%}.mmb{display:flex}.srch input{width:160px}.fg2{grid-template-columns:1fr}.sg{grid-template-columns:repeat(2,1fr)}.scroll{padding:12px}.top{padding:10px 14px}}
-@media(max-width:600px){.sg{grid-template-columns:1fr}.cg{grid-template-columns:1fr}.srch input{width:120px}}
+@import url('https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Lora:ital,wght@0,500;0,600;1,400;1,500&family=Raleway:wght@500;600;700;800&display=swap');
+:root{
+  --ink:#120600;--deep:#2a0e00;--cog:#8b3a0f;--amber:#c4761a;--gold:#d4a843;--gilt:#f5d870;
+  --cream:#fdf6ec;--parch:#f3e6cc;--linen:#e6d3b3;--sand:#ccb890;
+  --text:#2a1008;--muted:#7a4e28;--faint:#b09060;--border:#ddc8a0;
+  --white:#ffffff;--red:#8b1a2a;--green:#265e2a;--blue:#1a3570;
+  --sh1:0 2px 14px rgba(18,6,0,.1);--sh2:0 6px 28px rgba(18,6,0,.17);--sh3:0 14px 52px rgba(18,6,0,.25);
+  --r:5px;--rm:12px;--rl:18px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body,#root{height:100%;background:var(--cream);color:var(--text);font-size:15px}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--parch)}::-webkit-scrollbar-thumb{background:var(--sand);border-radius:3px}
+body{font-family:'Raleway',sans-serif;-webkit-font-smoothing:antialiased}
 
-/* ─── LANDING PAGE ────────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&display=swap');
-.lp{min-height:100vh;background:var(--bg);color:var(--t1);overflow-x:hidden}
+.shell{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:244px;min-width:244px;display:flex;flex-direction:column;z-index:200;transition:transform .28s cubic-bezier(.4,0,.2,1)}
+.sidebar.hidden{transform:translateX(-100%);position:absolute;height:100%}
+.sidebar.open{transform:translateX(0);position:absolute;height:100%}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.scroll-area{flex:1;overflow-y:auto}
+
+/* Sidebar */
+.sb-root{position:relative;height:100%;display:flex;flex-direction:column;background:var(--ink)}
+.sb-photo{position:absolute;inset:0;overflow:hidden}
+.sb-photo img{width:100%;height:100%;object-fit:cover;opacity:.14;filter:sepia(.5) brightness(.7)}
+.sb-photo::after{content:'';position:absolute;inset:0;background:linear-gradient(175deg,rgba(18,6,0,.5) 0%,rgba(18,6,0,.9) 60%,rgba(18,6,0,.97) 100%)}
+.sb-inner{position:relative;z-index:1;display:flex;flex-direction:column;height:100%;overflow-y:auto}
+.sb-logo{padding:28px 20px 20px;border-bottom:1px solid rgba(212,168,67,.15)}
+.sb-glyph{font-size:36px;display:block;margin-bottom:8px;line-height:1}
+.sb-name{font-family:'Abril Fatface',display;font-size:27px;color:var(--gold);letter-spacing:.8px;line-height:1}
+.sb-sub{font-size:9.5px;color:rgba(255,255,255,.28);text-transform:uppercase;letter-spacing:3px;margin-top:6px;font-weight:700}
+.sb-nav{padding:14px 10px;flex:1}
+.sb-section{font-size:9px;text-transform:uppercase;letter-spacing:3px;color:rgba(255,255,255,.2);padding:14px 12px 5px;font-weight:800}
+.sb-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;color:rgba(255,255,255,.45);cursor:pointer;font-size:14px;font-weight:700;margin-bottom:2px;transition:all .15s;border-left:3px solid transparent}
+.sb-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.85)}
+.sb-item.on{background:rgba(212,168,67,.14);color:var(--gilt);border-left-color:var(--gold);padding-left:9px}
+.sb-ico{width:16px;height:16px;flex-shrink:0}
+.sb-badge{margin-left:auto;background:rgba(255,255,255,.09);color:rgba(255,255,255,.38);font-size:11px;padding:1px 8px;border-radius:10px;font-weight:800}
+.sb-item.on .sb-badge{background:rgba(212,168,67,.22);color:var(--gilt)}
+.sb-foot{padding:16px 14px;border-top:1px solid rgba(212,168,67,.12)}
+
+/* Topbar */
+.topbar{display:flex;align-items:center;gap:14px;padding:14px 36px;border-bottom:1px solid var(--border);background:var(--cream);flex-shrink:0;position:relative}
+.topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--amber),var(--gilt) 50%,transparent 80%)}
+.topbar-title{font-family:'Abril Fatface',display;font-size:27px;color:var(--ink);letter-spacing:.5px}
+.menu-btn{display:none;background:none;border:none;cursor:pointer;color:var(--muted);padding:4px}
+.menu-btn svg{width:22px;height:22px}
+
+/* Page bg watermark */
+.page-bg-img{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;opacity:.06;filter:sepia(.5) blur(2px);pointer-events:none;z-index:0}
+.page-layer{position:relative;z-index:1}
+
+/* Hero */
+.hero-wrap{position:relative;overflow:hidden;border-radius:var(--rl)}
+.hero-wrap img{width:100%;height:100%;object-fit:cover;display:block;transition:transform 9s ease}
+.hero-wrap:hover img{transform:scale(1.04)}
+.hero-fade{position:absolute;inset:0;background:linear-gradient(135deg,rgba(18,6,0,.88) 0%,rgba(18,6,0,.5) 55%,rgba(18,6,0,.08) 100%)}
+.hero-body{position:absolute;bottom:0;left:0;right:0;z-index:1;padding:42px 50px;display:flex;flex-direction:column}
+.hero-eyebrow{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:4.5px;color:var(--gold);margin-bottom:10px}
+.hero-title{font-family:'Abril Fatface',display;font-size:52px;color:var(--white);line-height:1.05;margin-bottom:10px;text-shadow:0 3px 24px rgba(0,0,0,.45);white-space:pre-line}
+.hero-sub{font-family:'Lora',serif;font-size:17px;font-style:italic;color:rgba(255,255,255,.72);max-width:520px;line-height:1.65}
+.hero-bar{position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--gold),var(--gilt),transparent 75%)}
+
+/* Section heading */
+.sh{margin-bottom:22px}
+.sh h2{font-family:'Abril Fatface',display;font-size:32px;color:var(--ink);line-height:1.1;margin-bottom:3px}
+.sh p{font-family:'Lora',serif;font-size:15.5px;font-style:italic;color:var(--muted)}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px;margin-bottom:32px}
+.stat{background:rgba(253,246,236,.9);border:1px solid var(--border);border-radius:var(--rm);padding:20px 18px;box-shadow:var(--sh1);backdrop-filter:blur(8px);position:relative;overflow:hidden;transition:box-shadow .18s,transform .18s}
+.stat:hover{box-shadow:var(--sh2);transform:translateY(-2px)}
+.stat-ico{font-size:26px;margin-bottom:9px}
+.stat-val{font-family:'Abril Fatface',display;font-size:38px;color:var(--ink);line-height:1}
+.stat-lbl{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-top:5px}
+
+/* Mosaic */
+.mosaic{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,155px);gap:10px;border-radius:var(--rm);overflow:hidden}
+.mc{overflow:hidden;position:relative;cursor:pointer}
+.mc img{width:100%;height:100%;object-fit:cover;transition:transform .55s ease}
+.mc:hover img{transform:scale(1.08)}
+.mc.big{grid-column:span 2;grid-row:span 2}
+.mc-lbl{position:absolute;bottom:0;left:0;right:0;padding:10px 14px;background:linear-gradient(transparent,rgba(18,6,0,.8));font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--white)}
+
+/* Image divider */
+.img-div{height:180px;border-radius:var(--rm);overflow:hidden;position:relative}
+.img-div img{width:100%;height:100%;object-fit:cover;display:block}
+.img-div-fade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(18,6,0,.83) 0%,rgba(18,6,0,.35) 60%,transparent 100%)}
+.img-div-text{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;justify-content:center;padding:0 42px}
+.img-div-text h3{font-family:'Abril Fatface',display;font-size:30px;color:var(--white);margin-bottom:5px}
+.img-div-text p{font-family:'Lora',serif;font-size:15px;font-style:italic;color:rgba(255,255,255,.7)}
+
+/* Showcase */
+.sc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(224px,1fr));gap:16px}
+.sc-card{border-radius:var(--rm);overflow:hidden;border:1px solid var(--border);background:var(--white);box-shadow:var(--sh1);transition:all .22s;cursor:pointer}
+.sc-card:hover{box-shadow:var(--sh3);transform:translateY(-4px)}
+.sc-img{height:170px;overflow:hidden;position:relative}
+.sc-img img{width:100%;height:100%;object-fit:cover;transition:transform .55s}
+.sc-card:hover .sc-img img{transform:scale(1.09)}
+.sc-img-fade{position:absolute;inset:0;background:linear-gradient(transparent 40%,rgba(18,6,0,.6))}
+.sc-badge{position:absolute;top:11px;right:11px;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.bd-rent{background:var(--gold);color:var(--ink)}
+.bd-sale{background:var(--green);color:#fff}
+.bd-both{background:var(--ink);color:var(--gold)}
+.sc-body{padding:14px 16px}
+.sc-cat{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--amber);margin-bottom:4px}
+.sc-name{font-family:'Lora',serif;font-size:17px;font-weight:600;color:var(--ink);margin-bottom:5px;line-height:1.3}
+.sc-price{font-family:'Abril Fatface',display;font-size:19px;color:var(--cog)}
+
+/* Category tiles */
+.cat-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px}
+.cat-tile{border-radius:var(--rm);overflow:hidden;cursor:pointer;position:relative;height:122px;box-shadow:var(--sh1);transition:all .2s}
+.cat-tile:hover{box-shadow:var(--sh2);transform:translateY(-3px)}
+.cat-tile img{width:100%;height:100%;object-fit:cover;transition:transform .55s}
+.cat-tile:hover img{transform:scale(1.1)}
+.cat-tile::after{content:'';position:absolute;inset:0;background:linear-gradient(transparent 20%,rgba(18,6,0,.78))}
+.cat-info{position:absolute;bottom:0;left:0;right:0;padding:10px 12px;z-index:1}
+.cat-emo{font-size:18px;display:block;margin-bottom:2px}
+.cat-name{font-size:12px;font-weight:800;color:var(--white);text-transform:uppercase;letter-spacing:.8px;line-height:1.2}
+.cat-cnt{font-size:11px;color:rgba(255,255,255,.6);font-weight:600}
+
+/* Inventory cards */
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(266px,1fr));gap:16px}
+.inv-card{background:rgba(253,246,236,.93);border:1px solid var(--border);border-radius:var(--rm);overflow:hidden;cursor:pointer;transition:all .2s;box-shadow:var(--sh1);backdrop-filter:blur(4px)}
+.inv-card:hover{box-shadow:var(--sh2);transform:translateY(-3px)}
+.inv-img{height:170px;overflow:hidden}
+.inv-img img{width:100%;height:100%;object-fit:cover;transition:transform .55s}
+.inv-card:hover .inv-img img{transform:scale(1.07)}
+.inv-body{padding:14px 16px}
+.inv-cat{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px}
+.inv-name{font-family:'Lora',serif;font-size:18px;font-weight:600;color:var(--ink);margin-bottom:8px;line-height:1.25}
+.inv-meta{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.chip{padding:3px 9px;border-radius:3px;font-size:11.5px;font-weight:700;background:var(--parch);color:var(--muted)}
+.inv-foot{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--linen)}
+.mkt-badge{padding:3px 9px;border-radius:3px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px}
+.mb-rent{background:rgba(26,53,112,.1);color:var(--blue)}
+.mb-sale{background:rgba(38,94,42,.1);color:var(--green)}
+.mb-both{background:rgba(196,118,26,.12);color:var(--cog)}
+.mb-none{background:var(--parch);color:var(--faint)}
+.price{font-family:'Abril Fatface',display;font-size:18px;color:var(--cog)}
+
+/* Bar charts */
+.bar-row{display:flex;align-items:center;gap:12px;padding:7px 0}
+.bar-ico{font-size:17px;width:24px;text-align:center}
+.bar-lbl{width:142px;font-size:13.5px;font-weight:700;color:var(--muted);flex-shrink:0}
+.bar-track{flex:1;height:7px;background:var(--linen);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .75s cubic-bezier(.4,0,.2,1)}
+.bar-cnt{width:30px;text-align:right;font-size:14px;font-weight:800;color:var(--text)}
+
+/* Card */
+.card{background:rgba(253,246,236,.9);border:1px solid var(--border);border-radius:var(--rm);box-shadow:var(--sh1);backdrop-filter:blur(6px)}
+.card-p{padding:26px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 21px;border-radius:var(--r);font-size:14px;font-weight:800;cursor:pointer;border:1.5px solid transparent;font-family:'Raleway',sans-serif;letter-spacing:.3px;transition:all .15s;white-space:nowrap}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+.btn-p{background:var(--ink);color:var(--gold);border-color:var(--ink)}
+.btn-p:hover:not(:disabled){background:var(--deep)}
+.btn-g{background:linear-gradient(135deg,var(--gold),var(--amber));color:var(--ink);border:none;font-weight:800;box-shadow:0 3px 12px rgba(196,118,26,.38)}
+.btn-g:hover:not(:disabled){filter:brightness(1.09);transform:translateY(-1px);box-shadow:0 6px 20px rgba(196,118,26,.48)}
+.btn-o{background:transparent;color:var(--text);border-color:var(--border)}
+.btn-o:hover:not(:disabled){background:var(--parch);border-color:var(--sand)}
+.btn-d{background:rgba(139,26,42,.07);color:var(--red);border-color:rgba(139,26,42,.2)}
+.btn-d:hover:not(:disabled){background:rgba(139,26,42,.14)}
+.btn-sm{padding:5px 13px;font-size:12.5px}
+.btn-full{width:100%;justify-content:center}
+.ico-btn{padding:7px;background:transparent;border:1.5px solid var(--border);border-radius:var(--r);cursor:pointer;color:var(--muted);display:inline-flex;align-items:center;transition:all .15s}
+.ico-btn:hover{border-color:var(--sand);color:var(--text);background:var(--parch)}
+.ico-btn svg{width:15px;height:15px}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(18,6,0,.76);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;animation:fi .15s}
+.modal{background:var(--cream);border-radius:var(--rl);width:100%;max-width:640px;max-height:91vh;display:flex;flex-direction:column;box-shadow:var(--sh3);animation:su .22s}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);background:var(--parch);border-radius:var(--rl) var(--rl) 0 0}
+.modal-hd h2{font-family:'Abril Fatface',display;font-size:23px;color:var(--ink)}
+.modal-bd{padding:24px;overflow-y:auto;flex:1}
+.modal-ft{padding:16px 24px;border-top:2px solid var(--linen);background:var(--parch);border-radius:0 0 var(--rl) var(--rl);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
+
+/* Form */
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg.fu{grid-column:1/-1}
+.fl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.3px;color:var(--muted)}
+.fi,.fs,.ft{background:var(--parch);border:1.5px solid var(--border);border-radius:var(--r);padding:9px 12px;font-size:14px;color:var(--text);font-family:'Raleway',sans-serif;font-weight:600;outline:none;transition:border .15s,box-shadow .15s;width:100%}
+.fi:focus,.fs:focus,.ft:focus{border-color:var(--gold);background:var(--white);box-shadow:0 0 0 3px rgba(212,168,67,.14)}
+.ft{resize:vertical;min-height:72px}
+.sdiv{grid-column:1/-1;border-top:1.5px solid var(--border);padding-top:16px;margin-top:6px}
+.slbl{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--amber);margin-bottom:12px}
+.tc{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;background:var(--linen);border-radius:3px;font-size:12.5px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .12s}
+.tc:hover{background:rgba(139,26,42,.1);color:var(--red)}
+.ph-wrap{width:76px;height:76px;border-radius:var(--r);overflow:hidden;position:relative;border:1.5px solid var(--border)}
+.ph-wrap img{width:100%;height:100%;object-fit:cover}
+.ph-rm{position:absolute;top:2px;right:2px;width:20px;height:20px;background:rgba(18,6,0,.72);border:none;color:#fff;border-radius:50%;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s}
+.ph-wrap:hover .ph-rm{opacity:1}
+.ph-add{width:76px;height:76px;border:2px dashed var(--border);border-radius:var(--r);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:var(--faint);font-size:11.5px;font-weight:800;gap:4px;transition:all .15s}
+.ph-add:hover{border-color:var(--gold);color:var(--gold);background:rgba(212,168,67,.06)}
+.ph-add svg{width:20px;height:20px}
+
+/* Detail */
+.dt-sec{margin-bottom:22px}
+.dt-sec h3{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--linen)}
+.dt-row{display:flex;padding:6px 0;font-size:14.5px}
+.dt-lbl{width:136px;color:var(--faint);flex-shrink:0;font-size:13px;font-weight:700}
+.dt-img{border-radius:var(--rm);overflow:hidden;margin-bottom:20px;position:relative;cursor:zoom-in;height:240px}
+.dt-img img{width:100%;height:100%;object-fit:cover;transition:transform .3s}
+.dt-img:hover img{transform:scale(1.03)}
+
+/* Table */
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:var(--rm);background:rgba(253,246,236,.9);backdrop-filter:blur(6px)}
+table{width:100%;border-collapse:collapse}
+th{padding:11px 15px;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--faint);font-weight:800;text-align:left;background:var(--parch);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:11px 15px;border-bottom:1px solid var(--linen);font-size:14px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(243,230,204,.55)}
+
+/* Filters */
+.fbar{background:rgba(253,246,236,.9);border:1px solid var(--border);border-radius:var(--rm);padding:14px 18px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;backdrop-filter:blur(6px)}
+.fbar label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:1.3px;color:var(--faint);margin-bottom:4px;font-weight:800}
+.fbar select{background:var(--parch);border:1.5px solid var(--border);border-radius:var(--r);padding:6px 10px;font-size:13px;font-weight:700;color:var(--text);font-family:'Raleway',sans-serif;outline:none}
+
+/* Pagination */
+.pgn{display:flex;align-items:center;justify-content:center;gap:5px;padding:20px 0}
+.pgn button{background:rgba(253,246,236,.9);border:1.5px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:var(--r);cursor:pointer;font-size:13.5px;font-family:'Raleway',sans-serif;font-weight:800;transition:all .15s}
+.pgn button:hover:not(:disabled){border-color:var(--gold);color:var(--cog)}
+.pgn button.on{background:var(--ink);color:var(--gold);border-color:var(--ink)}
+.pgn button:disabled{opacity:.3;cursor:not-allowed}
+
+/* View toggle */
+.vtog{display:flex;border:1.5px solid var(--border);border-radius:var(--r);overflow:hidden}
+.vtog button{background:none;border:none;color:var(--muted);padding:7px 15px;cursor:pointer;font-size:13.5px;font-family:'Raleway',sans-serif;font-weight:800;transition:all .15s}
+.vtog button.on{background:var(--ink);color:var(--gold)}
+.vtog button:not(.on):hover{background:var(--parch);color:var(--text)}
+
+/* Search */
+.srch{position:relative;display:flex;align-items:center}
+.srch svg{position:absolute;left:11px;width:15px;height:15px;color:var(--faint);pointer-events:none}
+.srch input{background:rgba(253,246,236,.9);border:1.5px solid var(--border);border-radius:22px;padding:8px 14px 8px 34px;font-size:14px;font-weight:700;color:var(--text);font-family:'Raleway',sans-serif;outline:none;width:240px;transition:border .15s,box-shadow .15s;backdrop-filter:blur(4px)}
+.srch input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,168,67,.13);background:var(--white)}
+.srch input::placeholder{color:var(--faint);font-weight:500}
+
+/* Tabs */
+.tabs{display:flex;gap:2px;border-bottom:1.5px solid var(--border);margin-bottom:22px}
+.tab{background:none;border:none;padding:10px 20px;font-size:14.5px;font-weight:800;color:var(--faint);cursor:pointer;border-bottom:3px solid transparent;font-family:'Raleway',sans-serif;transition:all .15s}
+.tab.on{color:var(--cog);border-bottom-color:var(--gold)}
+.tab:hover:not(.on){color:var(--muted)}
+
+/* Lightbox */
+.lb{position:fixed;inset:0;background:rgba(18,6,0,.93);z-index:2000;display:flex;align-items:center;justify-content:center;cursor:zoom-out}
+.lb img{max-width:90vw;max-height:90vh;border-radius:var(--rm);box-shadow:var(--sh3)}
+
+/* Empty */
+.empty{text-align:center;padding:66px 20px}
+.empty-ico{font-size:58px;margin-bottom:16px;opacity:.3}
+.empty h3{font-family:'Abril Fatface',display;font-size:28px;color:var(--ink);margin-bottom:8px}
+.empty p{font-family:'Lora',serif;font-style:italic;color:var(--muted);font-size:16px;margin-bottom:20px}
+
+/* Pricing */
+.pricing-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:16px}
+.pricing-card{background:rgba(253,246,236,.9);border:1.5px solid var(--border);border-radius:var(--rm);padding:22px;transition:all .2s}
+.pricing-card:hover{box-shadow:var(--sh2)}
+.pricing-card.hot{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,168,67,.16)}
+.pname{font-family:'Abril Fatface',display;font-size:23px;color:var(--ink);margin-bottom:4px}
+.pprice{font-family:'Abril Fatface',display;font-size:36px;color:var(--cog)}
+.pprice span{font-size:14px;color:var(--muted);font-family:'Raleway',sans-serif;font-weight:600}
+.pdesc{font-family:'Lora',serif;font-style:italic;font-size:14px;color:var(--muted);margin:8px 0 16px}
+.pfeat{display:flex;align-items:flex-start;gap:7px;font-size:13.5px;font-weight:700;margin-bottom:7px;color:var(--text)}
+.pfeat svg{width:14px;height:14px;color:var(--green);flex-shrink:0;margin-top:2px}
+
+.mob-overlay{position:fixed;inset:0;background:rgba(18,6,0,.55);z-index:190}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+@keyframes su{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fin{animation:fi .35s ease}
+
+@media(max-width:900px){
+  .sidebar{position:absolute;height:100%}
+  .menu-btn{display:flex}
+  .srch input{width:170px}
+  .fg2{grid-template-columns:1fr}
+  .topbar{padding:10px 18px}
+  .hero-title{font-size:34px}
+  .hero-body{padding:28px 26px}
+  .mosaic{grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,130px)}
+  .mc.big{grid-column:span 2;grid-row:span 1}
+}
+@media(max-width:600px){
+  .inv-grid{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .cat-gallery{grid-template-columns:repeat(2,1fr)}
+  .srch input{width:140px}
+  .pricing-grid{grid-template-columns:1fr}
+  .hero-title{font-size:26px}
+  .sc-grid{grid-template-columns:1fr 1fr}
+}
+
+/* ── FLOATING CTA ─────────────────────────────────────────────── */
+.fab {
+  position:fixed; bottom:32px; right:32px; z-index:500;
+  display:flex; flex-direction:column; align-items:flex-end; gap:10px;
+}
+.fab-btn {
+  display:flex; align-items:center; gap:10px;
+  background:linear-gradient(135deg,var(--gold),var(--amber));
+  color:var(--ink); border:none; border-radius:50px;
+  padding:14px 24px; cursor:pointer;
+  font-family:'Raleway',sans-serif; font-size:15px; font-weight:800;
+  box-shadow:0 6px 28px rgba(196,118,26,.55);
+  transition:all .2s; white-space:nowrap;
+  letter-spacing:.2px;
+}
+.fab-btn:hover { transform:translateY(-3px) scale(1.03); box-shadow:0 10px 36px rgba(196,118,26,.65); filter:brightness(1.07); }
+.fab-btn svg   { width:20px; height:20px; flex-shrink:0; }
+.fab-pulse {
+  position:absolute; inset:-4px; border-radius:50px;
+  border:2px solid var(--gold); opacity:0;
+  animation:pulse 2.2s ease-out infinite;
+  pointer-events:none;
+}
+.fab-sub {
+  background:var(--ink); color:rgba(255,255,255,.75);
+  font-family:'Lora',serif; font-style:italic;
+  font-size:13px; padding:6px 14px; border-radius:20px;
+  box-shadow:0 3px 14px rgba(18,6,0,.35);
+  animation:fi .4s ease .6s both;
+}
+@keyframes pulse {
+  0%   { transform:scale(1);    opacity:.7; }
+  70%  { transform:scale(1.12); opacity:0;  }
+  100% { opacity:0; }
+}
+@media(max-width:600px){
+  .fab { bottom:20px; right:16px; }
+  .fab-btn { font-size:13.5px; padding:12px 18px; }
+  .fab-sub { display:none; }
+}
+
+/* ── Landing Page ─────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+:root{--bg:#0d0b11;--bg2:#15121b;--bg3:#1d1925;--bg3h:#252131;--bgi:#110f18;--bd:#282333;--bdl:#38324a;--t1:#ede8df;--t2:#9b93a8;--t3:#685f76;--goldd:#a37f2c;--grn:#4caf50;--blu:#42a5f5;--sh:0 4px 24px rgba(0,0,0,.4);--r:10px;--rs:6px;--tr:.2s ease}
+.lp{min-height:100vh;background:var(--bg);color:var(--t1);overflow-x:hidden;font-family:'DM Sans',sans-serif}
+.lp *{box-sizing:border-box;margin:0;padding:0}
 .lp-grain{position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.04;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)'/%3E%3C/svg%3E")}
 .lpn{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:20px 52px;transition:background .4s,border .4s}
 .lpn.lpns{background:rgba(13,11,17,.94);border-bottom:1px solid rgba(212,168,67,.1);backdrop-filter:blur(14px)}
@@ -313,7 +499,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
 .lp-cat-lbl{font-size:12px;font-weight:500;color:var(--t2)}
 .lp-tg{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:48px}
 .lp-tc{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:28px}
-.lp-tt{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:17px;color:var(--t1);line-height:1.6;margin-bottom:20px;position:relative;z-index:1;}
+.lp-tt{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:17px;color:var(--t1);line-height:1.6;margin-bottom:20px}
 .lp-tn{font-size:12.5px;font-weight:600;color:var(--gold)}
 .lp-tr{font-size:11.5px;color:var(--t3);margin-top:2px}
 .lp-pg{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:52px}
@@ -339,38 +525,788 @@ tr:hover td{background:rgba(255,255,255,.015)}
 .lp-ctr{border-left:1px solid rgba(212,168,67,.35)}
 .lp-ct.open .lp-ctl{transform:translateX(-100%)}
 .lp-ct.open .lp-ctr{transform:translateX(100%)}
-.back-lp{display:flex;align-items:center;gap:7px;padding:7px 11px;margin:8px 9px 0;border-radius:var(--rs);color:var(--t3);cursor:pointer;font-size:12px;font-weight:500;border:1px solid transparent;transition:all var(--tr)}
-.back-lp:hover{background:var(--bg3);color:var(--t2);border-color:var(--bd)}
 @keyframes lp-rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:900px){.lpn{padding:16px 20px}.lpf-row{grid-template-columns:1fr;gap:32px}.lpf-row.rev{direction:ltr}.lp-tg{grid-template-columns:1fr}.lp-pg{grid-template-columns:1fr}.lph-curtl,.lph-curtr{width:40px}.lp-ft{padding:32px 20px 20px}}
 @media(max-width:600px){.lp-cats{grid-template-columns:repeat(3,1fr)}.lph-btns{flex-direction:column;align-items:stretch}.lph-btns button{justify-content:center}}
 `;
 
-// ─── Landing Page ────────────────────────────────────────────────────────────
-function LandingPage({onLaunch}){
+const Ic = {
+  search:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>,
+  plus:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>,
+  edit:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+  trash:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
+  x:       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12"/></svg>,
+  menu:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>,
+  home:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>,
+  box:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>,
+  store:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/><path d="m3 9 2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/><path d="M12 3v6"/></svg>,
+  chart:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>,
+  settings:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>,
+  filter:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
+  check:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,
+  dl:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+  cam:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>,
+};
+
+function Modal({title,onClose,children,footer}){
+  useEffect(()=>{const h=e=>e.key==="Escape"&&onClose();window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h)},[onClose]);
+  return(
+    <div className="overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div className="modal-hd"><h2>{title}</h2><button className="ico-btn" onClick={onClose}>{Ic.x}</button></div>
+        <div className="modal-bd">{children}</div>
+        {footer&&<div className="modal-ft">{footer}</div>}
+      </div>
+    </div>
+  );
+}
+
+function ItemForm({item,onSave,onCancel,submitId,userId}){
+  const blank={name:"",category:"costumes",condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,avail:"In Stock",img:null,tags:[]};
+  const[f,setF]=useState(item||blank);
+  const[ti,setTi]=useState("");
+  const[upl,setUpl]=useState(false);
+  const fr=useRef();
+  const upd=(k,v)=>setF(p=>({...p,[k]:v}));
+  // Keep a ref always pointing at latest form state so the footer button works
+  const fRef=useRef(f);
+  useEffect(()=>{fRef.current=f;},[f]);
+  useEffect(()=>{
+    if(!submitId) return;
+    const btn=document.getElementById(submitId);
+    if(!btn) return;
+    const handler=()=>{ const cur=fRef.current; if(cur.name.trim()) onSave(cur); };
+    btn.onclick=handler;
+    btn.disabled=!f.name.trim();
+    btn.style.opacity=f.name.trim()?'1':'.42';
+  },[f.name,submitId,onSave]);
+  const showRent=f.mkt==="For Rent"||f.mkt==="Rent or Sale";
+  const showSale=f.mkt==="For Sale"||f.mkt==="Rent or Sale";
+  const handlePhoto=async e=>{
+    const file=e.target.files?.[0];if(!file)return;
+    setUpl(true);
+    const url = userId ? await uploadPhoto(file, userId) : await resizeImg(file);
+    if(url) upd("img", url);
+    else alert("Photo upload failed. Please try again.");
+    setUpl(false);
+    if(fr.current)fr.current.value="";
+  };
+  const addTag=()=>{const t=ti.trim().toLowerCase();if(t&&!(f.tags||[]).includes(t))upd("tags",[...(f.tags||[]),t]);setTi("");};
+  return(
+    <div className="fg2">
+      <div className="fg fu"><label className="fl">Item Name *</label><input className="fi" value={f.name} onChange={e=>upd("name",e.target.value)} placeholder="e.g. Victorian Ball Gown" autoFocus/></div>
+      <div className="fg"><label className="fl">Category</label><select className="fs" value={f.category} onChange={e=>upd("category",e.target.value)}>{CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</select></div>
+      <div className="fg"><label className="fl">Condition</label><select className="fs" value={f.condition} onChange={e=>upd("condition",e.target.value)}>{CONDS.map(c=><option key={c}>{c}</option>)}</select></div>
+      <div className="fg"><label className="fl">Size</label><select className="fs" value={f.size} onChange={e=>upd("size",e.target.value)}>{SIZES.map(s=><option key={s}>{s}</option>)}</select></div>
+      <div className="fg"><label className="fl">Quantity</label><input className="fi" type="number" min="0" value={f.qty} onChange={e=>upd("qty",parseInt(e.target.value)||0)}/></div>
+      <div className="fg"><label className="fl">Availability</label><select className="fs" value={f.avail} onChange={e=>upd("avail",e.target.value)}>{AVAIL.map(a=><option key={a}>{a}</option>)}</select></div>
+      <div className="fg"><label className="fl">Location</label><input className="fi" value={f.location} onChange={e=>upd("location",e.target.value)} placeholder="e.g. Costume Closet A"/></div>
+      <div className="fg fu sdiv">
+        <div className="slbl">📷 Photo</div>
+        <div style={{display:"flex",gap:10}}>
+          {f.img?<div className="ph-wrap"><img src={f.img} alt=""/><button className="ph-rm" onClick={()=>upd("img",null)}>×</button></div>
+                :<label className="ph-add" style={{opacity:upl?.5:1}}>{Ic.cam}<span>{upl?"Uploading…":"Add Photo"}</span><input ref={fr} type="file" accept="image/*" hidden onChange={handlePhoto} disabled={upl}/></label>}
+        </div>
+      </div>
+      <div className="fg fu">
+        <div className="slbl">🏷 Tags</div>
+        <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>{(f.tags||[]).map(t=><span key={t} className="tc" onClick={()=>upd("tags",f.tags.filter(x=>x!==t))}>#{t} ×</span>)}</div>
+        <div style={{display:"flex",gap:7}}><input className="fi" style={{flex:1}} value={ti} onChange={e=>setTi(e.target.value)} placeholder="Add tag…" onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addTag()}}}/><button className="btn btn-o btn-sm" onClick={addTag}>Add</button></div>
+      </div>
+      <div className="fg fu"><label className="fl">Notes</label><textarea className="ft" value={f.notes} onChange={e=>upd("notes",e.target.value)} placeholder="Production history, care instructions…"/></div>
+      <div className="fg fu sdiv"><div className="slbl">🏪 Marketplace</div></div>
+      <div className="fg"><label className="fl">Listing Status</label><select className="fs" value={f.mkt} onChange={e=>upd("mkt",e.target.value)}>{MKT.map(s=><option key={s}>{s}</option>)}</select></div>
+      <div className="fg"/>
+      {showRent&&<div className="fg"><label className="fl">Rental / week ($)</label><input className="fi" type="number" min="0" step="0.01" value={f.rent} onChange={e=>upd("rent",parseFloat(e.target.value)||0)}/></div>}
+      {showSale&&<div className="fg"><label className="fl">Sale Price ($)</label><input className="fi" type="number" min="0" step="0.01" value={f.sale} onChange={e=>upd("sale",parseFloat(e.target.value)||0)}/></div>}
+
+    </div>
+  );
+}
+
+function ItemDetail({item,onEdit,onDelete}){
+  const cat=CAT[item.category]||CAT.other;
+  const[lb,setLb]=useState(false);
+  const fb=usp(CAT_IMG[item.category]||CAT_IMG.other,800,480);
+  const src=item.img||fb;
+  const mktCls=item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="Rent or Sale"?"mb-both":"mb-none";
+  return(
+    <>
+      {lb&&<div className="lb" onClick={()=>setLb(false)}><img src={src} alt=""/></div>}
+      <div className="dt-img" onClick={()=>setLb(true)}>
+        <img src={src} alt={item.name}/>
+        {!item.img&&<><div style={{position:"absolute",inset:0,background:"linear-gradient(transparent 50%,rgba(18,6,0,.5))"}}/><div style={{position:"absolute",bottom:12,left:14,color:"rgba(255,255,255,.65)",fontSize:12,fontFamily:"'Lora',serif",fontStyle:"italic"}}>Representative image</div></>}
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:13,marginBottom:16}}>
+        <div style={{width:50,height:50,background:cat.color+"22",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0,border:`1.5px solid ${cat.color}44`}}>{cat.icon}</div>
+        <div>
+          <div style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1.5,color:cat.color}}>{cat.label}</div>
+          <div style={{fontFamily:"'Abril Fatface',display",fontSize:24,color:"var(--ink)",lineHeight:1.1}}>{item.name}</div>
+        </div>
+      </div>
+      {(item.tags||[]).length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>{item.tags.map(t=><span key={t} style={{background:"rgba(196,118,26,.12)",color:"var(--cog)",fontSize:12.5,fontWeight:700,padding:"3px 9px",borderRadius:3}}>#{t}</span>)}</div>}
+      <div className="dt-sec"><h3>Details</h3>
+        {[["Condition",item.condition],["Size",item.size],["Quantity",item.qty],["Availability",item.avail],["Location",item.location||"—"],["Notes",item.notes||"—"],["Added",item.added?new Date(item.added).toLocaleDateString():"—"],["ID",<span style={{fontFamily:"monospace",fontSize:11,color:"var(--faint)"}}>{item.id}</span>]].map(([l,v])=>(
+          <div className="dt-row" key={l}><span className="dt-lbl">{l}</span><span>{v}</span></div>
+        ))}
+      </div>
+      <div className="dt-sec"><h3>Marketplace</h3>
+        <div className="dt-row"><span className="dt-lbl">Status</span><span className={`mkt-badge ${mktCls}`}>{item.mkt}</span></div>
+        {(item.mkt==="For Rent"||item.mkt==="Rent or Sale")&&<div className="dt-row"><span className="dt-lbl">Rental/week</span><span className="price">{fmt$(item.rent)}</span></div>}
+        {(item.mkt==="For Sale"||item.mkt==="Rent or Sale")&&<div className="dt-row"><span className="dt-lbl">Sale Price</span><span className="price">{fmt$(item.sale)}</span></div>}
+      </div>
+      <div style={{display:"flex",gap:8,marginTop:16}}>
+        <button className="btn btn-p btn-sm" onClick={onEdit}><span style={{width:14,height:14,display:"flex"}}>{Ic.edit}</span>Edit</button>
+        <button className="btn btn-d btn-sm" onClick={()=>{if(window.confirm("Delete this item?"))onDelete(item.id)}}><span style={{width:14,height:14,display:"flex"}}>{Ic.trash}</span>Delete</button>
+      </div>
+    </>
+  );
+}
+
+function Pager({total,page,per,onPage}){
+  const pages=Math.ceil(total/per);if(pages<=1)return null;
+  const s=Math.max(1,page-2),e=Math.min(pages,page+2),nums=[];
+  for(let i=s;i<=e;i++)nums.push(i);
+  return(
+    <div className="pgn">
+      <button disabled={page<=1} onClick={()=>onPage(page-1)}>‹</button>
+      {s>1&&<><button onClick={()=>onPage(1)}>1</button><span style={{color:"var(--faint)"}}>…</span></>}
+      {nums.map(n=><button key={n} className={n===page?"on":""} onClick={()=>onPage(n)}>{n}</button>)}
+      {e<pages&&<><span style={{color:"var(--faint)"}}>…</span><button onClick={()=>onPage(pages)}>{pages}</button></>}
+      <button disabled={page>=pages} onClick={()=>onPage(page+1)}>›</button>
+    </div>
+  );
+}
+
+/* ── PAGES ─────────────────────────────────────────────────────────────────── */
+
+function Dashboard({items,org,goInventory}){
+  const totalQty=items.reduce((s,i)=>s+(i.qty||1),0);
+  const listed=items.filter(i=>i.mkt!=="Not Listed").length;
+  const withImg=items.filter(i=>i.img).length;
+  const totalVal=items.reduce((s,i)=>s+((i.sale||0)*(i.qty||1)),0);
+  const cc={};items.forEach(i=>{cc[i.category]=(cc[i.category]||0)+(i.qty||1)});
+  const maxC=Math.max(1,...Object.values(cc));
+  return(
+    <div style={{position:"relative",padding:"32px 36px 56px"}}>
+      <img src={usp(BG.dashboard,1400,900)} alt="" className="page-bg-img"/>
+      <div className="page-layer">
+        {/* Hero */}
+        <div className="hero-wrap" style={{height:380,marginBottom:32}}>
+          <img src={usp(BG.dashboard,1200,480)} alt="Grand Theatre" loading="eager"/>
+          <div className="hero-fade"/>
+          <div className="hero-body">
+            <div className="hero-eyebrow">🎭 Theatre Inventory & Marketplace</div>
+            <h1 className="hero-title">{org.name?`Welcome,\n${org.name}`:"Welcome to\nTheatre4u"}</h1>
+            <p className="hero-sub">Everything your program owns — cataloged, photographed, and ready to share with the wider arts community.</p>
+          </div>
+          <div className="hero-bar"/>
+        </div>
+        {/* Stats */}
+        <div className="stats">
+          {[{ico:"📦",val:totalQty,lbl:"Total Items",col:"#c4761a"},{ico:"📂",val:items.length,lbl:"Entries",col:"#1554a0"},{ico:"🏪",val:listed,lbl:"On Marketplace",col:"#27723a"},{ico:"📷",val:withImg,lbl:"With Photos",col:"#a0144e"},{ico:"💰",val:totalVal>0?fmt$(totalVal):"—",lbl:"Est. Value",col:"#8b3a0f"}].map(s=>(
+            <div key={s.lbl} className="stat" style={{borderTop:`4px solid ${s.col}`}}>
+              <div className="stat-ico">{s.ico}</div>
+              <div className="stat-val">{s.val}</div>
+              <div className="stat-lbl">{s.lbl}</div>
+            </div>
+          ))}
+        </div>
+        {/* Mosaic */}
+        <div className="sh"><h2>From the Stage</h2><p>A glimpse of what arts programs are cataloging and sharing nationwide.</p></div>
+        <div className="mosaic" style={{marginBottom:32}}>
+          <div className="mc big"><img src={usp("photo-1503095396549-807759245b35",800,400)} alt="Grand Theatre" loading="lazy"/><div className="mc-lbl">Grand Stage Interiors</div></div>
+          <div className="mc"><img src={usp("photo-1509631179647-0177331693ae",400,200)} alt="Costumes" loading="lazy"/><div className="mc-lbl">Costumes</div></div>
+          <div className="mc"><img src={usp("photo-1514525253161-7a46d19cd819",400,200)} alt="Lighting" loading="lazy"/><div className="mc-lbl">Stage Lighting</div></div>
+          <div className="mc"><img src={usp("photo-1516450360452-9312f5e86fc7",400,200)} alt="Effects" loading="lazy"/><div className="mc-lbl">Special Effects</div></div>
+          <div className="mc"><img src={usp("photo-1598488035139-bdbb2231ce04",400,200)} alt="Sound" loading="lazy"/><div className="mc-lbl">Sound Equipment</div></div>
+        </div>
+        {/* Divider 1 */}
+        <div className="img-div" style={{marginBottom:32}}>
+          <img src={usp("photo-1560179707-f14e90ef3623",1000,240)} alt="Stage" loading="lazy"/>
+          <div className="img-div-fade"/>
+          <div className="img-div-text">
+            <h3>The Theatre Marketplace</h3>
+            <p>Rent or buy costumes, props, lighting and more from programs in your community.</p>
+          </div>
+        </div>
+        {/* Marketplace Highlights — populated by real listings */}
+        <div className="sh"><h2>Marketplace Highlights</h2><p>Items listed for rent or sale by programs in your community will appear here.</p></div>
+        <div style={{background:"var(--parch)",border:"2px dashed var(--border)",borderRadius:"var(--rl)",padding:"40px 32px",textAlign:"center",marginBottom:36}}>
+          <div style={{fontSize:44,marginBottom:12}}>🏪</div>
+          <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:8}}>No Listings Yet</h3>
+          <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 18px"}}>When you or other programs list items for rent or sale on the Marketplace, they'll be showcased here for the whole community to discover.</p>
+          <button className="btn btn-g" onClick={()=>nav("marketplace")} style={{display:"inline-flex",alignItems:"center",gap:7}}>
+            <span>Browse Marketplace</span>
+          </button>
+        </div>
+        {/* Category gallery */}
+        <div className="sh"><h2>Browse by Category</h2><p>Click any category to explore your inventory.</p></div>
+        <div className="cat-gallery" style={{marginBottom:36}}>
+          {CATS.map(cat=>{
+            const count=items.filter(it=>it.category===cat.id).length;
+            return(
+              <div key={cat.id} className="cat-tile" onClick={goInventory}>
+                <img src={usp(CAT_IMG[cat.id]||CAT_IMG.other,300,160)} alt={cat.label} loading="lazy"/>
+                <div className="cat-info"><span className="cat-emo">{cat.icon}</span><span className="cat-name">{cat.label}</span>{count>0&&<div className="cat-cnt">{count} item{count!==1?"s":""}</div>}</div>
+              </div>
+            );
+          })}
+        </div>
+        {/* Divider 2 */}
+        <div className="img-div" style={{marginBottom:32}}>
+          <img src={usp("photo-1504196606672-aef5c9cefc92",1000,240)} alt="Theatre seats" loading="lazy"/>
+          <div className="img-div-fade"/>
+          <div className="img-div-text">
+            <h3>Every Seat Filled. Every Prop Accounted For.</h3>
+            <p>Theatre4u keeps your whole program organized from rehearsal to curtain call.</p>
+          </div>
+        </div>
+        {/* Bar chart */}
+        {items.length>0?(
+          <div className="card card-p">
+            <div className="sh" style={{marginBottom:20}}><h2>Inventory at a Glance</h2></div>
+            {CATS.map(cat=>{const c=cc[cat.id]||0;if(!c)return null;return(
+              <div key={cat.id} className="bar-row">
+                <span className="bar-ico">{cat.icon}</span>
+                <span className="bar-lbl">{cat.label}</span>
+                <div className="bar-track"><div className="bar-fill" style={{width:`${(c/maxC)*100}%`,background:cat.color}}/></div>
+                <span className="bar-cnt">{c}</span>
+              </div>
+            );})}
+          </div>
+        ):(
+          <div className="empty"><div className="empty-ico">🎭</div><h3>Your Stage Awaits</h3><p>Load sample data from Settings, or add your first item to begin.</p></div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Inventory({items,onAdd,onEdit,onDelete,userId}){
+  const[search,setSrch]=useState("");const[catF,setCatF]=useState("all");
+  const[condF,setCondF]=useState("all");const[availF,setAvailF]=useState("all");
+  const[mktF,setMktF]=useState("all");const[view,setView]=useState("grid");
+  const[showF,setShowF]=useState(false);const[pg,setPg]=useState(1);
+  const[modal,setModal]=useState(null);const[active,setActive]=useState(null);
+  const PP=20;
+  const mktCls=m=>m==="For Rent"?"mb-rent":m==="For Sale"?"mb-sale":m==="Rent or Sale"?"mb-both":"mb-none";
+  const filtered=useMemo(()=>{
+    let f=items;
+    if(search){const q=search.toLowerCase();f=f.filter(i=>i.name.toLowerCase().includes(q)||(i.notes||"").toLowerCase().includes(q)||(i.location||"").toLowerCase().includes(q)||(i.tags||[]).some(t=>t.includes(q)))}
+    if(catF!=="all")f=f.filter(i=>i.category===catF);
+    if(condF!=="all")f=f.filter(i=>i.condition===condF);
+    if(availF!=="all")f=f.filter(i=>i.avail===availF);
+    if(mktF!=="all")f=f.filter(i=>i.mkt===mktF);
+    return f;
+  },[items,search,catF,condF,availF,mktF]);
+  const paged=useMemo(()=>filtered.slice((pg-1)*PP,pg*PP),[filtered,pg]);
+  useEffect(()=>setPg(1),[search,catF,condF,availF,mktF]);
+  const openD=item=>{setActive(item);setModal("d")};
+  const openE=item=>{setActive(item);setModal("e")};
+  const handleSave=form=>{
+    if(active&&modal==="e")onEdit({...active,...form});
+    else onAdd({...form,id:uid(),added:new Date().toISOString()});
+    setModal(null);setActive(null);
+  };
+  return(
+    <div style={{position:"relative"}}>
+      <img src={usp(BG.inventory,1400,900)} alt="" className="page-bg-img"/>
+      <div style={{padding:"32px 36px 0"}}>
+        <div className="hero-wrap" style={{height:240}}>
+          <img src={usp(BG.inventory,1100,300)} alt="Stage" loading="lazy"/>
+          <div className="hero-fade"/>
+          <div className="hero-body">
+            <div className="hero-eyebrow">📦 Your Collection</div>
+            <h1 className="hero-title" style={{fontSize:46}}>Inventory</h1>
+            <p className="hero-sub">Every costume, prop, set piece and piece of gear — all in one place.</p>
+          </div>
+          <div className="hero-bar"/>
+        </div>
+      </div>
+      <div style={{padding:"24px 36px 56px",position:"relative",zIndex:1}}>
+        <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:14,alignItems:"center"}}>
+          <div className="srch">{Ic.search}<input value={search} onChange={e=>setSrch(e.target.value)} placeholder="Search items, tags, location…"/></div>
+          <button className="ico-btn" style={showF?{borderColor:"var(--gold)",color:"var(--cog)"}:{}} onClick={()=>setShowF(!showF)}>{Ic.filter}</button>
+          <div className="vtog"><button className={view==="grid"?"on":""} onClick={()=>setView("grid")}>Grid</button><button className={view==="table"?"on":""} onClick={()=>setView("table")}>Table</button></div>
+          <div style={{marginLeft:"auto"}}><button className="btn btn-g" onClick={()=>{setActive(null);setModal("a")}}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add Item</button></div>
+        </div>
+        {showF&&(
+          <div className="fbar fin">
+            <div><label>Category</label><select value={catF} onChange={e=>setCatF(e.target.value)}><option value="all">All</option>{CATS.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></div>
+            <div><label>Condition</label><select value={condF} onChange={e=>setCondF(e.target.value)}><option value="all">All</option>{CONDS.map(c=><option key={c}>{c}</option>)}</select></div>
+            <div><label>Availability</label><select value={availF} onChange={e=>setAvailF(e.target.value)}><option value="all">All</option>{AVAIL.map(a=><option key={a}>{a}</option>)}</select></div>
+            <div><label>Marketplace</label><select value={mktF} onChange={e=>setMktF(e.target.value)}><option value="all">All</option>{MKT.map(s=><option key={s}>{s}</option>)}</select></div>
+            <button className="btn btn-o btn-sm" onClick={()=>{setCatF("all");setCondF("all");setAvailF("all");setMktF("all")}}>Clear</button>
+          </div>
+        )}
+        <div style={{fontSize:13,fontWeight:700,color:"var(--faint)",marginBottom:12}}>{filtered.length} item{filtered.length!==1?"s":""}</div>
+        {view==="grid"&&(paged.length===0
+          ?<div className="empty"><div className="empty-ico">🎭</div><h3>No Items Found</h3><p>{items.length===0?"Add your first item to build your catalog.":"Try adjusting search or filters."}</p>{items.length===0&&<button className="btn btn-g" onClick={()=>{setActive(null);setModal("a")}}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add First Item</button>}</div>
+          :<div className="inv-grid">
+              {paged.map(item=>{
+                const cat=CAT[item.category]||CAT.other;
+                const fb=usp(CAT_IMG[item.category]||CAT_IMG.other,400,220);
+                return(
+                  <div key={item.id} className="inv-card" onClick={()=>openD(item)}>
+                    <div className="inv-img"><img src={item.img||fb} alt={item.name} loading="lazy" style={!item.img?{opacity:.72}:{}}/></div>
+                    <div className="inv-body">
+                      <div className="inv-cat" style={{color:cat.color}}>{cat.icon} {cat.label}</div>
+                      <div className="inv-name">{item.name}</div>
+                      <div className="inv-meta"><span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span>{item.size!=="N/A"&&<span className="chip">{item.size}</span>}<span className="chip">{item.avail}</span></div>
+                      <div className="inv-foot"><span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span>{item.mkt!=="Not Listed"&&<span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+        )}
+        {view==="table"&&(
+          <div className="tw">
+            <table>
+              <thead><tr><th></th><th>Item</th><th>Category</th><th>Cond.</th><th>Qty</th><th>Location</th><th>Avail.</th><th>Market</th><th></th></tr></thead>
+              <tbody>
+                {paged.map(item=>{
+                  const cat=CAT[item.category]||CAT.other;
+                  const fb=usp(CAT_IMG[item.category]||CAT_IMG.other,60,60);
+                  return(
+                    <tr key={item.id}>
+                      <td style={{width:40,padding:"4px 8px"}}><img src={item.img||fb} alt="" style={{width:32,height:32,borderRadius:4,objectFit:"cover",opacity:item.img?1:.7}}/></td>
+                      <td style={{fontFamily:"'Lora',serif",fontWeight:600,fontSize:15,cursor:"pointer",color:"var(--ink)"}} onClick={()=>openD(item)}>{item.name}</td>
+                      <td style={{fontWeight:700,color:"var(--muted)"}}>{cat.icon} {cat.label}</td>
+                      <td>{item.condition}</td><td style={{fontWeight:800}}>{item.qty}</td>
+                      <td style={{color:"var(--muted)"}}>{item.location||"—"}</td>
+                      <td>{item.avail}</td>
+                      <td><span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span></td>
+                      <td><div style={{display:"flex",gap:4}}>
+                        <button className="ico-btn" onClick={e=>{e.stopPropagation();openE(item)}}>{Ic.edit}</button>
+                        <button className="ico-btn" style={{color:"var(--red)"}} onClick={e=>{e.stopPropagation();if(window.confirm("Delete?"))onDelete(item.id)}}>{Ic.trash}</button>
+                      </div></td>
+                    </tr>
+                  );
+                })}
+                {paged.length===0&&<tr><td colSpan={9} style={{textAlign:"center",color:"var(--faint)",padding:40,fontFamily:"'Lora',serif",fontStyle:"italic"}}>No items found</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <Pager total={filtered.length} page={pg} per={PP} onPage={setPg}/>
+      </div>
+      {modal==="a"&&(<Modal title="Add New Item" onClose={()=>setModal(null)}
+          footer={<><button className="btn btn-o" onClick={()=>setModal(null)}>Cancel</button><button className="btn btn-g" id="form-save-btn">Add Item</button></>}>
+          <ItemForm onSave={handleSave} onCancel={()=>setModal(null)} submitId="form-save-btn" userId={userId}/>
+        </Modal>)}
+      {modal==="e"&&active&&(<Modal title="Edit Item" onClose={()=>setModal(null)}
+          footer={<><button className="btn btn-o" onClick={()=>setModal(null)}>Cancel</button><button className="btn btn-g" id="form-save-btn">Save Changes</button></>}>
+          <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} submitId="form-save-btn" userId={userId}/>
+        </Modal>)}
+      {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} onEdit={()=>setModal("e")} onDelete={id=>{onDelete(id);setModal(null);setActive(null)}}/></Modal>}
+    </div>
+  );
+}
+
+function Marketplace({items,org}){
+  const[search,setSrch]=useState("");const[catF,setCatF]=useState("all");
+  const[typeF,setTypeF]=useState("all");const[pg,setPg]=useState(1);
+  const[viewing,setViewing]=useState(null);
+  const PP=16;
+  const mktCls=m=>m==="For Rent"?"mb-rent":m==="For Sale"?"mb-sale":"mb-both";
+  const listed=useMemo(()=>{
+    let f=items.filter(i=>i.mkt!=="Not Listed"&&i.avail==="In Stock");
+    if(search){const q=search.toLowerCase();f=f.filter(i=>i.name.toLowerCase().includes(q))}
+    if(catF!=="all")f=f.filter(i=>i.category===catF);
+    if(typeF==="rent")f=f.filter(i=>i.mkt.includes("Rent"));
+    if(typeF==="sale")f=f.filter(i=>i.mkt.includes("Sale"));
+    return f;
+  },[items,search,catF,typeF]);
+  const paged=useMemo(()=>listed.slice((pg-1)*PP,pg*PP),[listed,pg]);
+  useEffect(()=>setPg(1),[search,catF,typeF]);
+  return(
+    <div style={{position:"relative"}}>
+      <img src={usp(BG.marketplace,1400,900)} alt="" className="page-bg-img"/>
+      <div style={{padding:"32px 36px 0"}}>
+        <div className="hero-wrap" style={{height:280}}>
+          <img src={usp(BG.marketplace,1100,340)} alt="Marketplace" loading="eager"/>
+          <div className="hero-fade"/>
+          <div className="hero-body">
+            <div className="hero-eyebrow">🏪 Community Exchange</div>
+            <h1 className="hero-title" style={{fontSize:46}}>The Marketplace</h1>
+            <p className="hero-sub">Rent or buy costumes, props, lighting, sound and more from programs near you. Give assets a second life.</p>
+          </div>
+          <div className="hero-bar"/>
+        </div>
+      </div>
+      <div style={{padding:"24px 36px 56px",position:"relative",zIndex:1}}>
+        <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:14,alignItems:"center"}}>
+          <div className="srch">{Ic.search}<input value={search} onChange={e=>setSrch(e.target.value)} placeholder="Search listings…"/></div>
+          <select style={{background:"rgba(253,246,236,.9)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"8px 11px",fontSize:14,fontWeight:700,color:"var(--text)",fontFamily:"'Raleway',sans-serif",outline:"none"}} value={catF} onChange={e=>setCatF(e.target.value)}>
+            <option value="all">All Categories</option>{CATS.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}
+          </select>
+          <div className="vtog"><button className={typeF==="all"?"on":""} onClick={()=>setTypeF("all")}>All</button><button className={typeF==="rent"?"on":""} onClick={()=>setTypeF("rent")}>Rent</button><button className={typeF==="sale"?"on":""} onClick={()=>setTypeF("sale")}>Sale</button></div>
+        </div>
+        <div style={{fontSize:13,fontWeight:700,color:"var(--faint)",marginBottom:12}}>{listed.length} listing{listed.length!==1?"s":""}</div>
+        {paged.length===0
+          ?<div className="empty"><div className="empty-ico">🏪</div><h3>No Listings Yet</h3><p>Mark items as "For Rent" or "For Sale" in your Inventory to display them here.</p></div>
+          :<div className="inv-grid">
+              {paged.map(item=>{
+                const cat=CAT[item.category]||CAT.other;
+                const fb=usp(CAT_IMG[item.category]||CAT_IMG.other,400,220);
+                return(
+                  <div key={item.id} className="inv-card" onClick={()=>setViewing(item)}>
+                    {org.name&&<div style={{padding:"6px 14px",background:"var(--parch)",borderBottom:"1px solid var(--linen)",fontSize:11,fontWeight:800,color:"var(--amber)",textTransform:"uppercase",letterSpacing:1.5}}>{org.name}</div>}
+                    <div className="inv-img"><img src={item.img||fb} alt={item.name} loading="lazy" style={!item.img?{opacity:.72}:{}}/></div>
+                    <div className="inv-body">
+                      <div className="inv-cat" style={{color:cat.color}}>{cat.icon} {cat.label}</div>
+                      <div className="inv-name">{item.name}</div>
+                      {item.notes&&<p style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:14,color:"var(--muted)",margin:"3px 0 8px",lineHeight:1.5}}>{item.notes.slice(0,80)}{item.notes.length>80?"…":""}</p>}
+                      <div className="inv-meta"><span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span></div>
+                      <div className="inv-foot">
+                        <span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span>
+                        <span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+        }
+        <Pager total={listed.length} page={pg} per={PP} onPage={setPg}/>
+      </div>
+      {viewing&&<Modal title="Listing Details" onClose={()=>setViewing(null)}><ItemDetail item={viewing} onEdit={()=>{}} onDelete={()=>{}}/></Modal>}
+    </div>
+  );
+}
+
+function Reports({ items }) {
+  const [tab,setTab] = useState("overview");
+  const totalQty  = items.reduce((s,i)=>s+(i.qty||1),0);
+  const catData   = CATS.map(cat=>{const ci=items.filter(i=>i.category===cat.id);return{...cat,count:ci.length,qty:ci.reduce((s,i)=>s+(i.qty||1),0),val:ci.reduce((s,i)=>s+((i.sale||0)*(i.qty||1)),0)}}).filter(c=>c.count>0);
+  const condData  = CONDS.map(c=>({l:c,n:items.filter(i=>i.condition===c).length})).filter(c=>c.n>0);
+  const availData = AVAIL.map(a=>({l:a,n:items.filter(i=>i.avail===a).length})).filter(a=>a.n>0);
+  const mktData   = MKT.map(s=>({l:s,n:items.filter(i=>i.mkt===s).length})).filter(m=>m.n>0);
+  const maxN = n => Math.max(1,n);
+  const locData = Object.entries(
+    items.reduce((acc,i)=>{
+      const loc=i.location||"Unassigned";
+      if(!acc[loc]) acc[loc]={count:0,qty:0,items:[]};
+      acc[loc].count++;
+      acc[loc].qty+=(i.qty||1);
+      acc[loc].items.push(i);
+      return acc;
+    },{})
+  ).sort((a,b)=>b[1].qty-a[1].qty);
+
+  const csv = () => {
+    const h=["Name","Category","Condition","Size","Qty","Location","Availability","Market","Rent","Sale","Tags","Notes","ID","Added"];
+    const rows=items.map(i=>[i.name,i.category,i.condition,i.size,i.qty,i.location,i.avail,i.mkt,i.rent,i.sale,(i.tags||[]).join(";"),`"${(i.notes||"").replace(/"/g,'""')}"`,i.id,i.added]);
+    const csv=[h,...rows].map(r=>r.join(",")).join("\n");
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="theatre4u_inventory.csv";a.click();
+  };
+
+  return(
+    <div style={{position:"relative"}}>
+      <img src={usp(BG.reports,1400,900)} alt="" className="page-bg-img"/>
+
+      <div style={{padding:"32px 36px 0"}}>
+        <div className="hero-wrap" style={{height:230}}>
+          <img src={usp(BG.reports,1100,290)} alt="Reports" loading="lazy"/>
+          <div className="hero-fade"/>
+          <div className="hero-body">
+            <div className="hero-eyebrow">📊 Analytics</div>
+            <h1 className="hero-title" style={{fontSize:44}}>Reports</h1>
+            <p className="hero-sub">Breakdowns, condition tracking, and data exports for your program.</p>
+          </div>
+          <div style={{position:"absolute",bottom:24,right:30,zIndex:2}}>
+            <button className="btn btn-g" onClick={csv}><span style={{width:14,height:14,display:"flex"}}>{Ic.dl}</span>Export CSV</button>
+          </div>
+          <div className="hero-bar"/>
+        </div>
+      </div>
+
+      <div style={{padding:"24px 36px 48px",position:"relative",zIndex:1}}>
+        <div className="tabs">
+          {[["overview","Overview"],["condition","Condition"],["availability","Availability"],["market","Marketplace"],["location","Locations"]].map(([t,l])=>(
+            <button key={t} className={`tab ${tab===t?"on":""}`} onClick={()=>setTab(t)}>{l}</button>
+          ))}
+        </div>
+
+        {tab==="overview"&&(
+          <div className="card card-p">
+            <div className="sh"><h2>Category Breakdown</h2></div>
+            <div className="tw">
+              <table>
+                <thead><tr><th>Category</th><th>Entries</th><th>Total Qty</th><th>Est. Value</th></tr></thead>
+                <tbody>
+                  {catData.map(c=>(
+                    <tr key={c.id}>
+                      <td style={{fontWeight:700}}>{c.icon} {c.label}</td>
+                      <td>{c.count}</td>
+                      <td style={{fontWeight:800}}>{c.qty}</td>
+                      <td style={{fontFamily:"'Abril Fatface',display",color:"var(--cog)",fontSize:16}}>{c.val>0?fmt$(c.val):"—"}</td>
+                    </tr>
+                  ))}
+                  <tr style={{background:"var(--parch)"}}>
+                    <td style={{fontFamily:"'Abril Fatface',display",fontSize:17}}>Total</td>
+                    <td style={{fontWeight:800}}>{items.length}</td>
+                    <td style={{fontWeight:800}}>{totalQty}</td>
+                    <td style={{fontFamily:"'Abril Fatface',display",color:"var(--cog)",fontSize:18}}>{fmt$(catData.reduce((s,c)=>s+c.val,0))}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {tab==="condition"&&(
+          <div className="card card-p">
+            <div className="sh"><h2>Condition Report</h2></div>
+            {condData.map(c=>(
+              <div className="bar-row" key={c.l}>
+                <span className="bar-lbl" style={{width:110}}>{c.l}</span>
+                <div className="bar-track"><div className="bar-fill" style={{width:`${(c.n/maxN(items.length))*100}%`,background:c.l==="New"?"#4caf50":c.l==="Excellent"?"#66bb6a":c.l==="Good"?"#42a5f5":"#ffa726"}}/></div>
+                <span className="bar-cnt">{c.n}</span>
+              </div>
+            ))}
+            {condData.length===0&&<p style={{color:"var(--faint)",fontStyle:"italic",fontFamily:"'Lora',serif"}}>No data yet.</p>}
+          </div>
+        )}
+
+        {tab==="availability"&&(
+          <div className="card card-p">
+            <div className="sh"><h2>Availability</h2></div>
+            {availData.map(a=>(
+              <div className="bar-row" key={a.l}>
+                <span className="bar-lbl" style={{width:130}}>{a.l}</span>
+                <div className="bar-track"><div className="bar-fill" style={{width:`${(a.n/maxN(items.length))*100}%`,background:a.l==="In Stock"?"#4caf50":a.l==="In Use"?"#42a5f5":"#ffa726"}}/></div>
+                <span className="bar-cnt">{a.n}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab==="market"&&(
+          <div className="card card-p">
+            <div className="sh"><h2>Marketplace Status</h2></div>
+            {mktData.map(m=>(
+              <div className="bar-row" key={m.l}>
+                <span className="bar-lbl" style={{width:130}}>{m.l}</span>
+                <div className="bar-track"><div className="bar-fill" style={{width:`${(m.n/maxN(items.length))*100}%`,background:m.l.includes("Rent")?"#42a5f5":m.l.includes("Sale")?"#4caf50":m.l==="Rent or Sale"?"#d4a843":"#aaa"}}/></div>
+                <span className="bar-cnt">{m.n}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab==="location"&&(
+          <div className="card card-p">
+            <div className="sh"><h2>Items by Location</h2><p>Where everything is stored across your facility.</p></div>
+            {locData.length===0
+              ? <p style={{color:"var(--muted)",textAlign:"center",padding:24}}>No items yet.</p>
+              : locData.map(([loc,data])=>(
+                <div key={loc} style={{marginBottom:24}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,paddingBottom:6,borderBottom:"1px solid var(--border)"}}>
+                    <span style={{fontSize:18}}>📍</span>
+                    <span style={{fontFamily:"'Abril Fatface',display",fontSize:17}}>{loc}</span>
+                    <span style={{marginLeft:"auto",background:"var(--linen)",borderRadius:20,padding:"2px 10px",fontSize:12,fontWeight:700,color:"var(--muted)"}}>{data.qty} item{data.qty!==1?"s":""}</span>
+                  </div>
+                  <div className="tw">
+                    <table>
+                      <thead><tr><th>Item</th><th>Category</th><th>Condition</th><th>Qty</th><th>Availability</th></tr></thead>
+                      <tbody>
+                        {data.items.map(item=>{
+                          const cat=CAT[item.category]||CAT.other;
+                          return(
+                            <tr key={item.id}>
+                              <td style={{fontWeight:700}}>{item.name}</td>
+                              <td>{cat.icon} {cat.label}</td>
+                              <td>{item.condition}</td>
+                              <td style={{fontWeight:800}}>{item.qty}</td>
+                              <td><span style={{padding:"2px 8px",borderRadius:10,fontSize:11,fontWeight:700,background:item.avail==="In Stock"?"rgba(76,175,80,.15)":"rgba(66,165,245,.15)",color:item.avail==="In Stock"?"#2e7d32":"#1565c0"}}>{item.avail}</span></td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Settings({ org, setOrg, onSeed }) {
+  const [f,setF]       = useState(org);
+  const [saved,setSaved] = useState(false);
+  const upd = (k,v) => setF(p=>({...p,[k]:v}));
+  const save = async() => { await setOrg(f); setSaved(true); setTimeout(()=>setSaved(false),2200); };
+
+  return(
+    <div style={{position:"relative"}}>
+      <img src={usp(BG.settings,1400,900)} alt="" className="page-bg-img"/>
+
+      <div style={{padding:"32px 36px 0"}}>
+        <div className="hero-wrap" style={{height:210}}>
+          <img src={usp(BG.settings,1100,260)} alt="Settings" loading="lazy"/>
+          <div className="hero-fade"/>
+          <div className="hero-body">
+            <div className="hero-eyebrow">⚙️ Configuration</div>
+            <h1 className="hero-title" style={{fontSize:44}}>Settings</h1>
+            <p className="hero-sub">{f.name||"Your program"} — manage your profile and data.</p>
+          </div>
+          <div className="hero-bar"/>
+        </div>
+      </div>
+
+      <div style={{padding:"24px 36px 48px",position:"relative",zIndex:1,maxWidth:760}}>
+
+        {/* Org Profile */}
+        <div className="card card-p" style={{marginBottom:20}}>
+          <div className="sh"><h2>Organization Profile</h2><p>This information appears on your marketplace listings.</p></div>
+          <div className="fg2">
+            <div className="fg fu"><label className="fl">Organization Name</label><input className="fi" value={f.name||""} onChange={e=>upd("name",e.target.value)} placeholder="e.g. Lincoln High Drama Dept"/></div>
+            <div className="fg">
+              <label className="fl">Type</label>
+              <select className="fs" value={f.type||""} onChange={e=>upd("type",e.target.value)}>
+                <option value="">Select…</option>
+                {["School","District","Community Theatre","College","Professional","Other"].map(t=><option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className="fg"><label className="fl">Email</label><input className="fi" type="email" value={f.email||""} onChange={e=>upd("email",e.target.value)} placeholder="drama@school.edu"/></div>
+            <div className="fg"><label className="fl">Phone</label><input className="fi" value={f.phone||""} onChange={e=>upd("phone",e.target.value)} placeholder="(555) 123-4567"/></div>
+            <div className="fg"><label className="fl">City / Location</label><input className="fi" value={f.location||""} onChange={e=>upd("location",e.target.value)} placeholder="Portland, OR"/></div>
+            <div className="fg fu"><label className="fl">About Your Program</label><textarea className="ft" value={f.bio||""} onChange={e=>upd("bio",e.target.value)} placeholder="Tell others about your program…"/></div>
+          </div>
+          <div style={{display:"flex",gap:10,alignItems:"center",marginTop:18,paddingTop:14,borderTop:"1.5px solid var(--border)"}}>
+            <button className="btn btn-p" onClick={save}><span style={{width:14,height:14,display:"flex"}}>{Ic.check}</span>Save Profile</button>
+            {saved&&<span style={{color:"var(--green)",fontWeight:800,fontSize:13.5}}>✓ Saved!</span>}
+          </div>
+        </div>
+
+        {/* Plans */}
+        <div className="card card-p" style={{marginBottom:20}}>
+          <div className="sh"><h2>Plans</h2><p>Choose the right plan for your program.</p></div>
+          <div className="pricing-grid">
+            {[
+              { name:"Free",    price:"$0",  per:"/forever", desc:"Perfect for getting started.",       hot:false, link:null,     btn:"Current Plan",  feats:["Up to 50 items","Basic marketplace","CSV export","QR labels"] },
+              { name:"Pro",     price:"$12", per:"/month",   desc:"For active programs & companies.",   hot:true,  link:"https://buy.stripe.com/test_8x26oJ3vhcvy1Wi7eq9sk00", btn:"Get Pro →",     feats:["Unlimited items","Priority marketplace","Photo storage 5GB","Analytics dashboard","Email support"] },
+              { name:"District",price:"$49", per:"/month",   desc:"Multiple schools, one platform.",    hot:false, link:"https://buy.stripe.com/test_8x2cN79TF67a0SebuG9sk01", btn:"Get District →", feats:["Unlimited programs","Shared inventory pool","Admin controls","White-label option","Dedicated support"] },
+            ].map(p=>(
+              <div key={p.name} className={`pricing-card${p.hot?" hot":""}`}>
+                <div className="pname">{p.name}</div>
+                <div className="pprice">{p.price}<span>{p.per}</span></div>
+                <div className="pdesc">{p.desc}</div>
+                {p.feats.map(ft=>(
+                  <div key={ft} className="pfeat">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    {ft}
+                  </div>
+                ))}
+                {p.link
+                  ? <a href={p.link} target="_blank" rel="noreferrer" className={`btn btn-full ${p.hot?"btn-g":"btn-o"}`} style={{marginTop:16,textDecoration:"none",display:"flex",justifyContent:"center"}}>{p.btn}</a>
+                  : <button className="btn btn-full btn-o" style={{marginTop:16,opacity:.5,cursor:"default"}} disabled>{p.btn}</button>
+                }
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Data */}
+        <div className="card card-p">
+          <div className="sh"><h2>Data Management</h2><p>Load sample data to explore, or reset everything to start fresh.</p></div>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+            <button className="btn btn-o" onClick={onSeed}><span style={{width:14,height:14,display:"flex"}}>{Ic.box}</span>Load Sample Data</button>
+            <button className="btn btn-d" onClick={()=>{
+              if(window.confirm("Delete ALL items and reset the app? This cannot be undone.")){
+                const empty={name:"",type:"",email:"",phone:"",location:"",bio:""};
+                setOrg(empty);setF(empty);
+                DB.save("t4u-items",[]);DB.save("t4u-org",empty);
+                window.location.reload();
+              }
+            }}><span style={{width:14,height:14,display:"flex"}}>{Ic.trash}</span>Reset All Data</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// AUTH SCREENS
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ─── Legal Modals ────────────────────────────────────────────────────────────
+function LegalModal({title, onClose, children}){
+  useEffect(()=>{const h=e=>e.key==="Escape"&&onClose();window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h)},[onClose]);
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{background:"var(--bg2,#15121b)",border:"1px solid rgba(212,168,67,.2)",borderRadius:14,width:"100%",maxWidth:680,maxHeight:"88vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 48px rgba(0,0,0,.6)"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,.08)"}}>
+          <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:18,color:"#ede8df"}}>{title}</h2>
+          <button onClick={onClose} style={{background:"none",border:"1px solid rgba(255,255,255,.15)",borderRadius:6,color:"#9b93a8",cursor:"pointer",padding:"4px 8px",fontSize:13}}>✕ Close</button>
+        </div>
+        <div style={{padding:"20px 24px",overflowY:"auto",flex:1,color:"#c8c0d4",fontSize:13.5,lineHeight:1.75}}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const TERMS_CONTENT = [
+  ["1. Acceptance of Terms","By accessing or using Theatre4u at theatre4u.org, you agree to be bound by these Terms of Service. If you do not agree, please do not use the Service. Theatre4u is operated by its founder based in California, USA."],
+  ["2. Description of Service","Theatre4u is a cloud-based inventory management and marketplace platform for theatre programs, schools, community theatres, and performing arts organizations. We reserve the right to modify or discontinue the Service at any time with reasonable notice."],
+  ["3. Account Registration","You must create an account with accurate information and are responsible for maintaining confidentiality of your credentials. You must be at least 18 years old, or have authorization of a parent, guardian, or school administrator if a minor acting on behalf of an organization."],
+  ["4. Subscription Plans and Payments","Theatre4u offers free and paid plans billed monthly via Stripe. Subscriptions auto-renew unless cancelled. All fees are non-refundable except as required by law. We may change pricing with 30 days notice to current subscribers."],
+  ["5. User Content","You retain ownership of content you upload. By uploading, you grant us a license to store and display it solely to provide the Service. You are responsible for ensuring your content does not infringe third-party rights or violate applicable laws."],
+  ["6. Marketplace Transactions","Theatre4u provides a platform for listing items for rent or sale. We are not a party to any transaction between users. All agreements are solely between listing users and interested parties. We do not handle payments between users."],
+  ["7. Prohibited Conduct","You agree not to: use the Service unlawfully; upload false or fraudulent content; attempt unauthorized access; interfere with the Service; use automated scraping tools; impersonate others; or transmit spam or malware. Violations may result in immediate account termination."],
+  ["8. Intellectual Property","The Theatre4u name, logo, design, and software are owned by us and protected by applicable law. Nothing in these Terms grants you any right to use our intellectual property without prior written consent."],
+  ["9. Disclaimer of Warranties","THE SERVICE IS PROVIDED AS IS WITHOUT WARRANTIES OF ANY KIND. We do not warrant that the Service will be uninterrupted, error-free, or free of harmful components."],
+  ["10. Limitation of Liability","TO THE FULLEST EXTENT PERMITTED BY CALIFORNIA LAW, WE SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES. Our total liability shall not exceed amounts paid by you in the three months preceding the claim."],
+  ["11. Governing Law","These Terms are governed by California law. Disputes shall be resolved through binding arbitration in California under AAA rules, except either party may seek injunctive relief in court. You waive the right to class action."],
+  ["12. Changes & Contact","We may modify these Terms with 14 days notice. Continued use constitutes acceptance. Questions: hello@theatre4u.org"],
+];
+
+const PRIVACY_CONTENT = [
+  ["1. Introduction","Theatre4u is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information. It complies with applicable California privacy laws including the CCPA and CalOPPA."],
+  ["2. Information We Collect","Account Information: organization name, email, password (encrypted), and optional profile details. Inventory Data: all items, photos, and descriptions you upload. Payment Information: handled by Stripe — we do not store full card details. Usage and technical data to improve the Service."],
+  ["3. How We Use Your Information","We use your information to: provide and improve the Service; process payments; send transactional emails; respond to support inquiries; detect fraud; and comply with legal obligations. We do not sell your personal information or use it for targeted advertising."],
+  ["4. How We Share Your Information","Service Providers: Supabase (database/auth), Stripe (payments), and Vercel (hosting) — all contractually obligated to protect your data. Marketplace Listings: organization name and item details are visible to other registered users. Legal requirements and business transfers as required."],
+  ["5. Data Retention & Security","We retain your data while your account is active and delete it within 30 days of account deletion (backups up to 90 days). We use HTTPS/TLS encryption, encrypted passwords, and row-level database security. You are responsible for your account credentials."],
+  ["6. Your California Rights (CCPA)","California residents have the right to: know what personal information we collect; request deletion; opt out of sale (we do not sell data); and non-discrimination for exercising privacy rights. Contact hello@theatre4u.org to submit a verified request. We respond within 45 days."],
+  ["7. Cookies","We use essential cookies and local storage to maintain login sessions and preferences. We do not use third-party advertising cookies or tracking pixels."],
+  ["8. Children's Privacy","Theatre4u is not directed to children under 13. We do not knowingly collect information from children under 13. Users aged 13–18 must have authorization from a parent, guardian, or school administrator."],
+  ["9. Changes & Contact","We may update this policy with 14 days notice. Questions: hello@theatre4u.org | theatre4u.org | California, USA"],
+];
+
+// ── Landing Page ──────────────────────────────────────────────────────────────
+function LandingPage({onSignIn, onSignUp}){
   const[scrolled,setScrolled]=useState(false);
   const[curtain,setCurtain]=useState("closed");
-  const[authModal,setAuthModal]=useState(null);
-
   useEffect(()=>{
-    requestAnimationFrame(()=>{
-      setCurtain("open");
-      setTimeout(()=>setCurtain("hidden"),800);
-    });
+    requestAnimationFrame(()=>{setCurtain("open");setTimeout(()=>setCurtain("hidden"),800);});
     const h=()=>setScrolled(window.scrollY>40);
     window.addEventListener("scroll",h,{passive:true});
     return()=>window.removeEventListener("scroll",h);
   },[]);
 
-  const launch=()=>{
-    setCurtain("closed");
-    setTimeout(()=>{ window.scrollTo(0,0); onLaunch(); },700);
-  };
+  const CATS_LP=[
+    {id:"costumes",label:"Costumes",icon:"👗"},{id:"props",label:"Props",icon:"🎭"},
+    {id:"sets",label:"Sets & Scenery",icon:"🏛️"},{id:"lighting",label:"Lighting",icon:"💡"},
+    {id:"sound",label:"Sound",icon:"🔊"},{id:"scripts",label:"Scripts & Music",icon:"📜"},
+    {id:"makeup",label:"Makeup & Wigs",icon:"💄"},{id:"furniture",label:"Stage Furniture",icon:"🪑"},
+    {id:"fabrics",label:"Fabrics & Drapes",icon:"🧵"},{id:"tools",label:"Tools",icon:"🔧"},
+    {id:"effects",label:"Special Effects",icon:"✨"},{id:"other",label:"Other",icon:"📦"},
+  ];
 
   const FEATS=[
     {n:"01",title:<>Track <em>every</em> item</>,body:"Costumes, props, lighting rigs, audio gear, scripts — every item catalogued with photos, condition notes, storage locations, and tags.",bullets:["Up to 5 photos per item","Custom tags and notes","QR code label per item","Exact storage location tracking"],demo:(
       <div className="lpf-demo">
-        {[{ico:"\u{1F457}",name:"Victorian Ball Gown",loc:"Closet A",cond:"Good",c:"rgba(76,175,80,.12)",t:"#4caf50"},{ico:"\u{1F399}\uFE0F",name:"Shure SM58 Wireless",loc:"Sound Booth",cond:"Excellent",c:"rgba(66,165,245,.12)",t:"#42a5f5"},{ico:"\u{1F4A1}",name:"LED Par Can RGBW",loc:"Lighting Store",cond:"New",c:"rgba(76,175,80,.12)",t:"#4caf50"}].map(r=>(
+        {[{ico:"👗",name:"Victorian Ball Gown",loc:"Closet A",cond:"Good",c:"rgba(76,175,80,.12)",t:"#4caf50"},{ico:"🎙️",name:"Shure SM58 Wireless",loc:"Sound Booth",cond:"Excellent",c:"rgba(66,165,245,.12)",t:"#42a5f5"},{ico:"💡",name:"LED Par Can RGBW",loc:"Lighting Store",cond:"New",c:"rgba(76,175,80,.12)",t:"#4caf50"}].map(r=>(
           <div key={r.name} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"var(--bg)",borderRadius:6,marginBottom:7,border:"1px solid var(--bd)"}}>
             <span style={{fontSize:20}}>{r.ico}</span>
             <div style={{flex:1,minWidth:0}}><div style={{fontWeight:600,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</div><div style={{fontSize:10,color:"var(--t3)"}}>{r.loc}</div></div>
@@ -379,20 +1315,17 @@ function LandingPage({onLaunch}){
         ))}
       </div>
     )},
-    {n:"02",title:<><em>QR labels</em> for everything</>,body:"Every item gets a unique QR code. Print it, stick it on the bin. Scan it with any phone to pull up full details instantly — no app required.",bullets:["One-click print from any browser","Scan with any smartphone","Instant item lookup by ID","Print all labels in bulk from Reports"],demo:(
+    {n:"02",title:<><em>QR labels</em> for everything</>,body:"Every item gets a unique QR code. Print it, stick it on the bin. Scan it with any phone to pull up full details instantly.",bullets:["One-click print from any browser","Scan with any smartphone","Instant item lookup by ID","Print all labels in bulk from Reports"],demo:(
       <div className="lpf-demo" style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
         <div style={{background:"#fff",padding:14,borderRadius:10}}>
           <canvas ref={el=>{if(!el)return;const ctx=el.getContext("2d");const s=96;el.width=s;el.height=s;ctx.fillStyle="#fff";ctx.fillRect(0,0,s,s);const c=s/25;const draw=(x,y,w,h,fill)=>{ctx.fillStyle=fill;ctx.fillRect(x*c,y*c,w*c,h*c)};draw(0,0,7,7,"#1a1520");draw(1,1,5,5,"#fff");draw(2,2,3,3,"#1a1520");draw(18,0,7,7,"#1a1520");draw(19,1,5,5,"#fff");draw(20,2,3,3,"#1a1520");draw(0,18,7,7,"#1a1520");draw(1,19,5,5,"#fff");draw(2,20,3,3,"#1a1520");for(let i=0;i<25;i++)for(let j=0;j<25;j++){if((i<8&&j<8)||(i<8&&j>=18)||(i>=18&&j<8))continue;if(((i*13+j*7+i+j)%4===0))draw(j,i,1,1,"#1a1520");}draw(11,11,3,3,"#d4a843");}} width={96} height={96} style={{display:"block"}}/>
         </div>
-        <div style={{textAlign:"center"}}>
-          <div style={{fontSize:11,fontWeight:600}}>Victorian Ball Gown</div>
-          <div style={{fontSize:10,color:"var(--t3)",fontFamily:"monospace"}}>T4U \u00B7 Costume Closet A</div>
-        </div>
+        <div style={{textAlign:"center"}}><div style={{fontSize:11,fontWeight:600}}>Victorian Ball Gown</div><div style={{fontSize:10,color:"var(--t3)",fontFamily:"monospace"}}>T4U · Costume Closet A</div></div>
       </div>
     )},
     {n:"03",title:<>The theatre <em>marketplace</em></>,body:"List your items for rent or sale. Other programs can browse and contact you. Turn idle inventory into income — or find what you need for your next production.",bullets:["Set rental price per week","Or list for outright sale","Filter by category and type","Connect with nearby programs"],demo:(
       <div className="lpf-demo">
-        {[{ico:"\u{1FA91}",name:"Wooden Throne Chair",badge:"For Rent",price:"$30/wk",bc:"rgba(66,165,245,.14)",tc:"var(--blu)"},{ico:"\u{1F32B}\uFE0F",name:"Fog Machine 1000W",badge:"For Rent",price:"$20/wk",bc:"rgba(66,165,245,.14)",tc:"var(--blu)"},{ico:"\u{1F4DC}",name:"Romeo & Juliet Scripts (30)",badge:"For Sale",price:"$5 ea",bc:"rgba(76,175,80,.14)",tc:"var(--grn)"}].map(r=>(
+        {[{ico:"🪑",name:"Wooden Throne Chair",badge:"For Rent",price:"$30/wk",bc:"rgba(66,165,245,.14)",tc:"#42a5f5"},{ico:"🌫️",name:"Fog Machine 1000W",badge:"For Rent",price:"$20/wk",bc:"rgba(66,165,245,.14)",tc:"#42a5f5"},{ico:"📜",name:"Romeo & Juliet Scripts (30)",badge:"For Sale",price:"$5 ea",bc:"rgba(76,175,80,.14)",tc:"#4caf50"}].map(r=>(
           <div key={r.name} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"var(--bg)",borderRadius:6,marginBottom:7,border:"1px solid var(--bd)"}}>
             <span style={{fontSize:20}}>{r.ico}</span>
             <div style={{flex:1,minWidth:0}}><div style={{fontWeight:600,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</div><span style={{fontSize:10,padding:"1px 6px",background:r.bc,color:r.tc,borderRadius:8}}>{r.badge}</span></div>
@@ -424,16 +1357,14 @@ function LandingPage({onLaunch}){
           <div className="lp-ctl"/><div className="lp-ctr"/>
         </div>
       )}
-
       {/* Nav */}
       <nav className={"lpn"+(scrolled?" lpns":"")}>
-        <div className="lpnl"><div className="lpni">{"\u{1F3AD}"}</div><div className="lpnt">Theatre4u</div></div>
+        <div className="lpnl"><div className="lpni">🎭</div><div className="lpnt">Theatre4u</div></div>
         <div className="lpnr">
-          <button className="lp-btns2" style={{padding:"8px 20px",fontSize:13}} onClick={()=>setAuthModal("signin")}>Sign In</button>
-          <button className="lp-btnp" style={{padding:"8px 22px",fontSize:13}} onClick={()=>setAuthModal("signup")}>{"\u{1F3AD}"} Get Started Free</button>
+          <button className="lp-btns2" style={{padding:"8px 20px",fontSize:13}} onClick={onSignIn}>Sign In</button>
+          <button className="lp-btnp" style={{padding:"8px 22px",fontSize:13}} onClick={onSignUp}>🎭 Get Started Free</button>
         </div>
       </nav>
-
       {/* Hero */}
       <section className="lph">
         <div className="lph-curtl"/><div className="lph-curtr"/><div className="lph-line"/>
@@ -441,18 +1372,16 @@ function LandingPage({onLaunch}){
         <h1 className="lph-h">The Inventory <em>&amp;</em><br/><b>Marketplace</b><br/><span style={{fontSize:"clamp(38px,6vw,80px)",fontStyle:"normal",color:"var(--t1)",fontWeight:300}}>for Theatre Programs</span></h1>
         <p className="lph-sub">Track every costume, prop, and piece of equipment your program owns. List items for rent or sale. Generate QR labels for every storage bin. All in one place.</p>
         <div className="lph-btns">
-          <button className="lp-btnp" onClick={()=>setAuthModal("signup")}><span>{"\u{1F3AD}"}</span> Start for Free</button>
-          <button className="lp-btns2" onClick={()=>document.getElementById("lp-features").scrollIntoView({behavior:"smooth"})}>See How It Works</button>
+          <button className="lp-btnp" onClick={onSignUp}><span>🎭</span> Start for Free</button>
+          <button className="lp-btns2" onClick={()=>document.getElementById("lp-features")?.scrollIntoView({behavior:"smooth"})}>See How It Works</button>
         </div>
         <div className="lph-stats">
-          {[["12","Item categories"],["5","Photos per item"],["\u221E","Inventory entries"],["1-click","QR printing"]].map(([n,l])=>(
+          {[["12","Item categories"],["5","Photos per item"],["∞","Inventory entries"],["1-click","QR printing"]].map(([n,l])=>(
             <div key={l} style={{textAlign:"center"}}><div className="lph-sn">{n}</div><div className="lph-sl">{l}</div></div>
           ))}
         </div>
       </section>
-
       <hr className="lp-divider"/>
-
       {/* Features */}
       <section id="lp-features" style={{background:"var(--bg2)",borderBottom:"1px solid var(--bd)"}}>
         <div className="lps" style={{paddingBottom:20}}>
@@ -474,9 +1403,7 @@ function LandingPage({onLaunch}){
           ))}
         </div>
       </section>
-
       <hr className="lp-divider"/>
-
       {/* Categories */}
       <section style={{background:"var(--bg)"}}>
         <div className="lps">
@@ -484,8 +1411,8 @@ function LandingPage({onLaunch}){
           <h2 className="lps-title">Every corner of your <em>theatre</em></h2>
           <p className="lps-sub">From leading costume to the tools in the scene shop &mdash; every type of item has a home.</p>
           <div className="lp-cats">
-            {CATEGORIES.map(c=>(
-              <div key={c.id} className="lp-cat" onClick={()=>setAuthModal("signup")}>
+            {CATS_LP.map(c=>(
+              <div key={c.id} className="lp-cat" onClick={onSignUp}>
                 <div className="lp-cat-ico">{c.icon}</div>
                 <div className="lp-cat-lbl">{c.label}</div>
               </div>
@@ -493,9 +1420,7 @@ function LandingPage({onLaunch}){
           </div>
         </div>
       </section>
-
       <hr className="lp-divider"/>
-
       {/* Testimonials */}
       <section style={{background:"var(--bg2)",borderTop:"1px solid var(--bd)",borderBottom:"1px solid var(--bd)"}}>
         <div className="lps">
@@ -512,16 +1437,14 @@ function LandingPage({onLaunch}){
           </div>
         </div>
       </section>
-
       <hr className="lp-divider"/>
-
       {/* Pricing */}
       <section style={{background:"var(--bg)"}}>
         <div className="lps">
           <div className="lps-lbl">Simple Pricing</div>
           <h2 className="lps-title">Start free. <em>Grow</em> when you&apos;re ready.</h2>
           <p className="lps-sub">No credit card required. No surprise fees. Cancel any time.</p>
-          <div style={{display:"flex",alignItems:"center",background:"var(--bg3)",border:"1px solid var(--bd)",borderRadius:"var(--rs)",padding:3,width:"fit-content",margin:"24px auto 0"}}>
+          <div style={{display:"flex",alignItems:"center",background:"var(--bg2)",border:"1px solid var(--bd)",borderRadius:"var(--rs)",padding:3,width:"fit-content",margin:"24px auto 0"}}>
             <button onClick={()=>setBilling("monthly")} style={{background:billing==="monthly"?"var(--gold)":"transparent",color:billing==="monthly"?"#1a0f00":"var(--t2)",border:"none",borderRadius:"4px",padding:"7px 20px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"DM Sans,sans-serif",transition:"all .2s"}}>Monthly</button>
             <button onClick={()=>setBilling("annual")} style={{background:billing==="annual"?"var(--gold)":"transparent",color:billing==="annual"?"#1a0f00":"var(--t2)",border:"none",borderRadius:"4px",padding:"7px 20px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"DM Sans,sans-serif",transition:"all .2s",display:"flex",alignItems:"center",gap:6}}>Annual <span style={{fontSize:10,padding:"1px 6px",background:billing==="annual"?"rgba(0,0,0,.15)":"rgba(212,168,67,.15)",color:billing==="annual"?"#1a0f00":"var(--gold)",borderRadius:9,fontWeight:700}}>Save 17%</span></button>
           </div>
@@ -533,510 +1456,490 @@ function LandingPage({onLaunch}){
                 <div className="lp-pa">{billing==="annual"&&p.annual?p.annual:p.price}</div>
                 <div className="lp-pper">{billing==="annual"&&p.annual?<span style={{color:"var(--gold)",fontSize:13}}>{p.annualSave}</span>:p.period}</div>
                 <ul className="lp-pul">{p.feats.map(f=><li key={f}>{f}</li>)}</ul>
-                <button className={p.feat?"lp-btnp":"lp-btns2"} style={{width:"100%",justifyContent:"center",padding:"12px 0"}} onClick={()=>setAuthModal("signup")}>Get Started</button>
+                <button className={p.feat?"lp-btnp":"lp-btns2"} style={{width:"100%",justifyContent:"center",padding:"12px 0"}} onClick={onSignUp}>Get Started</button>
               </div>
             ))}
           </div>
           <p style={{textAlign:"center",marginTop:24,fontSize:12.5,color:"var(--t3)"}}>All plans include a 14-day free trial. No credit card required to start.</p>
         </div>
       </section>
-
       {/* CTA */}
       <div className="lp-cta">
         <div style={{position:"relative",zIndex:1}}>
           <div className="lps-lbl" style={{marginBottom:16}}>Ready?</div>
           <h2 className="lps-title" style={{marginBottom:20}}>Your program deserves<br/><em>better than a spreadsheet.</em></h2>
           <p style={{color:"var(--t2)",fontSize:16,marginBottom:44,fontFamily:"'Cormorant Garamond',serif",fontStyle:"italic",maxWidth:480,margin:"0 auto 44px"}}>Join drama directors and technical coordinators who finally know what they own.</p>
-          <button className="lp-btnp" style={{fontSize:16,padding:"16px 44px"}} onClick={()=>setAuthModal("signup")}><span>{"\u{1F3AD}"}</span> Open Theatre4u &mdash; It&apos;s Free</button>
+          <button className="lp-btnp" style={{fontSize:16,padding:"16px 44px"}} onClick={onSignUp}><span>🎭</span> Open Theatre4u &mdash; It&apos;s Free</button>
         </div>
       </div>
-
       {/* Footer */}
       <footer className="lp-ft">
         <div>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
-            <div className="lpni" style={{width:28,height:28,fontSize:14}}>{"\u{1F3AD}"}</div>
+            <div className="lpni" style={{width:28,height:28,fontSize:14}}>🎭</div>
             <span style={{fontFamily:"'Playfair Display',serif",fontSize:16,color:"var(--gold)"}}>Theatre4u</span>
           </div>
           <div className="lp-fc">Inventory &amp; Marketplace for Theatre Programs</div>
         </div>
         <div className="lp-fl">
-          <button onClick={()=>setAuthModal("signin")}>Sign In</button>
-          <button onClick={()=>{}}>hello@theatre4u.org</button>
+          <button onClick={onSignIn}>Sign In</button>
+          <button>hello@theatre4u.org</button>
         </div>
         <div className="lp-fc">&copy; {new Date().getFullYear()} Theatre4u. Built for the arts community.</div>
       </footer>
+    </div>
+  );
+}
 
-      {/* Auth Modal */}
-      {authModal&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.78)",zIndex:5000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={e=>e.target===e.currentTarget&&setAuthModal(null)}>
-          <div style={{background:"var(--bg2)",border:"1px solid var(--bd)",borderRadius:14,width:"100%",maxWidth:420,padding:32,boxShadow:"0 8px 48px rgba(0,0,0,.5)",animation:"su .2s ease"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+// ── Auth Overlay (modal over landing page) ────────────────────────────────────
+function AuthOverlay({onAuth}){
+  const[visible,setVisible]=useState(false);
+  const[mode,setMode]=useState("login");
+  const[email,setEmail]=useState("");
+  const[pass,setPass]=useState("");
+  const[orgName,setOrgName]=useState("");
+  const[err,setErr]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[done,setDone]=useState(false);
+  const[legal,setLegal]=useState(null);
+
+  useEffect(()=>{
+    window.__t4u_show_auth=(m)=>{setMode(m||"login");setErr("");setVisible(true);};
+    return()=>{delete window.__t4u_show_auth;};
+  },[]);
+
+  if(!visible) return null;
+
+  const close=()=>{setVisible(false);setErr("");setEmail("");setPass("");setOrgName("");setDone(false);};
+
+  const submit=async()=>{
+    setErr("");setLoading(true);
+    try{
+      if(mode==="signup"){
+        if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
+        const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName}}});
+        if(error)throw error;
+        if(data.user){
+          await SB.from("orgs").insert({id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:""});
+          setDone(true);
+        }
+      } else {
+        const{data,error}=await SB.auth.signInWithPassword({email,password:pass});
+        if(error)throw error;
+        onAuth(data.user);
+        close();
+      }
+    }catch(e){setErr(e.message||"Something went wrong.");}
+    setLoading(false);
+  };
+
+  const resetPass=async()=>{
+    if(!email){setErr("Enter your email above first.");return;}
+    await SB.auth.resetPasswordForEmail(email,{redirectTo:"https://theatre4u.org"});
+    setErr("Password reset email sent — check your inbox.");
+  };
+
+  const overlayStyle={position:"fixed",inset:0,background:"rgba(0,0,0,.82)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(4px)"};
+  const cardStyle={background:"#15121b",border:"1px solid #282333",borderRadius:16,width:"100%",maxWidth:440,padding:"36px 36px 32px",boxShadow:"0 16px 56px rgba(0,0,0,.6)",animation:"lp-rise .2s ease",fontFamily:"'DM Sans',sans-serif",color:"#ede8df"};
+  const inputStyle={width:"100%",background:"#110f18",border:"1px solid #282333",borderRadius:6,padding:"10px 12px",color:"#ede8df",fontSize:14,fontFamily:"'DM Sans',sans-serif",outline:"none",boxSizing:"border-box"};
+  const labelStyle={fontSize:11,fontWeight:600,color:"#9b93a8",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4};
+
+  if(done) return(
+    <div style={overlayStyle} onClick={e=>e.target===e.currentTarget&&close()}>
+      <div style={{...cardStyle,textAlign:"center"}}>
+        <div style={{fontSize:52,marginBottom:12}}>🎭</div>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:"#d4a843",marginBottom:8}}>Check your email!</h2>
+        <p style={{color:"#9b93a8",fontSize:14,lineHeight:1.6,marginBottom:24}}>We sent a confirmation link to <strong style={{color:"#ede8df"}}>{email}</strong>. Click it to activate your account.</p>
+        <button onClick={()=>{setDone(false);setMode("login");}} style={{background:"#1d1925",border:"1px solid #282333",color:"#ede8df",padding:"10px 24px",borderRadius:6,cursor:"pointer",fontSize:14,fontFamily:"'DM Sans',sans-serif"}}>Back to Sign In</button>
+      </div>
+    </div>
+  );
+
+  return(
+    <div style={overlayStyle} onClick={e=>e.target===e.currentTarget&&close()}>
+      <div style={cardStyle}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:24}}>
+          <div>
+            <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:"#ede8df"}}>{mode==="login"?"Welcome back":"Get started free"}</div>
+            <div style={{fontSize:12,color:"#685f76",marginTop:3}}>{mode==="login"?"Sign in to your Theatre4u account":"Create your free Theatre4u account"}</div>
+          </div>
+          <button onClick={close} style={{background:"none",border:"1px solid #282333",borderRadius:6,color:"#9b93a8",cursor:"pointer",padding:"4px 9px",fontSize:14,lineHeight:1}}>×</button>
+        </div>
+        {/* Tabs */}
+        <div style={{display:"flex",borderBottom:"2px solid #282333",marginBottom:22,gap:2}}>
+          {["login","signup"].map(m=>(
+            <button key={m} onClick={()=>{setMode(m);setErr("");}} style={{flex:1,background:"none",border:"none",borderBottom:`3px solid ${mode===m?"#d4a843":"transparent"}`,padding:"7px 0 9px",fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:13,color:mode===m?"#d4a843":"#685f76",cursor:"pointer",textTransform:"uppercase",letterSpacing:1,marginBottom:-2,transition:"all .2s"}}>
+              {m==="login"?"Sign In":"Create Account"}
+            </button>
+          ))}
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          {mode==="signup"&&(
+            <div><label style={labelStyle}>Organization Name</label>
+              <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High Drama Dept." style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
+            </div>
+          )}
+          <div><label style={labelStyle}>Email</label>
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@school.edu" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"} onKeyDown={e=>e.key==="Enter"&&submit()}/>
+          </div>
+          <div><label style={labelStyle}>Password</label>
+            <input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder={mode==="signup"?"Min. 6 characters":"••••••••"} style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"} onKeyDown={e=>e.key==="Enter"&&submit()}/>
+          </div>
+        </div>
+        {err&&<div style={{marginTop:12,padding:"9px 12px",background:err.includes("sent")?"rgba(76,175,80,.1)":"rgba(194,24,91,.1)",border:`1px solid ${err.includes("sent")?"rgba(76,175,80,.3)":"rgba(194,24,91,.25)"}`,borderRadius:7,fontSize:13,color:err.includes("sent")?"#4caf50":"#e57373"}}>{err}</div>}
+        <button onClick={submit} disabled={loading} style={{marginTop:20,width:"100%",background:"linear-gradient(135deg,#d4a843,#a37f2c)",color:"#1a0f00",border:"none",borderRadius:6,padding:"12px",fontSize:15,fontWeight:700,cursor:loading?"not-allowed":"pointer",fontFamily:"'DM Sans',sans-serif",opacity:loading?.7:1}}>
+          {loading?"Please wait…":mode==="login"?"Sign In →":"Create Free Account →"}
+        </button>
+        {mode==="login"&&<button onClick={resetPass} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:"#685f76",fontSize:12.5,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textDecoration:"underline"}}>Forgot password?</button>}
+        <div style={{textAlign:"center",marginTop:14,fontSize:12.5,color:"#685f76"}}>
+          {mode==="login"?<>Don&apos;t have an account? <button onClick={()=>{setMode("signup");setErr("");}} style={{background:"none",border:"none",color:"#d4a843",cursor:"pointer",fontSize:12.5,fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>Sign up free</button></>:<>Already have an account? <button onClick={()=>{setMode("login");setErr("");}} style={{background:"none",border:"none",color:"#d4a843",cursor:"pointer",fontSize:12.5,fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>Sign in</button></>}
+        </div>
+        {mode==="signup"&&(
+          <p style={{textAlign:"center",fontSize:11,color:"#685f76",marginTop:14,lineHeight:1.5}}>
+            Free plan includes 50 items. No credit card required.<br/>
+            By signing up you agree to our{" "}
+            <span onClick={()=>setLegal("terms")} style={{color:"#d4a843",textDecoration:"underline",cursor:"pointer"}}>Terms of Service</span>
+            {" "}and{" "}
+            <span onClick={()=>setLegal("privacy")} style={{color:"#d4a843",textDecoration:"underline",cursor:"pointer"}}>Privacy Policy</span>.
+          </p>
+        )}
+      </div>
+      {legal==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegal(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
+      {legal==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegal(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
+    </div>
+  );
+}
+
+function AuthScreen({onAuth}){
+  const[mode,setMode]=useState("login");
+  const[email,setEmail]=useState("");
+  const[pass,setPass]=useState("");
+  const[orgName,setOrgName]=useState("");
+  const[err,setErr]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[done,setDone]=useState(false);
+  const[legal,setLegal]=useState(null);
+
+  const submit=async()=>{
+    setErr("");setLoading(true);
+    try{
+      if(mode==="signup"){
+        if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
+        const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName}}});
+        if(error)throw error;
+        if(data.user){
+          // create org row
+          await SB.from("orgs").insert({id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:""});
+          setDone(true);
+        }
+      } else {
+        const{data,error}=await SB.auth.signInWithPassword({email,password:pass});
+        if(error)throw error;
+        onAuth(data.user);
+      }
+    }catch(e){setErr(e.message||"Something went wrong.");}
+    setLoading(false);
+  };
+
+  const resetPass=async()=>{
+    if(!email){setErr("Enter your email above first.");return;}
+    await SB.auth.resetPasswordForEmail(email,{redirectTo:"https://theatre4u.org"});
+    setErr("Password reset email sent — check your inbox.");
+  };
+
+  if(done) return(
+    <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+      <style>{CSS}</style>
+      <div style={{background:"var(--cream)",borderRadius:16,padding:"48px 40px",maxWidth:440,width:"100%",textAlign:"center",boxShadow:"0 12px 48px rgba(0,0,0,.4)"}}>
+        <div style={{fontSize:52,marginBottom:12}}>🎭</div>
+        <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:28,color:"var(--ink)",marginBottom:8}}>Check your email!</h2>
+        <p style={{color:"var(--muted)",fontSize:15,lineHeight:1.6,marginBottom:24}}>We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account and get started.</p>
+        <button className="btn btn-o" onClick={()=>{setDone(false);setMode("login");}}>Back to Login</button>
+      </div>
+    </div>
+  );
+
+  return(
+    <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:24,position:"relative",overflow:"hidden"}}>
+      <style>{CSS}</style>
+      <img src={usp(BG.dashboard,1400,900)} alt="" style={{position:"fixed",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.18,filter:"sepia(.6)",pointerEvents:"none"}}/>
+      <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:440}}>
+        {/* Logo */}
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{fontSize:52,marginBottom:6}}>🎭</div>
+          <div style={{fontFamily:"'Abril Fatface',display",fontSize:36,color:"var(--gold)",letterSpacing:1}}>Theatre4u</div>
+          <div style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:15,color:"rgba(255,255,255,.5)",marginTop:2}}>Inventory & Marketplace</div>
+        </div>
+        {/* Card */}
+        <div style={{background:"var(--cream)",borderRadius:16,padding:"36px 36px 32px",boxShadow:"0 16px 56px rgba(0,0,0,.5)"}}>
+          {/* Tabs */}
+          <div style={{display:"flex",borderBottom:"2px solid var(--linen)",marginBottom:24,gap:2}}>
+            {["login","signup"].map(m=>(
+              <button key={m} onClick={()=>{setMode(m);setErr("");}} style={{flex:1,background:"none",border:"none",borderBottom:`3px solid ${mode===m?"var(--gold)":"transparent"}`,padding:"8px 0 10px",fontFamily:"'Raleway',sans-serif",fontWeight:800,fontSize:14,color:mode===m?"var(--amber)":"var(--faint)",cursor:"pointer",textTransform:"uppercase",letterSpacing:1,marginBottom:-2,transition:"all .2s"}}>
+                {m==="login"?"Sign In":"Create Account"}
+              </button>
+            ))}
+          </div>
+          {/* Fields */}
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            {mode==="signup"&&(
               <div>
-                <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700}}>{authModal==="signin"?"Welcome back":"Get started free"}</div>
-                <div style={{fontSize:12,color:"var(--t3)",marginTop:3}}>{authModal==="signin"?"Sign in to your Theatre4u account":"Create your free Theatre4u account"}</div>
+                <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Organization Name</label>
+                <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High Drama Dept." style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--linen)",borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"'Raleway',sans-serif",color:"var(--ink)",outline:"none",boxSizing:"border-box"}}
+                  onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--linen)"}/>
               </div>
-              <button onClick={()=>setAuthModal(null)} style={{background:"none",border:"1px solid var(--bd)",borderRadius:6,color:"var(--t2)",cursor:"pointer",padding:"4px 8px",fontSize:13}}>&#x2715;</button>
+            )}
+            <div>
+              <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Email</label>
+              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@school.edu" style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--linen)",borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"'Raleway',sans-serif",color:"var(--ink)",outline:"none",boxSizing:"border-box"}}
+                onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--linen)"}
+                onKeyDown={e=>e.key==="Enter"&&submit()}/>
             </div>
-            {authModal==="signup"&&<div style={{marginBottom:14}}><label style={{fontSize:10,fontWeight:600,color:"var(--t2)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Organization Name</label><input style={{width:"100%",background:"var(--bgi)",border:"1px solid var(--bd)",borderRadius:6,padding:"9px 11px",color:"var(--t1)",fontSize:13,fontFamily:"DM Sans,sans-serif",outline:"none"}} placeholder="Lincoln High Drama Dept."/></div>}
-            <div style={{marginBottom:14}}><label style={{fontSize:10,fontWeight:600,color:"var(--t2)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Email</label><input style={{width:"100%",background:"var(--bgi)",border:"1px solid var(--bd)",borderRadius:6,padding:"9px 11px",color:"var(--t1)",fontSize:13,fontFamily:"DM Sans,sans-serif",outline:"none"}} placeholder="you@school.edu" type="email"/></div>
-            <div style={{marginBottom:22}}><label style={{fontSize:10,fontWeight:600,color:"var(--t2)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Password</label><input style={{width:"100%",background:"var(--bgi)",border:"1px solid var(--bd)",borderRadius:6,padding:"9px 11px",color:"var(--t1)",fontSize:13,fontFamily:"DM Sans,sans-serif",outline:"none"}} placeholder={authModal==="signin"?"Your password":"Choose a password (8+ chars)"} type="password"/></div>
-            <button className="lp-btnp" style={{width:"100%",justifyContent:"center",padding:"12px 0",fontSize:15}} onClick={launch}>{authModal==="signin"?"Sign In to App":"Create Account & Enter"}</button>
-            <div style={{textAlign:"center",marginTop:16,fontSize:12.5,color:"var(--t3)"}}>
-              {authModal==="signin"?<>Don&apos;t have an account? <button onClick={()=>setAuthModal("signup")} style={{background:"none",border:"none",color:"var(--gold)",cursor:"pointer",fontSize:12.5,fontFamily:"DM Sans,sans-serif",fontWeight:600}}>Sign up free</button></>:<>Already have an account? <button onClick={()=>setAuthModal("signin")} style={{background:"none",border:"none",color:"var(--gold)",cursor:"pointer",fontSize:12.5,fontFamily:"DM Sans,sans-serif",fontWeight:600}}>Sign in</button></>}
+            <div>
+              <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Password</label>
+              <input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder={mode==="signup"?"Min. 6 characters":"••••••••"} style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--linen)",borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"'Raleway',sans-serif",color:"var(--ink)",outline:"none",boxSizing:"border-box"}}
+                onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--linen)"}
+                onKeyDown={e=>e.key==="Enter"&&submit()}/>
             </div>
-            {authModal==="signup"&&<p style={{textAlign:"center",fontSize:11,color:"var(--t3)",marginTop:14,lineHeight:1.5}}>Free plan includes 50 items. No credit card required.</p>}
           </div>
+          {err&&<div style={{marginTop:12,padding:"9px 12px",background:err.includes("sent")?"rgba(38,94,42,.1)":"rgba(139,26,42,.08)",border:`1px solid ${err.includes("sent")?"rgba(38,94,42,.3)":"rgba(139,26,42,.2)"}`,borderRadius:7,fontSize:13,color:err.includes("sent")?"var(--green)":"var(--red)"}}>{err}</div>}
+          <button className="btn btn-g btn-full" style={{marginTop:20,padding:"12px",fontSize:15,letterSpacing:.3}} onClick={submit} disabled={loading}>
+            {loading?"Please wait…":mode==="login"?"Sign In →":"Create Free Account →"}
+          </button>
+          {mode==="login"&&<button onClick={resetPass} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:"var(--faint)",fontSize:12.5,cursor:"pointer",fontFamily:"'Raleway',sans-serif",textDecoration:"underline"}}>Forgot password?</button>}
+          {mode==="signup"&&<p style={{fontSize:12,color:"var(--faint)",textAlign:"center",marginTop:14,lineHeight:1.6}}>Free to start — no credit card needed.<br/>By creating an account you agree to our <span onClick={()=>setLegal("terms")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Terms of Service</span> and <span onClick={()=>setLegal("privacy")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Privacy Policy</span>.</p>}
         </div>
-      )}
+        <p style={{textAlign:"center",color:"rgba(255,255,255,.25)",fontSize:12,marginTop:20}}>theatre4u.org — Built for the arts community 🎭</p>
+      </div>
+      {legal==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegal(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
+      {legal==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegal(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
     </div>
   );
 }
 
-// â”€â”€â”€ Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function Modal({title, onClose, children}){
-  useEffect(()=>{const h=e=>e.key==="Escape"&&onClose();window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h)},[onClose]);
-  return(<div className="mov" onClick={e=>e.target===e.currentTarget&&onClose()}><div className="modal" onClick={e=>e.stopPropagation()}><div className="mh"><h2>{title}</h2><button className="bi" onClick={onClose}>{I.x()}</button></div><div className="mb2">{children}</div></div></div>);
-}
+// ══════════════════════════════════════════════════════════════════════════════
+// APP ROOT
+// ══════════════════════════════════════════════════════════════════════════════
+export default function App() {
+  const [user,setUser]     = useState(null);
+  const [items,setItems]   = useState([]);
+  const [org,setOrg]       = useState({name:"",type:"",email:"",phone:"",location:"",bio:""});
+  const [page,setPage]     = useState("dashboard");
+  const [legalPage,setLegalPage] = useState(null);
+  const [mob,setMob]       = useState(false);
+  const [loaded,setLoaded] = useState(false);
+  const [authChk,setAuthChk] = useState(false);
 
-function Lightbox({src,onClose}){if(!src)return null;return<div className="lb" onClick={onClose}><img src={src} alt="Full"/></div>}
-
-// â”€â”€â”€ Item Form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function ItemForm({item, onSave, onCancel}){
-  const[f,setF]=useState(item||{name:"",category:"costumes",condition:"Good",size:"N/A",quantity:1,location:"",notes:"",marketStatus:"Not Listed",rentalPrice:0,salePrice:0,availability:"In Stock",images:[],tags:[]});
-  const[ti,setTi]=useState("");
-  const fr=useRef();
-  const s=(k,v)=>setF(p=>({...p,[k]:v}));
-  const v=f.name.trim();
-
-  const addPhoto=async(e)=>{
-    const files=Array.from(e.target.files||[]);
-    const nw=[];
-    for(const file of files.slice(0,5-(f.images||[]).length)){nw.push(await compressImage(file,600,.75))}
-    s("images",[...(f.images||[]),...nw]);
-    if(fr.current)fr.current.value="";
-  };
-
-  const addTag=()=>{const t=ti.trim().toLowerCase();if(t&&!(f.tags||[]).includes(t))s("tags",[...(f.tags||[]),t]);setTi("")};
-
-  return(<>
-    <div className="fg2">
-      <div className="fg fu"><label className="fl">Item Name *</label><input className="fi" value={f.name} onChange={e=>s("name",e.target.value)} placeholder="e.g. Victorian Ball Gown" autoFocus/></div>
-      <div className="fg"><label className="fl">Category</label><select className="fs" value={f.category} onChange={e=>s("category",e.target.value)}>{CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</select></div>
-      <div className="fg"><label className="fl">Condition</label><select className="fs" value={f.condition} onChange={e=>s("condition",e.target.value)}>{CONDITIONS.map(c=><option key={c}>{c}</option>)}</select></div>
-      <div className="fg"><label className="fl">Size</label><select className="fs" value={f.size} onChange={e=>s("size",e.target.value)}>{SIZES.map(c=><option key={c}>{c}</option>)}</select></div>
-      <div className="fg"><label className="fl">Quantity</label><input className="fi" type="number" min="0" value={f.quantity} onChange={e=>s("quantity",parseInt(e.target.value)||0)}/></div>
-      <div className="fg"><label className="fl">Availability</label><select className="fs" value={f.availability} onChange={e=>s("availability",e.target.value)}>{AVAILABILITY.map(c=><option key={c}>{c}</option>)}</select></div>
-      <div className="fg"><label className="fl">Location</label><input className="fi" value={f.location} onChange={e=>s("location",e.target.value)} placeholder="Costume Closet A"/></div>
-
-      <div className="fg fu" style={{borderTop:"1px solid var(--bd)",paddingTop:12,marginTop:2}}>
-        <label className="fl" style={{display:"flex",alignItems:"center",gap:5,marginBottom:6}}>{I.camera(13)} Photos (up to 5)</label>
-        <div className="pa">
-          {(f.images||[]).map((img,i)=>(<div key={i} className="pt"><img src={img} alt=""/><button className="pr2" onClick={()=>s("images",(f.images||[]).filter((_,j)=>j!==i))}>Ã—</button></div>))}
-          {(f.images||[]).length<5&&(<label className="pad">{I.plus(16)}<span>Add</span><input ref={fr} type="file" accept="image/*" multiple hidden onChange={addPhoto}/></label>)}
-        </div>
-      </div>
-
-      <div className="fg fu">
-        <label className="fl" style={{display:"flex",alignItems:"center",gap:5}}>{I.tag(13)} Tags</label>
-        <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:4}}>
-          {(f.tags||[]).map(t=><span key={t} className="mt" style={{cursor:"pointer"}} onClick={()=>s("tags",f.tags.filter(x=>x!==t))}>{t} Ã—</span>)}
-        </div>
-        <div style={{display:"flex",gap:5}}>
-          <input className="fi" value={ti} onChange={e=>setTi(e.target.value)} placeholder="Add tag..." style={{flex:1}} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addTag()}}}/>
-          <button className="btn bsm bs" onClick={addTag}>Add</button>
-        </div>
-      </div>
-
-      <div className="fg fu"><label className="fl">Notes</label><textarea className="ft" value={f.notes} onChange={e=>s("notes",e.target.value)} placeholder="Production history, care instructions..."/></div>
-
-      <div className="fg fu" style={{borderTop:"1px solid var(--bd)",paddingTop:12,marginTop:2}}>
-        <label className="fl" style={{color:"var(--gold)",marginBottom:4}}>Marketplace Settings</label>
-      </div>
-      <div className="fg"><label className="fl">Listing</label><select className="fs" value={f.marketStatus} onChange={e=>s("marketStatus",e.target.value)}>{MARKET_STATUS.map(c=><option key={c}>{c}</option>)}</select></div>
-      <div className="fg"/>
-      {(f.marketStatus==="For Rent"||f.marketStatus==="Rent or Sale")&&<div className="fg"><label className="fl">Rental / week</label><input className="fi" type="number" min="0" step="0.01" value={f.rentalPrice} onChange={e=>s("rentalPrice",parseFloat(e.target.value)||0)}/></div>}
-      {(f.marketStatus==="For Sale"||f.marketStatus==="Rent or Sale")&&<div className="fg"><label className="fl">Sale Price</label><input className="fi" type="number" min="0" step="0.01" value={f.salePrice} onChange={e=>s("salePrice",parseFloat(e.target.value)||0)}/></div>}
-    </div>
-    <div style={{display:"flex",gap:7,justifyContent:"flex-end",marginTop:18,paddingTop:14,borderTop:"1px solid var(--bd)"}}>
-      <button className="btn bs" onClick={onCancel}>Cancel</button>
-      <button className="btn bp" disabled={!v} style={!v?{opacity:.5}:{}} onClick={()=>onSave(f)}>{I.check(14)} {item?"Save":"Add Item"}</button>
-    </div>
-  </>);
-}
-
-// â”€â”€â”€ Item Detail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function ItemDetail({item, onEdit, onDelete, onClose}){
-  const cat=CAT_MAP[item.category]||CAT_MAP.other;
-  const mB=item.marketStatus==="For Rent"?"r":item.marketStatus==="For Sale"?"s":item.marketStatus==="Rent or Sale"?"b":"n";
-  const[lb,setLb]=useState(null);
-  const[qr,setQr]=useState(null);
-  useEffect(()=>{setQr(QR.toDataURL("T4U:"+item.id+":"+item.name,200))},[item.id,item.name]);
-
-  const printQR=()=>{
-    const w=window.open("","_blank","width=400,height=500");if(!w)return;
-    w.document.write("<html><head><title>QR - "+item.name+"</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:20px}h2{margin-bottom:4px}p{color:#666;font-size:14px}</style></head><body><h2>"+item.name+"</h2><p>"+cat.label+" | ID: "+item.id+"</p><img src='"+qr+"' width='200' height='200'/><br><p style='font-size:11px;margin-top:20px'>Theatre4u Inventory</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>");
-    w.document.close();
-  };
-  const dlQR=()=>{const a=document.createElement("a");a.href=qr;a.download="T4U-"+item.id+".png";a.click()};
-
-  return(<>
-    <Lightbox src={lb} onClose={()=>setLb(null)}/>
-    {(item.images||[]).length>0&&<div className="pg">{item.images.map((img,i)=><img key={i} src={img} alt="" onClick={()=>setLb(img)}/>)}</div>}
-    <div style={{display:"flex",alignItems:"center",gap:11,marginBottom:18}}>
-      <div className="icc" style={{background:cat.color+"22",fontSize:24,width:44,height:44}}>{cat.icon}</div>
-      <div><div style={{fontSize:11.5,color:cat.color,fontWeight:600}}>{cat.label}</div><div style={{fontFamily:"'Playfair Display',serif",fontSize:19,fontWeight:700}}>{item.name}</div></div>
-    </div>
-    {(item.tags||[]).length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:14}}>{item.tags.map(t=><span key={t} className="mt" style={{background:"rgba(212,168,67,.1)",color:"var(--gold)"}}>#{t}</span>)}</div>}
-    <div className="dsec"><h3>Details</h3>
-      <div className="dr"><span className="drl">Condition</span><span className="drv">{item.condition}</span></div>
-      <div className="dr"><span className="drl">Size</span><span className="drv">{item.size}</span></div>
-      <div className="dr"><span className="drl">Quantity</span><span className="drv">{item.quantity}</span></div>
-      <div className="dr"><span className="drl">Availability</span><span className="drv">{item.availability}</span></div>
-      <div className="dr"><span className="drl">Location</span><span className="drv">{item.location||"\u2014"}</span></div>
-      {item.notes&&<div className="dr"><span className="drl">Notes</span><span className="drv">{item.notes}</span></div>}
-      <div className="dr"><span className="drl">Added</span><span className="drv">{item.dateAdded?new Date(item.dateAdded).toLocaleDateString():"\u2014"}</span></div>
-      <div className="dr"><span className="drl">Item ID</span><span className="drv" style={{fontFamily:"monospace",fontSize:11,color:"var(--t3)"}}>{item.id}</span></div>
-    </div>
-    <div className="dsec"><h3>Marketplace</h3>
-      <div className="dr"><span className="drl">Status</span><span className="drv"><span className={"mb "+mB}>{item.marketStatus}</span></span></div>
-      {(item.marketStatus==="For Rent"||item.marketStatus==="Rent or Sale")&&<div className="dr"><span className="drl">Rental</span><span className="drv pr">{currency(item.rentalPrice)}/wk</span></div>}
-      {(item.marketStatus==="For Sale"||item.marketStatus==="Rent or Sale")&&<div className="dr"><span className="drl">Sale Price</span><span className="drv pr">{currency(item.salePrice)}</span></div>}
-    </div>
-    <div className="dsec"><h3 style={{display:"flex",alignItems:"center",gap:7}}>{I.qr(15)} QR Code Label</h3>
-      <div className="qrc">{qr&&<img src={qr} alt="QR" width={110} height={110}/>}
-        <div><div style={{fontFamily:"'Playfair Display',serif",fontSize:14,marginBottom:3}}>{item.name}</div>
-          <p style={{fontSize:12,color:"var(--t3)",lineHeight:1.4,marginBottom:8}}>Print this label and attach it to the item or storage bin. Anyone can scan it to look up details instantly.</p>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-            <button className="btn bsm bs" onClick={printQR}>{I.print(13)} Print</button>
-            <button className="btn bsm bs" onClick={dlQR}>{I.download(13)} Save</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div style={{display:"flex",gap:7,marginTop:16}}>
-      <button className="btn bp" onClick={()=>onEdit(item)}>{I.edit(14)} Edit</button>
-      <button className="btn bd" onClick={()=>{if(confirm("Delete this item?"))onDelete(item.id)}}>{I.trash(14)} Delete</button>
-    </div>
-  </>);
-}
-
-// â”€â”€â”€ Pagination â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function Pgn({total,page,per,onPage}){
-  const pages=Math.ceil(total/per);if(pages<=1)return null;
-  const s=Math.max(1,page-2),e=Math.min(pages,page+2),b=[];
-  for(let i=s;i<=e;i++)b.push(i);
-  return(<div className="pgn">
-    <button disabled={page<=1} onClick={()=>onPage(page-1)}>&lsaquo;</button>
-    {s>1&&<><button onClick={()=>onPage(1)}>1</button><span style={{color:"var(--t3)"}}>â€¦</span></>}
-    {b.map(i=><button key={i} className={i===page?"a":""} onClick={()=>onPage(i)}>{i}</button>)}
-    {e<pages&&<><span style={{color:"var(--t3)"}}>â€¦</span><button onClick={()=>onPage(pages)}>{pages}</button></>}
-    <button disabled={page>=pages} onClick={()=>onPage(page+1)}>&rsaquo;</button>
-  </div>);
-}
-
-// â”€â”€â”€ Scanner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function Scanner({items,onFound,onClose}){
-  const[input,setInput]=useState("");
-  const[result,setResult]=useState(null);
-  const search=()=>{
-    const q=input.trim().toLowerCase();if(!q)return;
-    const found=items.find(i=>i.id===q||i.id.toLowerCase()===q||i.name.toLowerCase().includes(q));
-    setResult(found||"nf");
-  };
-  return(<div className="sov" onClick={e=>e.target===e.currentTarget&&onClose()}>
-    <div style={{textAlign:"center",color:"var(--t1)"}}><div style={{marginBottom:10}}>{I.scan(44)}</div>
-      <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:6}}>QR / ID Lookup</h2>
-      <p style={{color:"var(--t3)",marginBottom:16,maxWidth:380,fontSize:13}}>Enter the item ID from a printed QR label, or type a name to find items quickly.</p>
-    </div>
-    <div style={{display:"flex",gap:8,alignItems:"center"}}>
-      <input className="fi" value={input} onChange={e=>setInput(e.target.value)} placeholder="Item ID or name..." style={{width:260,fontSize:15,padding:11}} autoFocus onKeyDown={e=>e.key==="Enter"&&search()}/>
-      <button className="btn bp" onClick={search} style={{padding:"11px 18px"}}>Lookup</button>
-    </div>
-    {result==="nf"&&<div style={{background:"rgba(194,24,91,.15)",border:"1px solid rgba(194,24,91,.3)",borderRadius:9,padding:14,color:"var(--red)",marginTop:6}}>No item found for "{input}"</div>}
-    {result&&result!=="nf"&&<div className="cd" style={{maxWidth:380,marginTop:6,cursor:"pointer"}} onClick={()=>{onFound(result);onClose()}}>
-      <div style={{display:"flex",alignItems:"center",gap:9}}>
-        <div className="icc" style={{background:(CAT_MAP[result.category]?.color||"#757575")+"22"}}>{CAT_MAP[result.category]?.icon||"\u{1F4E6}"}</div>
-        <div><div style={{fontWeight:600}}>{result.name}</div><div style={{fontSize:11,color:"var(--t3)"}}>{result.category} \u00B7 {result.condition} \u00B7 Qty: {result.quantity}</div></div>
-      </div>
-      <div style={{fontSize:11,color:"var(--gold)",marginTop:7}}>Click to view details \u2192</div>
-    </div>}
-    <button className="btn bs" onClick={onClose} style={{marginTop:10}}>Close</button>
-  </div>);
-}
-
-// â•â•â• PAGES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-function Dashboard({items,org}){
-  const tq=items.reduce((s,i)=>s+(i.quantity||1),0);
-  const listed=items.filter(i=>i.marketStatus!=="Not Listed").length;
-  const tv=items.reduce((s,i)=>s+((i.salePrice||0)*(i.quantity||1)),0);
-  const wp=items.filter(i=>(i.images||[]).length>0).length;
-  const cc={};items.forEach(i=>{cc[i.category]=(cc[i.category]||0)+(i.quantity||1)});
-  const mx=Math.max(1,...Object.values(cc));
-  return(<div className="fin">
-    <div style={{marginBottom:22}}><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:2}}>Welcome{org.name?", "+org.name:" to Theatre4u"}</h2><p style={{color:"var(--t3)",fontSize:13.5}}>Your theatre inventory at a glance.</p></div>
-    <div className="sg">
-      <div className="cd sc"><div className="si">{"\u{1F4E6}"}</div><div className="sv">{tq}</div><div className="sl">Total Items</div></div>
-      <div className="cd sc"><div className="si">{"\u{1F4C2}"}</div><div className="sv">{items.length}</div><div className="sl">Entries</div></div>
-      <div className="cd sc"><div className="si">{"\u{1F3EA}"}</div><div className="sv">{listed}</div><div className="sl">Listed</div></div>
-      <div className="cd sc"><div className="si">{"\u{1F4F8}"}</div><div className="sv">{wp}</div><div className="sl">With Photos</div></div>
-      <div className="cd sc"><div className="si">{"\u{1F4B0}"}</div><div className="sv">{tv>0?currency(tv):"\u2014"}</div><div className="sl">Est. Value</div></div>
-    </div>
-    <div className="cd" style={{marginBottom:18}}>
-      <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:12}}>Inventory by Category</h3>
-      {CATEGORIES.map(cat=>{const c=cc[cat.id]||0;if(!c)return null;return<div className="cb" key={cat.id}><div className="cbi">{cat.icon}</div><div className="cbl">{cat.label}</div><div className="cbt"><div className="cbf" style={{width:(c/mx*100)+"%",background:cat.color}}/></div><div className="cbc">{c}</div></div>})}
-      {items.length===0&&<p style={{color:"var(--t3)",textAlign:"center",padding:14}}>No items yet. Add your first or load sample data in Settings.</p>}
-    </div>
-    <div className="cd">
-      <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:8}}>Getting Started</h3>
-      <div style={{color:"var(--t2)",fontSize:13,lineHeight:1.7}}>
-        <p style={{marginBottom:5}}>{"\u{1F4E6}"} <strong>Inventory</strong> — Add items with photos, tags, locations, and conditions.</p>
-        <p style={{marginBottom:5}}>{"\u{1F4F8}"} <strong>Photos</strong> — Upload up to 5 photos per item for visual ID.</p>
-        <p style={{marginBottom:5}}>{"\u{1F533}"} <strong>QR Codes</strong> — Every item gets a printable QR label for instant lookup.</p>
-        <p style={{marginBottom:5}}>{"\u{1F3EA}"} <strong>Marketplace</strong> — Share items for rent or sale with other programs.</p>
-        <p>{"\u{1F4CA}"} <strong>Reports</strong> — Breakdowns and CSV export.</p>
-      </div>
-    </div>
-  </div>);
-}
-
-function Inventory({items,onAdd,onEdit,onDelete}){
-  const[search,setSrch]=useState("");const[cf,setCf]=useState("all");const[cof,setCof]=useState("all");const[af,setAf]=useState("all");const[mf,setMf]=useState("all");
-  const[view,setView]=useState("grid");const[showF,setShowF]=useState(false);const[pg,setPg]=useState(1);const[modal,setModal]=useState(null);const[act,setAct]=useState(null);const[scan,setScan]=useState(false);
-  const PP=18;
-  const flt=useMemo(()=>{let f=items;if(search){const q=search.toLowerCase();f=f.filter(i=>i.name.toLowerCase().includes(q)||(i.notes||"").toLowerCase().includes(q)||(i.location||"").toLowerCase().includes(q)||(i.tags||[]).some(t=>t.includes(q)))}
-    if(cf!=="all")f=f.filter(i=>i.category===cf);if(cof!=="all")f=f.filter(i=>i.condition===cof);if(af!=="all")f=f.filter(i=>i.availability===af);if(mf!=="all")f=f.filter(i=>i.marketStatus===mf);return f},[items,search,cf,cof,af,mf]);
-  const pd=useMemo(()=>flt.slice((pg-1)*PP,pg*PP),[flt,pg]);
-  useEffect(()=>setPg(1),[search,cf,cof,af,mf]);
-  const save=(form)=>{if(act)onEdit({...act,...form});else onAdd({...form,id:uid(),dateAdded:new Date().toISOString()});setModal(null);setAct(null)};
-  const openD=(item)=>{setAct(item);setModal("d")};const openE=(item)=>{setAct(item);setModal("e")};
-
-  return(<div className="fin">
-    {scan&&<Scanner items={items} onFound={openD} onClose={()=>setScan(false)}/>}
-    <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12,alignItems:"center"}}>
-      <div className="srch">{I.search(14)}<input value={search} onChange={e=>setSrch(e.target.value)} placeholder="Search items, tags..."/></div>
-      <button className="bi" title="Filters" onClick={()=>setShowF(!showF)} style={showF?{borderColor:"var(--gold)",color:"var(--gold)"}:{}}>{I.filter(14)}</button>
-      <button className="bi" title="QR Lookup" onClick={()=>setScan(true)}>{I.scan(14)}</button>
-      <div className="vt"><button className={view==="grid"?"a":""} onClick={()=>setView("grid")}>Grid</button><button className={view==="table"?"a":""} onClick={()=>setView("table")}>Table</button></div>
-      <div style={{marginLeft:"auto"}}><button className="btn bp" onClick={()=>{setAct(null);setModal("a")}}>{I.plus(14)} Add Item</button></div>
-    </div>
-    {showF&&<div className="fp fin">
-      <div><label>Category</label><select value={cf} onChange={e=>setCf(e.target.value)}><option value="all">All</option>{CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></div>
-      <div><label>Condition</label><select value={cof} onChange={e=>setCof(e.target.value)}><option value="all">All</option>{CONDITIONS.map(c=><option key={c}>{c}</option>)}</select></div>
-      <div><label>Availability</label><select value={af} onChange={e=>setAf(e.target.value)}><option value="all">All</option>{AVAILABILITY.map(c=><option key={c}>{c}</option>)}</select></div>
-      <div><label>Market</label><select value={mf} onChange={e=>setMf(e.target.value)}><option value="all">All</option>{MARKET_STATUS.map(c=><option key={c}>{c}</option>)}</select></div>
-      <button className="btn bsm bs" onClick={()=>{setCf("all");setCof("all");setAf("all");setMf("all")}}>Clear</button>
-    </div>}
-    <div style={{color:"var(--t3)",fontSize:11.5,marginBottom:8}}>{flt.length} item{flt.length!==1?"s":""}</div>
-    {view==="grid"&&<>{pd.length===0?<div className="emp"><div className="ei">{"\u{1F3AD}"}</div><h3>No items found</h3><p>{items.length===0?"Add your first item to begin.":"Adjust search or filters."}</p>{items.length===0&&<button className="btn bp" onClick={()=>{setAct(null);setModal("a")}}>{I.plus(14)} Add Item</button>}</div>
-      :<div className="cg">{pd.map(item=>{const cat=CAT_MAP[item.category]||CAT_MAP.other;const mB=item.marketStatus==="For Rent"?"r":item.marketStatus==="For Sale"?"s":item.marketStatus==="Rent or Sale"?"b":"n";const hi=(item.images||[]).length>0;
-        return(<div key={item.id} className="cd ic" onClick={()=>openD(item)}>
-          {hi&&<div className="ic-img"><img src={item.images[0]} alt={item.name} loading="lazy"/></div>}
-          <div className="ich">{!hi&&<div className="icc" style={{background:cat.color+"22"}}>{cat.icon}</div>}<div><div className="ict">{item.name}</div><div className="ics">{cat.label}{item.location?" \u00B7 "+item.location:""}</div></div></div>
-          <div className="icm"><span className="mt">{item.condition}</span><span className="mt">\u00D7{item.quantity}</span>{item.size!=="N/A"&&<span className="mt">{item.size}</span>}<span className="mt">{item.availability}</span>{hi&&<span className="mt">{"\u{1F4F8}"} {item.images.length}</span>}</div>
-          <div className="icf"><span className={"mb "+mB}>{item.marketStatus}</span>{item.marketStatus!=="Not Listed"&&<span className="pr">{item.rentalPrice>0?currency(item.rentalPrice)+"/wk":""}{item.rentalPrice>0&&item.salePrice>0?" \u00B7 ":""}{item.salePrice>0?currency(item.salePrice):""}</span>}</div>
-        </div>)})}</div>}<Pgn total={flt.length} page={pg} per={PP} onPage={setPg}/></>}
-    {view==="table"&&<><div className="tw"><table><thead><tr><th></th><th>Item</th><th>Category</th><th>Cond.</th><th>Qty</th><th>Location</th><th>Status</th><th>Market</th><th></th></tr></thead><tbody>
-      {pd.map(item=>{const cat=CAT_MAP[item.category]||CAT_MAP.other;const mB=item.marketStatus==="For Rent"?"r":item.marketStatus==="For Sale"?"s":item.marketStatus==="Rent or Sale"?"b":"n";
-        return(<tr key={item.id}><td style={{width:36,padding:"3px 6px"}}>{(item.images||[]).length>0?<img src={item.images[0]} alt="" style={{width:28,height:28,borderRadius:3,objectFit:"cover"}}/>:<span style={{fontSize:16}}>{cat.icon}</span>}</td>
-          <td style={{fontWeight:600,cursor:"pointer"}} onClick={()=>openD(item)}>{item.name}</td><td>{cat.label}</td><td>{item.condition}</td><td>{item.quantity}</td><td style={{color:"var(--t2)"}}>{item.location||"\u2014"}</td><td>{item.availability}</td>
-          <td><span className={"mb "+mB}>{item.marketStatus}</span></td><td><div style={{display:"flex",gap:3}}><button className="bi" onClick={e=>{e.stopPropagation();openE(item)}}>{I.edit(12)}</button><button className="bi" style={{color:"var(--red)"}} onClick={e=>{e.stopPropagation();if(confirm("Delete?"))onDelete(item.id)}}>{I.trash(12)}</button></div></td></tr>)})}
-      {pd.length===0&&<tr><td colSpan={9} style={{textAlign:"center",color:"var(--t3)",padding:32}}>No items</td></tr>}
-    </tbody></table></div><Pgn total={flt.length} page={pg} per={PP} onPage={setPg}/></>}
-    {modal==="a"&&<Modal title="Add New Item" onClose={()=>setModal(null)}><ItemForm onSave={save} onCancel={()=>setModal(null)}/></Modal>}
-    {modal==="e"&&act&&<Modal title="Edit Item" onClose={()=>setModal(null)}><ItemForm item={act} onSave={save} onCancel={()=>setModal(null)}/></Modal>}
-    {modal==="d"&&act&&<Modal title="Item Details" onClose={()=>{setModal(null);setAct(null)}}><ItemDetail item={act} onEdit={()=>setModal("e")} onDelete={id=>{onDelete(id);setModal(null);setAct(null)}} onClose={()=>{setModal(null);setAct(null)}}/></Modal>}
-  </div>);
-}
-
-function Marketplace({items,org}){
-  const[search,setSrch]=useState("");const[cf,setCf]=useState("all");const[tf,setTf]=useState("all");const[pg,setPg]=useState(1);const[vi,setVi]=useState(null);const PP=16;
-  const listed=useMemo(()=>{let f=items.filter(i=>i.marketStatus!=="Not Listed"&&i.availability==="In Stock");if(search){const q=search.toLowerCase();f=f.filter(i=>i.name.toLowerCase().includes(q))}if(cf!=="all")f=f.filter(i=>i.category===cf);if(tf==="rent")f=f.filter(i=>i.marketStatus.includes("Rent"));if(tf==="sale")f=f.filter(i=>i.marketStatus.includes("Sale"));return f},[items,search,cf,tf]);
-  const pd=useMemo(()=>listed.slice((pg-1)*PP,pg*PP),[listed,pg]);useEffect(()=>setPg(1),[search,cf,tf]);
-  return(<div className="fin">
-    <p style={{color:"var(--t2)",fontSize:13,marginBottom:14}}>Items marked for rent or sale. Other organizations can browse these.</p>
-    <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12,alignItems:"center"}}>
-      <div className="srch">{I.search(14)}<input value={search} onChange={e=>setSrch(e.target.value)} placeholder="Search listings..."/></div>
-      <select value={cf} onChange={e=>setCf(e.target.value)} style={{background:"var(--bgi)",border:"1px solid var(--bd)",borderRadius:6,padding:"5px 8px",color:"var(--t1)",fontSize:12}}><option value="all">All Categories</option>{CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select>
-      <div className="vt"><button className={tf==="all"?"a":""} onClick={()=>setTf("all")}>All</button><button className={tf==="rent"?"a":""} onClick={()=>setTf("rent")}>Rent</button><button className={tf==="sale"?"a":""} onClick={()=>setTf("sale")}>Sale</button></div>
-    </div>
-    <div style={{color:"var(--t3)",fontSize:11.5,marginBottom:8}}>{listed.length} listing{listed.length!==1?"s":""}</div>
-    {pd.length===0?<div className="emp"><div className="ei">{"\u{1F3EA}"}</div><h3>No listings</h3><p>Mark items for rent or sale in inventory.</p></div>
-    :<div className="cg">{pd.map(item=>{const cat=CAT_MAP[item.category]||CAT_MAP.other;const mB=item.marketStatus==="For Rent"?"r":item.marketStatus==="For Sale"?"s":"b";const hi=(item.images||[]).length>0;
-      return(<div key={item.id} className="cd ic" onClick={()=>setVi(item)}>
-        {org.name&&<div style={{fontSize:11,color:"var(--gold)",fontWeight:600,marginBottom:7,display:"flex",alignItems:"center",gap:5}}><span style={{width:6,height:6,background:"var(--gold)",borderRadius:"50%",display:"inline-block"}}/>{org.name}</div>}
-        {hi&&<div className="ic-img"><img src={item.images[0]} alt={item.name} loading="lazy"/></div>}
-        <div className="ich">{!hi&&<div className="icc" style={{background:cat.color+"22"}}>{cat.icon}</div>}<div><div className="ict">{item.name}</div><div className="ics">{cat.label} \u00B7 {item.condition} \u00B7 Qty: {item.quantity}</div></div></div>
-        {item.notes&&<p style={{fontSize:11.5,color:"var(--t3)",margin:"5px 0",lineHeight:1.4}}>{item.notes.slice(0,80)}{item.notes.length>80?"\u2026":""}</p>}
-        <div className="icf"><span className={"mb "+mB}>{item.marketStatus}</span><span className="pr">{item.rentalPrice>0?currency(item.rentalPrice)+"/wk":""}{item.rentalPrice>0&&item.salePrice>0?" \u00B7 ":""}{item.salePrice>0?currency(item.salePrice):""}</span></div>
-      </div>)})}</div>}
-    <Pgn total={listed.length} page={pg} per={PP} onPage={setPg}/>
-    {vi&&<Modal title="Listing" onClose={()=>setVi(null)}><ItemDetail item={vi} onEdit={()=>{}} onDelete={()=>{}} onClose={()=>setVi(null)}/></Modal>}
-  </div>);
-}
-
-function Reports({items}){
-  const[tab,setTab]=useState("overview");
-  const tq=items.reduce((s,i)=>s+(i.quantity||1),0);
-  const cd=CATEGORIES.map(cat=>{const ci=items.filter(i=>i.category===cat.id);return{...cat,count:ci.length,qty:ci.reduce((s,i)=>s+(i.quantity||1),0),value:ci.reduce((s,i)=>s+((i.salePrice||0)*(i.quantity||1)),0)}}).filter(c=>c.count>0);
-  const coD=CONDITIONS.map(c=>({l:c,c:items.filter(i=>i.condition===c).length})).filter(c=>c.c>0);
-  const avD=AVAILABILITY.map(a=>({l:a,c:items.filter(i=>i.availability===a).length})).filter(a=>a.c>0);
-  const mkD=MARKET_STATUS.map(s=>({l:s,c:items.filter(i=>i.marketStatus===s).length})).filter(m=>m.c>0);
-
-  const csv=()=>{
-    if(items.length===0){alert("No items to export.");return;}
-    const h=["Name","Category","Condition","Size","Qty","Location","Availability","Market","Rental","Sale","Tags","Notes","ID","Date"];
-    const rows=items.map(i=>[
-      '"'+(i.name||"").replace(/"/g,'""')+'"',
-      i.category,i.condition,i.size,i.quantity,
-      '"'+(i.location||"").replace(/"/g,'""')+'"',
-      i.availability,i.marketStatus,
-      i.rentalPrice||0,i.salePrice||0,
-      '"'+(i.tags||[]).join(";").replace(/"/g,'""')+'"',
-      '"'+(i.notes||"").replace(/"/g,'""')+'"',
-      i.id,i.dateAdded||""
-    ].join(","));
-    const csv="\uFEFF"+[h.join(","),...rows].join("\r\n");
-    const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");
-    a.href=url;a.download="theatre4u_inventory.csv";
-    document.body.appendChild(a);a.click();
-    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},200);
-  };
-
-  const printQR=()=>{const w=window.open("","_blank");if(!w)return;
-    const labels=items.map(i=>{const src=QR.toDataURL("T4U:"+i.id+":"+i.name,140);return'<div style="display:inline-block;text-align:center;padding:10px;border:1px dashed #ccc;margin:5px;width:170px"><img src="'+src+'" width="96" height="96"/><div style="font-size:10px;font-weight:600;margin-top:5px">'+i.name+'</div><div style="font-size:8px;color:#888">'+i.id+'</div></div>'}).join("");
-    w.document.write('<html><head><title>Theatre4u QR Labels</title></head><body style="font-family:sans-serif;padding:16px">'+labels+'<script>setTimeout(function(){window.print()},400)<\/script></body></html>');w.document.close()};
-
-  return(<div className="fin">
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:7}}>
-      <p style={{color:"var(--t2)",fontSize:13}}>Analyze and export inventory data.</p>
-      <div style={{display:"flex",gap:6}}><button className="btn bs bsm" onClick={printQR}>{I.qr(13)} Print All QR</button><button className="btn bs bsm" onClick={csv}>{I.download(13)} Export CSV</button></div>
-    </div>
-    <div className="tabs">{["overview","condition","availability","market"].map(t=><button key={t} className={"tab "+(tab===t?"a":"")} onClick={()=>setTab(t)}>{t[0].toUpperCase()+t.slice(1)}</button>)}</div>
-    {tab==="overview"&&<div className="cd"><h3 style={{fontFamily:"'Playfair Display',serif",marginBottom:12}}>Category Breakdown</h3><div className="tw"><table><thead><tr><th>Category</th><th>Entries</th><th>Qty</th><th>Value</th></tr></thead><tbody>
-      {cd.map(c=><tr key={c.id}><td>{c.icon} {c.label}</td><td>{c.count}</td><td>{c.qty}</td><td>{c.value>0?currency(c.value):"\u2014"}</td></tr>)}
-      <tr style={{fontWeight:700}}><td>Total</td><td>{items.length}</td><td>{tq}</td><td>{currency(cd.reduce((s,c)=>s+c.value,0))}</td></tr></tbody></table></div></div>}
-    {tab==="condition"&&<div className="cd"><h3 style={{fontFamily:"'Playfair Display',serif",marginBottom:12}}>Condition Report</h3>
-      {coD.map(c=><div className="cb" key={c.l}><div className="cbl" style={{width:100}}>{c.l}</div><div className="cbt"><div className="cbf" style={{width:(c.c/items.length*100)+"%",background:c.l==="New"?"#4caf50":c.l==="Excellent"?"#66bb6a":c.l==="Good"?"#42a5f5":"#ffa726"}}/></div><div className="cbc">{c.c}</div></div>)}</div>}
-    {tab==="availability"&&<div className="cd"><h3 style={{fontFamily:"'Playfair Display',serif",marginBottom:12}}>Availability</h3>
-      {avD.map(a=><div className="cb" key={a.l}><div className="cbl" style={{width:100}}>{a.l}</div><div className="cbt"><div className="cbf" style={{width:(a.c/items.length*100)+"%",background:a.l==="In Stock"?"#4caf50":"#42a5f5"}}/></div><div className="cbc">{a.c}</div></div>)}</div>}
-    {tab==="market"&&<div className="cd"><h3 style={{fontFamily:"'Playfair Display',serif",marginBottom:12}}>Marketplace</h3>
-      {mkD.map(m=><div className="cb" key={m.l}><div className="cbl" style={{width:100}}>{m.l}</div><div className="cbt"><div className="cbf" style={{width:(m.c/items.length*100)+"%",background:m.l.includes("Rent")?"#42a5f5":m.l.includes("Sale")?"#4caf50":m.l.includes("or")?"#d4a843":"#757575"}}/></div><div className="cbc">{m.c}</div></div>)}</div>}
-  </div>);
-}
-
-function Settings({org,setOrg,onSeed}){
-  const[f,setF]=useState(org);const[saved,setSaved]=useState(false);
-  const s=(k,v)=>setF(p=>({...p,[k]:v}));
-  const save=()=>{setOrg(f);setSaved(true);setTimeout(()=>setSaved(false),2000)};
-  return(<div className="fin" style={{maxWidth:600}}>
-    <div className="cd" style={{marginBottom:18}}>
-      <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:16}}>Organization Profile</h3>
-      <div className="fg2">
-        <div className="fg fu"><label className="fl">Organization Name</label><input className="fi" value={f.name} onChange={e=>s("name",e.target.value)} placeholder="Lincoln High Drama"/></div>
-        <div className="fg"><label className="fl">Type</label><select className="fs" value={f.type} onChange={e=>s("type",e.target.value)}><option value="">Select...</option><option value="school">School</option><option value="district">District</option><option value="community">Community Theatre</option><option value="college">College</option><option value="professional">Professional</option><option value="other">Other</option></select></div>
-        <div className="fg"><label className="fl">Email</label><input className="fi" type="email" value={f.email} onChange={e=>s("email",e.target.value)} placeholder="drama@school.edu"/></div>
-        <div className="fg"><label className="fl">Phone</label><input className="fi" value={f.phone} onChange={e=>s("phone",e.target.value)} placeholder="(555) 123-4567"/></div>
-        <div className="fg"><label className="fl">City</label><input className="fi" value={f.location} onChange={e=>s("location",e.target.value)} placeholder="Portland, OR"/></div>
-        <div className="fg fu"><label className="fl">About</label><textarea className="ft" value={f.bio} onChange={e=>s("bio",e.target.value)} placeholder="Tell others about your program..."/></div>
-      </div>
-      <div style={{marginTop:14,display:"flex",gap:7,alignItems:"center"}}>
-        <button className="btn bp" onClick={save}>{I.check(14)} Save</button>
-        {saved&&<span style={{color:"var(--grn)",fontSize:12,fontWeight:600}}>{"\u2713"} Saved!</span>}
-      </div>
-    </div>
-    <div className="cd">
-      <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:8}}>Data Management</h3>
-      <p style={{color:"var(--t3)",fontSize:12.5,marginBottom:12}}>Load sample data to explore, or reset everything.</p>
-      <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
-        <button className="btn bs" onClick={onSeed}>{I.box(14)} Load Samples</button>
-        <button className="btn bd" onClick={()=>{if(confirm("Delete ALL data?")){const e={name:"",type:"",email:"",phone:"",location:"",bio:""};setOrg(e);setF(e);DB.save("t4u-items",[]);DB.save("t4u-org",e);window.location.reload()}}}>{I.trash(14)} Reset All</button>
-      </div>
-    </div>
-  </div>);
-}
-
-// â•â•â• APP â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-export default function App(){
-  const[items,setItems]=useState([]);const[org,setOrg]=useState({name:"",type:"",email:"",phone:"",location:"",bio:""});
-  const[page,setPage]=useState("dashboard");const[so,setSo]=useState(false);const[loaded,setLoaded]=useState(false);
-  const[scene,setScene]=useState("landing");
-  const[curtain,setCurtain]=useState("hidden");
-
-  useEffect(()=>{(async()=>{const si=await DB.load("t4u-items",null);const so2=await DB.load("t4u-org",null);if(si)setItems(si);if(so2)setOrg(so2);setLoaded(true)})()},[]);
-  useEffect(()=>{if(loaded)DB.save("t4u-items",items)},[items,loaded]);
-  useEffect(()=>{if(loaded)DB.save("t4u-org",org)},[org,loaded]);
-
-  const add=useCallback(i=>setItems(p=>[i,...p]),[]);
-  const edit=useCallback(i=>setItems(p=>p.map(x=>x.id===i.id?i:x)),[]);
-  const del=useCallback(id=>setItems(p=>p.filter(x=>x.id!==id)),[]);
-  const seed=useCallback(()=>setItems(p=>[...p,...seedItems()]),[]);
-  const nav=p=>{setPage(p);setSo(false)};
-
-  const goApp=useCallback(()=>{
-    setCurtain("closed");
-    setTimeout(()=>{setScene("app");window.scrollTo(0,0);setCurtain("open");setTimeout(()=>setCurtain("hidden"),800);},700);
+  // ── Auth listener ────────────────────────────────────────────────────────
+  useEffect(()=>{
+    SB.auth.getSession().then(({data:{session}})=>{
+      setUser(session?.user||null);
+      setAuthChk(true);
+    });
+    const{data:{subscription}}=SB.auth.onAuthStateChange((_,session)=>{
+      setUser(session?.user||null);
+      if(!session) { setItems([]); setOrg({name:"",type:"",email:"",phone:"",location:"",bio:""}); setLoaded(false); }
+    });
+    return()=>subscription.unsubscribe();
   },[]);
 
-  const goLanding=useCallback(()=>{
-    setCurtain("closed");
-    setTimeout(()=>{setScene("landing");window.scrollTo(0,0);setCurtain("open");setTimeout(()=>setCurtain("hidden"),800);},700);
+  // ── Load data once logged in ─────────────────────────────────────────────
+  useEffect(()=>{
+    if(!user) return;
+    (async()=>{
+      const{data:orgData}=await SB.from("orgs").select("*").eq("id",user.id).single();
+      if(orgData) setOrg(orgData);
+      const{data:itemData}=await SB.from("items").select("*").eq("org_id",user.id).order("added",{ascending:false});
+      if(itemData) setItems(itemData);
+      setLoaded(true);
+    })();
+  },[user]);
+
+  // ── CRUD ─────────────────────────────────────────────────────────────────
+  const add = useCallback(async(item)=>{
+    const row={...item,org_id:user.id};
+    const{data,error}=await SB.from("items").insert(row).select().single();
+    if(error){ alert("Could not save item: "+error.message); console.error(error); return; }
+    if(data) setItems(p=>[data,...p]);
+  },[user]);
+
+  const edit = useCallback(async(item)=>{
+    const{data,error}=await SB.from("items").update(item).eq("id",item.id).select().single();
+    if(error){ alert("Could not update item: "+error.message); console.error(error); return; }
+    if(data) setItems(p=>p.map(x=>x.id===item.id?data:x));
   },[]);
 
-  const navs=[{id:"dashboard",l:"Dashboard",i:I.home},{id:"inventory",l:"Inventory",i:I.box},{id:"marketplace",l:"Marketplace",i:I.store},{id:"reports",l:"Reports",i:I.chart},{id:"settings",l:"Settings",i:I.settings}];
-  const listed=items.filter(i=>i.marketStatus!=="Not Listed").length;
-  const titles={dashboard:"Dashboard",inventory:"Inventory",marketplace:"Marketplace",reports:"Reports",settings:"Settings"};
-  const desk=typeof window!=="undefined"&&window.innerWidth>900;
+  const del = useCallback(async(id)=>{
+    await SB.from("items").delete().eq("id",id);
+    setItems(p=>p.filter(x=>x.id!==id));
+  },[]);
 
-  const curtainEl=curtain!=="hidden"&&(
-    <div style={{position:"fixed",inset:0,zIndex:9000,display:"flex",pointerEvents:"none"}}>
-      <div style={{flex:1,background:"var(--bg2)",transition:"transform .7s cubic-bezier(.77,0,.18,1)",borderRight:"1px solid rgba(212,168,67,.35)",transform:curtain==="open"?"translateX(-100%)":"translateX(0)"}}/>
-      <div style={{flex:1,background:"var(--bg2)",transition:"transform .7s cubic-bezier(.77,0,.18,1)",borderLeft:"1px solid rgba(212,168,67,.35)",transform:curtain==="open"?"translateX(100%)":"translateX(0)"}}/>
+  const seed = useCallback(async()=>{
+    const samples=makeSamples().map(i=>({...i,org_id:user.id}));
+    const{data}=await SB.from("items").insert(samples).select();
+    if(data) setItems(p=>[...data,...p]);
+  },[user]);
+
+  const saveOrg = useCallback(async(o)=>{
+    setOrg(o);
+    await SB.from("orgs").upsert({...o,id:user.id});
+  },[user]);
+
+  const signOut = async()=>{ await SB.auth.signOut(); };
+
+  const nav = p => { setPage(p); setMob(false); };
+  const isDesk = typeof window !== "undefined" && window.innerWidth > 900;
+  const listed = items.filter(i=>i.mkt!=="Not Listed").length;
+
+  const NAV = [
+    { id:"dashboard",   label:"Dashboard",   ico:Ic.home    },
+    { id:"inventory",   label:"Inventory",   ico:Ic.box     },
+    { id:"marketplace", label:"Marketplace", ico:Ic.store   },
+    { id:"reports",     label:"Reports",     ico:Ic.chart   },
+    { id:"settings",    label:"Settings",    ico:Ic.settings},
+  ];
+  const TITLES = { dashboard:"Dashboard", inventory:"Inventory", marketplace:"Marketplace", reports:"Reports", settings:"Settings" };
+
+  // ── Auth gate ────────────────────────────────────────────────────────────
+  if(!authChk) return(
+    <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexDirection:"column"}}>
+      <style>{CSS}</style>
+      <div style={{fontSize:52}}>🎭</div>
+      <div style={{fontFamily:"'Abril Fatface',display",fontSize:22,color:"var(--gold)"}}>Loading Theatre4u…</div>
+      <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
     </div>
   );
 
-  if(scene==="landing") return(<><style>{CSS}</style>{curtainEl}<LandingPage onLaunch={goApp}/></>);
+  if(!user) return(
+    <>
+      <style>{CSS}</style>
+      <LandingPage
+        onSignIn={()=>{
+          // Show auth screen in signin mode by mounting AuthScreen with initial mode
+          const el=document.getElementById("t4u-auth-overlay");
+          if(el) el.style.display="flex";
+          window.__t4u_auth_mode="login";
+          window.__t4u_show_auth&&window.__t4u_show_auth("login");
+        }}
+        onSignUp={()=>{
+          window.__t4u_show_auth&&window.__t4u_show_auth("signup");
+        }}
+      />
+      <AuthOverlay onAuth={u=>{setUser(u);}} />
+    </>
+  );
 
-  return(<><style>{CSS}</style>{curtainEl}
-    <div className="app">
-      <aside className={"side "+(desk?"":so?"ms":"mh")} style={desk?{position:"relative",transform:"none",opacity:1}:{}}>
-        <div className="logo"><div className="logo-i">{"\u{1F3AD}"}</div><div><div className="logo-t">Theatre4u</div><div className="logo-s">Inventory & Market</div></div></div>
-        <nav className="nav">
-          <div className="nlbl">Main</div>
-          {navs.map(n=><div key={n.id} className={"ni "+(page===n.id?"a":"")} onClick={()=>nav(n.id)}>{n.i(16)}<span>{n.l}</span>
-            {n.id==="inventory"&&items.length>0&&<span className="c">{items.length}</span>}
-            {n.id==="marketplace"&&listed>0&&<span className="c">{listed}</span>}
-          </div>)}
-          <div className="nlbl" style={{marginTop:12}}>Categories</div>
-          {CATEGORIES.slice(0,7).map(cat=>{const c=items.filter(i=>i.category===cat.id).length;
-            return<div key={cat.id} className="ni" onClick={()=>nav("inventory")} style={{fontSize:12,padding:"5px 11px"}}><span>{cat.icon}</span><span>{cat.label}</span>{c>0&&<span className="c">{c}</span>}</div>})}
-          <div style={{marginTop:"auto",padding:"10px 9px 6px",borderTop:"1px solid var(--bd)"}}>
-            <div className="back-lp" onClick={goLanding}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg>
-              <span>About Theatre4u</span>
+  return (
+    <>
+      <style>{CSS}</style>
+      <div className="shell">
+        {/* Sidebar */}
+        <aside className={`sidebar ${isDesk ? "" : mob ? "open" : "hidden"}`}
+               style={isDesk ? {position:"relative",transform:"none"} : {}}>
+          <div className="sb-root">
+            <div className="sb-photo">
+              <img src={usp(BG.sidebar,400,900)} alt=""/>
             </div>
-            <div className="back-lp" style={{color:"var(--red)",marginTop:2}} onClick={()=>{if(window.confirm("Sign out? Your data is saved locally."))setScene("landing")}}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-              <span>Sign Out</span>
+            <div className="sb-inner">
+              <div className="sb-logo">
+                <span className="sb-glyph">🎭</span>
+                <div className="sb-name">Theatre4u</div>
+                <div className="sb-sub">Inventory & Marketplace</div>
+              </div>
+
+              <nav className="sb-nav">
+                <div className="sb-label">Navigation</div>
+                {NAV.map(n=>(
+                  <div key={n.id} className={`sb-item ${page===n.id?"on":""}`} onClick={()=>nav(n.id)}>
+                    <span className="sb-ico">{n.ico}</span>
+                    <span>{n.label}</span>
+                    {n.id==="inventory"  && items.length>0 && <span className="sb-badge">{items.length}</span>}
+                    {n.id==="marketplace"&& listed>0       && <span className="sb-badge">{listed}</span>}
+                  </div>
+                ))}
+
+                <div className="sb-label" style={{marginTop:14}}>Categories</div>
+                {CATS.slice(0,7).map(cat=>{
+                  const c=items.filter(i=>i.category===cat.id).length;
+                  return(
+                    <div key={cat.id} className="sb-item" style={{fontSize:12.5,padding:"6px 12px"}} onClick={()=>nav("inventory")}>
+                      <span>{cat.icon}</span><span>{cat.label}</span>
+                      {c>0&&<span className="sb-badge">{c}</span>}
+                    </div>
+                  );
+                })}
+              </nav>
+
+              <div className="sb-foot">
+                {org.name&&<div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.35)",marginBottom:8,textTransform:"uppercase",letterSpacing:1.5}}>🏛 {org.name}</div>}
+                <div style={{display:"flex",gap:6,flexDirection:"column"}}>
+                  <button className="btn btn-o btn-sm btn-full" style={{color:"rgba(255,255,255,.45)",borderColor:"rgba(255,255,255,.1)",fontSize:12}} onClick={()=>nav("settings")}>
+                    <span style={{width:13,height:13,display:"flex"}}>{Ic.settings}</span>Settings
+                  </button>
+                  <button className="btn btn-sm btn-full" style={{background:"rgba(139,26,42,.25)",borderColor:"rgba(139,26,42,.3)",color:"rgba(255,255,255,.45)",fontSize:12}} onClick={signOut}>
+                    Sign Out
+                  </button>
+                </div>
+                <div style={{display:"flex",gap:10,justifyContent:"center",marginTop:10}}>
+                  <span onClick={()=>setLegalPage("terms")} style={{fontSize:10,color:"rgba(255,255,255,.25)",textDecoration:"none",cursor:"pointer"}}>Terms</span>
+                  <span style={{color:"rgba(255,255,255,.15)"}}>·</span>
+                  <span onClick={()=>setLegalPage("privacy")} style={{fontSize:10,color:"rgba(255,255,255,.25)",textDecoration:"none",cursor:"pointer"}}>Privacy</span>
+                </div>
+              </div>
             </div>
           </div>
-        </nav>
-      </aside>
-      <div className="main">
-        <div className="top"><button className="mmb" onClick={()=>setSo(!so)}>{so?I.x(20):I.menu(20)}</button><h1>{titles[page]}</h1></div>
-        <div className="scroll" onClick={()=>so&&setSo(false)}>
-          {!loaded?<div style={{textAlign:"center",padding:50,color:"var(--t3)"}}><div style={{fontSize:32,marginBottom:10}}>{"\u{1F3AD}"}</div><p>Loading...</p></div>:<>
-            {page==="dashboard"&&<Dashboard items={items} org={org}/>}
-            {page==="inventory"&&<Inventory items={items} onAdd={add} onEdit={edit} onDelete={del}/>}
-            {page==="marketplace"&&<Marketplace items={items} org={org}/>}
-            {page==="reports"&&<Reports items={items}/>}
-            {page==="settings"&&<Settings org={org} setOrg={setOrg} onSeed={seed}/>}
-          </>}
+        </aside>
+
+        {mob && !isDesk && <div className="mob-overlay" onClick={()=>setMob(false)}/>}
+
+        <div className="main">
+          <div style={{height:3,background:"linear-gradient(90deg,var(--gold),var(--amber),var(--gilt) 55%,transparent 82%)",flexShrink:0}}/>
+          <div className="topbar">
+            <button className="menu-btn" onClick={()=>setMob(!mob)}>{mob?Ic.x:Ic.menu}</button>
+            <span className="topbar-title">{TITLES[page]}</span>
+          </div>
+          <div className="scroll-area" onClick={()=>mob&&setMob(false)}>
+            {!loaded
+              ? <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:18,color:"var(--faint)"}}>
+                  <div style={{fontSize:52}}>🎭</div>
+                  <div style={{fontFamily:"'Abril Fatface',display",fontSize:24,color:"var(--muted)"}}>Loading your collection…</div>
+                  <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
+                </div>
+              : <div className="fin">
+                  {page==="dashboard"   && <Dashboard   items={items} org={org} goInventory={()=>nav("inventory")}/>}
+                  {page==="inventory"   && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id}/>}
+                  {page==="marketplace" && <Marketplace items={items} org={org}/>}
+                  {page==="reports"     && <Reports     items={items}/>}
+                  {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed}/>}
+                </div>
+            }
+          </div>
         </div>
       </div>
-    </div>
-    {so&&!desk&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:99}} onClick={()=>setSo(false)}/>}
-  </>);
+
+      {/* ── Floating CTA ── */}
+      {!loaded&&<div className="fab">
+        <div style={{position:"relative"}}>
+          <div className="fab-pulse"/>
+          <button className="fab-btn" onClick={()=>nav("inventory")}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            Start Building Your Inventory
+          </button>
+        </div>
+        <div className="fab-sub">✨ Free to get started — no credit card needed</div>
+      </div>}
+      {loaded&&<div className="fab">
+        <div style={{position:"relative"}}>
+          <div className="fab-pulse"/>
+{legalPage==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegalPage(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
+          {legalPage==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegalPage(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
+          <button className="fab-btn" onClick={()=>{nav("inventory");setTimeout(()=>{const btn=document.querySelector(".btn-g");if(btn)btn.click();},300);}}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            Start Building Your Inventory
+          </button>
+        </div>
+        <div className="fab-sub">✨ Free to get started — no credit card needed</div>
+      </div>}
+    </>
+  );
 }
