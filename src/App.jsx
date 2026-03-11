@@ -1150,6 +1150,52 @@ function Settings({ org, setOrg, onSeed }) {
 // ══════════════════════════════════════════════════════════════════════════════
 // AUTH SCREENS
 // ══════════════════════════════════════════════════════════════════════════════
+
+// ─── Legal Modals ────────────────────────────────────────────────────────────
+function LegalModal({title, onClose, children}){
+  useEffect(()=>{const h=e=>e.key==="Escape"&&onClose();window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h)},[onClose]);
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{background:"var(--bg2,#15121b)",border:"1px solid rgba(212,168,67,.2)",borderRadius:14,width:"100%",maxWidth:680,maxHeight:"88vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 48px rgba(0,0,0,.6)"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,.08)"}}>
+          <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:18,color:"#ede8df"}}>{title}</h2>
+          <button onClick={onClose} style={{background:"none",border:"1px solid rgba(255,255,255,.15)",borderRadius:6,color:"#9b93a8",cursor:"pointer",padding:"4px 8px",fontSize:13}}>✕ Close</button>
+        </div>
+        <div style={{padding:"20px 24px",overflowY:"auto",flex:1,color:"#c8c0d4",fontSize:13.5,lineHeight:1.75}}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const TERMS_CONTENT = [
+  ["1. Acceptance of Terms","By accessing or using Theatre4u at theatre4u.org, you agree to be bound by these Terms of Service. If you do not agree, please do not use the Service. Theatre4u is operated by its founder based in California, USA."],
+  ["2. Description of Service","Theatre4u is a cloud-based inventory management and marketplace platform for theatre programs, schools, community theatres, and performing arts organizations. We reserve the right to modify or discontinue the Service at any time with reasonable notice."],
+  ["3. Account Registration","You must create an account with accurate information and are responsible for maintaining confidentiality of your credentials. You must be at least 18 years old, or have authorization of a parent, guardian, or school administrator if a minor acting on behalf of an organization."],
+  ["4. Subscription Plans and Payments","Theatre4u offers free and paid plans billed monthly via Stripe. Subscriptions auto-renew unless cancelled. All fees are non-refundable except as required by law. We may change pricing with 30 days notice to current subscribers."],
+  ["5. User Content","You retain ownership of content you upload. By uploading, you grant us a license to store and display it solely to provide the Service. You are responsible for ensuring your content does not infringe third-party rights or violate applicable laws."],
+  ["6. Marketplace Transactions","Theatre4u provides a platform for listing items for rent or sale. We are not a party to any transaction between users. All agreements are solely between listing users and interested parties. We do not handle payments between users."],
+  ["7. Prohibited Conduct","You agree not to: use the Service unlawfully; upload false or fraudulent content; attempt unauthorized access; interfere with the Service; use automated scraping tools; impersonate others; or transmit spam or malware. Violations may result in immediate account termination."],
+  ["8. Intellectual Property","The Theatre4u name, logo, design, and software are owned by us and protected by applicable law. Nothing in these Terms grants you any right to use our intellectual property without prior written consent."],
+  ["9. Disclaimer of Warranties","THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND. We do not warrant that the Service will be uninterrupted, error-free, or free of harmful components."],
+  ["10. Limitation of Liability","TO THE FULLEST EXTENT PERMITTED BY CALIFORNIA LAW, WE SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES. Our total liability shall not exceed amounts paid by you in the three months preceding the claim."],
+  ["11. Governing Law","These Terms are governed by California law. Disputes shall be resolved through binding arbitration in California under AAA rules, except either party may seek injunctive relief in court. You waive the right to class action."],
+  ["12. Changes & Contact","We may modify these Terms with 14 days notice. Continued use constitutes acceptance. Questions: hello@theatre4u.org"],
+];
+
+const PRIVACY_CONTENT = [
+  ["1. Introduction","Theatre4u is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information. It complies with applicable California privacy laws including the CCPA and CalOPPA."],
+  ["2. Information We Collect","Account Information: organization name, email, password (encrypted), and optional profile details. Inventory Data: all items, photos, and descriptions you upload. Payment Information: handled by Stripe — we do not store full card details. Usage and technical data to improve the Service."],
+  ["3. How We Use Your Information","We use your information to: provide and improve the Service; process payments; send transactional emails; respond to support inquiries; detect fraud; and comply with legal obligations. We do not sell your personal information or use it for targeted advertising."],
+  ["4. How We Share Your Information","Service Providers: Supabase (database/auth), Stripe (payments), and Vercel (hosting) — all contractually obligated to protect your data. Marketplace Listings: organization name and item details are visible to other registered users. Legal requirements and business transfers as required."],
+  ["5. Data Retention & Security","We retain your data while your account is active and delete it within 30 days of account deletion (backups up to 90 days). We use HTTPS/TLS encryption, encrypted passwords, and row-level database security. You are responsible for your account credentials."],
+  ["6. Your California Rights (CCPA)","California residents have the right to: know what personal information we collect; request deletion; opt out of sale (we do not sell data); and non-discrimination for exercising privacy rights. Contact hello@theatre4u.org to submit a verified request. We respond within 45 days."],
+  ["7. Cookies","We use essential cookies and local storage to maintain login sessions and preferences. We do not use third-party advertising cookies or tracking pixels."],
+  ["8. Children's Privacy","Theatre4u is not directed to children under 13. We do not knowingly collect information from children under 13. Users aged 13–18 must have authorization from a parent, guardian, or school administrator."],
+  ["9. Changes & Contact","We may update this policy with 14 days notice. Questions: hello@theatre4u.org | theatre4u.org | California, USA"],
+];
+
 function AuthScreen({onAuth}){
   const[mode,setMode]=useState("login");
   const[email,setEmail]=useState("");
@@ -1158,6 +1204,7 @@ function AuthScreen({onAuth}){
   const[err,setErr]=useState("");
   const[loading,setLoading]=useState(false);
   const[done,setDone]=useState(false);
+  const[legal,setLegal]=useState(null);
 
   const submit=async()=>{
     setErr("");setLoading(true);
@@ -1249,10 +1296,12 @@ function AuthScreen({onAuth}){
           {mode==="signup"&&<p style={{fontSize:12,color:"var(--faint)",textAlign:"center",marginTop:14,lineHeight:1.6}}>
   Free to start — no credit card needed.<br/>
   By creating an account you agree to our{" "}
-  <a href="/terms" target="_blank" rel="noreferrer" style={{color:"var(--gold)",textDecoration:"underline"}}>Terms of Service</a>
+  <span onClick={()=>setLegal("terms")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Terms of Service</span>
   {" "}and{" "}
-  <a href="/privacy" target="_blank" rel="noreferrer" style={{color:"var(--gold)",textDecoration:"underline"}}>Privacy Policy</a>.
+  <span onClick={()=>setLegal("privacy")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Privacy Policy</span>.
 </p>}
+{legal==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegal(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
+{legal==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegal(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
         </div>
         <p style={{textAlign:"center",color:"rgba(255,255,255,.25)",fontSize:12,marginTop:20}}>theatre4u.org — Built for the arts community 🎭</p>
       </div>
@@ -1268,6 +1317,7 @@ export default function App() {
   const [items,setItems]   = useState([]);
   const [org,setOrg]       = useState({name:"",type:"",email:"",phone:"",location:"",bio:""});
   const [page,setPage]     = useState("dashboard");
+  const [legalPage,setLegalPage] = useState(null);
   const [mob,setMob]       = useState(false);
   const [loaded,setLoaded] = useState(false);
   const [authChk,setAuthChk] = useState(false);
@@ -1406,9 +1456,9 @@ export default function App() {
                   </button>
                 </div>
                 <div style={{display:"flex",gap:10,justifyContent:"center",marginTop:10}}>
-                  <a href="/terms" target="_blank" rel="noreferrer" style={{fontSize:10,color:"rgba(255,255,255,.25)",textDecoration:"none"}}>Terms</a>
+                  <span onClick={()=>setLegalPage("terms")} style={{fontSize:10,color:"rgba(255,255,255,.25)",textDecoration:"none",cursor:"pointer"}}>Terms</span>
                   <span style={{color:"rgba(255,255,255,.15)"}}>·</span>
-                  <a href="/privacy" target="_blank" rel="noreferrer" style={{fontSize:10,color:"rgba(255,255,255,.25)",textDecoration:"none"}}>Privacy</a>
+                  <span onClick={()=>setLegalPage("privacy")} style={{fontSize:10,color:"rgba(255,255,255,.25)",textDecoration:"none",cursor:"pointer"}}>Privacy</span>
                 </div>
               </div>
             </div>
@@ -1456,6 +1506,8 @@ export default function App() {
       {loaded&&<div className="fab">
         <div style={{position:"relative"}}>
           <div className="fab-pulse"/>
+{legalPage==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegalPage(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
+          {legalPage==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegalPage(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
           <button className="fab-btn" onClick={()=>{nav("inventory");setTimeout(()=>{const btn=document.querySelector(".btn-g");if(btn)btn.click();},300);}}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
             Start Building Your Inventory
