@@ -589,7 +589,6 @@ function LandingPage({onLaunch}){
           </div>
         </div>
       )}
-    </footer>
     </div>
   );
 }
