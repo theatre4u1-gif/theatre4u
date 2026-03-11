@@ -312,9 +312,8 @@ tr:hover td{background:rgba(255,255,255,.015)}
 .lp-cat-ico{font-size:26px;margin-bottom:8px}
 .lp-cat-lbl{font-size:12px;font-weight:500;color:var(--t2)}
 .lp-tg{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:48px}
-.lp-tc{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:28px;position:relative}
-.lp-tq{font-family:'Cormorant Garamond',serif;font-size:64px;color:rgba(212,168,67,.12);position:absolute;top:12px;left:18px;line-height:1;font-style:italic}
-.lp-tt{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:17px;color:var(--t1);line-height:1.6;margin-bottom:20px;position:relative;z-index:1;padding-top:22px}
+.lp-tc{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:28px}
+.lp-tt{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:17px;color:var(--t1);line-height:1.6;margin-bottom:20px;position:relative;z-index:1;}
 .lp-tn{font-size:12.5px;font-weight:600;color:var(--gold)}
 .lp-tr{font-size:11.5px;color:var(--t3);margin-top:2px}
 .lp-pg{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:52px}
@@ -351,6 +350,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
 function LandingPage({onLaunch}){
   const[scrolled,setScrolled]=useState(false);
   const[curtain,setCurtain]=useState("closed");
+  const[authModal,setAuthModal]=useState(null);
 
   useEffect(()=>{
     requestAnimationFrame(()=>{
@@ -410,10 +410,11 @@ function LandingPage({onLaunch}){
   ];
 
   const PLANS=[
-    {plan:"Starter",price:"Free",period:"forever",feats:["Up to 50 items","QR code labels","Photo uploads","CSV export"],feat:false},
-    {plan:"Pro",price:"$12",period:"/month",feats:["Unlimited inventory","Marketplace listings","Priority support","Advanced reports","Everything in Starter"],feat:true},
-    {plan:"District",price:"$49",period:"/month",feats:["Multiple organisations","District dashboard","Bulk import","Dedicated support","Everything in Pro"],feat:false},
+    {plan:"Starter",price:"Free",period:"forever",annual:null,feats:["Up to 50 items","QR code labels","Photo uploads","CSV export"],feat:false},
+    {plan:"Pro",price:"$12",period:"/month",annual:"$120/yr",annualSave:"save $24",feats:["Unlimited inventory","Marketplace listings","Priority support","Advanced reports","Everything in Starter"],feat:true},
+    {plan:"District",price:"$49",period:"/month",annual:"$500/yr",annualSave:"save $88",feats:["Multiple organizations","District dashboard","Bulk import","Dedicated support","Everything in Pro"],feat:false},
   ];
+  const[billing,setBilling]=useState("monthly");
 
   return(
     <div className="lp">
@@ -428,8 +429,8 @@ function LandingPage({onLaunch}){
       <nav className={"lpn"+(scrolled?" lpns":"")}>
         <div className="lpnl"><div className="lpni">{"\u{1F3AD}"}</div><div className="lpnt">Theatre4u</div></div>
         <div className="lpnr">
-          <button className="lp-btns2" style={{padding:"8px 20px",fontSize:13}} onClick={launch}>Sign In</button>
-          <button className="lp-btnp" style={{padding:"8px 22px",fontSize:13}} onClick={launch}>{"\u{1F3AD}"} Get Started Free</button>
+          <button className="lp-btns2" style={{padding:"8px 20px",fontSize:13}} onClick={()=>setAuthModal("signin")}>Sign In</button>
+          <button className="lp-btnp" style={{padding:"8px 22px",fontSize:13}} onClick={()=>setAuthModal("signup")}>{"\u{1F3AD}"} Get Started Free</button>
         </div>
       </nav>
 
@@ -440,7 +441,7 @@ function LandingPage({onLaunch}){
         <h1 className="lph-h">The Inventory <em>&amp;</em><br/><b>Marketplace</b><br/><span style={{fontSize:"clamp(38px,6vw,80px)",fontStyle:"normal",color:"var(--t1)",fontWeight:300}}>for Theatre Programs</span></h1>
         <p className="lph-sub">Track every costume, prop, and piece of equipment your program owns. List items for rent or sale. Generate QR labels for every storage bin. All in one place.</p>
         <div className="lph-btns">
-          <button className="lp-btnp" onClick={launch}><span>{"\u{1F3AD}"}</span> Start for Free</button>
+          <button className="lp-btnp" onClick={()=>setAuthModal("signup")}><span>{"\u{1F3AD}"}</span> Start for Free</button>
           <button className="lp-btns2" onClick={()=>document.getElementById("lp-features").scrollIntoView({behavior:"smooth"})}>See How It Works</button>
         </div>
         <div className="lph-stats">
@@ -457,7 +458,7 @@ function LandingPage({onLaunch}){
         <div className="lps" style={{paddingBottom:20}}>
           <div className="lps-lbl">How It Works</div>
           <h2 className="lps-title">Everything your program needs,<br/><em>nothing it doesn&apos;t</em></h2>
-          <p className="lps-sub">Built by people who know what it&apos;s like backstage &mdash; not enterprise software adapted for theatre.</p>
+          <p className="lps-sub">Simple enough to set up in an afternoon. Powerful enough to run your whole program.</p>
         </div>
         <div className="lps" style={{paddingTop:60}}>
           {FEATS.map((f,i)=>(
@@ -484,7 +485,7 @@ function LandingPage({onLaunch}){
           <p className="lps-sub">From leading costume to the tools in the scene shop &mdash; every type of item has a home.</p>
           <div className="lp-cats">
             {CATEGORIES.map(c=>(
-              <div key={c.id} className="lp-cat" onClick={launch}>
+              <div key={c.id} className="lp-cat" onClick={()=>setAuthModal("signup")}>
                 <div className="lp-cat-ico">{c.icon}</div>
                 <div className="lp-cat-lbl">{c.label}</div>
               </div>
@@ -503,7 +504,6 @@ function LandingPage({onLaunch}){
           <div className="lp-tg">
             {TESTI.map(t=>(
               <div key={t.name} className="lp-tc">
-                <div className="lp-tq">&ldquo;</div>
                 <div className="lp-tt">{t.text}</div>
                 <div className="lp-tn">{t.name}</div>
                 <div className="lp-tr">{t.role}</div>
@@ -521,15 +521,19 @@ function LandingPage({onLaunch}){
           <div className="lps-lbl">Simple Pricing</div>
           <h2 className="lps-title">Start free. <em>Grow</em> when you&apos;re ready.</h2>
           <p className="lps-sub">No credit card required. No surprise fees. Cancel any time.</p>
+          <div style={{display:"flex",alignItems:"center",background:"var(--bg3)",border:"1px solid var(--bd)",borderRadius:"var(--rs)",padding:3,width:"fit-content",margin:"24px auto 0"}}>
+            <button onClick={()=>setBilling("monthly")} style={{background:billing==="monthly"?"var(--gold)":"transparent",color:billing==="monthly"?"#1a0f00":"var(--t2)",border:"none",borderRadius:"4px",padding:"7px 20px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"DM Sans,sans-serif",transition:"all .2s"}}>Monthly</button>
+            <button onClick={()=>setBilling("annual")} style={{background:billing==="annual"?"var(--gold)":"transparent",color:billing==="annual"?"#1a0f00":"var(--t2)",border:"none",borderRadius:"4px",padding:"7px 20px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"DM Sans,sans-serif",transition:"all .2s",display:"flex",alignItems:"center",gap:6}}>Annual <span style={{fontSize:10,padding:"1px 6px",background:billing==="annual"?"rgba(0,0,0,.15)":"rgba(212,168,67,.15)",color:billing==="annual"?"#1a0f00":"var(--gold)",borderRadius:9,fontWeight:700}}>Save 17%</span></button>
+          </div>
           <div className="lp-pg">
             {PLANS.map(p=>(
               <div key={p.plan} className={"lp-pc"+(p.feat?" feat":"")}>
                 {p.feat&&<div style={{fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"var(--gold)",marginBottom:10}}>Most Popular</div>}
                 <div className="lp-pp">{p.plan}</div>
-                <div className="lp-pa">{p.price}</div>
-                <div className="lp-pper">{p.period}</div>
+                <div className="lp-pa">{billing==="annual"&&p.annual?p.annual:p.price}</div>
+                <div className="lp-pper">{billing==="annual"&&p.annual?<span style={{color:"var(--gold)",fontSize:13}}>{p.annualSave}</span>:p.period}</div>
                 <ul className="lp-pul">{p.feats.map(f=><li key={f}>{f}</li>)}</ul>
-                <button className={p.feat?"lp-btnp":"lp-btns2"} style={{width:"100%",justifyContent:"center",padding:"12px 0"}} onClick={launch}>Get Started</button>
+                <button className={p.feat?"lp-btnp":"lp-btns2"} style={{width:"100%",justifyContent:"center",padding:"12px 0"}} onClick={()=>setAuthModal("signup")}>Get Started</button>
               </div>
             ))}
           </div>
@@ -541,9 +545,9 @@ function LandingPage({onLaunch}){
       <div className="lp-cta">
         <div style={{position:"relative",zIndex:1}}>
           <div className="lps-lbl" style={{marginBottom:16}}>Ready?</div>
-          <h2 className="lps-title" style={{marginBottom:20}}>Your programme deserves<br/><em>better than a spreadsheet.</em></h2>
+          <h2 className="lps-title" style={{marginBottom:20}}>Your program deserves<br/><em>better than a spreadsheet.</em></h2>
           <p style={{color:"var(--t2)",fontSize:16,marginBottom:44,fontFamily:"'Cormorant Garamond',serif",fontStyle:"italic",maxWidth:480,margin:"0 auto 44px"}}>Join drama directors and technical coordinators who finally know what they own.</p>
-          <button className="lp-btnp" style={{fontSize:16,padding:"16px 44px"}} onClick={launch}><span>{"\u{1F3AD}"}</span> Open Theatre4u &mdash; It&apos;s Free</button>
+          <button className="lp-btnp" style={{fontSize:16,padding:"16px 44px"}} onClick={()=>setAuthModal("signup")}><span>{"\u{1F3AD}"}</span> Open Theatre4u &mdash; It&apos;s Free</button>
         </div>
       </div>
 
@@ -557,11 +561,35 @@ function LandingPage({onLaunch}){
           <div className="lp-fc">Inventory &amp; Marketplace for Theatre Programs</div>
         </div>
         <div className="lp-fl">
-          <button onClick={launch}>Open App</button>
+          <button onClick={()=>setAuthModal("signin")}>Sign In</button>
           <button onClick={()=>{}}>hello@theatre4u.org</button>
         </div>
         <div className="lp-fc">&copy; {new Date().getFullYear()} Theatre4u. Built for the arts community.</div>
       </footer>
+
+      {/* Auth Modal */}
+      {authModal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.78)",zIndex:5000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={e=>e.target===e.currentTarget&&setAuthModal(null)}>
+          <div style={{background:"var(--bg2)",border:"1px solid var(--bd)",borderRadius:14,width:"100%",maxWidth:420,padding:32,boxShadow:"0 8px 48px rgba(0,0,0,.5)",animation:"su .2s ease"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+              <div>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700}}>{authModal==="signin"?"Welcome back":"Get started free"}</div>
+                <div style={{fontSize:12,color:"var(--t3)",marginTop:3}}>{authModal==="signin"?"Sign in to your Theatre4u account":"Create your free Theatre4u account"}</div>
+              </div>
+              <button onClick={()=>setAuthModal(null)} style={{background:"none",border:"1px solid var(--bd)",borderRadius:6,color:"var(--t2)",cursor:"pointer",padding:"4px 8px",fontSize:13}}>&#x2715;</button>
+            </div>
+            {authModal==="signup"&&<div style={{marginBottom:14}}><label style={{fontSize:10,fontWeight:600,color:"var(--t2)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Organization Name</label><input style={{width:"100%",background:"var(--bgi)",border:"1px solid var(--bd)",borderRadius:6,padding:"9px 11px",color:"var(--t1)",fontSize:13,fontFamily:"DM Sans,sans-serif",outline:"none"}} placeholder="Lincoln High Drama Dept."/></div>}
+            <div style={{marginBottom:14}}><label style={{fontSize:10,fontWeight:600,color:"var(--t2)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Email</label><input style={{width:"100%",background:"var(--bgi)",border:"1px solid var(--bd)",borderRadius:6,padding:"9px 11px",color:"var(--t1)",fontSize:13,fontFamily:"DM Sans,sans-serif",outline:"none"}} placeholder="you@school.edu" type="email"/></div>
+            <div style={{marginBottom:22}}><label style={{fontSize:10,fontWeight:600,color:"var(--t2)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Password</label><input style={{width:"100%",background:"var(--bgi)",border:"1px solid var(--bd)",borderRadius:6,padding:"9px 11px",color:"var(--t1)",fontSize:13,fontFamily:"DM Sans,sans-serif",outline:"none"}} placeholder={authModal==="signin"?"Your password":"Choose a password (8+ chars)"} type="password"/></div>
+            <button className="lp-btnp" style={{width:"100%",justifyContent:"center",padding:"12px 0",fontSize:15}} onClick={launch}>{authModal==="signin"?"Sign In to App":"Create Account & Enter"}</button>
+            <div style={{textAlign:"center",marginTop:16,fontSize:12.5,color:"var(--t3)"}}>
+              {authModal==="signin"?<>Don&apos;t have an account? <button onClick={()=>setAuthModal("signup")} style={{background:"none",border:"none",color:"var(--gold)",cursor:"pointer",fontSize:12.5,fontFamily:"DM Sans,sans-serif",fontWeight:600}}>Sign up free</button></>:<>Already have an account? <button onClick={()=>setAuthModal("signin")} style={{background:"none",border:"none",color:"var(--gold)",cursor:"pointer",fontSize:12.5,fontFamily:"DM Sans,sans-serif",fontWeight:600}}>Sign in</button></>}
+            </div>
+            {authModal==="signup"&&<p style={{textAlign:"center",fontSize:11,color:"var(--t3)",marginTop:14,lineHeight:1.5}}>Free plan includes 50 items. No credit card required.</p>}
+          </div>
+        </div>
+      )}
+    </footer>
     </div>
   );
 }
