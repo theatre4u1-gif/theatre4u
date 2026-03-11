@@ -790,11 +790,11 @@ function Dashboard({items,org}){
     <div className="cd">
       <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:8}}>Getting Started</h3>
       <div style={{color:"var(--t2)",fontSize:13,lineHeight:1.7}}>
-        <p style={{marginBottom:5}}>{"\u{1F4E6}"} <strong>Inventory</strong> â€” Add items with photos, tags, locations, and conditions.</p>
-        <p style={{marginBottom:5}}>{"\u{1F4F8}"} <strong>Photos</strong> â€” Upload up to 5 photos per item for visual ID.</p>
-        <p style={{marginBottom:5}}>{"\u{1F533}"} <strong>QR Codes</strong> â€” Every item gets a printable QR label for instant lookup.</p>
-        <p style={{marginBottom:5}}>{"\u{1F3EA}"} <strong>Marketplace</strong> â€” Share items for rent or sale with other programs.</p>
-        <p>{"\u{1F4CA}"} <strong>Reports</strong> â€” Breakdowns and CSV export.</p>
+        <p style={{marginBottom:5}}>{"\u{1F4E6}"} <strong>Inventory</strong> — Add items with photos, tags, locations, and conditions.</p>
+        <p style={{marginBottom:5}}>{"\u{1F4F8}"} <strong>Photos</strong> — Upload up to 5 photos per item for visual ID.</p>
+        <p style={{marginBottom:5}}>{"\u{1F533}"} <strong>QR Codes</strong> — Every item gets a printable QR label for instant lookup.</p>
+        <p style={{marginBottom:5}}>{"\u{1F3EA}"} <strong>Marketplace</strong> — Share items for rent or sale with other programs.</p>
+        <p>{"\u{1F4CA}"} <strong>Reports</strong> — Breakdowns and CSV export.</p>
       </div>
     </div>
   </div>);
@@ -883,9 +883,27 @@ function Reports({items}){
   const avD=AVAILABILITY.map(a=>({l:a,c:items.filter(i=>i.availability===a).length})).filter(a=>a.c>0);
   const mkD=MARKET_STATUS.map(s=>({l:s,c:items.filter(i=>i.marketStatus===s).length})).filter(m=>m.c>0);
 
-  const csv=()=>{const h=["Name","Category","Condition","Size","Qty","Location","Availability","Market","Rental","Sale","Tags","Notes","ID","Date"];
-    const r=items.map(i=>[i.name,i.category,i.condition,i.size,i.quantity,i.location,i.availability,i.marketStatus,i.rentalPrice,i.salePrice,(i.tags||[]).join(";"),'"'+(i.notes||"").replace(/"/g,'""')+'"',i.id,i.dateAdded]);
-    const c=[h.join(","),...r.map(r=>r.join(","))].join("\n");const b=new Blob([c],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="theatre4u_inventory.csv";a.click()};
+  const csv=()=>{
+    if(items.length===0){alert("No items to export.");return;}
+    const h=["Name","Category","Condition","Size","Qty","Location","Availability","Market","Rental","Sale","Tags","Notes","ID","Date"];
+    const rows=items.map(i=>[
+      '"'+(i.name||"").replace(/"/g,'""')+'"',
+      i.category,i.condition,i.size,i.quantity,
+      '"'+(i.location||"").replace(/"/g,'""')+'"',
+      i.availability,i.marketStatus,
+      i.rentalPrice||0,i.salePrice||0,
+      '"'+(i.tags||[]).join(";").replace(/"/g,'""')+'"',
+      '"'+(i.notes||"").replace(/"/g,'""')+'"',
+      i.id,i.dateAdded||""
+    ].join(","));
+    const csv="\uFEFF"+[h.join(","),...rows].join("\r\n");
+    const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download="theatre4u_inventory.csv";
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},200);
+  };
 
   const printQR=()=>{const w=window.open("","_blank");if(!w)return;
     const labels=items.map(i=>{const src=QR.toDataURL("T4U:"+i.id+":"+i.name,140);return'<div style="display:inline-block;text-align:center;padding:10px;border:1px dashed #ccc;margin:5px;width:170px"><img src="'+src+'" width="96" height="96"/><div style="font-size:10px;font-weight:600;margin-top:5px">'+i.name+'</div><div style="font-size:8px;color:#888">'+i.id+'</div></div>'}).join("");
@@ -998,6 +1016,10 @@ export default function App(){
             <div className="back-lp" onClick={goLanding}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg>
               <span>About Theatre4u</span>
+            </div>
+            <div className="back-lp" style={{color:"var(--red)",marginTop:2}} onClick={()=>{if(window.confirm("Sign out? Your data is saved locally."))setScene("landing")}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              <span>Sign Out</span>
             </div>
           </div>
         </nav>
