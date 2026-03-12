@@ -85,26 +85,31 @@ const AVAIL = ["In Stock","In Use","Checked Out","Being Repaired","Lost","Retire
 const MKT   = ["Not Listed","For Rent","For Sale","Rent or Sale"];
 
 // ── QR Code Generator (pure canvas, no dependencies) ─────────────────────────
-// ── QR Code — Google Charts API (guaranteed scannable) ───────────────────────
-// Returns a data URL by fetching the QR PNG from Google Charts, or falls back
-// to a direct URL string the caller can use as <img src>.
+// ── QR Code — generated client-side via esm.sh/qrcode ───────────────────────
+let _qrMod = null;
+async function _getQR() {
+  if (_qrMod) return _qrMod;
+  _qrMod = await import("https://esm.sh/qrcode@1.5.3");
+  return _qrMod;
+}
 const QR = {
-  // Returns an object URL or direct src string — always async
+  // Returns a data URL (canvas-rendered, no network after first load)
   async toDataURL(text, size = 200) {
-    const src = `https://chart.googleapis.com/chart?cht=qr&chs=${size}x${size}&chl=${encodeURIComponent(text)}&choe=UTF-8&chld=M`;
     try {
-      const res  = await fetch(src);
-      const blob = await res.blob();
-      return URL.createObjectURL(blob);
-    } catch {
-      // If fetch fails (CORS/network), return the URL directly — browsers can still display it as img src
-      return src;
+      const QRCode = await _getQR();
+      return await QRCode.toDataURL(text, {
+        width: size,
+        margin: 2,
+        errorCorrectionLevel: "M",
+        color: { dark: "#000000", light: "#ffffff" },
+      });
+    } catch(e) {
+      console.error("QR error:", e);
+      return null;
     }
   },
-  // Synchronous src for cases where we just need an <img src> (print popup, bulk labels)
-  src(text, size = 200) {
-    return `https://chart.googleapis.com/chart?cht=qr&chs=${size}x${size}&chl=${encodeURIComponent(text)}&choe=UTF-8&chld=M`;
-  }
+  // Sync convenience — returns a promise, named for readable call sites
+  src: null, // not used in new version
 };
 
 function makeSamples(){
@@ -685,15 +690,20 @@ function ItemDetail({item,onEdit,onDelete}){
   const mktCls=item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="Rent or Sale"?"mb-both":"mb-none";
 
   useEffect(()=>{
-    setQr(QR.src("https://theatre4u.org/#/item/"+item.id, 200));
+    QR.toDataURL("https://theatre4u.org/#/item/"+item.id, 200).then(url=>{if(url)setQr(url);});
   },[item.id, item.name]);
 
-  const printQR=()=>{
+  const printQR=async()=>{
+    const qrSrc=await QR.toDataURL("https://theatre4u.org/#/item/"+item.id,200);
+    if(!qrSrc)return;
     const w=window.open("","_blank","width=420,height=520");if(!w)return;
-    const loc=item.location?"Location: "+item.location:"";const itemUrl="theatre4u.org/#/item/"+item.id;const qrSrc=QR.src("https://theatre4u.org/#/item/"+item.id,200);w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2><p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qrSrc}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${itemUrl}</p><p style="font-size:11px;color:#bbb">Theatre4u Inventory</p><script>window.onload=function(){setTimeout(function(){window.print()},600)}<\/script></body></html>`);
+    const loc=item.location?"Location: "+item.location:"";
+    const itemUrl="theatre4u.org/#/item/"+item.id;
+    w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2><p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qrSrc}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${itemUrl}</p><p style="font-size:11px;color:#bbb">Theatre4u Inventory</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
     w.document.close();
   };
-  const dlQR=async()=>{try{const r=await fetch(QR.src("https://theatre4u.org/#/item/"+item.id,300));const b=await r.blob();const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="T4U-"+item.id+".png";a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}catch{window.open(QR.src("https://theatre4u.org/#/item/"+item.id,300))}};
+
+  const dlQR=async()=>{const u=await QR.toDataURL("https://theatre4u.org/#/item/"+item.id,300);if(!u)return;const a=document.createElement("a");a.href=u;a.download="T4U-"+item.id+".png";a.click();};
 
   return(
     <>
@@ -1091,18 +1101,12 @@ function Reports({ items }) {
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="theatre4u_inventory.csv";a.click();
   };
 
-  const printAllQR = () => {
+  const printAllQR = async () => {
     const w=window.open("","_blank");if(!w)return;
-    const labels=items.map(i=>{
-      const src=QR.src("https://theatre4u.org/#/item/"+i.id,140);
-      return `<div style="display:inline-block;text-align:center;padding:10px;border:1px dashed #ccc;margin:5px;width:160px;vertical-align:top">
-        <img src="${src}" width="100" height="100" crossorigin="anonymous"/>
-        <div style="font-size:10px;font-weight:700;margin-top:5px;word-break:break-word">${i.name}</div>
-        <div style="font-size:8px;color:#888;margin-top:2px">${i.category} · ${i.id.slice(0,8)}</div>
-      </div>`;
-    }).join("");
-    w.document.write(`<html><head><title>Theatre4u QR Labels</title></head><body style="font-family:sans-serif;padding:16px"><h2 style="font-size:14px;margin-bottom:16px;color:#333">Theatre4u — QR Labels (${items.length} items)</h2>${labels}<script>window.onload=function(){setTimeout(function(){window.print()},600)}<\/script></body></html>`);
-    w.document.close();
+    w.document.write(`<html><head><title>Theatre4u QR Labels</title></head><body style="font-family:sans-serif;padding:16px"><h2 style="font-size:14px;margin-bottom:16px;color:#333">Theatre4u — QR Labels (${items.length} items)</h2><div id="lbl">Generating…</div></body></html>`);w.document.close();
+    const srcs=await Promise.all(items.map(i=>QR.toDataURL("https://theatre4u.org/#/item/"+i.id,140)));
+    const labels=items.map((i,n)=>`<div style="display:inline-block;text-align:center;padding:10px;border:1px dashed #ccc;margin:5px;width:160px;vertical-align:top"><img src="${srcs[n]||""}" width="100" height="100"/><div style="font-size:10px;font-weight:700;margin-top:5px;word-break:break-word">${i.name}</div><div style="font-size:8px;color:#888;margin-top:2px">${i.category} · ${i.id.slice(0,8)}</div></div>`).join("");
+    const el=w.document.getElementById("lbl");if(el){el.outerHTML=labels;setTimeout(()=>w.print(),400);}
   };
 
   return(
