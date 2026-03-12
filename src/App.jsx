@@ -1167,7 +1167,7 @@ function Reports({ items }) {
   );
 }
 
-function Settings({ org, setOrg, onSeed }) {
+function Settings({ org, setOrg, onSeed, user, setItems }) {
   const [f,setF]       = useState(org);
   const [saved,setSaved] = useState(false);
   const upd = (k,v) => setF(p=>({...p,[k]:v}));
@@ -1248,14 +1248,14 @@ function Settings({ org, setOrg, onSeed }) {
           <div className="sh"><h2>Data Management</h2><p>Load sample data to explore, or reset everything to start fresh.</p></div>
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
             <button className="btn btn-o" onClick={onSeed}><span style={{width:14,height:14,display:"flex"}}>{Ic.box}</span>Load Sample Data</button>
-            <button className="btn btn-d" onClick={()=>{
-              if(window.confirm("Delete ALL items and reset the app? This cannot be undone.")){
-                const empty={name:"",type:"",email:"",phone:"",location:"",bio:""};
-                setOrg(empty);setF(empty);
-                DB.save("t4u-items",[]);DB.save("t4u-org",empty);
-                window.location.reload();
+            <button className="btn btn-d" onClick={async()=>{
+              if(window.confirm("This will permanently delete ALL your inventory items from the database. Your account and organization profile will remain. This cannot be undone.")){
+                const{error}=await SB.from("items").delete().eq("org_id",user.id);
+                if(error){window.alert("Error deleting items: "+error.message);return;}
+                setItems([]);
+                window.alert("All inventory items deleted successfully.");
               }
-            }}><span style={{width:14,height:14,display:"flex"}}>{Ic.trash}</span>Reset All Data</button>
+            }}><span style={{width:14,height:14,display:"flex"}}>{Ic.trash}</span>Delete All Items</button>
           </div>
         </div>
       </div>
@@ -1804,10 +1804,14 @@ export default function App() {
   },[]);
 
   const seed = useCallback(async()=>{
+    if(items.length>0){
+      if(!window.confirm("You already have "+items.length+" item(s). Add sample data anyway?")) return;
+    }
     const samples=makeSamples().map(i=>({...i,org_id:user.id}));
-    const{data}=await SB.from("items").insert(samples).select();
+    const{data,error}=await SB.from("items").insert(samples).select();
+    if(error){window.alert("Could not load samples: "+error.message);return;}
     if(data) setItems(p=>[...data,...p]);
-  },[user]);
+  },[user,items]);
 
   const saveOrg = useCallback(async(o)=>{
     setOrg(o);
@@ -1939,7 +1943,7 @@ export default function App() {
                   {page==="inventory"   && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id}/>}
                   {page==="marketplace" && <Marketplace items={items} org={org}/>}
                   {page==="reports"     && <Reports     items={items}/>}
-                  {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed}/>}
+                  {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} setItems={setItems}/>}
                 </div>
             }
           </div>
