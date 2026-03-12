@@ -79,6 +79,7 @@ const CATS = [
   {id:"other",    label:"Other",           icon:"📦",color:"#4a2e1a"},
 ];
 const CAT   = Object.fromEntries(CATS.map(c=>[c.id,c]));
+const CAT_MAP = CAT; // alias used by PublicItemPage
 const CONDS = ["New","Excellent","Good","Fair","Poor","For Parts"];
 const SIZES = ["XS","S","M","L","XL","XXL","One Size","N/A"];
 const AVAIL = ["In Stock","In Use","Checked Out","Being Repaired","Lost","Retired"];
