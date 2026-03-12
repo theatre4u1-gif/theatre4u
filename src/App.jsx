@@ -85,68 +85,52 @@ const AVAIL = ["In Stock","In Use","Checked Out","Being Repaired","Lost","Retire
 const MKT   = ["Not Listed","For Rent","For Sale","Rent or Sale"];
 
 // ── QR Code Generator (pure canvas, no dependencies) ─────────────────────────
-const QR = (() => {
-  function generatePattern(text) {
-    const hash = [];
-    for (let i = 0; i < 21 * 21; i++) {
-      let h = 0;
-      for (let j = 0; j < text.length; j++) {
-        h = ((h << 5) - h + text.charCodeAt(j) + i * 7) | 0;
-      }
-      hash.push(Math.abs(h) % 3 === 0);
+// ── Real QR Code Generator using qrcode-generator library ───────────────────
+// Loaded once on first use, then cached
+let _qrLib = null;
+const _qrLibUrl = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+
+async function _loadQRLib() {
+  if (_qrLib) return _qrLib;
+  if (window.QRCode) { _qrLib = window.QRCode; return _qrLib; }
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = _qrLibUrl;
+    s.onload = () => { _qrLib = window.QRCode; resolve(_qrLib); };
+    s.onerror = () => reject(new Error("QR library failed to load"));
+    document.head.appendChild(s);
+  });
+}
+
+const QR = {
+  // Returns a data URL — async because we lazy-load the library
+  async toDataURL(text, size = 200) {
+    try {
+      await _loadQRLib();
+      // QRCode renders into a hidden div then we grab the canvas
+      const container = document.createElement("div");
+      container.style.cssText = "position:fixed;left:-9999px;top:-9999px;width:"+size+"px;height:"+size+"px";
+      document.body.appendChild(container);
+      new window.QRCode(container, {
+        text,
+        width: size,
+        height: size,
+        colorDark: "#1a1520",
+        colorLight: "#ffffff",
+        correctLevel: window.QRCode.CorrectLevel.M,
+      });
+      // Give it a tick to render
+      await new Promise(r => setTimeout(r, 50));
+      const canvas = container.querySelector("canvas");
+      const dataUrl = canvas ? canvas.toDataURL() : null;
+      document.body.removeChild(container);
+      return dataUrl;
+    } catch(e) {
+      console.error("QR generation failed:", e);
+      return null;
     }
-    return hash;
   }
-
-  function toDataURL(text, size = 200) {
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d");
-    const grid = 21;
-    const cell = size / (grid + 4);
-    const offset = (size - cell * grid) / 2;
-
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, size, size);
-
-    const pattern = generatePattern(text);
-
-    const drawFinder = (x, y) => {
-      ctx.fillStyle = "#1a1520";
-      ctx.fillRect(offset + x * cell, offset + y * cell, 7 * cell, 7 * cell);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(offset + (x + 1) * cell, offset + (y + 1) * cell, 5 * cell, 5 * cell);
-      ctx.fillStyle = "#1a1520";
-      ctx.fillRect(offset + (x + 2) * cell, offset + (y + 2) * cell, 3 * cell, 3 * cell);
-    };
-    drawFinder(0, 0);
-    drawFinder(14, 0);
-    drawFinder(0, 14);
-
-    ctx.fillStyle = "#1a1520";
-    for (let i = 0; i < grid; i++) {
-      for (let j = 0; j < grid; j++) {
-        if ((i < 8 && j < 8) || (i < 8 && j >= 13) || (i >= 13 && j < 8)) continue;
-        if (pattern[i * grid + j]) {
-          ctx.fillRect(offset + j * cell, offset + i * cell, cell, cell);
-        }
-      }
-    }
-
-    // Centre mark in brand gold
-    ctx.fillStyle = "#d4a843";
-    ctx.fillRect(offset + 9 * cell, offset + 9 * cell, 3 * cell, 3 * cell);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(offset + 9.5 * cell, offset + 9.5 * cell, 2 * cell, 2 * cell);
-    ctx.fillStyle = "#d4a843";
-    ctx.fillRect(offset + 10 * cell, offset + 10 * cell, cell, cell);
-
-    return canvas.toDataURL();
-  }
-
-  return { toDataURL };
-})();
+};
 
 function makeSamples(){
   return [
@@ -726,12 +710,14 @@ function ItemDetail({item,onEdit,onDelete}){
   const mktCls=item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="Rent or Sale"?"mb-both":"mb-none";
 
   useEffect(()=>{
-    setQr(QR.toDataURL("T4U:"+item.id+":"+item.name, 200));
+    const qrText=["Theatre4u",item.name,item.category,item.condition,item.location?"Loc: "+item.location:"","ID: "+item.id].filter(Boolean).join(" | ");QR.toDataURL(qrText, 200).then(url=>{
+      if(url) setQr(url);
+    });
   },[item.id, item.name]);
 
   const printQR=()=>{
     const w=window.open("","_blank","width=420,height=520");if(!w)return;
-    w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:16px 0}h2{margin-bottom:4px;font-size:18px}p{color:#666;font-size:13px}</style></head><body><h2>${item.name}</h2><p>${cat.label} · ID: ${item.id}</p><img src="${qr}" width="200" height="200"/><br><p style="font-size:11px;margin-top:16px">Theatre4u Inventory</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
+    const loc=item.location?"Location: "+item.location:"";w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2><p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qr}" width="200" height="200"/><p style="font-size:11px;margin-top:12px;color:#999">ID: ${item.id}</p><p style="font-size:11px;color:#bbb">Theatre4u Inventory</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
     w.document.close();
   };
   const dlQR=()=>{const a=document.createElement("a");a.href=qr;a.download="T4U-"+item.id+".png";a.click()};
@@ -769,7 +755,10 @@ function ItemDetail({item,onEdit,onDelete}){
           QR Code Label
         </h3>
         <div style={{display:"flex",alignItems:"center",gap:16,padding:"14px",background:"var(--parch)",borderRadius:10,border:"1px solid var(--border)"}}>
-          {qr&&<img src={qr} alt="QR Code" width={110} height={110} style={{borderRadius:6,flexShrink:0,border:"1px solid var(--linen)"}}/>}
+          {qr
+            ?<img src={qr} alt="QR Code" width={110} height={110} style={{borderRadius:6,flexShrink:0,border:"1px solid var(--linen)"}}/>
+            :<div style={{width:110,height:110,borderRadius:6,border:"1px solid var(--linen)",background:"var(--parch)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:11,color:"var(--faint)"}}>Generating…</div>
+          }
           <div>
             <div style={{fontFamily:"'Lora',serif",fontWeight:600,fontSize:14,marginBottom:4}}>{item.name}</div>
             <p style={{fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:10}}>Print and attach to the item or storage bin. Anyone can scan it to look up details instantly.</p>
@@ -1132,18 +1121,21 @@ function Reports({ items }) {
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="theatre4u_inventory.csv";a.click();
   };
 
-  const printAllQR = () => {
+  const printAllQR = async () => {
     const w=window.open("","_blank");if(!w)return;
-    const labels=items.map(i=>{
-      const src=QR.toDataURL("T4U:"+i.id+":"+i.name,140);
-      return `<div style="display:inline-block;text-align:center;padding:10px;border:1px dashed #ccc;margin:5px;width:160px;vertical-align:top">
-        <img src="${src}" width="100" height="100"/>
-        <div style="font-size:10px;font-weight:700;margin-top:5px;word-break:break-word">${i.name}</div>
-        <div style="font-size:8px;color:#888;margin-top:2px">${i.category} &middot; ${i.id.slice(0,8)}</div>
-      </div>`;
-    }).join("");
-    w.document.write(`<html><head><title>Theatre4u QR Labels</title></head><body style="font-family:sans-serif;padding:16px"><h2 style="font-size:14px;margin-bottom:12px;color:#333">Theatre4u &mdash; QR Labels (${items.length} items)</h2>${labels}<script>setTimeout(function(){window.print()},400)<\/script></body></html>`);
+    w.document.write(`<html><head><title>Theatre4u QR Labels</title></head><body style="font-family:sans-serif;padding:16px"><h2 style="font-size:14px;margin-bottom:16px;color:#333">Theatre4u — QR Labels (${items.length} items)</h2><div id="labels">Generating QR codes…</div></body></html>`);
     w.document.close();
+    // Generate all QRs then inject — avoids blank images from async race
+    const srcs = await Promise.all(items.map(i=>{ const t=["Theatre4u",i.name,i.category,i.condition,i.location?"Loc: "+i.location:"","ID: "+i.id].filter(Boolean).join(" | "); return QR.toDataURL(t,140); }));
+    const labels = items.map((i,idx)=>`<div style="display:inline-block;text-align:center;padding:10px;border:1px dashed #ccc;margin:5px;width:160px;vertical-align:top">
+      ${srcs[idx]?`<img src="${srcs[idx]}" width="100" height="100"/>`:"<div style='width:100px;height:100px;background:#eee;display:inline-block'></div>"}
+      <div style="font-size:10px;font-weight:700;margin-top:5px;word-break:break-word">${i.name}</div>
+      <div style="font-size:8px;color:#888;margin-top:2px">${i.category} · ${i.id.slice(0,8)}</div>
+    </div>`).join("");
+    if(w.document.getElementById("labels")){
+      w.document.getElementById("labels").innerHTML=labels;
+      setTimeout(()=>w.print(),400);
+    }
   };
 
   return(
