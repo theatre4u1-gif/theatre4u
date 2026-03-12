@@ -1249,6 +1249,73 @@ function Reports({ items }) {
   );
 }
 
+// ── Shared upgrade/pricing component — used in Settings + any upsell modal ────
+const STRIPE_LINKS = {
+  pro:      { monthly:"https://buy.stripe.com/test_8x26oJ3vhcvy1Wi7eq9sk00", annual:"https://buy.stripe.com/test_8x214p6HtdzCgRc2Ya9sk02" },
+  district: { monthly:"https://buy.stripe.com/test_8x2cN79TF67a0SebuG9sk01", annual:"https://buy.stripe.com/test_28E6oJ5Dp7be30meGS9sk03" },
+};
+const UPGRADE_PLANS = [
+  { id:"free",     name:"Free",     monthlyPrice:"$0",  annualPrice:"Free",   per:"/forever", annualNote:null,       desc:"Perfect for getting started.",     hot:false,
+    feats:["Up to 50 items","QR code labels","Photo uploads","CSV export"] },
+  { id:"pro",      name:"Pro",      monthlyPrice:"$12", annualPrice:"$120",   per:"/month",   annualNote:"save $24", desc:"For active programs & companies.", hot:true,
+    feats:["Unlimited inventory","Priority marketplace","Photo storage 5GB","Analytics dashboard","Email support"] },
+  { id:"district", name:"District", monthlyPrice:"$49", annualPrice:"$500",   per:"/month",   annualNote:"save $88", desc:"Multiple schools, one platform.",  hot:false,
+    feats:["Multiple organizations","District dashboard","Bulk import","Dedicated support","Everything in Pro"] },
+];
+
+function UpgradePlans({ compact = false }) {
+  const [billing, setBilling] = useState("monthly");
+  return (
+    <div>
+      {/* Toggle */}
+      <div style={{display:"flex",alignItems:"center",background:"var(--bg)",border:"1px solid var(--bd)",borderRadius:8,padding:3,width:"fit-content",margin:compact?"0 0 16px":"0 auto 20px"}}>
+        <button onClick={()=>setBilling("monthly")} style={{background:billing==="monthly"?"var(--gold)":"transparent",color:billing==="monthly"?"#1a0f00":"var(--t2)",border:"none",borderRadius:5,padding:"6px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .2s"}}>
+          Monthly
+        </button>
+        <button onClick={()=>setBilling("annual")} style={{background:billing==="annual"?"var(--gold)":"transparent",color:billing==="annual"?"#1a0f00":"var(--t2)",border:"none",borderRadius:5,padding:"6px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .2s",display:"flex",alignItems:"center",gap:6}}>
+          Annual <span style={{fontSize:10,padding:"1px 6px",background:billing==="annual"?"rgba(0,0,0,.15)":"rgba(212,168,67,.15)",color:billing==="annual"?"#1a0f00":"var(--gold)",borderRadius:9,fontWeight:700}}>Save 17%</span>
+        </button>
+      </div>
+      {/* Cards */}
+      <div style={{display:"grid",gridTemplateColumns:compact?"1fr":"repeat(auto-fit,minmax(200px,1fr))",gap:12}}>
+        {UPGRADE_PLANS.map(p=>{
+          const price   = billing==="annual" ? p.annualPrice : p.monthlyPrice;
+          const note    = billing==="annual" ? p.annualNote  : null;
+          const link    = STRIPE_LINKS[p.id]?.[billing];
+          const isFree  = p.id==="free";
+          return (
+            <div key={p.id} style={{border:"1px solid "+(p.hot?"var(--gold)":"var(--bd)"),borderRadius:10,padding:16,background:p.hot?"rgba(212,168,67,.05)":"var(--bg)",position:"relative",display:"flex",flexDirection:"column"}}>
+              {p.hot && <div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",background:"var(--gold)",color:"#1a0f00",fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",padding:"2px 10px",borderRadius:9,whiteSpace:"nowrap"}}>Most Popular</div>}
+              <div style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:16,fontWeight:700,marginBottom:4}}>{p.name}</div>
+              <div style={{display:"flex",alignItems:"baseline",gap:4,marginBottom:2}}>
+                <span style={{fontSize:26,fontWeight:800,color:"var(--gold)"}}>{price}</span>
+                {!isFree && <span style={{fontSize:12,color:"var(--t3)"}}>{billing==="annual"?"/yr":p.per}</span>}
+              </div>
+              {note && <div style={{fontSize:11,color:"var(--grn,#4caf50)",fontWeight:600,marginBottom:6}}>{note}</div>}
+              <div style={{fontSize:12,color:"var(--t2)",marginBottom:10}}>{p.desc}</div>
+              <ul style={{listStyle:"none",padding:0,margin:"0 0 14px",flex:1}}>
+                {p.feats.map(f=>(
+                  <li key={f} style={{display:"flex",alignItems:"flex-start",gap:6,fontSize:12,color:"var(--t2)",marginBottom:4}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2.5" style={{flexShrink:0,marginTop:1}}><polyline points="20 6 9 17 4 12"/></svg>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              {isFree
+                ? <button className="btn btn-o btn-full" style={{opacity:.5,cursor:"default"}} disabled>Current Plan</button>
+                : <a href={link} target="_blank" rel="noreferrer" className={"btn btn-full "+(p.hot?"btn-g":"btn-o")} style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto"}}>
+                    {billing==="annual" ? "Get "+p.name+" Annual →" : "Get "+p.name+" →"}
+                  </a>
+              }
+            </div>
+          );
+        })}
+      </div>
+      <p style={{textAlign:compact?"left":"center",marginTop:12,fontSize:11.5,color:"var(--t3)"}}>All paid plans include a 14-day free trial · No credit card required to start · Cancel any time</p>
+    </div>
+  );
+}
+
 function Settings({ org, setOrg, onSeed, user, items, setItems }) {
   const [f,setF]       = useState(org);
   const [saved,setSaved] = useState(false);
@@ -1300,29 +1367,8 @@ function Settings({ org, setOrg, onSeed, user, items, setItems }) {
         {/* Plans */}
         <div className="card card-p" style={{marginBottom:20}}>
           <div className="sh"><h2>Plans</h2><p>Choose the right plan for your program.</p></div>
-          <div className="pricing-grid">
-            {[
-              { name:"Free",    price:"$0",  per:"/forever", desc:"Perfect for getting started.",       hot:false, link:null,     btn:"Current Plan",  feats:["Up to 50 items","Basic marketplace","CSV export","QR labels"] },
-              { name:"Pro",     price:"$12", per:"/month",   desc:"For active programs & companies.",   hot:true,  link:"https://buy.stripe.com/test_8x26oJ3vhcvy1Wi7eq9sk00",  annualLink:"https://buy.stripe.com/test_8x214p6HtdzCgRc2Ya9sk02", btn:"Get Pro →",     feats:["Unlimited items","Priority marketplace","Photo storage 5GB","Analytics dashboard","Email support"] },
-              { name:"District",price:"$49", per:"/month",   desc:"Multiple schools, one platform.",    hot:false, link:"https://buy.stripe.com/test_8x2cN79TF67a0SebuG9sk01", annualLink:"https://buy.stripe.com/test_28E6oJ5Dp7be30meGS9sk03", btn:"Get District →", feats:["Unlimited programs","Shared inventory pool","Admin controls","White-label option","Dedicated support"] },
-            ].map(p=>(
-              <div key={p.name} className={`pricing-card${p.hot?" hot":""}`}>
-                <div className="pname">{p.name}</div>
-                <div className="pprice">{p.price}<span>{p.per}</span></div>
-                <div className="pdesc">{p.desc}</div>
-                {p.feats.map(ft=>(
-                  <div key={ft} className="pfeat">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                    {ft}
-                  </div>
-                ))}
-                {p.link
-                  ? <a href={p.link} target="_blank" rel="noreferrer" className={`btn btn-full ${p.hot?"btn-g":"btn-o"}`} style={{marginTop:16,textDecoration:"none",display:"flex",justifyContent:"center"}}>{p.btn}</a>
-                  : <button className="btn btn-full btn-o" style={{marginTop:16,opacity:.5,cursor:"default"}} disabled>{p.btn}</button>
-                }
-              </div>
-            ))}
-          </div>
+          {/* Billing toggle */}
+          <UpgradePlans />
         </div>
 
         {/* Data */}
@@ -1462,20 +1508,7 @@ function LandingPage({onSignIn, onSignUp}){
     {text:"Finally know what we actually own. Scanned an old bin backstage and found $800 worth of equipment we had forgotten about. Worth every penny.",name:"Patricia K.",role:"Performing Arts Coordinator, District 47"},
   ];
 
-  const PLANS=[
-    {plan:"Starter",price:"Free",period:"forever",annual:null,annualSave:null,
-     monthlyLink:null,annualLink:null,
-     feats:["Up to 50 items","QR code labels","Photo uploads","CSV export"],feat:false},
-    {plan:"Pro",price:"$12",period:"/month",annual:"$120/yr",annualSave:"save $24",
-     monthlyLink:"https://buy.stripe.com/test_8x26oJ3vhcvy1Wi7eq9sk00",
-     annualLink:"https://buy.stripe.com/test_8x214p6HtdzCgRc2Ya9sk02",
-     feats:["Unlimited inventory","Marketplace listings","Priority support","Advanced reports","Everything in Starter"],feat:true},
-    {plan:"District",price:"$49",period:"/month",annual:"$500/yr",annualSave:"save $88",
-     monthlyLink:"https://buy.stripe.com/test_8x2cN79TF67a0SebuG9sk01",
-     annualLink:"https://buy.stripe.com/test_28E6oJ5Dp7be30meGS9sk03",
-     feats:["Multiple organizations","District dashboard","Bulk import","Dedicated support","Everything in Pro"],feat:false},
-  ];
-  const[billing,setBilling]=useState("monthly");
+  // Pricing uses shared UPGRADE_PLANS + STRIPE_LINKS constants and UpgradePlans component
 
   return(
     <div className="lp">
@@ -1572,30 +1605,7 @@ function LandingPage({onSignIn, onSignUp}){
           <div className="lps-lbl">Simple Pricing</div>
           <h2 className="lps-title">Start free. <em>Grow</em> when you&apos;re ready.</h2>
           <p className="lps-sub">No credit card required. No surprise fees. Cancel any time.</p>
-          <div style={{display:"flex",alignItems:"center",background:"var(--bg2)",border:"1px solid var(--bd)",borderRadius:"var(--rs)",padding:3,width:"fit-content",margin:"24px auto 0"}}>
-            <button onClick={()=>setBilling("monthly")} style={{background:billing==="monthly"?"var(--gold)":"transparent",color:billing==="monthly"?"#1a0f00":"var(--t2)",border:"none",borderRadius:"4px",padding:"7px 20px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"DM Sans,sans-serif",transition:"all .2s"}}>Monthly</button>
-            <button onClick={()=>setBilling("annual")} style={{background:billing==="annual"?"var(--gold)":"transparent",color:billing==="annual"?"#1a0f00":"var(--t2)",border:"none",borderRadius:"4px",padding:"7px 20px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"DM Sans,sans-serif",transition:"all .2s",display:"flex",alignItems:"center",gap:6}}>Annual <span style={{fontSize:10,padding:"1px 6px",background:billing==="annual"?"rgba(0,0,0,.15)":"rgba(212,168,67,.15)",color:billing==="annual"?"#1a0f00":"var(--gold)",borderRadius:9,fontWeight:700}}>Save 17%</span></button>
-          </div>
-          <div className="lp-pg">
-            {PLANS.map(p=>(
-              <div key={p.plan} className={"lp-pc"+(p.feat?" feat":"")}>
-                {p.feat&&<div style={{fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"var(--gold)",marginBottom:10}}>Most Popular</div>}
-                <div className="lp-pp">{p.plan}</div>
-                <div className="lp-pa">{billing==="annual"&&p.annual?p.annual:p.price}</div>
-                <div className="lp-pper">{billing==="annual"&&p.annual?<span style={{color:"var(--gold)",fontSize:13}}>{p.annualSave}</span>:p.period}</div>
-                <ul className="lp-pul">{p.feats.map(f=><li key={f}>{f}</li>)}</ul>
-                <button className={p.feat?"lp-btnp":"lp-btns2"} style={{width:"100%",justifyContent:"center",padding:"12px 0"}}
-                  onClick={()=>{
-                    const link = billing==="annual" ? p.annualLink : p.monthlyLink;
-                    if(link) window.open(link,"_blank");
-                    else onSignUp();
-                  }}>
-                  {p.plan==="Starter" ? "Get Started Free" : billing==="annual" ? "Get "+p.plan+" Annual →" : "Get "+p.plan+" →"}
-                </button>
-              </div>
-            ))}
-          </div>
-          <p style={{textAlign:"center",marginTop:24,fontSize:12.5,color:"var(--t3)"}}>All plans include a 14-day free trial. No credit card required to start.</p>
+          <UpgradePlans />
         </div>
       </section>
       {/* CTA */}
