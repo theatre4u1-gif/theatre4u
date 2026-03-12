@@ -8,36 +8,60 @@ const SB = createClient(
 );
 const uid  = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 const fmt$ = n  => "$" + Number(n || 0).toFixed(2);
+// Page background images — 5 confirmed-working Unsplash IDs only
 const usp=(id,w=900,h=500)=>`https://images.unsplash.com/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=82`;
-
 const BG = {
   dashboard:   "photo-1503095396549-807759245b35", // grand theatre interior
-  inventory:   "photo-1558618666-fcd25c85cd64",    // costume rack
+  inventory:   "photo-1503095396549-807759245b35", // grand theatre interior
   marketplace: "photo-1460723237483-7a6dc9d0b212", // theatre stage
   reports:     "photo-1504196606672-aef5c9cefc92", // theatre seats
-  settings:    "photo-1481627834876-b7833e8f5570", // library/scripts
+  settings:    "photo-1504196606672-aef5c9cefc92", // theatre seats
 };
-const CAT_IMG = {
-  costumes: "photo-1558618666-fcd25c85cd64",   // Victorian gown / costume rack
-  props:    "photo-1513364776144-60967b0f800f", // period props and items
-  sets:     "photo-1460723237483-7a6dc9d0b212", // theatre stage set
-  lighting: "photo-1514525253161-7a46d19cd819", // stage lighting
-  sound:    "photo-1598488035139-bdbb2231ce04", // audio mixing / microphone
-  scripts:  "photo-1481627834876-b7833e8f5570", // books/scripts on shelves
-  makeup:   "photo-1487412720507-e7ab37603c6f", // makeup/cosmetics flat lay
-  furniture:"photo-1555041469-a586c61ea9bc",    // elegant chair/furniture
-  fabrics:  "photo-1558769132-cb1aea458c5e",    // rich red/gold drape fabric
-  tools:    "photo-1504148455328-c376907d081c",  // workshop tools
-  effects:  "photo-1492684223066-81342ee5ff30",  // atmospheric/smoke effects
-  other:    "photo-1503095396549-807759245b35",  // grand theatre interior
+
+// Category visual identity — CSS gradients, always works, never breaks
+const CAT_GFX = {
+  costumes:  {grad:"linear-gradient(135deg,#7b1560,#c2185b,#e91e8c)",    icon:"👗"},
+  props:     {grad:"linear-gradient(135deg,#4a148c,#7b1fa2,#9c27b0)",    icon:"🎭"},
+  sets:      {grad:"linear-gradient(135deg,#0d2b6e,#1565c0,#1976d2)",    icon:"🏛️"},
+  lighting:  {grad:"linear-gradient(135deg,#7f4800,#e65100,#ff9800)",    icon:"💡"},
+  sound:     {grad:"linear-gradient(135deg,#1b5e20,#2e7d32,#43a047)",    icon:"🔊"},
+  scripts:   {grad:"linear-gradient(135deg,#bf360c,#d84315,#e64a19)",    icon:"📜"},
+  makeup:    {grad:"linear-gradient(135deg,#880e4f,#ad1457,#e91e63)",    icon:"💄"},
+  furniture: {grad:"linear-gradient(135deg,#3e2723,#5d4037,#795548)",    icon:"🪑"},
+  fabrics:   {grad:"linear-gradient(135deg,#4a148c,#6a1b9a,#8e24aa)",    icon:"🧵"},
+  tools:     {grad:"linear-gradient(135deg,#263238,#37474f,#546e7a)",    icon:"🔧"},
+  effects:   {grad:"linear-gradient(135deg,#006064,#00838f,#00acc1)",    icon:"✨"},
+  other:     {grad:"linear-gradient(135deg,#37474f,#546e7a,#78909c)",    icon:"📦"},
 };
+
+// CatCard — renders a category tile using gradient instead of photo
+function CatCard({catId,label,icon,width=300,height=160,children}){
+  const g=CAT_GFX[catId]||CAT_GFX.other;
+  return(
+    <div style={{width,height,background:g.grad,borderRadius:8,position:"relative",overflow:"hidden",display:"flex",alignItems:"flex-end"}}>
+      <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:Math.round(height*0.38),opacity:.25,userSelect:"none"}}>{g.icon}</div>
+      <div style={{position:"relative",zIndex:1,width:"100%"}}>{children}</div>
+    </div>
+  );
+}
+
+// CatThumb — small square thumbnail for item cards/lists
+function CatThumb({catId,size=56}){
+  const g=CAT_GFX[catId]||CAT_GFX.other;
+  return(
+    <div style={{width:size,height:size,background:g.grad,borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:Math.round(size*0.44),flexShrink:0}}>
+      {g.icon}
+    </div>
+  );
+}
+
 const SHOWCASE = [
-  {img:"photo-1558618666-fcd25c85cd64",name:"Victorian Ball Gown",  cat:"costumes", price:"$25/wk", badge:"For Rent"},
-  {img:"photo-1558769132-cb1aea458c5e",name:"Grand Stage Drape",    cat:"fabrics",  price:"$60/wk", badge:"For Rent"},
-  {img:"photo-1492684223066-81342ee5ff30",name:"Fog Machine Pro",   cat:"effects",  price:"$20/wk", badge:"For Rent"},
-  {img:"photo-1513364776144-60967b0f800f",name:"Period Prop Set",   cat:"props",    price:"$45",    badge:"For Sale"},
-  {img:"photo-1514525253161-7a46d19cd819",name:"LED Par Can Array", cat:"lighting", price:"$12/wk", badge:"Rent or Sale"},
-  {img:"photo-1598488035139-bdbb2231ce04",name:"Shure Wireless Mic",cat:"sound",    price:"$18/wk", badge:"For Rent"},
+  {cat:"costumes", name:"Victorian Ball Gown",   price:"$25/wk", badge:"For Rent"},
+  {cat:"fabrics",  name:"Grand Stage Drape",     price:"$60/wk", badge:"For Rent"},
+  {cat:"effects",  name:"Fog Machine Pro",       price:"$20/wk", badge:"For Rent"},
+  {cat:"props",    name:"Period Prop Set",        price:"$45",    badge:"For Sale"},
+  {cat:"lighting", name:"LED Par Can Array",     price:"$12/wk", badge:"Rent or Sale"},
+  {cat:"sound",    name:"Shure Wireless Mic",    price:"$18/wk", badge:"For Rent"},
 ];
 
 const CATS = [
@@ -191,8 +215,8 @@ body{font-family:'Raleway',sans-serif;-webkit-font-smoothing:antialiased}
 /* Mosaic */
 .mosaic{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,155px);gap:10px;border-radius:var(--rm);overflow:hidden}
 .mc{overflow:hidden;position:relative;cursor:pointer}
-.mc img{width:100%;height:100%;object-fit:cover;transition:transform .55s ease}
-.mc:hover img{transform:scale(1.08)}
+.mc>div:first-child{width:100%;height:100%;object-fit:cover;transition:transform .55s ease}
+.mc:hover>div:first-child{transform:scale(1.04)}
 .mc.big{grid-column:span 2;grid-row:span 2}
 .mc-lbl{position:absolute;bottom:0;left:0;right:0;padding:10px 14px;background:linear-gradient(transparent,rgba(18,6,0,.8));font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--white)}
 
@@ -225,8 +249,8 @@ body{font-family:'Raleway',sans-serif;-webkit-font-smoothing:antialiased}
 .cat-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px}
 .cat-tile{border-radius:var(--rm);overflow:hidden;cursor:pointer;position:relative;height:122px;box-shadow:var(--sh1);transition:all .2s}
 .cat-tile:hover{box-shadow:var(--sh2);transform:translateY(-3px)}
-.cat-tile img{width:100%;height:100%;object-fit:cover;transition:transform .55s}
-.cat-tile:hover img{transform:scale(1.1)}
+.cat-tile>div{width:100%;height:100%!important;border-radius:0!important;transition:transform .55s}
+.cat-tile:hover>div{transform:scale(1.06)}
 .cat-tile::after{content:'';position:absolute;inset:0;background:linear-gradient(transparent 20%,rgba(18,6,0,.78))}
 .cat-info{position:absolute;bottom:0;left:0;right:0;padding:10px 12px;z-index:1}
 .cat-emo{font-size:18px;display:block;margin-bottom:2px}
@@ -633,15 +657,16 @@ function ItemForm({item,onSave,onCancel,submitId,userId}){
 function ItemDetail({item,onEdit,onDelete}){
   const cat=CAT[item.category]||CAT.other;
   const[lb,setLb]=useState(false);
-  const fb=usp(CAT_IMG[item.category]||CAT_IMG.other,800,480);
-  const src=item.img||fb;
+  const gfx=CAT_GFX[item.category]||CAT_GFX.other;
   const mktCls=item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="Rent or Sale"?"mb-both":"mb-none";
   return(
     <>
-      {lb&&<div className="lb" onClick={()=>setLb(false)}><img src={src} alt=""/></div>}
-      <div className="dt-img" onClick={()=>setLb(true)}>
-        <img src={src} alt={item.name}/>
-        {!item.img&&<><div style={{position:"absolute",inset:0,background:"linear-gradient(transparent 50%,rgba(18,6,0,.5))"}}/><div style={{position:"absolute",bottom:12,left:14,color:"rgba(255,255,255,.65)",fontSize:12,fontFamily:"'Lora',serif",fontStyle:"italic"}}>Representative image</div></>}
+      {lb&&item.img&&<div className="lb" onClick={()=>setLb(false)}><img src={item.img} alt=""/></div>}
+      <div className="dt-img" onClick={()=>item.img&&setLb(true)} style={{cursor:item.img?"zoom-in":"default"}}>
+        {item.img
+          ?<img src={item.img} alt={item.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+          :<div style={{width:"100%",height:"100%",background:gfx.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:72,opacity:.85}}>{gfx.icon}</div>
+        }
       </div>
       <div style={{display:"flex",alignItems:"center",gap:13,marginBottom:16}}>
         <div style={{width:50,height:50,background:cat.color+"22",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0,border:`1.5px solid ${cat.color}44`}}>{cat.icon}</div>
@@ -718,14 +743,14 @@ function Dashboard({items,org,goInventory}){
             </div>
           ))}
         </div>
-        {/* Mosaic */}
+        {/* Mosaic — gradient tiles */}
         <div className="sh"><h2>From the Stage</h2><p>A glimpse of what arts programs are cataloging and sharing nationwide.</p></div>
         <div className="mosaic" style={{marginBottom:32}}>
-          <div className="mc big"><img src={usp("photo-1503095396549-807759245b35",800,400)} alt="Grand Theatre" loading="lazy"/><div className="mc-lbl">Grand Stage Interiors</div></div>
-          <div className="mc"><img src={usp("photo-1558618666-fcd25c85cd64",400,200)} alt="Costumes" loading="lazy"/><div className="mc-lbl">Costumes</div></div>
-          <div className="mc"><img src={usp("photo-1514525253161-7a46d19cd819",400,200)} alt="Lighting" loading="lazy"/><div className="mc-lbl">Stage Lighting</div></div>
-          <div className="mc"><img src={usp("photo-1492684223066-81342ee5ff30",400,200)} alt="Effects" loading="lazy"/><div className="mc-lbl">Special Effects</div></div>
-          <div className="mc"><img src={usp("photo-1598488035139-bdbb2231ce04",400,200)} alt="Sound" loading="lazy"/><div className="mc-lbl">Sound Equipment</div></div>
+          <div className="mc big" style={{background:"linear-gradient(135deg,#0d2b6e,#1565c0,#1976d2)",position:"relative"}}><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:80,opacity:.18,userSelect:"none"}}>🎭</div><div className="mc-lbl">Grand Stage Interiors</div></div>
+          <div className="mc" style={{background:"linear-gradient(135deg,#7b1560,#c2185b,#e91e8c)",position:"relative"}}><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:42,opacity:.22,userSelect:"none"}}>👗</div><div className="mc-lbl">Costumes</div></div>
+          <div className="mc" style={{background:"linear-gradient(135deg,#7f4800,#e65100,#ff9800)",position:"relative"}}><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:42,opacity:.22,userSelect:"none"}}>💡</div><div className="mc-lbl">Stage Lighting</div></div>
+          <div className="mc" style={{background:"linear-gradient(135deg,#006064,#00838f,#00acc1)",position:"relative"}}><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:42,opacity:.22,userSelect:"none"}}>✨</div><div className="mc-lbl">Special Effects</div></div>
+          <div className="mc" style={{background:"linear-gradient(135deg,#1b5e20,#2e7d32,#43a047)",position:"relative"}}><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:42,opacity:.22,userSelect:"none"}}>🔊</div><div className="mc-lbl">Sound Equipment</div></div>
         </div>
         {/* Divider 1 */}
         <div className="img-div" style={{marginBottom:32}}>
@@ -753,8 +778,9 @@ function Dashboard({items,org,goInventory}){
             const count=items.filter(it=>it.category===cat.id).length;
             return(
               <div key={cat.id} className="cat-tile" onClick={goInventory}>
-                <img src={usp(CAT_IMG[cat.id]||CAT_IMG.other,300,160)} alt={cat.label} loading="lazy"/>
-                <div className="cat-info"><span className="cat-emo">{cat.icon}</span><span className="cat-name">{cat.label}</span>{count>0&&<div className="cat-cnt">{count} item{count!==1?"s":""}</div>}</div>
+                <CatCard catId={cat.id} label={cat.label} icon={cat.icon} width="100%" height={160}>
+                  <div className="cat-info"><span className="cat-emo">{cat.icon}</span><span className="cat-name">{cat.label}</span>{count>0&&<div className="cat-cnt">{count} item{count!==1?"s":""}</div>}</div>
+                </CatCard>
               </div>
             );
           })}
@@ -852,10 +878,9 @@ function Inventory({items,onAdd,onEdit,onDelete,userId}){
           :<div className="inv-grid">
               {paged.map(item=>{
                 const cat=CAT[item.category]||CAT.other;
-                const fb=usp(CAT_IMG[item.category]||CAT_IMG.other,400,220);
                 return(
                   <div key={item.id} className="inv-card" onClick={()=>openD(item)}>
-                    <div className="inv-img"><img src={item.img||fb} alt={item.name} loading="lazy" style={!item.img?{opacity:.72}:{}}/></div>
+                    <div className="inv-img">{item.img?<img src={item.img} alt={item.name} loading="lazy"/>:<CatCard catId={item.category} width="100%" height={220}><div style={{padding:"0 14px 12px",color:"#fff"}}></div></CatCard>}</div>
                     <div className="inv-body">
                       <div className="inv-cat" style={{color:cat.color}}>{cat.icon} {cat.label}</div>
                       <div className="inv-name">{item.name}</div>
@@ -874,10 +899,9 @@ function Inventory({items,onAdd,onEdit,onDelete,userId}){
               <tbody>
                 {paged.map(item=>{
                   const cat=CAT[item.category]||CAT.other;
-                  const fb=usp(CAT_IMG[item.category]||CAT_IMG.other,60,60);
                   return(
                     <tr key={item.id}>
-                      <td style={{width:40,padding:"4px 8px"}}><img src={item.img||fb} alt="" style={{width:32,height:32,borderRadius:4,objectFit:"cover",opacity:item.img?1:.7}}/></td>
+                      <td style={{width:40,padding:"4px 8px"}}>{item.img?<img src={item.img} alt="" style={{width:32,height:32,borderRadius:4,objectFit:"cover"}}/>:<CatThumb catId={item.category} size={32}/>}</td>
                       <td style={{fontFamily:"'Lora',serif",fontWeight:600,fontSize:15,cursor:"pointer",color:"var(--ink)"}} onClick={()=>openD(item)}>{item.name}</td>
                       <td style={{fontWeight:700,color:"var(--muted)"}}>{cat.icon} {cat.label}</td>
                       <td>{item.condition}</td><td style={{fontWeight:800}}>{item.qty}</td>
@@ -956,11 +980,10 @@ function Marketplace({items,org}){
           :<div className="inv-grid">
               {paged.map(item=>{
                 const cat=CAT[item.category]||CAT.other;
-                const fb=usp(CAT_IMG[item.category]||CAT_IMG.other,400,220);
                 return(
                   <div key={item.id} className="inv-card" onClick={()=>setViewing(item)}>
                     {org.name&&<div style={{padding:"6px 14px",background:"var(--parch)",borderBottom:"1px solid var(--linen)",fontSize:11,fontWeight:800,color:"var(--amber)",textTransform:"uppercase",letterSpacing:1.5}}>{org.name}</div>}
-                    <div className="inv-img"><img src={item.img||fb} alt={item.name} loading="lazy" style={!item.img?{opacity:.72}:{}}/></div>
+                    <div className="inv-img">{item.img?<img src={item.img} alt={item.name} loading="lazy"/>:<CatCard catId={item.category} width="100%" height={220}><div style={{padding:"0 14px 12px",color:"#fff"}}></div></CatCard>}</div>
                     <div className="inv-body">
                       <div className="inv-cat" style={{color:cat.color}}>{cat.icon} {cat.label}</div>
                       <div className="inv-name">{item.name}</div>
@@ -1843,8 +1866,8 @@ export default function App() {
         <aside className={`sidebar ${isDesk ? "" : mob ? "open" : "hidden"}`}
                style={isDesk ? {position:"relative",transform:"none"} : {}}>
           <div className="sb-root">
-            <div className="sb-photo">
-              <img src={usp(BG.sidebar,400,900)} alt=""/>
+            <div className="sb-photo" style={{background:"linear-gradient(180deg,#0d1829 0%,#1a0d2e 40%,#2d0a1e 100%)",position:"relative",overflow:"hidden"}}>
+              <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:120,opacity:.07,userSelect:"none"}}>🎭</div>
             </div>
             <div className="sb-inner">
               <div className="sb-logo">
