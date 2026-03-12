@@ -1304,7 +1304,14 @@ const PLANS_DEF = {
   pro:      { label:"Pro",      maxItems:Infinity, marketplace:true,  reports:true  },
   district: { label:"District", maxItems:Infinity, marketplace:true,  reports:true  },
 };
-const ADMIN_EMAIL = "theatre4u1@gmail.com";
+// ── Admin accounts — add emails here for free District access + admin dashboard
+const ADMIN_EMAILS = [
+  "theatre4u1@gmail.com",
+  // Add tester emails here:
+  // "tester1@example.com",
+];
+const isAdminEmail = (e) => ADMIN_EMAILS.includes((e||"").toLowerCase().trim());
+const ADMIN_EMAIL  = ADMIN_EMAILS[0]; // legacy alias
 
 const UPGRADE_PLANS = [
   { id:"free",     name:"Free",     monthlyPrice:"$0",  annualPrice:"Free",   per:"/forever", annualNote:null,       desc:"Perfect for getting started.",     hot:false,
@@ -1369,6 +1376,191 @@ function UpgradePlans({ compact = false }) {
   );
 }
 
+// ── Admin Dashboard ───────────────────────────────────────────────────────────
+function AdminDashboard({ currentUser }) {
+  const [orgs,    setOrgs]    = useState([]);
+  const [counts,  setCounts]  = useState({});
+  const [loading, setLoading] = useState(true);
+  const [search,  setSearch]  = useState("");
+  const [planF,   setPlanF]   = useState("all");
+  const [saving,  setSaving]  = useState(null);
+  const [msg,     setMsg]     = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    // Load all orgs
+    const { data: orgData, error } = await SB.from("orgs").select("*").order("created_at", { ascending: false });
+    if (error) { setLoading(false); return; }
+    setOrgs(orgData || []);
+    // Load item counts per org
+    const { data: itemData } = await SB.from("items").select("org_id");
+    const c = {};
+    (itemData || []).forEach(i => { c[i.org_id] = (c[i.org_id] || 0) + 1; });
+    setCounts(c);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const setPlanFor = async (orgId, newPlan) => {
+    setSaving(orgId);
+    const { error } = await SB.from("orgs").update({ plan: newPlan }).eq("id", orgId);
+    if (!error) {
+      setOrgs(p => p.map(o => o.id === orgId ? { ...o, plan: newPlan } : o));
+      setMsg("Plan updated!");
+      setTimeout(() => setMsg(""), 2000);
+    }
+    setSaving(null);
+  };
+
+  const filtered = useMemo(() => {
+    let f = orgs;
+    if (planF !== "all") f = f.filter(o => (o.plan || "free") === planF);
+    if (search) {
+      const q = search.toLowerCase();
+      f = f.filter(o => (o.name || "").toLowerCase().includes(q) || (o.email || "").toLowerCase().includes(q));
+    }
+    return f;
+  }, [orgs, planF, search]);
+
+  // Stats
+  const totalOrgs  = orgs.length;
+  const totalItems = Object.values(counts).reduce((s, c) => s + c, 0);
+  const byPlan     = { free: 0, pro: 0, district: 0 };
+  orgs.forEach(o => { const p = o.plan || "free"; byPlan[p] = (byPlan[p] || 0) + 1; });
+  const mrr = (byPlan.pro * 12) + (byPlan.district * 49);
+
+  const planColor = { free: "rgba(255,255,255,.2)", pro: "var(--gold)", district: "#42a5f5" };
+  const planLabel = { free: "Free", pro: "Pro", district: "District" };
+
+  return (
+    <div style={{ position: "relative" }}>
+      <img src={usp("photo-1503095396549-807759245b35", 1400, 900)} alt="" className="page-bg-img" />
+
+      <div style={{ padding: "32px 36px 0" }}>
+        <div className="hero-wrap" style={{ height: 210 }}>
+          <img src={usp("photo-1503095396549-807759245b35", 1100, 260)} alt="Admin" loading="eager" />
+          <div className="hero-fade" />
+          <div className="hero-body">
+            <div className="hero-eyebrow">🔧 Admin Only</div>
+            <h1 className="hero-title" style={{ fontSize: 44 }}>Admin Dashboard</h1>
+            <p className="hero-sub">Platform overview — all organizations, plans, and data.</p>
+          </div>
+          <div className="hero-bar" />
+        </div>
+      </div>
+
+      <div style={{ padding: "24px 36px 48px", position: "relative", zIndex: 1 }}>
+
+        {/* Stats row */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 12, marginBottom: 24 }}>
+          {[
+            { icon: "🏛",  label: "Organizations", val: totalOrgs },
+            { icon: "📦",  label: "Total Items",    val: totalItems },
+            { icon: "🆓",  label: "Free Accounts",  val: byPlan.free },
+            { icon: "⭐",  label: "Pro Accounts",   val: byPlan.pro,      color: "var(--gold)" },
+            { icon: "🏢",  label: "District Accts", val: byPlan.district, color: "#42a5f5" },
+            { icon: "💰",  label: "Est. MRR",       val: "$" + mrr,       color: "var(--green)" },
+          ].map(s => (
+            <div key={s.label} className="card card-p" style={{ textAlign: "center", padding: "16px 12px" }}>
+              <div style={{ fontSize: 26, marginBottom: 4 }}>{s.icon}</div>
+              <div style={{ fontFamily: "var(--serif)", fontSize: 26, fontWeight: 700, color: s.color || "var(--linen)" }}>{s.val}</div>
+              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Admin emails */}
+        <div className="card card-p" style={{ marginBottom: 20, borderColor: "rgba(212,168,67,.3)", background: "rgba(212,168,67,.04)" }}>
+          <div className="sh"><h2 style={{ color: "var(--gold)" }}>🔑 Admin Accounts</h2><p>These emails have free District access and see this dashboard. Edit the ADMIN_EMAILS array in the source to add more.</p></div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {ADMIN_EMAILS.map(e => (
+              <div key={e} style={{ padding: "4px 12px", background: "rgba(212,168,67,.15)", border: "1px solid rgba(212,168,67,.3)", borderRadius: 20, fontSize: 12.5, color: "var(--gold)", fontWeight: 600 }}>
+                {e}{e === currentUser?.email ? " (you)" : ""}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Filter bar */}
+        <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
+          <div className="srch-wrap" style={{ position: "relative", flex: 1, minWidth: 200 }}>
+            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none", display: "flex" }}>{Ic.search}</span>
+            <input className="fi" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search org name or email…" style={{ paddingLeft: 34, width: "100%" }} />
+          </div>
+          <div style={{ display: "flex", gap: 0, border: "1px solid var(--border)", borderRadius: 6, overflow: "hidden" }}>
+            {["all","free","pro","district"].map(p => (
+              <button key={p} onClick={() => setPlanF(p)} style={{ background: planF === p ? "var(--gold)" : "transparent", color: planF === p ? "#1a0f00" : "var(--muted)", border: "none", padding: "6px 14px", cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, fontWeight: 600, textTransform: "capitalize" }}>
+                {p === "all" ? "All" : planLabel[p]}
+              </button>
+            ))}
+          </div>
+          <button className="btn btn-o btn-sm" onClick={load}>↻ Refresh</button>
+          {msg && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>✓ {msg}</span>}
+        </div>
+
+        {/* Orgs table */}
+        <div className="card" style={{ overflow: "hidden" }}>
+          {loading ? (
+            <div style={{ textAlign: "center", padding: 40, color: "var(--muted)" }}>Loading organizations…</div>
+          ) : filtered.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 40, color: "var(--muted)" }}>No organizations found.</div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: "rgba(0,0,0,.25)" }}>
+                    {["Organization","Email","Type","Plan","Items","Joined","Change Plan"].map(h => (
+                      <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((o, i) => {
+                    const p = o.plan || "free";
+                    const isAdmin = isAdminEmail(o.email);
+                    return (
+                      <tr key={o.id} style={{ borderTop: "1px solid var(--border)", background: i % 2 === 0 ? "rgba(255,255,255,.01)" : "transparent" }}>
+                        <td style={{ padding: "10px 14px", fontWeight: 700, fontSize: 13.5 }}>
+                          {o.name || <span style={{ color: "var(--faint)", fontStyle: "italic" }}>Unnamed</span>}
+                          {isAdmin && <span style={{ marginLeft: 6, fontSize: 10, padding: "1px 6px", background: "rgba(212,168,67,.2)", color: "var(--gold)", borderRadius: 8, fontWeight: 700 }}>ADMIN</span>}
+                        </td>
+                        <td style={{ padding: "10px 14px", fontSize: 12.5, color: "var(--muted)" }}>{o.email || "—"}</td>
+                        <td style={{ padding: "10px 14px", fontSize: 12.5, color: "var(--muted)" }}>{o.type || "—"}</td>
+                        <td style={{ padding: "10px 14px" }}>
+                          <span style={{ padding: "3px 9px", borderRadius: 10, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: .5, background: p === "pro" ? "rgba(212,168,67,.2)" : p === "district" ? "rgba(66,165,245,.2)" : "rgba(255,255,255,.07)", color: planColor[p] }}>
+                            {planLabel[p]}
+                          </span>
+                        </td>
+                        <td style={{ padding: "10px 14px", fontSize: 13, fontWeight: 600 }}>{counts[o.id] || 0}</td>
+                        <td style={{ padding: "10px 14px", fontSize: 12, color: "var(--muted)" }}>{o.created_at ? new Date(o.created_at).toLocaleDateString() : "—"}</td>
+                        <td style={{ padding: "10px 14px" }}>
+                          <div style={{ display: "flex", gap: 4 }}>
+                            {["free","pro","district"].map(np => (
+                              <button key={np} onClick={() => np !== p && setPlanFor(o.id, np)} disabled={np === p || saving === o.id}
+                                style={{ padding: "3px 9px", fontSize: 11, fontWeight: 700, textTransform: "capitalize", cursor: np === p ? "default" : "pointer", borderRadius: 6, border: "1px solid", background: np === p ? (np === "pro" ? "rgba(212,168,67,.25)" : np === "district" ? "rgba(66,165,245,.25)" : "rgba(255,255,255,.1)") : "transparent", color: np === p ? planColor[np] : "var(--muted)", opacity: saving === o.id ? .5 : 1, fontFamily: "inherit" }}>
+                                {saving === o.id ? "…" : np}
+                              </button>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div style={{ marginTop: 10, fontSize: 12, color: "var(--faint)" }}>
+          {filtered.length} of {orgs.length} organizations · Data live from Supabase
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Settings({ org, setOrg, onSeed, user, items, setItems, plan="free", userEmail="", setPlan }) {
   const [f,setF]       = useState(org);
   const [saved,setSaved] = useState(false);
@@ -1426,7 +1618,7 @@ function Settings({ org, setOrg, onSeed, user, items, setItems, plan="free", use
 
         {/* Data */}
         {/* Admin Test Panel — only visible to admin email */}
-        {userEmail===ADMIN_EMAIL&&(
+        {isAdminEmail(userEmail)&&(
           <div className="card card-p" style={{marginBottom:20,border:"1px solid rgba(212,168,67,.4)",background:"rgba(212,168,67,.04)"}}>
             <div className="sh">
               <h2 style={{color:"var(--gold)"}}>🔧 Admin: Plan Test Mode</h2>
@@ -2128,7 +2320,10 @@ export default function App() {
     if(!user) return;
     (async()=>{
       const{data:orgData}=await SB.from("orgs").select("*").eq("id",user.id).single();
-      if(orgData){ setOrg(orgData); setPlanState(orgData.plan||"free"); }
+      // Admin emails always get District plan regardless of what is stored
+      const effectivePlan = isAdminEmail(user?.email) ? "district" : (orgData?.plan || "free");
+      if(orgData){ setOrg(orgData); setPlanState(effectivePlan); }
+      else { setPlanState(effectivePlan); }
       const{data:itemData}=await SB.from("items").select("*").eq("org_id",user.id).order("added",{ascending:false});
       if(itemData) setItems(itemData);
       setLoaded(true);
@@ -2182,14 +2377,16 @@ export default function App() {
   const isDesk = typeof window !== "undefined" && window.innerWidth > 900;
   const listed = items.filter(i=>i.mkt!=="Not Listed").length;
 
+  const isAdmin = isAdminEmail(user?.email);
   const NAV = [
     { id:"dashboard",   label:"Dashboard",   ico:Ic.home    },
     { id:"inventory",   label:"Inventory",   ico:Ic.box     },
     { id:"marketplace", label:"Marketplace", ico:Ic.store   },
     { id:"reports",     label:"Reports",     ico:Ic.chart   },
     { id:"settings",    label:"Settings",    ico:Ic.settings},
+    ...(isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
   ];
-  const TITLES = { dashboard:"Dashboard", inventory:"Inventory", marketplace:"Marketplace", reports:"Reports", settings:"Settings" };
+  const TITLES = { dashboard:"Dashboard", inventory:"Inventory", marketplace:"Marketplace", reports:"Reports", settings:"Settings", admin:"Admin Dashboard" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicItemId) return <PublicItemPage itemId={publicItemId} />;
@@ -2250,9 +2447,13 @@ export default function App() {
               <nav className="sb-nav">
                 <div className="sb-label">Navigation</div>
                 {NAV.map(n=>(
-                  <div key={n.id} className={`sb-item ${page===n.id?"on":""}`} onClick={()=>nav(n.id)}>
-                    <span className="sb-ico">{n.ico}</span>
+                  <div key={n.id}
+                    className={`sb-item ${page===n.id?"on":""}`}
+                    onClick={()=>nav(n.id)}
+                    style={n.admin ? {marginTop:8, borderTop:"1px solid rgba(212,168,67,.15)", paddingTop:10, color: page===n.id ? undefined : "rgba(212,168,67,.6)"} : {}}>
+                    <span className="sb-ico">{n.admin ? "🔧" : n.ico}</span>
                     <span>{n.label}</span>
+                    {n.admin && <span style={{marginLeft:"auto",fontSize:9,padding:"1px 5px",background:"rgba(212,168,67,.2)",color:"var(--gold)",borderRadius:4,fontWeight:700,letterSpacing:1}}>ADMIN</span>}
                     {n.id==="inventory"  && items.length>0 && <span className="sb-badge">{items.length}</span>}
                     {n.id==="marketplace"&& listed>0       && <span className="sb-badge">{listed}</span>}
                   </div>
@@ -2311,6 +2512,7 @@ export default function App() {
                   {page==="marketplace" && <Marketplace items={items} org={org} plan={plan}/>}
                   {page==="reports"     && <Reports     items={items} plan={plan}/>}
                   {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan}/>}
+                  {page==="admin"       && isAdmin && <AdminDashboard currentUser={user}/>}
                 </div>
             }
           </div>
