@@ -11,24 +11,30 @@ const fmt$ = n  => "$" + Number(n || 0).toFixed(2);
 const usp=(id,w=900,h=500)=>`https://images.unsplash.com/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=82`;
 
 const BG = {
-  dashboard:   "photo-1503095396549-807759245b35",
-  inventory:   "photo-1560179707-f14e90ef3623",
-  marketplace: "photo-1514525253161-7a46d19cd819",
-  reports:     "photo-1504196606672-aef5c9cefc92",
-  settings:    "photo-1516450360452-9312f5e86fc7",
+  dashboard:   "photo-1503095396549-807759245b35", // grand theatre interior
+  inventory:   "photo-1558618666-fcd25c85cd64",    // costume rack
+  marketplace: "photo-1460723237483-7a6dc9d0b212", // theatre stage
+  reports:     "photo-1504196606672-aef5c9cefc92", // theatre seats
+  settings:    "photo-1481627834876-b7833e8f5570", // library/scripts
 };
 const CAT_IMG = {
-  costumes:"photo-1509631179647-0177331693ae", props:"photo-1578662996442-48f60103fc96",
-  sets:"photo-1507924538820-ede94a04019d",  lighting:"photo-1514525253161-7a46d19cd819",
-  sound:"photo-1598488035139-bdbb2231ce04",  scripts:"photo-1481627834876-b7833e8f5570",
-  makeup:"photo-1560066984-138daaa0d8fb", furniture:"photo-1555041469-a586c61ea9bc",
-  fabrics:"photo-1598899134739-24c46f58b8c0",   tools:"photo-1504148455328-c376907d081c",
-  effects:"photo-1516450360452-9312f5e86fc7",other:"photo-1492684223066-81342ee5ff30",
+  costumes: "photo-1558618666-fcd25c85cd64",   // Victorian gown / costume rack
+  props:    "photo-1513364776144-60967b0f800f", // period props and items
+  sets:     "photo-1460723237483-7a6dc9d0b212", // theatre stage set
+  lighting: "photo-1514525253161-7a46d19cd819", // stage lighting
+  sound:    "photo-1598488035139-bdbb2231ce04", // audio mixing / microphone
+  scripts:  "photo-1481627834876-b7833e8f5570", // books/scripts on shelves
+  makeup:   "photo-1487412720507-e7ab37603c6f", // makeup/cosmetics flat lay
+  furniture:"photo-1555041469-a586c61ea9bc",    // elegant chair/furniture
+  fabrics:  "photo-1558769132-cb1aea458c5e",    // rich red/gold drape fabric
+  tools:    "photo-1504148455328-c376907d081c",  // workshop tools
+  effects:  "photo-1492684223066-81342ee5ff30",  // atmospheric/smoke effects
+  other:    "photo-1503095396549-807759245b35",  // grand theatre interior
 };
 const SHOWCASE = [
   {img:"photo-1558618666-fcd25c85cd64",name:"Victorian Ball Gown",  cat:"costumes", price:"$25/wk", badge:"For Rent"},
   {img:"photo-1558769132-cb1aea458c5e",name:"Grand Stage Drape",    cat:"fabrics",  price:"$60/wk", badge:"For Rent"},
-  {img:"photo-1516450360452-9312f5e86fc7",name:"Fog Machine Pro",   cat:"effects",  price:"$20/wk", badge:"For Rent"},
+  {img:"photo-1492684223066-81342ee5ff30",name:"Fog Machine Pro",   cat:"effects",  price:"$20/wk", badge:"For Rent"},
   {img:"photo-1513364776144-60967b0f800f",name:"Period Prop Set",   cat:"props",    price:"$45",    badge:"For Sale"},
   {img:"photo-1514525253161-7a46d19cd819",name:"LED Par Can Array", cat:"lighting", price:"$12/wk", badge:"Rent or Sale"},
   {img:"photo-1598488035139-bdbb2231ce04",name:"Shure Wireless Mic",cat:"sound",    price:"$18/wk", badge:"For Rent"},
@@ -716,14 +722,14 @@ function Dashboard({items,org,goInventory}){
         <div className="sh"><h2>From the Stage</h2><p>A glimpse of what arts programs are cataloging and sharing nationwide.</p></div>
         <div className="mosaic" style={{marginBottom:32}}>
           <div className="mc big"><img src={usp("photo-1503095396549-807759245b35",800,400)} alt="Grand Theatre" loading="lazy"/><div className="mc-lbl">Grand Stage Interiors</div></div>
-          <div className="mc"><img src={usp("photo-1509631179647-0177331693ae",400,200)} alt="Costumes" loading="lazy"/><div className="mc-lbl">Costumes</div></div>
+          <div className="mc"><img src={usp("photo-1558618666-fcd25c85cd64",400,200)} alt="Costumes" loading="lazy"/><div className="mc-lbl">Costumes</div></div>
           <div className="mc"><img src={usp("photo-1514525253161-7a46d19cd819",400,200)} alt="Lighting" loading="lazy"/><div className="mc-lbl">Stage Lighting</div></div>
-          <div className="mc"><img src={usp("photo-1516450360452-9312f5e86fc7",400,200)} alt="Effects" loading="lazy"/><div className="mc-lbl">Special Effects</div></div>
+          <div className="mc"><img src={usp("photo-1492684223066-81342ee5ff30",400,200)} alt="Effects" loading="lazy"/><div className="mc-lbl">Special Effects</div></div>
           <div className="mc"><img src={usp("photo-1598488035139-bdbb2231ce04",400,200)} alt="Sound" loading="lazy"/><div className="mc-lbl">Sound Equipment</div></div>
         </div>
         {/* Divider 1 */}
         <div className="img-div" style={{marginBottom:32}}>
-          <img src={usp("photo-1560179707-f14e90ef3623",1000,240)} alt="Stage" loading="lazy"/>
+          <img src={usp("photo-1460723237483-7a6dc9d0b212",1000,240)} alt="Stage" loading="lazy"/>
           <div className="img-div-fade"/>
           <div className="img-div-text">
             <h3>The Theatre Marketplace</h3>
