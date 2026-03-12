@@ -461,45 +461,7 @@ tr:hover td{background:rgba(243,230,204,.55)}
 }
 
 /* ── FLOATING CTA ─────────────────────────────────────────────── */
-.fab {
-  position:fixed; bottom:32px; right:32px; z-index:500;
-  display:flex; flex-direction:column; align-items:flex-end; gap:10px;
-}
-.fab-btn {
-  display:flex; align-items:center; gap:10px;
-  background:linear-gradient(135deg,var(--gold),var(--amber));
-  color:var(--ink); border:none; border-radius:50px;
-  padding:14px 24px; cursor:pointer;
-  font-family:'Raleway',sans-serif; font-size:15px; font-weight:800;
-  box-shadow:0 6px 28px rgba(196,118,26,.55);
-  transition:all .2s; white-space:nowrap;
-  letter-spacing:.2px;
-}
-.fab-btn:hover { transform:translateY(-3px) scale(1.03); box-shadow:0 10px 36px rgba(196,118,26,.65); filter:brightness(1.07); }
-.fab-btn svg   { width:20px; height:20px; flex-shrink:0; }
-.fab-pulse {
-  position:absolute; inset:-4px; border-radius:50px;
-  border:2px solid var(--gold); opacity:0;
-  animation:pulse 2.2s ease-out infinite;
-  pointer-events:none;
-}
-.fab-sub {
-  background:var(--ink); color:rgba(255,255,255,.75);
-  font-family:'Lora',serif; font-style:italic;
-  font-size:13px; padding:6px 14px; border-radius:20px;
-  box-shadow:0 3px 14px rgba(18,6,0,.35);
-  animation:fi .4s ease .6s both;
-}
-@keyframes pulse {
-  0%   { transform:scale(1);    opacity:.7; }
-  70%  { transform:scale(1.12); opacity:0;  }
-  100% { opacity:0; }
-}
-@media(max-width:600px){
-  .fab { bottom:20px; right:16px; }
-  .fab-btn { font-size:13.5px; padding:12px 18px; }
-  .fab-sub { display:none; }
-}
+/* FAB removed — Upgrade button is now in sidebar */
 
 /* ── Landing Page ─────────────────────────────────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap');
@@ -2383,10 +2345,10 @@ export default function App() {
     { id:"inventory",   label:"Inventory",   ico:Ic.box     },
     { id:"marketplace", label:"Marketplace", ico:Ic.store   },
     { id:"reports",     label:"Reports",     ico:Ic.chart   },
-    { id:"settings",    label:"Settings",    ico:Ic.settings},
+    { id:"settings",    label:"Profile",     ico:Ic.settings},
     ...(isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
   ];
-  const TITLES = { dashboard:"Dashboard", inventory:"Inventory", marketplace:"Marketplace", reports:"Reports", settings:"Settings", admin:"Admin Dashboard" };
+  const TITLES = { dashboard:"Dashboard", inventory:"Inventory", marketplace:"Marketplace", reports:"Reports", settings:"Profile", admin:"Admin Dashboard" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicItemId) return <PublicItemPage itemId={publicItemId} />;
@@ -2474,8 +2436,13 @@ export default function App() {
               <div className="sb-foot">
                 {org.name&&<div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.35)",marginBottom:8,textTransform:"uppercase",letterSpacing:1.5}}>🏛 {org.name}</div>}
                 <div style={{display:"flex",gap:6,flexDirection:"column"}}>
+                  {plan==="free"&&!isAdmin&&(
+                    <button className="btn btn-sm btn-full" style={{background:"linear-gradient(135deg,var(--gold),var(--amber))",border:"none",color:"#1a0f00",fontSize:12,fontWeight:800,marginBottom:2}} onClick={()=>nav("settings")}>
+                      ⭐ Upgrade Plan
+                    </button>
+                  )}
                   <button className="btn btn-o btn-sm btn-full" style={{color:"rgba(255,255,255,.75)",borderColor:"rgba(255,255,255,.2)",fontSize:12}} onClick={()=>nav("settings")}>
-                    <span style={{width:13,height:13,display:"flex"}}>{Ic.settings}</span>Settings
+                    <span style={{width:13,height:13,display:"flex"}}>{Ic.settings}</span>Profile
                   </button>
                   <button className="btn btn-sm btn-full" style={{background:"rgba(139,26,42,.25)",borderColor:"rgba(139,26,42,.4)",color:"rgba(255,255,255,.8)",fontSize:12}} onClick={signOut}>
                     Sign Out
@@ -2519,29 +2486,9 @@ export default function App() {
         </div>
       </div>
 
-      {/* ── Floating CTA ── */}
-      {!loaded&&<div className="fab">
-        <div style={{position:"relative"}}>
-          <div className="fab-pulse"/>
-          <button className="fab-btn" onClick={()=>nav("inventory")}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
-            Start Building Your Inventory
-          </button>
-        </div>
-        <div className="fab-sub">✨ Free to get started — no credit card needed</div>
-      </div>}
-      {loaded&&<div className="fab">
-        <div style={{position:"relative"}}>
-          <div className="fab-pulse"/>
-{legalPage==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegalPage(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
-          {legalPage==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegalPage(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
-          <button className="fab-btn" onClick={()=>{nav("inventory");setTimeout(()=>{const btn=document.querySelector(".btn-g");if(btn)btn.click();},300);}}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
-            Start Building Your Inventory
-          </button>
-        </div>
-        <div className="fab-sub">✨ Free to get started — no credit card needed</div>
-      </div>}
+      {/* ── Legal Modals ── */}
+      {legalPage==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegalPage(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
+      {legalPage==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegalPage(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
     </>
   );
 }
