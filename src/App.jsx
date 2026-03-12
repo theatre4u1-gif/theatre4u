@@ -12,10 +12,10 @@ const fmt$ = n  => "$" + Number(n || 0).toFixed(2);
 const usp=(id,w=900,h=500)=>`https://images.unsplash.com/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=82`;
 const BG = {
   dashboard:   "photo-1503095396549-807759245b35", // grand theatre interior
-  inventory:   "photo-1503095396549-807759245b35", // grand theatre interior
-  marketplace: "photo-1460723237483-7a6dc9d0b212", // theatre stage
-  reports:     "photo-1504196606672-aef5c9cefc92", // theatre seats
-  settings:    "photo-1504196606672-aef5c9cefc92", // theatre seats
+  inventory:   "photo-1558618666-fcd25c85cd64", // costume rack / wardrobe
+  marketplace: "photo-1460723237483-7a6dc9d0b212", // theatre stage lit up
+  reports:     "photo-1568992688065-536aad8a12f6", // open ledger / notebook analytics
+  settings:    "photo-1497366216548-37526070297c", // organized office / workspace
 };
 
 // Category visual identity — CSS gradients, always works, never breaks
@@ -1151,7 +1151,7 @@ function Reports({ items }) {
             <p className="hero-sub">Breakdowns, condition tracking, and data exports for your program.</p>
           </div>
           <div style={{position:"absolute",bottom:24,right:30,zIndex:2,display:"flex",gap:8}}>
-            <button className="btn btn-o" onClick={printAllQR}>
+            <button className="btn" style={{background:"rgba(255,255,255,0.18)",border:"1px solid rgba(255,255,255,0.55)",color:"#fff",backdropFilter:"blur(6px)",fontWeight:600}} onClick={printAllQR}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/></svg>
               Print All QR
             </button>
