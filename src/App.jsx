@@ -885,7 +885,8 @@ function Dashboard({items,org,goInventory}){
   );
 }
 
-function Inventory({items,onAdd,onEdit,onDelete,userId}){
+function Inventory({items,onAdd,onEdit,onDelete,userId,plan="free"}){
+    const[upgradeReason,setUpgradeReason]=useState(null);
   const[search,setSrch]=useState("");const[catF,setCatF]=useState("all");
   const[condF,setCondF]=useState("all");const[availF,setAvailF]=useState("all");
   const[mktF,setMktF]=useState("all");const[view,setView]=useState("grid");
@@ -911,7 +912,20 @@ function Inventory({items,onAdd,onEdit,onDelete,userId}){
     else onAdd({...form,id:uid(),added:new Date().toISOString()});
     setModal(null);setActive(null);
   };
-  return(
+  const maxItems = PLANS_DEF[plan]?.maxItems ?? 50;
+  const nearLimit = plan==="free" && items.length >= 40 && items.length < 50;
+  const atLimit   = plan==="free" && items.length >= 50;
+
+  return(<>
+    {upgradeReason&&<UpgradePrompt reason={upgradeReason} onClose={()=>setUpgradeReason(null)}/>}
+    {(nearLimit||atLimit)&&(
+      <div style={{background:atLimit?"rgba(194,24,91,.12)":"rgba(212,168,67,.1)",border:"1px solid "+(atLimit?"rgba(194,24,91,.3)":"rgba(212,168,67,.25)"),borderRadius:8,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+        <span style={{fontSize:13,color:atLimit?"var(--red)":"var(--gold)",fontWeight:600}}>
+          {atLimit?"⚠️ Item limit reached — upgrade to add more items.":"⚡ "+items.length+"/50 items used on free plan."}
+        </span>
+        <button className="btn btn-g" style={{padding:"5px 14px",fontSize:12}} onClick={()=>setUpgradeReason("Upgrade to Pro for unlimited inventory, marketplace listings, and more.")}>Upgrade →</button>
+      </div>
+    )}
     <div style={{position:"relative"}}>
       <img src={usp(BG.inventory,1400,900)} alt="" className="page-bg-img"/>
       <div style={{padding:"32px 36px 0"}}>
@@ -931,7 +945,11 @@ function Inventory({items,onAdd,onEdit,onDelete,userId}){
           <div className="srch">{Ic.search}<input value={search} onChange={e=>setSrch(e.target.value)} placeholder="Search items, tags, location…"/></div>
           <button className="ico-btn" style={showF?{borderColor:"var(--gold)",color:"var(--cog)"}:{}} onClick={()=>setShowF(!showF)}>{Ic.filter}</button>
           <div className="vtog"><button className={view==="grid"?"on":""} onClick={()=>setView("grid")}>Grid</button><button className={view==="table"?"on":""} onClick={()=>setView("table")}>Table</button></div>
-          <div style={{marginLeft:"auto"}}><button className="btn btn-g" onClick={()=>{setActive(null);setModal("a")}}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add Item</button></div>
+          <div style={{marginLeft:"auto"}}><button className="btn btn-g" onClick={()=>{
+              const max=PLANS_DEF[plan]?.maxItems??50;
+              if(items.length>=max){setUpgradeReason("Your free plan is limited to "+max+" items. Upgrade to Pro for unlimited inventory.");return;}
+              setActive(null);setModal("a");
+            }}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add Item</button></div>
         </div>
         {showF&&(
           <div className="fbar fin">
@@ -1002,10 +1020,10 @@ function Inventory({items,onAdd,onEdit,onDelete,userId}){
         </Modal>)}
       {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} onEdit={()=>setModal("e")} onDelete={id=>{onDelete(id);setModal(null);setActive(null)}}/></Modal>}
     </div>
+  </>
   );
 }
-
-function Marketplace({items,org}){
+function Marketplace({items,org,plan="free"}){
   const[search,setSrch]=useState("");const[catF,setCatF]=useState("all");
   const[typeF,setTypeF]=useState("all");const[pg,setPg]=useState(1);
   const[viewing,setViewing]=useState(null);
@@ -1021,6 +1039,15 @@ function Marketplace({items,org}){
   },[items,search,catF,typeF]);
   const paged=useMemo(()=>listed.slice((pg-1)*PP,pg*PP),[listed,pg]);
   useEffect(()=>setPg(1),[search,catF,typeF]);
+  if(plan==="free") return(
+    <div style={{padding:"40px 20px",textAlign:"center"}}>
+      <div style={{fontSize:44,marginBottom:14}}>🏪</div>
+      <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:22,marginBottom:10}}>Marketplace is a Pro Feature</h2>
+      <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>List your costumes, props, and equipment for rent or sale to other theatre programs. Upgrade to Pro to unlock the marketplace.</p>
+      <UpgradePlans compact={true}/>
+    </div>
+  );
+
   return(
     <div style={{position:"relative"}}>
       <img src={usp(BG.marketplace,1400,900)} alt="" className="page-bg-img"/>
@@ -1249,11 +1276,36 @@ function Reports({ items }) {
   );
 }
 
+// ── Upgrade prompt modal ─────────────────────────────────────────────────────
+function UpgradePrompt({ reason, onClose }) {
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{background:"var(--bg2)",border:"1px solid var(--gold)",borderRadius:14,width:"100%",maxWidth:520,padding:28,boxShadow:"0 8px 48px rgba(0,0,0,.5)"}}>
+        <div style={{textAlign:"center",marginBottom:20}}>
+          <div style={{fontSize:36,marginBottom:10}}>⭐</div>
+          <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:22,marginBottom:8}}>Upgrade to Continue</h2>
+          <p style={{color:"var(--t2)",fontSize:14,lineHeight:1.6}}>{reason}</p>
+        </div>
+        <UpgradePlans compact={true}/>
+        <button onClick={onClose} style={{display:"block",margin:"16px auto 0",background:"none",border:"none",color:"var(--t3)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Maybe later</button>
+      </div>
+    </div>
+  );
+}
+
 // ── Shared upgrade/pricing component — used in Settings + any upsell modal ────
 const STRIPE_LINKS = {
   pro:      { monthly:"https://buy.stripe.com/test_8x26oJ3vhcvy1Wi7eq9sk00", annual:"https://buy.stripe.com/test_8x214p6HtdzCgRc2Ya9sk02" },
   district: { monthly:"https://buy.stripe.com/test_8x2cN79TF67a0SebuG9sk01", annual:"https://buy.stripe.com/test_28E6oJ5Dp7be30meGS9sk03" },
 };
+// ── Plan definitions ─────────────────────────────────────────────────────────
+const PLANS_DEF = {
+  free:     { label:"Free",     maxItems:50,  marketplace:false, reports:false },
+  pro:      { label:"Pro",      maxItems:Infinity, marketplace:true,  reports:true  },
+  district: { label:"District", maxItems:Infinity, marketplace:true,  reports:true  },
+};
+const ADMIN_EMAIL = "theatre4u1@gmail.com";
+
 const UPGRADE_PLANS = [
   { id:"free",     name:"Free",     monthlyPrice:"$0",  annualPrice:"Free",   per:"/forever", annualNote:null,       desc:"Perfect for getting started.",     hot:false,
     feats:["Up to 50 items","QR code labels","Photo uploads","CSV export"] },
@@ -1316,7 +1368,7 @@ function UpgradePlans({ compact = false }) {
   );
 }
 
-function Settings({ org, setOrg, onSeed, user, items, setItems }) {
+function Settings({ org, setOrg, onSeed, user, items, setItems, plan="free", userEmail="", setPlan }) {
   const [f,setF]       = useState(org);
   const [saved,setSaved] = useState(false);
   const upd = (k,v) => setF(p=>({...p,[k]:v}));
@@ -1372,6 +1424,32 @@ function Settings({ org, setOrg, onSeed, user, items, setItems }) {
         </div>
 
         {/* Data */}
+        {/* Admin Test Panel — only visible to admin email */}
+        {userEmail===ADMIN_EMAIL&&(
+          <div className="card card-p" style={{marginBottom:20,border:"1px solid rgba(212,168,67,.4)",background:"rgba(212,168,67,.04)"}}>
+            <div className="sh">
+              <h2 style={{color:"var(--gold)"}}>🔧 Admin: Plan Test Mode</h2>
+              <p>Simulate any subscription level. Changes are saved to the database so you can test the full flow.</p>
+            </div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
+              <span style={{fontSize:12,color:"var(--muted)",fontWeight:600}}>Current plan:</span>
+              <span style={{padding:"3px 10px",background:"var(--gold)",color:"#1a0f00",borderRadius:9,fontSize:12,fontWeight:700,textTransform:"uppercase"}}>{plan}</span>
+            </div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {["free","pro","district"].map(p=>(
+                <button key={p} className={"btn "+(plan===p?"btn-g":"btn-o")} style={{textTransform:"capitalize",opacity:plan===p?.6:1}}
+                  onClick={()=>plan!==p&&setPlan(p)}
+                  disabled={plan===p}>
+                  {plan===p?"✓ ":""}{p.charAt(0).toUpperCase()+p.slice(1)}{plan===p?" (active)":""}
+                </button>
+              ))}
+            </div>
+            <div style={{marginTop:10,fontSize:11.5,color:"var(--faint)",lineHeight:1.6}}>
+              <strong>Free:</strong> 50 item cap, no marketplace · <strong>Pro:</strong> unlimited items, marketplace · <strong>District:</strong> all Pro features + multi-org (future)
+            </div>
+          </div>
+        )}
+
         <div className="card card-p">
           <div className="sh"><h2>Data Management</h2><p>Load sample data to explore, or reset everything to start fresh.</p></div>
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
@@ -2024,6 +2102,7 @@ export default function App() {
   }, []);
   const [items,setItems]   = useState([]);
   const [org,setOrg]       = useState({name:"",type:"",email:"",phone:"",location:"",bio:""});
+  const [plan,setPlanState] = useState("free"); // derived from org.plan
   const [page,setPage]     = useState("dashboard");
   const [legalPage,setLegalPage] = useState(null);
   const [mob,setMob]       = useState(false);
@@ -2048,7 +2127,7 @@ export default function App() {
     if(!user) return;
     (async()=>{
       const{data:orgData}=await SB.from("orgs").select("*").eq("id",user.id).single();
-      if(orgData) setOrg(orgData);
+      if(orgData){ setOrg(orgData); setPlanState(orgData.plan||"free"); }
       const{data:itemData}=await SB.from("items").select("*").eq("org_id",user.id).order("added",{ascending:false});
       if(itemData) setItems(itemData);
       setLoaded(true);
@@ -2083,6 +2162,13 @@ export default function App() {
     if(error){window.alert("Could not load samples: "+error.message);return;}
     if(data) setItems(p=>[...data,...p]);
   },[user,items]);
+
+  // setPlan — used by admin test panel to override plan
+  const setPlan = useCallback(async(newPlan)=>{
+    setPlanState(newPlan);
+    setOrg(p=>({...p,plan:newPlan}));
+    await SB.from("orgs").update({plan:newPlan}).eq("id",user.id);
+  },[user]);
 
   const saveOrg = useCallback(async(o)=>{
     setOrg(o);
@@ -2152,6 +2238,12 @@ export default function App() {
                 <span className="sb-glyph">🎭</span>
                 <div className="sb-name">Theatre4u</div>
                 <div className="sb-sub">Inventory & Marketplace</div>
+                <div style={{marginTop:8,display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{padding:"2px 8px",background:plan==="free"?"rgba(255,255,255,.08)":plan==="pro"?"rgba(212,168,67,.2)":"rgba(66,165,245,.2)",color:plan==="free"?"rgba(255,255,255,.35)":plan==="pro"?"var(--gold)":"#42a5f5",borderRadius:9,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>
+                    {plan==="free"?"Free Plan":plan==="pro"?"Pro":"District"}
+                  </span>
+                  {plan==="free"&&<button onClick={()=>nav("settings")} style={{background:"none",border:"none",color:"rgba(212,168,67,.6)",fontSize:10,cursor:"pointer",fontFamily:"inherit",padding:0}}>Upgrade →</button>}
+                </div>
               </div>
 
               <nav className="sb-nav">
@@ -2213,11 +2305,11 @@ export default function App() {
                   <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
                 </div>
               : <div className="fin">
-                  {page==="dashboard"   && <Dashboard   items={items} org={org} goInventory={()=>nav("inventory")}/>}
-                  {page==="inventory"   && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id}/>}
-                  {page==="marketplace" && <Marketplace items={items} org={org}/>}
-                  {page==="reports"     && <Reports     items={items}/>}
-                  {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} items={items} setItems={setItems}/>}
+                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} goInventory={()=>nav("inventory")}/>}
+                  {page==="inventory"   && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan}/>}
+                  {page==="marketplace" && <Marketplace items={items} org={org} plan={plan}/>}
+                  {page==="reports"     && <Reports     items={items} plan={plan}/>}
+                  {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan}/>}
                 </div>
             }
           </div>
@@ -2249,4 +2341,40 @@ export default function App() {
       </div>}
     </>
   );
-}
+}  return(<>
+    {upgradeReason&&<UpgradePrompt reason={upgradeReason} onClose={()=>setUpgradeReason(null)}/>}
+    <divState, useEffect, useMemo, useRef, useCallback } from "react";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+// ── Supabase ──────────────────────────────────────────────────────────────────
+const SB = createClient(
+  "https://ldmmphwivnnboyhlxipl.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA"
+);
+const uid  = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
+const fmt$ = n  => "$" + Number(n || 0).toFixed(2);
+// Page background images — 5 confirmed-working Unsplash IDs only
+const usp=(id,w=900,h=500)=>`https://images.unsplash.com/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=82`;
+const BG = {
+  dashboard:   "photo-1503095396549-807759245b35", // grand theatre interior
+  inventory:   "photo-1503095396549-807759245b35", // grand theatre interior
+  marketplace: "photo-1460723237483-7a6dc9d0b212", // theatre stage
+  reports:     "photo-1504196606672-aef5c9cefc92", // theatre seats
+  settings:    "photo-1504196606672-aef5c9cefc92", // theatre seats
+};
+
+// Category visual identity — CSS gradients, always works, never breaks
+const CAT_GFX = {
+  costumes:  {grad:"linear-gradient(135deg,#7b1560,#c2185b,#e91e8c)",    icon:"👗"},
+  props:     {grad:"linear-gradient(135deg,#4a148c,#7b1fa2,#9c27b0)",    icon:"🎭"},
+  sets:      {grad:"linear-gradient(135deg,#0d2b6e,#1565c0,#1976d2)",    icon:"🏛️"},
+  lighting:  {grad:"linear-gradient(135deg,#7f4800,#e65100,#ff9800)",    icon:"💡"},
+  sound:     {grad:"linear-gradient(135deg,#1b5e20,#2e7d32,#43a047)",    icon:"🔊"},
+  scripts:   {grad:"linear-gradient(135deg,#bf360c,#d84315,#e64a19)",    icon:"📜"},
+  makeup:    {grad:"linear-gradient(135deg,#880e4f,#ad1457,#e91e63)",    icon:"💄"},
+  furniture: {grad:"linear-gradient(135deg,#3e2723,#5d4037,#795548)",    icon:"🪑"},
+  fabrics:   {grad:"linear-gradient(135deg,#4a148c,#6a1b9a,#8e24aa)",    icon:"🧵"},
+  tools:     {grad:"linear-gradient(135deg,#263238,#37474f,#546e7a)",    icon:"🔧"},
+  effects:   {grad:"linear-gradient(135deg,#006064,#00838f,#00acc1)",    icon:"✨"},
+  other:     {grad:"linear-gradient(135deg,#37474f,#546e7a,#78909c)",    icon:"📦"},
+};
