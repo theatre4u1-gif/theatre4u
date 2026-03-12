@@ -1309,9 +1309,9 @@ const ADMIN_EMAIL = "theatre4u1@gmail.com";
 const UPGRADE_PLANS = [
   { id:"free",     name:"Free",     monthlyPrice:"$0",  annualPrice:"Free",   per:"/forever", annualNote:null,       desc:"Perfect for getting started.",     hot:false,
     feats:["Up to 50 items","QR code labels","Photo uploads","CSV export"] },
-  { id:"pro",      name:"Pro",      monthlyPrice:"$12", annualPrice:"$120",   per:"/month",   annualNote:"save $24", desc:"For active programs & companies.", hot:true,
+  { id:"pro",      name:"Pro",      monthlyPrice:"$12", annualPrice:"$10",  annualTotal:"$120/yr", per:"/month", annualNote:"save $24", desc:"For active programs & companies.", hot:true,
     feats:["Unlimited inventory","Priority marketplace","Photo storage 5GB","Analytics dashboard","Email support"] },
-  { id:"district", name:"District", monthlyPrice:"$49", annualPrice:"$500",   per:"/month",   annualNote:"save $88", desc:"Multiple schools, one platform.",  hot:false,
+  { id:"district", name:"District", monthlyPrice:"$49", annualPrice:"$42",  annualTotal:"$500/yr", per:"/month", annualNote:"save $88", desc:"Multiple schools, one platform.",  hot:false,
     feats:["Multiple organizations","District dashboard","Bulk import","Dedicated support","Everything in Pro"] },
 ];
 
@@ -1336,13 +1336,14 @@ function UpgradePlans({ compact = false }) {
           const link    = STRIPE_LINKS[p.id]?.[billing];
           const isFree  = p.id==="free";
           return (
-            <div key={p.id} style={{border:"1px solid "+(p.hot?"var(--gold)":"var(--bd)"),borderRadius:10,padding:16,background:p.hot?"rgba(212,168,67,.05)":"var(--bg)",position:"relative",display:"flex",flexDirection:"column"}}>
+            <div key={p.id} style={{border:"1px solid "+(p.hot?"var(--gold)":"rgba(212,168,67,.2)"),borderRadius:10,padding:16,background:"rgba(212,168,67,.05)",position:"relative",display:"flex",flexDirection:"column"}}>
               {p.hot && <div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",background:"var(--gold)",color:"#1a0f00",fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",padding:"2px 10px",borderRadius:9,whiteSpace:"nowrap"}}>Most Popular</div>}
               <div style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:16,fontWeight:700,marginBottom:4}}>{p.name}</div>
               <div style={{display:"flex",alignItems:"baseline",gap:4,marginBottom:2}}>
                 <span style={{fontSize:26,fontWeight:800,color:"var(--gold)"}}>{price}</span>
-                {!isFree && <span style={{fontSize:12,color:"var(--t3)"}}>{billing==="annual"?"/yr":p.per}</span>}
+                {!isFree && <span style={{fontSize:12,color:"var(--t3)"}}>{p.per}</span>}
               </div>
+              {billing==="annual" && !isFree && p.annualTotal && <div style={{fontSize:11,color:"var(--t3)",marginBottom:2}}>billed {p.annualTotal}</div>}
               {note && <div style={{fontSize:11,color:"var(--grn,#4caf50)",fontWeight:600,marginBottom:6}}>{note}</div>}
               <div style={{fontSize:12,color:"var(--t2)",marginBottom:10}}>{p.desc}</div>
               <ul style={{listStyle:"none",padding:0,margin:"0 0 14px",flex:1}}>
