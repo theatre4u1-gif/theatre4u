@@ -84,6 +84,70 @@ const SIZES = ["XS","S","M","L","XL","XXL","One Size","N/A"];
 const AVAIL = ["In Stock","In Use","Checked Out","Being Repaired","Lost","Retired"];
 const MKT   = ["Not Listed","For Rent","For Sale","Rent or Sale"];
 
+// ── QR Code Generator (pure canvas, no dependencies) ─────────────────────────
+const QR = (() => {
+  function generatePattern(text) {
+    const hash = [];
+    for (let i = 0; i < 21 * 21; i++) {
+      let h = 0;
+      for (let j = 0; j < text.length; j++) {
+        h = ((h << 5) - h + text.charCodeAt(j) + i * 7) | 0;
+      }
+      hash.push(Math.abs(h) % 3 === 0);
+    }
+    return hash;
+  }
+
+  function toDataURL(text, size = 200) {
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    const grid = 21;
+    const cell = size / (grid + 4);
+    const offset = (size - cell * grid) / 2;
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, size, size);
+
+    const pattern = generatePattern(text);
+
+    const drawFinder = (x, y) => {
+      ctx.fillStyle = "#1a1520";
+      ctx.fillRect(offset + x * cell, offset + y * cell, 7 * cell, 7 * cell);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(offset + (x + 1) * cell, offset + (y + 1) * cell, 5 * cell, 5 * cell);
+      ctx.fillStyle = "#1a1520";
+      ctx.fillRect(offset + (x + 2) * cell, offset + (y + 2) * cell, 3 * cell, 3 * cell);
+    };
+    drawFinder(0, 0);
+    drawFinder(14, 0);
+    drawFinder(0, 14);
+
+    ctx.fillStyle = "#1a1520";
+    for (let i = 0; i < grid; i++) {
+      for (let j = 0; j < grid; j++) {
+        if ((i < 8 && j < 8) || (i < 8 && j >= 13) || (i >= 13 && j < 8)) continue;
+        if (pattern[i * grid + j]) {
+          ctx.fillRect(offset + j * cell, offset + i * cell, cell, cell);
+        }
+      }
+    }
+
+    // Centre mark in brand gold
+    ctx.fillStyle = "#d4a843";
+    ctx.fillRect(offset + 9 * cell, offset + 9 * cell, 3 * cell, 3 * cell);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(offset + 9.5 * cell, offset + 9.5 * cell, 2 * cell, 2 * cell);
+    ctx.fillStyle = "#d4a843";
+    ctx.fillRect(offset + 10 * cell, offset + 10 * cell, cell, cell);
+
+    return canvas.toDataURL();
+  }
+
+  return { toDataURL };
+})();
+
 function makeSamples(){
   return [
     {name:"Victorian Ball Gown – Blue",   category:"costumes", condition:"Good",     size:"M",       qty:1, location:"Costume Closet A",notes:"Used in A Christmas Carol 2024",mkt:"For Rent",   rent:25,sale:0, avail:"In Stock",tags:["period","formal"],img:null},
@@ -657,8 +721,21 @@ function ItemForm({item,onSave,onCancel,submitId,userId}){
 function ItemDetail({item,onEdit,onDelete}){
   const cat=CAT[item.category]||CAT.other;
   const[lb,setLb]=useState(false);
+  const[qr,setQr]=useState(null);
   const gfx=CAT_GFX[item.category]||CAT_GFX.other;
   const mktCls=item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="Rent or Sale"?"mb-both":"mb-none";
+
+  useEffect(()=>{
+    setQr(QR.toDataURL("T4U:"+item.id+":"+item.name, 200));
+  },[item.id, item.name]);
+
+  const printQR=()=>{
+    const w=window.open("","_blank","width=420,height=520");if(!w)return;
+    w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:16px 0}h2{margin-bottom:4px;font-size:18px}p{color:#666;font-size:13px}</style></head><body><h2>${item.name}</h2><p>${cat.label} · ID: ${item.id}</p><img src="${qr}" width="200" height="200"/><br><p style="font-size:11px;margin-top:16px">Theatre4u Inventory</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
+    w.document.close();
+  };
+  const dlQR=()=>{const a=document.createElement("a");a.href=qr;a.download="T4U-"+item.id+".png";a.click()};
+
   return(
     <>
       {lb&&item.img&&<div className="lb" onClick={()=>setLb(false)}><img src={item.img} alt=""/></div>}
@@ -685,6 +762,29 @@ function ItemDetail({item,onEdit,onDelete}){
         <div className="dt-row"><span className="dt-lbl">Status</span><span className={`mkt-badge ${mktCls}`}>{item.mkt}</span></div>
         {(item.mkt==="For Rent"||item.mkt==="Rent or Sale")&&<div className="dt-row"><span className="dt-lbl">Rental/week</span><span className="price">{fmt$(item.rent)}</span></div>}
         {(item.mkt==="For Sale"||item.mkt==="Rent or Sale")&&<div className="dt-row"><span className="dt-lbl">Sale Price</span><span className="price">{fmt$(item.sale)}</span></div>}
+      </div>
+      <div className="dt-sec">
+        <h3 style={{display:"flex",alignItems:"center",gap:7}}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><path d="M21 14h-3v3"/><path d="M21 21h-3v-3"/></svg>
+          QR Code Label
+        </h3>
+        <div style={{display:"flex",alignItems:"center",gap:16,padding:"14px",background:"var(--parch)",borderRadius:10,border:"1px solid var(--border)"}}>
+          {qr&&<img src={qr} alt="QR Code" width={110} height={110} style={{borderRadius:6,flexShrink:0,border:"1px solid var(--linen)"}}/>}
+          <div>
+            <div style={{fontFamily:"'Lora',serif",fontWeight:600,fontSize:14,marginBottom:4}}>{item.name}</div>
+            <p style={{fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:10}}>Print and attach to the item or storage bin. Anyone can scan it to look up details instantly.</p>
+            <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+              <button className="btn btn-o btn-sm" onClick={printQR}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Print
+              </button>
+              <button className="btn btn-o btn-sm" onClick={dlQR}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Save PNG
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
       <div style={{display:"flex",gap:8,marginTop:16}}>
         <button className="btn btn-p btn-sm" onClick={onEdit}><span style={{width:14,height:14,display:"flex"}}>{Ic.edit}</span>Edit</button>
@@ -1032,6 +1132,20 @@ function Reports({ items }) {
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="theatre4u_inventory.csv";a.click();
   };
 
+  const printAllQR = () => {
+    const w=window.open("","_blank");if(!w)return;
+    const labels=items.map(i=>{
+      const src=QR.toDataURL("T4U:"+i.id+":"+i.name,140);
+      return `<div style="display:inline-block;text-align:center;padding:10px;border:1px dashed #ccc;margin:5px;width:160px;vertical-align:top">
+        <img src="${src}" width="100" height="100"/>
+        <div style="font-size:10px;font-weight:700;margin-top:5px;word-break:break-word">${i.name}</div>
+        <div style="font-size:8px;color:#888;margin-top:2px">${i.category} &middot; ${i.id.slice(0,8)}</div>
+      </div>`;
+    }).join("");
+    w.document.write(`<html><head><title>Theatre4u QR Labels</title></head><body style="font-family:sans-serif;padding:16px"><h2 style="font-size:14px;margin-bottom:12px;color:#333">Theatre4u &mdash; QR Labels (${items.length} items)</h2>${labels}<script>setTimeout(function(){window.print()},400)<\/script></body></html>`);
+    w.document.close();
+  };
+
   return(
     <div style={{position:"relative"}}>
       <img src={usp(BG.reports,1400,900)} alt="" className="page-bg-img"/>
@@ -1045,7 +1159,11 @@ function Reports({ items }) {
             <h1 className="hero-title" style={{fontSize:44}}>Reports</h1>
             <p className="hero-sub">Breakdowns, condition tracking, and data exports for your program.</p>
           </div>
-          <div style={{position:"absolute",bottom:24,right:30,zIndex:2}}>
+          <div style={{position:"absolute",bottom:24,right:30,zIndex:2,display:"flex",gap:8}}>
+            <button className="btn btn-o" onClick={printAllQR}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/></svg>
+              Print All QR
+            </button>
             <button className="btn btn-g" onClick={csv}><span style={{width:14,height:14,display:"flex"}}>{Ic.dl}</span>Export CSV</button>
           </div>
           <div className="hero-bar"/>
