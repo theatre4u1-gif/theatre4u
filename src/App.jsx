@@ -195,14 +195,14 @@ body{font-family:'Raleway',sans-serif;-webkit-font-smoothing:antialiased}
 .sb-logo{padding:28px 20px 20px;border-bottom:1px solid rgba(212,168,67,.15)}
 .sb-glyph{font-size:36px;display:block;margin-bottom:8px;line-height:1}
 .sb-name{font-family:'Abril Fatface',display;font-size:27px;color:var(--gold);letter-spacing:.8px;line-height:1}
-.sb-sub{font-size:9.5px;color:rgba(255,255,255,.28);text-transform:uppercase;letter-spacing:3px;margin-top:6px;font-weight:700}
+.sb-sub{font-size:9.5px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:3px;margin-top:6px;font-weight:700}
 .sb-nav{padding:14px 10px;flex:1}
 .sb-section{font-size:9px;text-transform:uppercase;letter-spacing:3px;color:rgba(255,255,255,.2);padding:14px 12px 5px;font-weight:800}
-.sb-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;color:rgba(255,255,255,.45);cursor:pointer;font-size:14px;font-weight:700;margin-bottom:2px;transition:all .15s;border-left:3px solid transparent}
+.sb-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;color:rgba(255,255,255,.72);cursor:pointer;font-size:14px;font-weight:700;margin-bottom:2px;transition:all .15s;border-left:3px solid transparent}
 .sb-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.85)}
 .sb-item.on{background:rgba(212,168,67,.14);color:var(--gilt);border-left-color:var(--gold);padding-left:9px}
 .sb-ico{width:16px;height:16px;flex-shrink:0}
-.sb-badge{margin-left:auto;background:rgba(255,255,255,.09);color:rgba(255,255,255,.38);font-size:11px;padding:1px 8px;border-radius:10px;font-weight:800}
+.sb-badge{margin-left:auto;background:rgba(255,255,255,.12);color:rgba(255,255,255,.65);font-size:11px;padding:1px 8px;border-radius:10px;font-weight:800}
 .sb-item.on .sb-badge{background:rgba(212,168,67,.22);color:var(--gilt)}
 .sb-foot{padding:16px 14px;border-top:1px solid rgba(212,168,67,.12)}
 
@@ -1355,7 +1355,7 @@ function UpgradePlans({ compact = false }) {
               </ul>
               {isFree
                 ? <button className="btn btn-o btn-full" style={{opacity:.5,cursor:"default"}} disabled>Current Plan</button>
-                : <a href={link} target="_blank" rel="noreferrer" className={"btn btn-full "+(p.hot?"btn-g":"btn-o")} style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto"}}>
+                : <a href={link} target="_blank" rel="noreferrer" className={"btn btn-full "+(p.hot?"btn-g":"")} style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",...(!p.hot?{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.25)",color:"#fff",fontWeight:700}:{})}}>
                     {billing==="annual" ? "Get "+p.name+" Annual →" : "Get "+p.name+" →"}
                   </a>
               }
@@ -2272,10 +2272,10 @@ export default function App() {
               <div className="sb-foot">
                 {org.name&&<div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.35)",marginBottom:8,textTransform:"uppercase",letterSpacing:1.5}}>🏛 {org.name}</div>}
                 <div style={{display:"flex",gap:6,flexDirection:"column"}}>
-                  <button className="btn btn-o btn-sm btn-full" style={{color:"rgba(255,255,255,.45)",borderColor:"rgba(255,255,255,.1)",fontSize:12}} onClick={()=>nav("settings")}>
+                  <button className="btn btn-o btn-sm btn-full" style={{color:"rgba(255,255,255,.75)",borderColor:"rgba(255,255,255,.2)",fontSize:12}} onClick={()=>nav("settings")}>
                     <span style={{width:13,height:13,display:"flex"}}>{Ic.settings}</span>Settings
                   </button>
-                  <button className="btn btn-sm btn-full" style={{background:"rgba(139,26,42,.25)",borderColor:"rgba(139,26,42,.3)",color:"rgba(255,255,255,.45)",fontSize:12}} onClick={signOut}>
+                  <button className="btn btn-sm btn-full" style={{background:"rgba(139,26,42,.25)",borderColor:"rgba(139,26,42,.4)",color:"rgba(255,255,255,.8)",fontSize:12}} onClick={signOut}>
                     Sign Out
                   </button>
                 </div>
