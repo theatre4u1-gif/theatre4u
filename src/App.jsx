@@ -1861,13 +1861,16 @@ function PublicItemPage({ itemId }) {
   }, [itemId]);
 
   const cat = item ? (CAT_MAP[item.category] || CAT_MAP.other) : null;
-  const mkt = item?.mkt || item?.marketStatus || "Not Listed";
+  const mkt = item?.mkt || item?.market_status || item?.marketStatus || "Not Listed";
+  const rentalPrice = item?.rent || item?.rental_price || item?.rentalPrice || 0;
+  const salePrice   = item?.sale || item?.sale_price  || item?.salePrice   || 0;
   const mB  = mkt==="For Rent"?"r":mkt==="For Sale"?"s":mkt==="Rent or Sale"?"b":"n";
   const imgs = item?.images || [];
 
   return (
-    <div style={{minHeight:"100vh",background:"var(--ink)",color:"var(--linen)",fontFamily:"'DM Sans',sans-serif",padding:"0 0 60px"}}>
+    <>
       <style>{CSS}</style>
+      <div style={{minHeight:"100vh",background:"var(--ink)",color:"var(--linen)",fontFamily:"'DM Sans',sans-serif",padding:"0 0 60px"}}>
       {lb && <div className="lightbox" onClick={()=>setLb(null)}><img src={lb} alt=""/></div>}
 
       {/* Header */}
@@ -1947,8 +1950,8 @@ function PublicItemPage({ itemId }) {
               <div style={{fontWeight:700,fontSize:12,textTransform:"uppercase",letterSpacing:1,color:"rgba(255,255,255,.4)",marginBottom:10}}>Marketplace</div>
               <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
                 <span className={"badge "+mB}>{mkt}</span>
-                {(item.rentalPrice||item.rental_price)>0 && <span style={{color:"var(--gold)",fontWeight:700}}>{fmt$(item.rentalPrice||item.rental_price)}/week</span>}
-                {(item.salePrice||item.sale_price)>0   && <span style={{color:"var(--gold)",fontWeight:700}}>{fmt$(item.salePrice||item.sale_price)} to buy</span>}
+                {rentalPrice>0 && <span style={{color:"var(--gold)",fontWeight:700}}>{fmt$(rentalPrice)}/week</span>}
+                {salePrice>0 && <span style={{color:"var(--gold)",fontWeight:700}}>{fmt$(salePrice)} to buy</span>}
               </div>
             </div>
           )}
@@ -1973,6 +1976,7 @@ function PublicItemPage({ itemId }) {
         </>)}
       </div>
     </div>
+    </>
   );
 }
 
