@@ -85,90 +85,27 @@ const AVAIL = ["In Stock","In Use","Checked Out","Being Repaired","Lost","Retire
 const MKT   = ["Not Listed","For Rent","For Sale","Rent or Sale"];
 
 // ── QR Code Generator (pure canvas, no dependencies) ─────────────────────────
-// ── QR Code Generator — pure JS, no external library ─────────────────────────
-// Implements QR Code version 2 (25x25) for short URLs via byte encoding.
-// Enough for https://theatre4u.org/#/item/xxxxxxxxxx  (~42 chars, fits v2-M).
-// Uses a precomputed Reed-Solomon approach sufficient for reliable scanning.
-const QR = (() => {
-  // GF(256) arithmetic for Reed-Solomon
-  const EXP = new Uint8Array(512), LOG = new Uint8Array(256);
-  (()=>{let x=1;for(let i=0;i<255;i++){EXP[i]=x;LOG[x]=i;x=x<128?x*2:x*2^285;}for(let i=255;i<512;i++)EXP[i]=EXP[i-255];})();
-  const gfMul=(a,b)=>a&&b?EXP[LOG[a]+LOG[b]]:0;
-  const gfPoly=(gen,n)=>{let p=[1];for(let i=0;i<n;i++){const q=[0,...p];for(let j=0;j<p.length;j++)q[j]^=gfMul(p[j],EXP[i]);}return p;};
-  const rsEncode=(data,n)=>{const gen=gfPoly(n);const r=new Uint8Array(n);for(const b of data){const f=b^r[0];const nr=new Uint8Array(n);for(let i=0;i<n-1;i++)nr[i]=r[i+1]^gfMul(gen[i+1]??0,f);nr[n-1]=gfMul(gen[n]??0,f);r.set(nr);}return r;};
-
-  // Encode text as ISO-8859-1 bytes (byte mode)
-  function encode(text){
-    const bytes=[];for(let i=0;i<text.length;i++)bytes.push(text.charCodeAt(i)&0xff);
-    // Determine version: 1=21x21 up to 17 bytes M, 2=25x25 up to 32, 3=29x29 up to 53, 4=33x33 up to 78
-    let ver=1,ecWords=10;
-    if(bytes.length>17){ver=2;ecWords=16;}
-    if(bytes.length>32){ver=3;ecWords=26;}
-    if(bytes.length>53){ver=4;ecWords=36;}
-    const cap={1:19,2:34,3:55,4:80}[ver]; // total codewords at M level
-    const dc=cap-ecWords;
-    // Build data codewords
-    const bits=[];
-    const push=(v,n)=>{for(let i=n-1;i>=0;i--)bits.push((v>>i)&1);};
-    push(0b0100,4); // byte mode
-    push(bytes.length,8);
-    for(const b of bytes)push(b,8);
-    push(0,4); // terminator
-    while(bits.length%8)bits.push(0);
-    const cw=[];
-    for(let i=0;i<bits.length;i+=8){let v=0;for(let j=0;j<8;j++)v=(v<<1)|bits[i+j];cw.push(v);}
-    while(cw.length<dc)cw.push(cw.length%2?0x11:0xec);
-    const ec=[...rsEncode(cw,ecWords)];
-    const all=[...cw,...ec];
-    // Place into matrix
-    const size={1:21,2:25,3:29,4:33}[ver];
-    const M=Array.from({length:size},()=>new Array(size).fill(-1)); // -1=empty
-    const F=Array.from({length:size},()=>new Array(size).fill(false)); // function modules
-    // Finder patterns
-    const finder=(r,c)=>{for(let i=0;i<7;i++)for(let j=0;j<7;j++){M[r+i][c+j]=(i===0||i===6||j===0||j===6||( i>=2&&i<=4&&j>=2&&j<=4))?1:0;F[r+i][c+j]=true;}
-      for(let k=-1;k<=7;k++){if(r+k>=0&&r+k<size){if(c-1>=0){M[r+k][c-1]=0;F[r+k][c-1]=true;}if(c+7<size){M[r+k][c+7]=0;F[r+k][c+7]=true;}}if(c+k>=-1&&c+k<=7){if(r-1>=0){M[r-1][c+k]=0;F[r-1][c+k]=true;}if(r+7<size){M[r+7][c+k]=0;F[r+7][c+k]=true;}}}};
-    finder(0,0);finder(0,size-7);finder(size-7,0);
-    // Timing
-    for(let i=8;i<size-8;i++){M[6][i]=(i%2===0)?1:0;M[i][6]=(i%2===0)?1:0;F[6][i]=true;F[i][6]=true;}
-    // Dark module
-    M[size-8][8]=1;F[size-8][8]=true;
-    // Format info (mask 0, M level) — precomputed strings for each version
-    const fmtBits="111011111000100"; // ECC level M, mask pattern 0
-    const fmtPos=[[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]];
-    const fmtPos2=[[size-1,8],[size-2,8],[size-3,8],[size-4,8],[size-5,8],[size-6,8],[size-7,8],[8,size-8],[8,size-7],[8,size-6],[8,size-5],[8,size-4],[8,size-3],[8,size-2],[8,size-1]];
-    for(let i=0;i<15;i++){const b=parseInt(fmtBits[i]);M[fmtPos[i][0]][fmtPos[i][1]]=b;F[fmtPos[i][0]][fmtPos[i][1]]=true;M[fmtPos2[i][0]][fmtPos2[i][1]]=b;F[fmtPos2[i][0]][fmtPos2[i][1]]=true;}
-    // Alignment pattern (ver>=2)
-    if(ver>=2){const ap={2:[6,18],3:[6,22],4:[6,26]}[ver];const alignAt=ap;
-      const ac=alignAt[1],ar=alignAt[0];
-      if(M[ar][ac]===-1){for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++){M[ar+i][ac+j]=(Math.abs(i)===2||Math.abs(j)===2||( i===0&&j===0))?1:0;F[ar+i][ac+j]=true;}}}
-    // Place data bits (zigzag, mask 0: (row+col)%2===0 inverted)
-    let idx2=0; const allBits=[];
-    for(const byte of all)for(let i=7;i>=0;i--)allBits.push((byte>>i)&1);
-    let up=true;
-    for(let col=size-1;col>=0;col-=2){if(col===6)col--;
-      for(let ri=0;ri<size;ri++){const row=up?size-1-ri:ri;
-        for(const c2 of[col,col-1]){if(!F[row][c2]&&idx2<allBits.length){const b=allBits[idx2++];M[row][c2]=(row+c2)%2===0?b^1:b;}}
-      }up=!up;}
-    return{M,size};
+// ── QR Code — Google Charts API (guaranteed scannable) ───────────────────────
+// Returns a data URL by fetching the QR PNG from Google Charts, or falls back
+// to a direct URL string the caller can use as <img src>.
+const QR = {
+  // Returns an object URL or direct src string — always async
+  async toDataURL(text, size = 200) {
+    const src = `https://chart.googleapis.com/chart?cht=qr&chs=${size}x${size}&chl=${encodeURIComponent(text)}&choe=UTF-8&chld=M`;
+    try {
+      const res  = await fetch(src);
+      const blob = await res.blob();
+      return URL.createObjectURL(blob);
+    } catch {
+      // If fetch fails (CORS/network), return the URL directly — browsers can still display it as img src
+      return src;
+    }
+  },
+  // Synchronous src for cases where we just need an <img src> (print popup, bulk labels)
+  src(text, size = 200) {
+    return `https://chart.googleapis.com/chart?cht=qr&chs=${size}x${size}&chl=${encodeURIComponent(text)}&choe=UTF-8&chld=M`;
   }
-
-  function toDataURL(text,px=200){
-    const{M,size}=encode(text);
-    const quiet=4,cell=Math.floor(px/(size+quiet*2));
-    const total=(size+quiet*2)*cell;
-    const canvas=document.createElement("canvas");
-    canvas.width=canvas.height=total;
-    const ctx=canvas.getContext("2d");
-    ctx.fillStyle="#fff";ctx.fillRect(0,0,total,total);
-    ctx.fillStyle="#000";
-    for(let r=0;r<size;r++)for(let c=0;c<size;c++)
-      if(M[r][c]===1)ctx.fillRect((c+quiet)*cell,(r+quiet)*cell,cell,cell);
-    return canvas.toDataURL();
-  }
-
-  // Async wrapper to match existing call sites
-  return { toDataURL: async(text,size=200)=>toDataURL(text,size) };
-})();
+};
 
 function makeSamples(){
   return [
@@ -748,17 +685,15 @@ function ItemDetail({item,onEdit,onDelete}){
   const mktCls=item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="Rent or Sale"?"mb-both":"mb-none";
 
   useEffect(()=>{
-    const qrText="https://theatre4u.org/#/item/"+item.id; QR.toDataURL(qrText, 200).then(url=>{
-      if(url) setQr(url);
-    });
+    setQr(QR.src("https://theatre4u.org/#/item/"+item.id, 200));
   },[item.id, item.name]);
 
   const printQR=()=>{
     const w=window.open("","_blank","width=420,height=520");if(!w)return;
-    const loc=item.location?"Location: "+item.location:"";const url="theatre4u.org/#/item/"+item.id;w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2><p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qr}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${url}</p><p style="font-size:11px;color:#bbb">Theatre4u Inventory</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
+    const loc=item.location?"Location: "+item.location:"";const itemUrl="theatre4u.org/#/item/"+item.id;const qrSrc=QR.src("https://theatre4u.org/#/item/"+item.id,200);w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2><p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qrSrc}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${itemUrl}</p><p style="font-size:11px;color:#bbb">Theatre4u Inventory</p><script>window.onload=function(){setTimeout(function(){window.print()},600)}<\/script></body></html>`);
     w.document.close();
   };
-  const dlQR=()=>{const a=document.createElement("a");a.href=qr;a.download="T4U-"+item.id+".png";a.click()};
+  const dlQR=async()=>{try{const r=await fetch(QR.src("https://theatre4u.org/#/item/"+item.id,300));const b=await r.blob();const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="T4U-"+item.id+".png";a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}catch{window.open(QR.src("https://theatre4u.org/#/item/"+item.id,300))}};
 
   return(
     <>
@@ -793,10 +728,7 @@ function ItemDetail({item,onEdit,onDelete}){
           QR Code Label
         </h3>
         <div style={{display:"flex",alignItems:"center",gap:16,padding:"14px",background:"var(--parch)",borderRadius:10,border:"1px solid var(--border)"}}>
-          {qr
-            ?<img src={qr} alt="QR Code" width={110} height={110} style={{borderRadius:6,flexShrink:0,border:"1px solid var(--linen)"}}/>
-            :<div style={{width:110,height:110,borderRadius:6,border:"1px solid var(--linen)",background:"var(--parch)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:11,color:"var(--faint)"}}>Generating…</div>
-          }
+          <img src={qr||""} alt="QR Code" width={110} height={110} style={{borderRadius:6,flexShrink:0,border:"1px solid var(--linen)"}}/>
           <div>
             <div style={{fontFamily:"'Lora',serif",fontWeight:600,fontSize:14,marginBottom:4}}>{item.name}</div>
             <p style={{fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:10}}>Print and attach to the item or storage bin. Anyone can scan it to look up details instantly.</p>
@@ -1159,21 +1091,18 @@ function Reports({ items }) {
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="theatre4u_inventory.csv";a.click();
   };
 
-  const printAllQR = async () => {
+  const printAllQR = () => {
     const w=window.open("","_blank");if(!w)return;
-    w.document.write(`<html><head><title>Theatre4u QR Labels</title></head><body style="font-family:sans-serif;padding:16px"><h2 style="font-size:14px;margin-bottom:16px;color:#333">Theatre4u — QR Labels (${items.length} items)</h2><div id="labels">Generating QR codes…</div></body></html>`);
+    const labels=items.map(i=>{
+      const src=QR.src("https://theatre4u.org/#/item/"+i.id,140);
+      return `<div style="display:inline-block;text-align:center;padding:10px;border:1px dashed #ccc;margin:5px;width:160px;vertical-align:top">
+        <img src="${src}" width="100" height="100" crossorigin="anonymous"/>
+        <div style="font-size:10px;font-weight:700;margin-top:5px;word-break:break-word">${i.name}</div>
+        <div style="font-size:8px;color:#888;margin-top:2px">${i.category} · ${i.id.slice(0,8)}</div>
+      </div>`;
+    }).join("");
+    w.document.write(`<html><head><title>Theatre4u QR Labels</title></head><body style="font-family:sans-serif;padding:16px"><h2 style="font-size:14px;margin-bottom:16px;color:#333">Theatre4u — QR Labels (${items.length} items)</h2>${labels}<script>window.onload=function(){setTimeout(function(){window.print()},600)}<\/script></body></html>`);
     w.document.close();
-    // Generate all QRs then inject — avoids blank images from async race
-    const srcs = await Promise.all(items.map(i=>QR.toDataURL("https://theatre4u.org/#/item/"+i.id, 140)));
-    const labels = items.map((i,idx)=>`<div style="display:inline-block;text-align:center;padding:10px;border:1px dashed #ccc;margin:5px;width:160px;vertical-align:top">
-      ${srcs[idx]?`<img src="${srcs[idx]}" width="100" height="100"/>`:"<div style='width:100px;height:100px;background:#eee;display:inline-block'></div>"}
-      <div style="font-size:10px;font-weight:700;margin-top:5px;word-break:break-word">${i.name}</div>
-      <div style="font-size:8px;color:#888;margin-top:2px">${i.category} · ${i.id.slice(0,8)}</div>
-    </div>`).join("");
-    if(w.document.getElementById("labels")){
-      w.document.getElementById("labels").innerHTML=labels;
-      setTimeout(()=>w.print(),400);
-    }
   };
 
   return(
