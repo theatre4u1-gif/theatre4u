@@ -198,9 +198,9 @@ body{font-family:'Raleway',sans-serif;-webkit-font-smoothing:antialiased}
 .sb-sub{font-size:9.5px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:3px;margin-top:6px;font-weight:700}
 .sb-nav{padding:14px 10px;flex:1}
 .sb-section{font-size:9px;text-transform:uppercase;letter-spacing:3px;color:rgba(255,255,255,.2);padding:14px 12px 5px;font-weight:800}
-.sb-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;color:rgba(255,255,255,.72);cursor:pointer;font-size:14px;font-weight:700;margin-bottom:2px;transition:all .15s;border-left:3px solid transparent}
-.sb-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.85)}
-.sb-item.on{background:rgba(212,168,67,.14);color:var(--gilt);border-left-color:var(--gold);padding-left:9px}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;color:rgba(255,255,255,.82);cursor:pointer;font-size:13.5px;font-weight:600;margin-bottom:1px;transition:all .15s;border-left:3px solid transparent}
+.sb-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.sb-item.on{background:rgba(212,168,67,.16);color:var(--gilt);border-left-color:var(--gold);padding-left:9px;font-weight:700}
 .sb-ico{width:16px;height:16px;flex-shrink:0}
 .sb-badge{margin-left:auto;background:rgba(255,255,255,.12);color:rgba(255,255,255,.65);font-size:11px;padding:1px 8px;border-radius:10px;font-weight:800}
 .sb-item.on .sb-badge{background:rgba(212,168,67,.22);color:var(--gilt)}
@@ -2345,7 +2345,6 @@ export default function App() {
     { id:"inventory",   label:"Inventory",   ico:Ic.box     },
     { id:"marketplace", label:"Marketplace", ico:Ic.store   },
     { id:"reports",     label:"Reports",     ico:Ic.chart   },
-    { id:"settings",    label:"Profile",     ico:Ic.settings},
     ...(isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
   ];
   const TITLES = { dashboard:"Dashboard", inventory:"Inventory", marketplace:"Marketplace", reports:"Reports", settings:"Profile", admin:"Admin Dashboard" };
@@ -2402,17 +2401,16 @@ export default function App() {
                   <span style={{padding:"2px 8px",background:plan==="free"?"rgba(255,255,255,.08)":plan==="pro"?"rgba(212,168,67,.2)":"rgba(66,165,245,.2)",color:plan==="free"?"rgba(255,255,255,.35)":plan==="pro"?"var(--gold)":"#42a5f5",borderRadius:9,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>
                     {plan==="free"?"Free Plan":plan==="pro"?"Pro":"District"}
                   </span>
-                  {plan==="free"&&<button onClick={()=>nav("settings")} style={{background:"none",border:"none",color:"rgba(212,168,67,.6)",fontSize:10,cursor:"pointer",fontFamily:"inherit",padding:0}}>Upgrade →</button>}
+
                 </div>
               </div>
 
               <nav className="sb-nav">
-                <div className="sb-label">Navigation</div>
                 {NAV.map(n=>(
                   <div key={n.id}
                     className={`sb-item ${page===n.id?"on":""}`}
                     onClick={()=>nav(n.id)}
-                    style={n.admin ? {marginTop:8, borderTop:"1px solid rgba(212,168,67,.15)", paddingTop:10, color: page===n.id ? undefined : "rgba(212,168,67,.6)"} : {}}>
+                    style={n.admin ? {marginTop:12, borderTop:"1px solid rgba(212,168,67,.15)", paddingTop:12, color: page===n.id ? undefined : "rgba(212,168,67,.65)"} : {}}>
                     <span className="sb-ico">{n.admin ? "🔧" : n.ico}</span>
                     <span>{n.label}</span>
                     {n.admin && <span style={{marginLeft:"auto",fontSize:9,padding:"1px 5px",background:"rgba(212,168,67,.2)",color:"var(--gold)",borderRadius:4,fontWeight:700,letterSpacing:1}}>ADMIN</span>}
@@ -2420,38 +2418,26 @@ export default function App() {
                     {n.id==="marketplace"&& listed>0       && <span className="sb-badge">{listed}</span>}
                   </div>
                 ))}
-
-                <div className="sb-label" style={{marginTop:14}}>Categories</div>
-                {CATS.slice(0,7).map(cat=>{
-                  const c=items.filter(i=>i.category===cat.id).length;
-                  return(
-                    <div key={cat.id} className="sb-item" style={{fontSize:12.5,padding:"6px 12px"}} onClick={()=>nav("inventory")}>
-                      <span>{cat.icon}</span><span>{cat.label}</span>
-                      {c>0&&<span className="sb-badge">{c}</span>}
-                    </div>
-                  );
-                })}
               </nav>
 
               <div className="sb-foot">
-                {org.name&&<div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.35)",marginBottom:8,textTransform:"uppercase",letterSpacing:1.5}}>🏛 {org.name}</div>}
-                <div style={{display:"flex",gap:6,flexDirection:"column"}}>
+                <div style={{display:"flex",gap:5,flexDirection:"column"}}>
                   {plan==="free"&&!isAdmin&&(
-                    <button className="btn btn-sm btn-full" style={{background:"linear-gradient(135deg,var(--gold),var(--amber))",border:"none",color:"#1a0f00",fontSize:12,fontWeight:800,marginBottom:2}} onClick={()=>nav("settings")}>
+                    <button className="btn btn-sm btn-full" style={{background:"linear-gradient(135deg,var(--gold),var(--amber))",border:"none",color:"#1a0f00",fontSize:13,fontWeight:800,padding:"9px 12px",letterSpacing:.2}} onClick={()=>nav("settings")}>
                       ⭐ Upgrade Plan
                     </button>
                   )}
-                  <button className="btn btn-o btn-sm btn-full" style={{color:"rgba(255,255,255,.75)",borderColor:"rgba(255,255,255,.2)",fontSize:12}} onClick={()=>nav("settings")}>
+                  <button className="btn btn-o btn-sm btn-full" style={{color:"rgba(255,255,255,.85)",borderColor:"rgba(255,255,255,.28)",fontSize:13,padding:"8px 12px"}} onClick={()=>nav("settings")}>
                     <span style={{width:13,height:13,display:"flex"}}>{Ic.settings}</span>Profile
                   </button>
-                  <button className="btn btn-sm btn-full" style={{background:"rgba(139,26,42,.25)",borderColor:"rgba(139,26,42,.4)",color:"rgba(255,255,255,.8)",fontSize:12}} onClick={signOut}>
+                  <button className="btn btn-sm btn-full" style={{background:"rgba(139,26,42,.22)",border:"1px solid rgba(139,26,42,.38)",color:"rgba(255,255,255,.85)",fontSize:13,padding:"8px 12px"}} onClick={signOut}>
                     Sign Out
                   </button>
                 </div>
                 <div style={{display:"flex",gap:10,justifyContent:"center",marginTop:10}}>
-                  <span onClick={()=>setLegalPage("terms")} style={{fontSize:10,color:"rgba(255,255,255,.25)",textDecoration:"none",cursor:"pointer"}}>Terms</span>
+                  <span onClick={()=>setLegalPage("terms")} style={{fontSize:10,color:"rgba(255,255,255,.3)",cursor:"pointer"}}>Terms</span>
                   <span style={{color:"rgba(255,255,255,.15)"}}>·</span>
-                  <span onClick={()=>setLegalPage("privacy")} style={{fontSize:10,color:"rgba(255,255,255,.25)",textDecoration:"none",cursor:"pointer"}}>Privacy</span>
+                  <span onClick={()=>setLegalPage("privacy")} style={{fontSize:10,color:"rgba(255,255,255,.3)",cursor:"pointer"}}>Privacy</span>
                 </div>
               </div>
             </div>
