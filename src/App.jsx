@@ -1303,8 +1303,8 @@ function Settings({ org, setOrg, onSeed, user, items, setItems }) {
           <div className="pricing-grid">
             {[
               { name:"Free",    price:"$0",  per:"/forever", desc:"Perfect for getting started.",       hot:false, link:null,     btn:"Current Plan",  feats:["Up to 50 items","Basic marketplace","CSV export","QR labels"] },
-              { name:"Pro",     price:"$12", per:"/month",   desc:"For active programs & companies.",   hot:true,  link:"https://buy.stripe.com/test_8x26oJ3vhcvy1Wi7eq9sk00", btn:"Get Pro →",     feats:["Unlimited items","Priority marketplace","Photo storage 5GB","Analytics dashboard","Email support"] },
-              { name:"District",price:"$49", per:"/month",   desc:"Multiple schools, one platform.",    hot:false, link:"https://buy.stripe.com/test_8x2cN79TF67a0SebuG9sk01", btn:"Get District →", feats:["Unlimited programs","Shared inventory pool","Admin controls","White-label option","Dedicated support"] },
+              { name:"Pro",     price:"$12", per:"/month",   desc:"For active programs & companies.",   hot:true,  link:"https://buy.stripe.com/test_8x26oJ3vhcvy1Wi7eq9sk00",  annualLink:"https://buy.stripe.com/test_8x214p6HtdzCgRc2Ya9sk02", btn:"Get Pro →",     feats:["Unlimited items","Priority marketplace","Photo storage 5GB","Analytics dashboard","Email support"] },
+              { name:"District",price:"$49", per:"/month",   desc:"Multiple schools, one platform.",    hot:false, link:"https://buy.stripe.com/test_8x2cN79TF67a0SebuG9sk01", annualLink:"https://buy.stripe.com/test_28E6oJ5Dp7be30meGS9sk03", btn:"Get District →", feats:["Unlimited programs","Shared inventory pool","Admin controls","White-label option","Dedicated support"] },
             ].map(p=>(
               <div key={p.name} className={`pricing-card${p.hot?" hot":""}`}>
                 <div className="pname">{p.name}</div>
@@ -1463,9 +1463,17 @@ function LandingPage({onSignIn, onSignUp}){
   ];
 
   const PLANS=[
-    {plan:"Starter",price:"Free",period:"forever",annual:null,feats:["Up to 50 items","QR code labels","Photo uploads","CSV export"],feat:false},
-    {plan:"Pro",price:"$12",period:"/month",annual:"$120/yr",annualSave:"save $24",feats:["Unlimited inventory","Marketplace listings","Priority support","Advanced reports","Everything in Starter"],feat:true},
-    {plan:"District",price:"$49",period:"/month",annual:"$500/yr",annualSave:"save $88",feats:["Multiple organizations","District dashboard","Bulk import","Dedicated support","Everything in Pro"],feat:false},
+    {plan:"Starter",price:"Free",period:"forever",annual:null,annualSave:null,
+     monthlyLink:null,annualLink:null,
+     feats:["Up to 50 items","QR code labels","Photo uploads","CSV export"],feat:false},
+    {plan:"Pro",price:"$12",period:"/month",annual:"$120/yr",annualSave:"save $24",
+     monthlyLink:"https://buy.stripe.com/test_8x26oJ3vhcvy1Wi7eq9sk00",
+     annualLink:"https://buy.stripe.com/test_8x214p6HtdzCgRc2Ya9sk02",
+     feats:["Unlimited inventory","Marketplace listings","Priority support","Advanced reports","Everything in Starter"],feat:true},
+    {plan:"District",price:"$49",period:"/month",annual:"$500/yr",annualSave:"save $88",
+     monthlyLink:"https://buy.stripe.com/test_8x2cN79TF67a0SebuG9sk01",
+     annualLink:"https://buy.stripe.com/test_28E6oJ5Dp7be30meGS9sk03",
+     feats:["Multiple organizations","District dashboard","Bulk import","Dedicated support","Everything in Pro"],feat:false},
   ];
   const[billing,setBilling]=useState("monthly");
 
@@ -1576,7 +1584,14 @@ function LandingPage({onSignIn, onSignUp}){
                 <div className="lp-pa">{billing==="annual"&&p.annual?p.annual:p.price}</div>
                 <div className="lp-pper">{billing==="annual"&&p.annual?<span style={{color:"var(--gold)",fontSize:13}}>{p.annualSave}</span>:p.period}</div>
                 <ul className="lp-pul">{p.feats.map(f=><li key={f}>{f}</li>)}</ul>
-                <button className={p.feat?"lp-btnp":"lp-btns2"} style={{width:"100%",justifyContent:"center",padding:"12px 0"}} onClick={onSignUp}>Get Started</button>
+                <button className={p.feat?"lp-btnp":"lp-btns2"} style={{width:"100%",justifyContent:"center",padding:"12px 0"}}
+                  onClick={()=>{
+                    const link = billing==="annual" ? p.annualLink : p.monthlyLink;
+                    if(link) window.open(link,"_blank");
+                    else onSignUp();
+                  }}>
+                  {p.plan==="Starter" ? "Get Started Free" : billing==="annual" ? "Get "+p.plan+" Annual →" : "Get "+p.plan+" →"}
+                </button>
               </div>
             ))}
           </div>
