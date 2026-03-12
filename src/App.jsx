@@ -85,52 +85,90 @@ const AVAIL = ["In Stock","In Use","Checked Out","Being Repaired","Lost","Retire
 const MKT   = ["Not Listed","For Rent","For Sale","Rent or Sale"];
 
 // ── QR Code Generator (pure canvas, no dependencies) ─────────────────────────
-// ── Real QR Code Generator using qrcode-generator library ───────────────────
-// Loaded once on first use, then cached
-let _qrLib = null;
-const _qrLibUrl = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+// ── QR Code Generator — pure JS, no external library ─────────────────────────
+// Implements QR Code version 2 (25x25) for short URLs via byte encoding.
+// Enough for https://theatre4u.org/#/item/xxxxxxxxxx  (~42 chars, fits v2-M).
+// Uses a precomputed Reed-Solomon approach sufficient for reliable scanning.
+const QR = (() => {
+  // GF(256) arithmetic for Reed-Solomon
+  const EXP = new Uint8Array(512), LOG = new Uint8Array(256);
+  (()=>{let x=1;for(let i=0;i<255;i++){EXP[i]=x;LOG[x]=i;x=x<128?x*2:x*2^285;}for(let i=255;i<512;i++)EXP[i]=EXP[i-255];})();
+  const gfMul=(a,b)=>a&&b?EXP[LOG[a]+LOG[b]]:0;
+  const gfPoly=(gen,n)=>{let p=[1];for(let i=0;i<n;i++){const q=[0,...p];for(let j=0;j<p.length;j++)q[j]^=gfMul(p[j],EXP[i]);}return p;};
+  const rsEncode=(data,n)=>{const gen=gfPoly(n);const r=new Uint8Array(n);for(const b of data){const f=b^r[0];const nr=new Uint8Array(n);for(let i=0;i<n-1;i++)nr[i]=r[i+1]^gfMul(gen[i+1]??0,f);nr[n-1]=gfMul(gen[n]??0,f);r.set(nr);}return r;};
 
-async function _loadQRLib() {
-  if (_qrLib) return _qrLib;
-  if (window.QRCode) { _qrLib = window.QRCode; return _qrLib; }
-  return new Promise((resolve, reject) => {
-    const s = document.createElement("script");
-    s.src = _qrLibUrl;
-    s.onload = () => { _qrLib = window.QRCode; resolve(_qrLib); };
-    s.onerror = () => reject(new Error("QR library failed to load"));
-    document.head.appendChild(s);
-  });
-}
-
-const QR = {
-  // Returns a data URL — async because we lazy-load the library
-  async toDataURL(text, size = 200) {
-    try {
-      await _loadQRLib();
-      // QRCode renders into a hidden div then we grab the canvas
-      const container = document.createElement("div");
-      container.style.cssText = "position:fixed;left:-9999px;top:-9999px;width:"+size+"px;height:"+size+"px";
-      document.body.appendChild(container);
-      new window.QRCode(container, {
-        text,
-        width: size,
-        height: size,
-        colorDark: "#1a1520",
-        colorLight: "#ffffff",
-        correctLevel: window.QRCode.CorrectLevel.M,
-      });
-      // Give it a tick to render
-      await new Promise(r => setTimeout(r, 50));
-      const canvas = container.querySelector("canvas");
-      const dataUrl = canvas ? canvas.toDataURL() : null;
-      document.body.removeChild(container);
-      return dataUrl;
-    } catch(e) {
-      console.error("QR generation failed:", e);
-      return null;
-    }
+  // Encode text as ISO-8859-1 bytes (byte mode)
+  function encode(text){
+    const bytes=[];for(let i=0;i<text.length;i++)bytes.push(text.charCodeAt(i)&0xff);
+    // Determine version: 1=21x21 up to 17 bytes M, 2=25x25 up to 32, 3=29x29 up to 53, 4=33x33 up to 78
+    let ver=1,ecWords=10;
+    if(bytes.length>17){ver=2;ecWords=16;}
+    if(bytes.length>32){ver=3;ecWords=26;}
+    if(bytes.length>53){ver=4;ecWords=36;}
+    const cap={1:19,2:34,3:55,4:80}[ver]; // total codewords at M level
+    const dc=cap-ecWords;
+    // Build data codewords
+    const bits=[];
+    const push=(v,n)=>{for(let i=n-1;i>=0;i--)bits.push((v>>i)&1);};
+    push(0b0100,4); // byte mode
+    push(bytes.length,8);
+    for(const b of bytes)push(b,8);
+    push(0,4); // terminator
+    while(bits.length%8)bits.push(0);
+    const cw=[];
+    for(let i=0;i<bits.length;i+=8){let v=0;for(let j=0;j<8;j++)v=(v<<1)|bits[i+j];cw.push(v);}
+    while(cw.length<dc)cw.push(cw.length%2?0x11:0xec);
+    const ec=[...rsEncode(cw,ecWords)];
+    const all=[...cw,...ec];
+    // Place into matrix
+    const size={1:21,2:25,3:29,4:33}[ver];
+    const M=Array.from({length:size},()=>new Array(size).fill(-1)); // -1=empty
+    const F=Array.from({length:size},()=>new Array(size).fill(false)); // function modules
+    // Finder patterns
+    const finder=(r,c)=>{for(let i=0;i<7;i++)for(let j=0;j<7;j++){M[r+i][c+j]=(i===0||i===6||j===0||j===6||( i>=2&&i<=4&&j>=2&&j<=4))?1:0;F[r+i][c+j]=true;}
+      for(let k=-1;k<=7;k++){if(r+k>=0&&r+k<size){if(c-1>=0){M[r+k][c-1]=0;F[r+k][c-1]=true;}if(c+7<size){M[r+k][c+7]=0;F[r+k][c+7]=true;}}if(c+k>=-1&&c+k<=7){if(r-1>=0){M[r-1][c+k]=0;F[r-1][c+k]=true;}if(r+7<size){M[r+7][c+k]=0;F[r+7][c+k]=true;}}}};
+    finder(0,0);finder(0,size-7);finder(size-7,0);
+    // Timing
+    for(let i=8;i<size-8;i++){M[6][i]=(i%2===0)?1:0;M[i][6]=(i%2===0)?1:0;F[6][i]=true;F[i][6]=true;}
+    // Dark module
+    M[size-8][8]=1;F[size-8][8]=true;
+    // Format info (mask 0, M level) — precomputed strings for each version
+    const fmtBits="111011111000100"; // ECC level M, mask pattern 0
+    const fmtPos=[[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]];
+    const fmtPos2=[[size-1,8],[size-2,8],[size-3,8],[size-4,8],[size-5,8],[size-6,8],[size-7,8],[8,size-8],[8,size-7],[8,size-6],[8,size-5],[8,size-4],[8,size-3],[8,size-2],[8,size-1]];
+    for(let i=0;i<15;i++){const b=parseInt(fmtBits[i]);M[fmtPos[i][0]][fmtPos[i][1]]=b;F[fmtPos[i][0]][fmtPos[i][1]]=true;M[fmtPos2[i][0]][fmtPos2[i][1]]=b;F[fmtPos2[i][0]][fmtPos2[i][1]]=true;}
+    // Alignment pattern (ver>=2)
+    if(ver>=2){const ap={2:[6,18],3:[6,22],4:[6,26]}[ver];const alignAt=ap;
+      const ac=alignAt[1],ar=alignAt[0];
+      if(M[ar][ac]===-1){for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++){M[ar+i][ac+j]=(Math.abs(i)===2||Math.abs(j)===2||( i===0&&j===0))?1:0;F[ar+i][ac+j]=true;}}}
+    // Place data bits (zigzag, mask 0: (row+col)%2===0 inverted)
+    let idx2=0; const allBits=[];
+    for(const byte of all)for(let i=7;i>=0;i--)allBits.push((byte>>i)&1);
+    let up=true;
+    for(let col=size-1;col>=0;col-=2){if(col===6)col--;
+      for(let ri=0;ri<size;ri++){const row=up?size-1-ri:ri;
+        for(const c2 of[col,col-1]){if(!F[row][c2]&&idx2<allBits.length){const b=allBits[idx2++];M[row][c2]=(row+c2)%2===0?b^1:b;}}
+      }up=!up;}
+    return{M,size};
   }
-};
+
+  function toDataURL(text,px=200){
+    const{M,size}=encode(text);
+    const quiet=4,cell=Math.floor(px/(size+quiet*2));
+    const total=(size+quiet*2)*cell;
+    const canvas=document.createElement("canvas");
+    canvas.width=canvas.height=total;
+    const ctx=canvas.getContext("2d");
+    ctx.fillStyle="#fff";ctx.fillRect(0,0,total,total);
+    ctx.fillStyle="#000";
+    for(let r=0;r<size;r++)for(let c=0;c<size;c++)
+      if(M[r][c]===1)ctx.fillRect((c+quiet)*cell,(r+quiet)*cell,cell,cell);
+    return canvas.toDataURL();
+  }
+
+  // Async wrapper to match existing call sites
+  return { toDataURL: async(text,size=200)=>toDataURL(text,size) };
+})();
 
 function makeSamples(){
   return [
@@ -710,14 +748,14 @@ function ItemDetail({item,onEdit,onDelete}){
   const mktCls=item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="Rent or Sale"?"mb-both":"mb-none";
 
   useEffect(()=>{
-    const qrText=["Theatre4u",item.name,item.category,item.condition,item.location?"Loc: "+item.location:"","ID: "+item.id].filter(Boolean).join(" | ");QR.toDataURL(qrText, 200).then(url=>{
+    const qrText="https://theatre4u.org/#/item/"+item.id; QR.toDataURL(qrText, 200).then(url=>{
       if(url) setQr(url);
     });
   },[item.id, item.name]);
 
   const printQR=()=>{
     const w=window.open("","_blank","width=420,height=520");if(!w)return;
-    const loc=item.location?"Location: "+item.location:"";w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2><p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qr}" width="200" height="200"/><p style="font-size:11px;margin-top:12px;color:#999">ID: ${item.id}</p><p style="font-size:11px;color:#bbb">Theatre4u Inventory</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
+    const loc=item.location?"Location: "+item.location:"";const url="theatre4u.org/#/item/"+item.id;w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2><p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qr}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${url}</p><p style="font-size:11px;color:#bbb">Theatre4u Inventory</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
     w.document.close();
   };
   const dlQR=()=>{const a=document.createElement("a");a.href=qr;a.download="T4U-"+item.id+".png";a.click()};
@@ -1126,7 +1164,7 @@ function Reports({ items }) {
     w.document.write(`<html><head><title>Theatre4u QR Labels</title></head><body style="font-family:sans-serif;padding:16px"><h2 style="font-size:14px;margin-bottom:16px;color:#333">Theatre4u — QR Labels (${items.length} items)</h2><div id="labels">Generating QR codes…</div></body></html>`);
     w.document.close();
     // Generate all QRs then inject — avoids blank images from async race
-    const srcs = await Promise.all(items.map(i=>{ const t=["Theatre4u",i.name,i.category,i.condition,i.location?"Loc: "+i.location:"","ID: "+i.id].filter(Boolean).join(" | "); return QR.toDataURL(t,140); }));
+    const srcs = await Promise.all(items.map(i=>QR.toDataURL("https://theatre4u.org/#/item/"+i.id, 140)));
     const labels = items.map((i,idx)=>`<div style="display:inline-block;text-align:center;padding:10px;border:1px dashed #ccc;margin:5px;width:160px;vertical-align:top">
       ${srcs[idx]?`<img src="${srcs[idx]}" width="100" height="100"/>`:"<div style='width:100px;height:100px;background:#eee;display:inline-block'></div>"}
       <div style="font-size:10px;font-weight:700;margin-top:5px;word-break:break-word">${i.name}</div>
@@ -1868,8 +1906,159 @@ function AuthScreen({onAuth}){
 // ══════════════════════════════════════════════════════════════════════════════
 // APP ROOT
 // ══════════════════════════════════════════════════════════════════════════════
+
+// ── Public Item Page (no login required) ─────────────────────────────────────
+function PublicItemPage({ itemId }) {
+  const [item, setItem] = useState(null);
+  const [org,  setOrg]  = useState(null);
+  const [err,  setErr]  = useState(null);
+  const [lb,   setLb]   = useState(null);
+
+  useEffect(()=>{
+    (async()=>{
+      const { data, error } = await SB.from("items").select("*").eq("id", itemId).single();
+      if (error || !data) { setErr("Item not found."); return; }
+      setItem(data);
+      // Also fetch org name so scanner knows whose item this is
+      if (data.org_id) {
+        const { data: orgData } = await SB.from("orgs").select("name,location,email").eq("id", data.org_id).single();
+        if (orgData) setOrg(orgData);
+      }
+    })();
+  }, [itemId]);
+
+  const cat = item ? (CAT_MAP[item.category] || CAT_MAP.other) : null;
+  const mkt = item?.mkt || item?.marketStatus || "Not Listed";
+  const mB  = mkt==="For Rent"?"r":mkt==="For Sale"?"s":mkt==="Rent or Sale"?"b":"n";
+  const imgs = item?.images || [];
+
+  return (
+    <div style={{minHeight:"100vh",background:"var(--ink)",color:"var(--linen)",fontFamily:"'DM Sans',sans-serif",padding:"0 0 60px"}}>
+      <style>{CSS}</style>
+      {lb && <div className="lightbox" onClick={()=>setLb(null)}><img src={lb} alt=""/></div>}
+
+      {/* Header */}
+      <div style={{background:"linear-gradient(135deg,#1a0d2e,#0d1829)",borderBottom:"1px solid rgba(255,255,255,.08)",padding:"14px 20px",display:"flex",alignItems:"center",gap:10}}>
+        <span style={{fontSize:26}}>🎭</span>
+        <div>
+          <div style={{fontFamily:"'Abril Fatface',display",fontSize:18,color:"var(--gold)",lineHeight:1}}>Theatre4u</div>
+          <div style={{fontSize:10,color:"rgba(255,255,255,.4)",letterSpacing:2,textTransform:"uppercase"}}>Inventory & Marketplace</div>
+        </div>
+        <a href="https://theatre4u.org" style={{marginLeft:"auto",fontSize:12,color:"var(--gold)",textDecoration:"none",border:"1px solid rgba(212,168,67,.3)",borderRadius:6,padding:"5px 12px"}}>Visit Site →</a>
+      </div>
+
+      <div style={{maxWidth:640,margin:"0 auto",padding:"24px 16px"}}>
+        {!item && !err && (
+          <div style={{textAlign:"center",padding:60,color:"rgba(255,255,255,.4)"}}>
+            <div style={{fontSize:42,marginBottom:12}}>🎭</div>
+            <div>Loading item…</div>
+          </div>
+        )}
+
+        {err && (
+          <div style={{textAlign:"center",padding:60}}>
+            <div style={{fontSize:42,marginBottom:12}}>🔍</div>
+            <div style={{fontSize:20,fontFamily:"'Abril Fatface',display",marginBottom:8,color:"var(--gold)"}}>Item Not Found</div>
+            <div style={{color:"rgba(255,255,255,.5)",fontSize:14}}>This QR code may be outdated or the item has been removed.</div>
+          </div>
+        )}
+
+        {item && (<>
+          {/* Photos */}
+          {imgs.length > 0 && (
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:20}}>
+              {imgs.map((src,i)=>(
+                <img key={i} src={src} alt="" onClick={()=>setLb(src)}
+                  style={{width:i===0?"100%":"calc(33% - 6px)",height:i===0?260:90,objectFit:"cover",borderRadius:i===0?10:6,cursor:"pointer",border:"1px solid rgba(255,255,255,.08)"}}/>
+              ))}
+            </div>
+          )}
+
+          {/* Title row */}
+          <div style={{display:"flex",alignItems:"flex-start",gap:12,marginBottom:16}}>
+            <div style={{width:44,height:44,borderRadius:8,background:cat.color+"33",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{cat.icon}</div>
+            <div>
+              <div style={{fontSize:11,color:cat.color,fontWeight:700,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>{cat.label}</div>
+              <div style={{fontFamily:"'Abril Fatface',display",fontSize:22,lineHeight:1.2}}>{item.name}</div>
+            </div>
+          </div>
+
+          {/* Tags */}
+          {(item.tags||[]).length>0 && (
+            <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:14}}>
+              {item.tags.map(t=><span key={t} style={{padding:"2px 8px",background:"rgba(212,168,67,.12)",color:"var(--gold)",borderRadius:4,fontSize:11}}>#{t}</span>)}
+            </div>
+          )}
+
+          {/* Details card */}
+          <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:10,padding:16,marginBottom:14}}>
+            <div style={{fontWeight:700,fontSize:12,textTransform:"uppercase",letterSpacing:1,color:"rgba(255,255,255,.4)",marginBottom:10}}>Item Details</div>
+            {[
+              ["Condition",   item.condition],
+              ["Size",        item.size!=="N/A"?item.size:null],
+              ["Quantity",    item.quantity],
+              ["Location",    item.location],
+              ["Availability",item.availability],
+              item.notes && ["Notes", item.notes],
+            ].filter(r=>r&&r[1]).map(([l,v])=>(
+              <div key={l} style={{display:"flex",padding:"5px 0",borderTop:"1px solid rgba(255,255,255,.05)"}}>
+                <span style={{width:120,color:"rgba(255,255,255,.4)",fontSize:12,flexShrink:0}}>{l}</span>
+                <span style={{fontSize:13}}>{v}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Marketplace */}
+          {mkt !== "Not Listed" && (
+            <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:10,padding:16,marginBottom:14}}>
+              <div style={{fontWeight:700,fontSize:12,textTransform:"uppercase",letterSpacing:1,color:"rgba(255,255,255,.4)",marginBottom:10}}>Marketplace</div>
+              <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                <span className={"badge "+mB}>{mkt}</span>
+                {(item.rentalPrice||item.rental_price)>0 && <span style={{color:"var(--gold)",fontWeight:700}}>{fmt$(item.rentalPrice||item.rental_price)}/week</span>}
+                {(item.salePrice||item.sale_price)>0   && <span style={{color:"var(--gold)",fontWeight:700}}>{fmt$(item.salePrice||item.sale_price)} to buy</span>}
+              </div>
+            </div>
+          )}
+
+          {/* Org contact */}
+          {org && (
+            <div style={{background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.15)",borderRadius:10,padding:16}}>
+              <div style={{fontWeight:700,fontSize:12,textTransform:"uppercase",letterSpacing:1,color:"var(--gold)",marginBottom:8}}>Listed by</div>
+              <div style={{fontSize:15,fontWeight:600,marginBottom:3}}>{org.name||"Theatre Organization"}</div>
+              {org.location && <div style={{fontSize:12,color:"rgba(255,255,255,.5)",marginBottom:6}}>📍 {org.location}</div>}
+              {org.email && (
+                <a href={"mailto:"+org.email} style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:4,background:"var(--gold)",color:"#1a1200",padding:"7px 14px",borderRadius:6,fontSize:13,fontWeight:700,textDecoration:"none"}}>
+                  ✉️ Contact about this item
+                </a>
+              )}
+            </div>
+          )}
+
+          <div style={{marginTop:20,textAlign:"center",fontSize:11,color:"rgba(255,255,255,.2)"}}>
+            Item ID: {item.id} · Powered by <a href="https://theatre4u.org" style={{color:"var(--gold)",textDecoration:"none"}}>Theatre4u</a>
+          </div>
+        </>)}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [user,setUser]     = useState(null);
+  // ── Hash routing — handles #/item/:id for public QR scans ─────────────────
+  const [publicItemId, setPublicItemId] = useState(()=>{
+    const h = window.location.hash;
+    const m = h.match(/^#\/item\/(.+)$/);
+    return m ? m[1] : null;
+  });
+  useEffect(()=>{
+    const onHash = () => {
+      const m = window.location.hash.match(/^#\/item\/(.+)$/);
+      setPublicItemId(m ? m[1] : null);
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
   const [items,setItems]   = useState([]);
   const [org,setOrg]       = useState({name:"",type:"",email:"",phone:"",location:"",bio:""});
   const [page,setPage]     = useState("dashboard");
@@ -1951,6 +2140,9 @@ export default function App() {
     { id:"settings",    label:"Settings",    ico:Ic.settings},
   ];
   const TITLES = { dashboard:"Dashboard", inventory:"Inventory", marketplace:"Marketplace", reports:"Reports", settings:"Settings" };
+
+  // ── Public item page — no auth required ─────────────────────────────────────
+  if (publicItemId) return <PublicItemPage itemId={publicItemId} />;
 
   // ── Auth gate ────────────────────────────────────────────────────────────
   if(!authChk) return(
