@@ -1167,7 +1167,7 @@ function Reports({ items }) {
   );
 }
 
-function Settings({ org, setOrg, onSeed, user, setItems }) {
+function Settings({ org, setOrg, onSeed, user, items, setItems }) {
   const [f,setF]       = useState(org);
   const [saved,setSaved] = useState(false);
   const upd = (k,v) => setF(p=>({...p,[k]:v}));
@@ -1249,12 +1249,21 @@ function Settings({ org, setOrg, onSeed, user, setItems }) {
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
             <button className="btn btn-o" onClick={onSeed}><span style={{width:14,height:14,display:"flex"}}>{Ic.box}</span>Load Sample Data</button>
             <button className="btn btn-d" onClick={async()=>{
-              if(window.confirm("This will permanently delete ALL your inventory items from the database. Your account and organization profile will remain. This cannot be undone.")){
-                const{error}=await SB.from("items").delete().eq("org_id",user.id);
-                if(error){window.alert("Error deleting items: "+error.message);return;}
-                setItems([]);
-                window.alert("All inventory items deleted successfully.");
+              if(!window.confirm("This will permanently delete ALL your inventory items from the database. Your account and organization profile will remain. This cannot be undone.")) return;
+              // Get current item IDs from state and delete each by primary key
+              // (more reliable than bulk delete against org_id with RLS)
+              const currentItems = items;
+              if(currentItems.length===0){window.alert("No items to delete.");return;}
+              let failed=0;
+              for(const item of currentItems){
+                const{error}=await SB.from("items").delete().eq("id",item.id);
+                if(error) failed++;
               }
+              // Also try a bulk delete by org_id as belt-and-suspenders
+              await SB.from("items").delete().eq("org_id",user.id);
+              setItems([]);
+              if(failed>0) window.alert("Deleted with "+failed+" error(s). Refresh if items remain.");
+              else window.alert("All inventory items deleted.");
             }}><span style={{width:14,height:14,display:"flex"}}>{Ic.trash}</span>Delete All Items</button>
           </div>
         </div>
@@ -1943,7 +1952,7 @@ export default function App() {
                   {page==="inventory"   && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id}/>}
                   {page==="marketplace" && <Marketplace items={items} org={org}/>}
                   {page==="reports"     && <Reports     items={items}/>}
-                  {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} setItems={setItems}/>}
+                  {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} items={items} setItems={setItems}/>}
                 </div>
             }
           </div>
