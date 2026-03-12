@@ -12,7 +12,7 @@ const fmt$ = n  => "$" + Number(n || 0).toFixed(2);
 const usp=(id,w=900,h=500)=>`https://images.unsplash.com/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=82`;
 const BG = {
   dashboard:   "photo-1503095396549-807759245b35", // grand theatre interior
-  inventory:   "photo-1558618666-fcd25c85cd64", // costume rack / wardrobe
+  inventory:   "photo-1489987707025-afc232f7ea0f", // rows of hanging garments on racks
   marketplace: "photo-1460723237483-7a6dc9d0b212", // theatre stage lit up
   reports:     "photo-1568992688065-536aad8a12f6", // open ledger / notebook analytics
   settings:    "photo-1497366216548-37526070297c", // organized office / workspace
