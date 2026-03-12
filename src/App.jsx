@@ -423,9 +423,9 @@ tr:hover td{background:rgba(243,230,204,.55)}
 
 /* Pricing */
 .pricing-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:16px}
-.pricing-card{background:rgba(253,246,236,.9);border:1.5px solid var(--border);border-radius:var(--rm);padding:22px;transition:all .2s}
+.pricing-card{background:#1e1208;border:1.5px solid rgba(212,168,67,.2);border-radius:var(--rm);padding:22px;transition:all .2s;color:#f0e6d3}
 .pricing-card:hover{box-shadow:var(--sh2)}
-.pricing-card.hot{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,168,67,.16)}
+.pricing-card.hot{background:#241808;border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,168,67,.2)}
 .pname{font-family:'Abril Fatface',display;font-size:23px;color:var(--ink);margin-bottom:4px}
 .pprice{font-family:'Abril Fatface',display;font-size:36px;color:var(--cog)}
 .pprice span{font-size:14px;color:var(--muted);font-family:'Raleway',sans-serif;font-weight:600}
@@ -1336,19 +1336,19 @@ function UpgradePlans({ compact = false }) {
           const link    = STRIPE_LINKS[p.id]?.[billing];
           const isFree  = p.id==="free";
           return (
-            <div key={p.id} style={{border:"1px solid "+(p.hot?"var(--gold)":"rgba(212,168,67,.2)"),borderRadius:10,padding:16,background:"rgba(212,168,67,.05)",position:"relative",display:"flex",flexDirection:"column"}}>
+            <div key={p.id} style={{border:"1.5px solid "+(p.hot?"var(--gold)":"rgba(212,168,67,.2)"),borderRadius:10,padding:16,background:p.hot?"#241808":"#1e1208",position:"relative",display:"flex",flexDirection:"column",color:"#f0e6d3"}}>
               {p.hot && <div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",background:"var(--gold)",color:"#1a0f00",fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",padding:"2px 10px",borderRadius:9,whiteSpace:"nowrap"}}>Most Popular</div>}
-              <div style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:16,fontWeight:700,marginBottom:4}}>{p.name}</div>
+              <div style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:16,fontWeight:700,marginBottom:4,color:"#f0e6d3"}}>{p.name}</div>
               <div style={{display:"flex",alignItems:"baseline",gap:4,marginBottom:2}}>
                 <span style={{fontSize:26,fontWeight:800,color:"var(--gold)"}}>{price}</span>
-                {!isFree && <span style={{fontSize:12,color:"var(--t3)"}}>{p.per}</span>}
+                {!isFree && <span style={{fontSize:12,color:"rgba(240,230,211,.5)"}}>{p.per}</span>}
               </div>
-              {billing==="annual" && !isFree && p.annualTotal && <div style={{fontSize:11,color:"var(--t3)",marginBottom:2}}>billed {p.annualTotal}</div>}
+              {billing==="annual" && !isFree && p.annualTotal && <div style={{fontSize:11,color:"rgba(240,230,211,.45)",marginBottom:2}}>billed {p.annualTotal}</div>}
               {note && <div style={{fontSize:11,color:"var(--grn,#4caf50)",fontWeight:600,marginBottom:6}}>{note}</div>}
-              <div style={{fontSize:12,color:"var(--t2)",marginBottom:10}}>{p.desc}</div>
+              <div style={{fontSize:12,color:"rgba(240,230,211,.65)",marginBottom:10}}>{p.desc}</div>
               <ul style={{listStyle:"none",padding:0,margin:"0 0 14px",flex:1}}>
                 {p.feats.map(f=>(
-                  <li key={f} style={{display:"flex",alignItems:"flex-start",gap:6,fontSize:12,color:"var(--t2)",marginBottom:4}}>
+                  <li key={f} style={{display:"flex",alignItems:"flex-start",gap:6,fontSize:12,color:"rgba(240,230,211,.75)",marginBottom:4}}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2.5" style={{flexShrink:0,marginTop:1}}><polyline points="20 6 9 17 4 12"/></svg>
                     {f}
                   </li>
@@ -1356,7 +1356,7 @@ function UpgradePlans({ compact = false }) {
               </ul>
               {isFree
                 ? <button className="btn btn-o btn-full" style={{opacity:.5,cursor:"default"}} disabled>Current Plan</button>
-                : <a href={link} target="_blank" rel="noreferrer" className={"btn btn-full "+(p.hot?"btn-g":"")} style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",...(!p.hot?{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.25)",color:"#fff",fontWeight:700}:{})}}>
+                : <a href={link} target="_blank" rel="noreferrer" className={"btn btn-full "+(p.hot?"btn-g":"")} style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",...(!p.hot?{background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}:{})}}>
                     {billing==="annual" ? "Get "+p.name+" Annual →" : "Get "+p.name+" →"}
                   </a>
               }
