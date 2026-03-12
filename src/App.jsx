@@ -2341,40 +2341,4 @@ export default function App() {
       </div>}
     </>
   );
-}  return(<>
-    {upgradeReason&&<UpgradePrompt reason={upgradeReason} onClose={()=>setUpgradeReason(null)}/>}
-    <divState, useEffect, useMemo, useRef, useCallback } from "react";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-// ── Supabase ──────────────────────────────────────────────────────────────────
-const SB = createClient(
-  "https://ldmmphwivnnboyhlxipl.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA"
-);
-const uid  = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
-const fmt$ = n  => "$" + Number(n || 0).toFixed(2);
-// Page background images — 5 confirmed-working Unsplash IDs only
-const usp=(id,w=900,h=500)=>`https://images.unsplash.com/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=82`;
-const BG = {
-  dashboard:   "photo-1503095396549-807759245b35", // grand theatre interior
-  inventory:   "photo-1503095396549-807759245b35", // grand theatre interior
-  marketplace: "photo-1460723237483-7a6dc9d0b212", // theatre stage
-  reports:     "photo-1504196606672-aef5c9cefc92", // theatre seats
-  settings:    "photo-1504196606672-aef5c9cefc92", // theatre seats
-};
-
-// Category visual identity — CSS gradients, always works, never breaks
-const CAT_GFX = {
-  costumes:  {grad:"linear-gradient(135deg,#7b1560,#c2185b,#e91e8c)",    icon:"👗"},
-  props:     {grad:"linear-gradient(135deg,#4a148c,#7b1fa2,#9c27b0)",    icon:"🎭"},
-  sets:      {grad:"linear-gradient(135deg,#0d2b6e,#1565c0,#1976d2)",    icon:"🏛️"},
-  lighting:  {grad:"linear-gradient(135deg,#7f4800,#e65100,#ff9800)",    icon:"💡"},
-  sound:     {grad:"linear-gradient(135deg,#1b5e20,#2e7d32,#43a047)",    icon:"🔊"},
-  scripts:   {grad:"linear-gradient(135deg,#bf360c,#d84315,#e64a19)",    icon:"📜"},
-  makeup:    {grad:"linear-gradient(135deg,#880e4f,#ad1457,#e91e63)",    icon:"💄"},
-  furniture: {grad:"linear-gradient(135deg,#3e2723,#5d4037,#795548)",    icon:"🪑"},
-  fabrics:   {grad:"linear-gradient(135deg,#4a148c,#6a1b9a,#8e24aa)",    icon:"🧵"},
-  tools:     {grad:"linear-gradient(135deg,#263238,#37474f,#546e7a)",    icon:"🔧"},
-  effects:   {grad:"linear-gradient(135deg,#006064,#00838f,#00acc1)",    icon:"✨"},
-  other:     {grad:"linear-gradient(135deg,#37474f,#546e7a,#78909c)",    icon:"📦"},
-};
+}
