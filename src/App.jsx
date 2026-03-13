@@ -854,6 +854,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId,plan="free",headerNote=nu
   const[mktF,setMktF]=useState("all");const[view,setView]=useState("grid");
   const[showF,setShowF]=useState(false);const[pg,setPg]=useState(1);
   const[modal,setModal]=useState(null);const[active,setActive]=useState(null);
+  const[showImport,setShowImport]=useState(false);
   const PP=20;
   const mktCls=m=>m==="For Rent"?"mb-rent":m==="For Sale"?"mb-sale":m==="Rent or Sale"?"mb-both":"mb-none";
   const filtered=useMemo(()=>{
@@ -908,11 +909,15 @@ function Inventory({items,onAdd,onEdit,onDelete,userId,plan="free",headerNote=nu
           <div className="srch">{Ic.search}<input value={search} onChange={e=>setSrch(e.target.value)} placeholder="Search items, tags, location…"/></div>
           <button className="ico-btn" style={showF?{borderColor:"var(--gold)",color:"var(--cog)"}:{}} onClick={()=>setShowF(!showF)}>{Ic.filter}</button>
           <div className="vtog"><button className={view==="grid"?"on":""} onClick={()=>setView("grid")}>Grid</button><button className={view==="table"?"on":""} onClick={()=>setView("table")}>Table</button></div>
-          <div style={{marginLeft:"auto"}}><button className="btn btn-g" onClick={()=>{
+          <div style={{marginLeft:"auto",display:"flex",gap:7}}>
+            <button className="btn btn-o" style={{fontSize:12,padding:"6px 12px"}} onClick={()=>setShowImport(true)}
+              title="Import from CSV">⬆ Import CSV</button>
+            <button className="btn btn-g" onClick={()=>{
               const max=PLANS_DEF[plan]?.maxItems??50;
               if(items.length>=max){setUpgradeReason("Your free plan is limited to "+max+" items. Upgrade to Pro for unlimited inventory.");return;}
               setActive(null);setModal("a");
-            }}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add Item</button></div>
+            }}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add Item</button>
+          </div>
         </div>
         {showF&&(
           <div className="fbar fin">
@@ -982,6 +987,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId,plan="free",headerNote=nu
           <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} submitId="form-save-btn" userId={userId}/>
         </Modal>)}
       {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} onEdit={()=>setModal("e")} onDelete={id=>{onDelete(id);setModal(null);setActive(null)}}/></Modal>}
+      {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={()=>{setShowImport(false);window.location.reload();}}/>}
     </div>
   </>
   );
@@ -1431,23 +1437,32 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
   const sendInvite = async () => {
     if (!invEmail.trim()) return;
     setSending(true); setMsg("");
-    const { data: { session } } = await SB.auth.getSession();
-    const res = await fetch(
-      "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/district-invite",
-      { method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
-        body: JSON.stringify({ email: invEmail.trim(), school_name: invSchool.trim(), district_id: district.id }) }
-    );
-    const result = await res.json();
-    if (result.success) {
-      setMsg("✓ Invite sent to " + invEmail);
-      setInvEmail(""); setInvSchool("");
-      setShowInvite(false);
-      load();
-    } else {
-      setMsg("Error: " + result.error);
+    try {
+      const { data: { session } } = await SB.auth.getSession();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      const res = await fetch(
+        "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/district-invite",
+        { method: "POST",
+          signal: controller.signal,
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
+          body: JSON.stringify({ email: invEmail.trim(), school_name: invSchool.trim() }) }
+      );
+      clearTimeout(timeout);
+      const result = await res.json();
+      if (result.success) {
+        setMsg("✓ Invite sent to " + invEmail);
+        setInvEmail(""); setInvSchool("");
+        setShowInvite(false);
+        load();
+      } else {
+        setMsg("Error: " + (result.error || "Unknown error"));
+      }
+    } catch (e) {
+      setMsg(e.name === "AbortError" ? "Error: Request timed out — check your connection." : "Error: " + String(e));
+    } finally {
+      setSending(false);
     }
-    setSending(false);
   };
 
   const revokeInvite = async (id) => {
@@ -1860,6 +1875,444 @@ function AdminDashboard({ currentUser }) {
 
         <div style={{ marginTop: 10, fontSize: 12, color: "var(--faint)" }}>
           {filtered.length} of {orgs.length} organizations · Data live from Supabase
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CSV IMPORT
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Our canonical fields and how to auto-detect them from messy column names
+const CSV_FIELDS = [
+  { key:"name",      label:"Item Name",    required:true,  hints:["name","item","title","description","desc"] },
+  { key:"category",  label:"Category",     required:false, hints:["category","cat","type","kind"] },
+  { key:"condition", label:"Condition",    required:false, hints:["condition","cond","quality","state"] },
+  { key:"size",      label:"Size",         required:false, hints:["size","sz"] },
+  { key:"qty",       label:"Quantity",     required:false, hints:["qty","quantity","count","amount","num","number"] },
+  { key:"location",  label:"Location",     required:false, hints:["location","loc","storage","bin","room","where","place"] },
+  { key:"avail",     label:"Availability", required:false, hints:["availability","avail","available","status"] },
+  { key:"mkt",       label:"Market Status",required:false, hints:["market","mkt","listing","listed","for rent","for sale"] },
+  { key:"rent",      label:"Rental Price", required:false, hints:["rent","rental","rate","per week","weekly"] },
+  { key:"sale",      label:"Sale Price",   required:false, hints:["sale","sell","price","cost","value"] },
+  { key:"tags",      label:"Tags",         required:false, hints:["tags","tag","keywords","labels"] },
+  { key:"notes",     label:"Notes",        required:false, hints:["notes","note","comments","comment","remarks","details"] },
+];
+
+// Fuzzy match a CSV column header to one of our fields
+function autoMatch(header) {
+  const h = header.toLowerCase().trim();
+  for (const f of CSV_FIELDS) {
+    if (h === f.key) return f.key;
+    if (f.hints.some(hint => h.includes(hint) || hint.includes(h))) return f.key;
+  }
+  return null;
+}
+
+// Parse a raw CSV string into rows
+function parseCSV(text) {
+  const lines = text.replace(/\r\n/g,"\n").replace(/\r/g,"\n").split("\n").filter(l=>l.trim());
+  const rows = [];
+  for (const line of lines) {
+    const cols = [];
+    let cur = "", inQ = false;
+    for (let i=0; i<line.length; i++) {
+      const c = line[i];
+      if (c==="\"" && inQ && line[i+1]==="\"") { cur+="\""; i++; }
+      else if (c==="\"") { inQ=!inQ; }
+      else if (c==="," && !inQ) { cols.push(cur); cur=""; }
+      else { cur+=c; }
+    }
+    cols.push(cur);
+    rows.push(cols.map(c=>c.trim()));
+  }
+  return rows;
+}
+
+// Coerce a raw string value into the right type/valid value for a field
+function coerce(key, raw) {
+  if (!raw && raw!==0) return undefined;
+  const v = String(raw).trim();
+  if (!v) return undefined;
+  switch(key) {
+    case "category": {
+      const lo = v.toLowerCase();
+      const match = CATS.find(c => lo.includes(c.id) || lo.includes(c.label.toLowerCase()) ||
+        c.label.toLowerCase().includes(lo));
+      return match ? match.id : "other";
+    }
+    case "condition": {
+      const match = CONDS.find(c=>c.toLowerCase()===v.toLowerCase());
+      return match || "Good";
+    }
+    case "size": {
+      const match = SIZES.find(s=>s.toLowerCase()===v.toLowerCase());
+      return match || "N/A";
+    }
+    case "avail": {
+      const match = AVAIL.find(a=>a.toLowerCase()===v.toLowerCase());
+      return match || "In Stock";
+    }
+    case "mkt": {
+      const match = MKT.find(m=>m.toLowerCase()===v.toLowerCase());
+      return match || "Not Listed";
+    }
+    case "qty":  { const n=parseInt(v); return isNaN(n)?1:Math.max(0,n); }
+    case "rent":
+    case "sale": { const n=parseFloat(v.replace(/[$,]/g,"")); return isNaN(n)?0:Math.max(0,n); }
+    case "tags": { return v.split(/[;,|]/).map(t=>t.trim().toLowerCase()).filter(Boolean); }
+    default:     return v;
+  }
+}
+
+function CSVImport({ onImport, onClose, userId }) {
+  const [step,    setStep]    = useState("upload");   // upload → map → preview → done
+  const [headers, setHeaders] = useState([]);
+  const [rows,    setRows]    = useState([]);
+  const [mapping, setMapping] = useState({});         // csvCol → fieldKey
+  const [parsed,  setParsed]  = useState([]);
+  const [errors,  setErrors]  = useState([]);
+  const [importing, setImporting] = useState(false);
+  const [progress, setProgress]   = useState(0);
+  const [result,  setResult]  = useState(null);
+  const fileRef = useRef();
+
+  // ── Step 1: Upload & parse ───────────────────────────────────────────────
+  const handleFile = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const allRows = parseCSV(ev.target.result);
+      if (allRows.length < 2) { alert("File appears empty or has only headers."); return; }
+      const hdrs = allRows[0];
+      const dataRows = allRows.slice(1).filter(r => r.some(c=>c));
+      setHeaders(hdrs);
+      setRows(dataRows);
+      // Auto-detect mapping
+      const auto = {};
+      hdrs.forEach((h,i) => { const match = autoMatch(h); if (match) auto[i] = match; });
+      setMapping(auto);
+      setStep("map");
+    };
+    reader.readAsText(file);
+  };
+
+  // Download our template
+  const downloadTemplate = () => {
+    const h = ["Name","Category","Condition","Size","Qty","Location","Availability","Market","Rent","Sale","Tags","Notes"];
+    const ex = [
+      ["Victorian Ball Gown","costumes","Good","M","1","Costume Closet A","In Stock","For Rent","25","0","period;formal","Used in A Christmas Carol"],
+      ["Fog Machine 1000W","effects","Excellent","N/A","2","Effects Cage","In Stock","For Rent","20","0","atmosphere","Includes remote"],
+      ["Romeo & Juliet Scripts","scripts","Fair","N/A","30","Library","In Stock","For Sale","0","5","shakespeare","Director annotated"],
+    ];
+    const csv = [h,...ex].map(r=>r.join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+    a.download = "theatre4u_import_template.csv";
+    a.click();
+  };
+
+  // ── Step 2: Column mapping → build preview ───────────────────────────────
+  const buildPreview = () => {
+    const errs = [];
+    const nameCol = Object.entries(mapping).find(([,v])=>v==="name");
+    if (!nameCol) { errs.push("You must map at least one column to 'Item Name'."); setErrors(errs); return; }
+
+    const items = rows.map((row, ri) => {
+      const item = {
+        category: "other", condition: "Good", size: "N/A",
+        qty: 1, avail: "In Stock", mkt: "Not Listed",
+        rent: 0, sale: 0, tags: [], notes: "", location: ""
+      };
+      Object.entries(mapping).forEach(([colIdx, fieldKey]) => {
+        const raw = row[parseInt(colIdx)];
+        const val = coerce(fieldKey, raw);
+        if (val !== undefined) item[fieldKey] = val;
+      });
+      if (!item.name?.trim()) errs.push(`Row ${ri+2}: Item name is blank — row will be skipped.`);
+      return item;
+    }).filter(i => i.name?.trim());
+
+    setErrors(errs);
+    setParsed(items);
+    setStep("preview");
+  };
+
+  // ── Step 3: Import ────────────────────────────────────────────────────────
+  const doImport = async () => {
+    setImporting(true);
+    setProgress(0);
+    const BATCH = 50;
+    let imported = 0, failed = 0;
+    const now = new Date().toISOString();
+
+    for (let i=0; i<parsed.length; i+=BATCH) {
+      const batch = parsed.slice(i, i+BATCH).map(item => ({
+        ...item,
+        org_id: userId,
+        added: now,
+      }));
+      const { error } = await SB.from("items").insert(batch);
+      if (error) { failed += batch.length; console.error("Import batch error:", error); }
+      else { imported += batch.length; }
+      setProgress(Math.round(((i+BATCH)/parsed.length)*100));
+    }
+    setResult({ imported, failed, total: parsed.length });
+    setImporting(false);
+    setStep("done");
+    if (imported > 0) onImport(); // trigger reload
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  const W = { maxWidth:680, width:"100%" };
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.78)",zIndex:2000,
+      display:"flex",alignItems:"center",justifyContent:"center",padding:16,animation:"fi .15s ease"}}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{...W,background:"var(--card)",border:"1px solid var(--border)",borderRadius:14,
+        maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 12px 56px rgba(0,0,0,.5)",
+        animation:"su .2s ease"}}>
+
+        {/* Header */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+          padding:"16px 22px",borderBottom:"1px solid var(--border)",flexShrink:0}}>
+          <div>
+            <h2 style={{fontFamily:"var(--serif)",fontSize:20,marginBottom:2}}>Import from CSV</h2>
+            <div style={{display:"flex",gap:12,marginTop:6}}>
+              {["upload","map","preview","done"].map((s,i)=>(
+                <div key={s} style={{display:"flex",alignItems:"center",gap:5,fontSize:11,
+                  color:step===s?"var(--gold)":["upload","map","preview","done"].indexOf(step)>i?"var(--green)":"var(--muted)",
+                  fontWeight:step===s?700:400}}>
+                  <div style={{width:18,height:18,borderRadius:"50%",display:"flex",alignItems:"center",
+                    justifyContent:"center",fontSize:9,fontWeight:800,
+                    background:step===s?"var(--gold)":["upload","map","preview","done"].indexOf(step)>i?"var(--green)":"rgba(255,255,255,.1)",
+                    color:step===s||["upload","map","preview","done"].indexOf(step)>i?"#1a0f00":"var(--muted)"}}>
+                    {["upload","map","preview","done"].indexOf(step)>i?"✓":i+1}
+                  </div>
+                  {s[0].toUpperCase()+s.slice(1)}
+                </div>
+              ))}
+            </div>
+          </div>
+          <button onClick={onClose} style={{background:"none",border:"1px solid var(--border)",
+            color:"var(--muted)",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:13,fontFamily:"inherit"}}>✕</button>
+        </div>
+
+        {/* Body */}
+        <div style={{flex:1,overflowY:"auto",padding:"20px 22px"}}>
+
+          {/* ── STEP 1: UPLOAD ── */}
+          {step==="upload" && (
+            <div style={{display:"flex",flexDirection:"column",gap:16}}>
+              <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",
+                borderRadius:10,padding:16}}>
+                <div style={{fontWeight:700,fontSize:13,marginBottom:6,color:"var(--gold)"}}>💡 Two ways to import</div>
+                <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
+                  <strong style={{color:"var(--text)"}}>Option A</strong> — Download our template, fill it in, upload it back.<br/>
+                  <strong style={{color:"var(--text)"}}>Option B</strong> — Upload any spreadsheet you already have. We'll help you match your columns to ours.
+                </p>
+                <button onClick={downloadTemplate} style={{background:"none",border:"1px solid var(--border)",
+                  color:"var(--text)",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:12,
+                  fontFamily:"inherit",fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
+                  ⬇ Download Template CSV
+                </button>
+              </div>
+
+              <label style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+                gap:10,border:"2px dashed var(--border)",borderRadius:12,padding:"36px 20px",
+                cursor:"pointer",transition:"border-color .2s",textAlign:"center"}}
+                onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor="var(--gold)"}}
+                onDragLeave={e=>{e.currentTarget.style.borderColor="var(--border)"}}
+                onDrop={e=>{e.preventDefault();e.currentTarget.style.borderColor="var(--border)";
+                  const f=e.dataTransfer.files[0];if(f){const dt=new DataTransfer();dt.items.add(f);fileRef.current.files=dt.files;handleFile({target:{files:[f]}})}}}>
+                <div style={{fontSize:40}}>📂</div>
+                <div style={{fontFamily:"var(--serif)",fontSize:18}}>Drop your CSV here</div>
+                <div style={{fontSize:12,color:"var(--muted)"}}>or click to browse — .csv files only</div>
+                <input ref={fileRef} type="file" accept=".csv,text/csv" hidden onChange={handleFile}/>
+              </label>
+
+              <div style={{fontSize:11,color:"var(--muted)",textAlign:"center"}}>
+                Supports exports from Google Sheets, Excel, Airtable, and most inventory apps.
+              </div>
+            </div>
+          )}
+
+          {/* ── STEP 2: MAP COLUMNS ── */}
+          {step==="map" && (
+            <div>
+              <p style={{fontSize:13,color:"var(--muted)",marginBottom:16,lineHeight:1.5}}>
+                We found <strong style={{color:"var(--text)"}}>{headers.length} columns</strong> and <strong style={{color:"var(--text)"}}>{rows.length} rows</strong> in your file.
+                Match each column to a Theatre4u field. We've auto-detected what we can — check and adjust below.
+              </p>
+
+              <div style={{border:"1px solid var(--border)",borderRadius:10,overflow:"hidden",marginBottom:14}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 28px 1fr",gap:0,
+                  background:"rgba(0,0,0,.25)",padding:"8px 14px",fontSize:10,
+                  textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",fontWeight:700}}>
+                  <span>Your Column</span><span/>
+                  <span>Maps To</span>
+                </div>
+                {headers.map((h,i)=>(
+                  <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 28px 1fr",
+                    alignItems:"center",gap:0,padding:"8px 14px",
+                    borderTop:"1px solid var(--border)",background:i%2===0?"transparent":"rgba(255,255,255,.02)"}}>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:600}}>{h||"(blank)"}</div>
+                      <div style={{fontSize:11,color:"var(--muted)",marginTop:1}}>
+                        e.g. {rows[0]?.[i]||"—"}
+                      </div>
+                    </div>
+                    <div style={{textAlign:"center",color:"var(--muted)",fontSize:16}}>→</div>
+                    <select value={mapping[i]||""} onChange={e=>{
+                        const v=e.target.value;
+                        setMapping(p=>{const n={...p};if(v)n[i]=v;else delete n[i];return n;});
+                      }}
+                      style={{background:"var(--bg)",border:"1px solid var(--border)",borderRadius:6,
+                        padding:"5px 8px",color:mapping[i]?"var(--text)":"var(--muted)",
+                        fontSize:12,fontFamily:"inherit",outline:"none",cursor:"pointer"}}>
+                      <option value="">— skip this column —</option>
+                      {CSV_FIELDS.map(f=>(
+                        <option key={f.key} value={f.key}>{f.label}{f.required?" *":""}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+
+              {errors.length>0&&<div style={{background:"rgba(194,24,91,.1)",border:"1px solid rgba(194,24,91,.25)",
+                borderRadius:8,padding:"10px 14px",marginBottom:12,fontSize:12,color:"var(--red)"}}>
+                {errors.map((e,i)=><div key={i}>⚠ {e}</div>)}
+              </div>}
+
+              <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                <button onClick={()=>setStep("upload")} style={{background:"none",border:"1px solid var(--border)",
+                  color:"var(--muted)",padding:"7px 16px",borderRadius:7,cursor:"pointer",fontSize:13,fontFamily:"inherit"}}>
+                  ← Back
+                </button>
+                <button onClick={buildPreview} className="btn btn-g" style={{padding:"7px 20px"}}>
+                  Preview Import →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── STEP 3: PREVIEW ── */}
+          {step==="preview" && (
+            <div>
+              <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16}}>
+                <div style={{flex:1,background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.2)",
+                  borderRadius:8,padding:"10px 14px",textAlign:"center"}}>
+                  <div style={{fontSize:22,fontWeight:800,color:"var(--green)"}}>{parsed.length}</div>
+                  <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>Items Ready</div>
+                </div>
+                {errors.length>0&&<div style={{flex:2,background:"rgba(255,167,38,.08)",border:"1px solid rgba(255,167,38,.2)",
+                  borderRadius:8,padding:"10px 14px"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#ffa726",marginBottom:4}}>⚠ {errors.length} warning{errors.length!==1?"s":""}</div>
+                  {errors.slice(0,3).map((e,i)=><div key={i} style={{fontSize:11,color:"var(--muted)"}}>{e}</div>)}
+                  {errors.length>3&&<div style={{fontSize:11,color:"var(--muted)"}}>+{errors.length-3} more…</div>}
+                </div>}
+              </div>
+
+              <div style={{border:"1px solid var(--border)",borderRadius:10,overflow:"hidden",marginBottom:16}}>
+                <div style={{overflowX:"auto",maxHeight:320}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                    <thead>
+                      <tr style={{background:"rgba(0,0,0,.3)",position:"sticky",top:0}}>
+                        {["#","Name","Category","Cond.","Qty","Location","Market","Notes"].map(h=>(
+                          <th key={h} style={{padding:"7px 10px",textAlign:"left",fontSize:10,
+                            textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",fontWeight:700,
+                            whiteSpace:"nowrap"}}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parsed.slice(0,100).map((item,i)=>{
+                        const cat=CAT[item.category]||CAT.other;
+                        return(
+                          <tr key={i} style={{borderTop:"1px solid var(--border)",
+                            background:i%2===0?"transparent":"rgba(255,255,255,.015)"}}>
+                            <td style={{padding:"6px 10px",color:"var(--muted)"}}>{i+1}</td>
+                            <td style={{padding:"6px 10px",fontWeight:600,maxWidth:160,
+                              overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</td>
+                            <td style={{padding:"6px 10px",whiteSpace:"nowrap"}}>{cat.icon} {cat.label}</td>
+                            <td style={{padding:"6px 10px",color:"var(--muted)"}}>{item.condition}</td>
+                            <td style={{padding:"6px 10px"}}>{item.qty}</td>
+                            <td style={{padding:"6px 10px",color:"var(--muted)",maxWidth:120,
+                              overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.location||"—"}</td>
+                            <td style={{padding:"6px 10px"}}>
+                              <span style={{fontSize:10,fontWeight:700,padding:"2px 6px",borderRadius:3,
+                                background:item.mkt==="Not Listed"?"rgba(255,255,255,.07)":"rgba(212,168,67,.15)",
+                                color:item.mkt==="Not Listed"?"var(--muted)":"var(--gold)"}}>{item.mkt}</span>
+                            </td>
+                            <td style={{padding:"6px 10px",color:"var(--muted)",maxWidth:140,
+                              overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.notes||"—"}</td>
+                          </tr>
+                        );
+                      })}
+                      {parsed.length>100&&(
+                        <tr><td colSpan={8} style={{padding:"8px 10px",textAlign:"center",
+                          color:"var(--muted)",fontSize:11,borderTop:"1px solid var(--border)"}}>
+                          + {parsed.length-100} more rows not shown in preview
+                        </td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div style={{display:"flex",gap:8,justifyContent:"flex-end",alignItems:"center"}}>
+                <button onClick={()=>setStep("map")} style={{background:"none",border:"1px solid var(--border)",
+                  color:"var(--muted)",padding:"7px 16px",borderRadius:7,cursor:"pointer",fontSize:13,fontFamily:"inherit"}}>
+                  ← Back
+                </button>
+                <button onClick={doImport} className="btn btn-g"
+                  style={{padding:"8px 22px",fontSize:14,fontWeight:800}} disabled={parsed.length===0||importing}>
+                  {importing
+                    ? <span style={{display:"flex",alignItems:"center",gap:8}}>
+                        <span style={{width:14,height:14,border:"2px solid rgba(255,255,255,.3)",borderTopColor:"#fff",
+                          borderRadius:"50%",animation:"spin .7s linear infinite",display:"inline-block"}}/>
+                        Importing… {progress}%
+                      </span>
+                    : `Import ${parsed.length} Item${parsed.length!==1?"s":""} →`}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── STEP 4: DONE ── */}
+          {step==="done" && result && (
+            <div style={{textAlign:"center",padding:"24px 0"}}>
+              <div style={{fontSize:56,marginBottom:16}}>{result.failed===0?"🎉":"⚠️"}</div>
+              <h3 style={{fontFamily:"var(--serif)",fontSize:24,marginBottom:8}}>
+                {result.failed===0?"Import Complete!":"Import Finished with Errors"}
+              </h3>
+              <div style={{display:"flex",gap:12,justifyContent:"center",marginBottom:20,flexWrap:"wrap"}}>
+                <div style={{background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.2)",
+                  borderRadius:10,padding:"12px 24px",textAlign:"center"}}>
+                  <div style={{fontSize:28,fontWeight:800,color:"var(--green)"}}>{result.imported}</div>
+                  <div style={{fontSize:11,color:"var(--muted)"}}>Items Imported</div>
+                </div>
+                {result.failed>0&&<div style={{background:"rgba(194,24,91,.1)",border:"1px solid rgba(194,24,91,.2)",
+                  borderRadius:10,padding:"12px 24px",textAlign:"center"}}>
+                  <div style={{fontSize:28,fontWeight:800,color:"var(--red)"}}>{result.failed}</div>
+                  <div style={{fontSize:11,color:"var(--muted)"}}>Failed</div>
+                </div>}
+              </div>
+              <p style={{color:"var(--muted)",fontSize:13,marginBottom:20}}>
+                {result.imported>0
+                  ? "Your items are now in your Inventory. You can edit any of them individually to add photos or refine details."
+                  : "Something went wrong. Please check your CSV file and try again."}
+              </p>
+              <button onClick={onClose} className="btn btn-g" style={{padding:"9px 28px"}}>
+                Go to Inventory →
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
