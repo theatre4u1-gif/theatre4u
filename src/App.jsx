@@ -645,10 +645,11 @@ function ItemForm({item,onSave,onCancel,submitId,userId}){
   );
 }
 
-function ItemDetail({item,onEdit,onDelete}){
+function ItemDetail({item,onEdit,onDelete,userId=null}){
   const cat=CAT[item.category]||CAT.other;
   const[lb,setLb]=useState(false);
   const[qr,setQr]=useState(null);
+  const[showAddToProd,setShowAddToProd]=useState(false);
   const gfx=CAT_GFX[item.category]||CAT_GFX.other;
   const mktCls=item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="Rent or Sale"?"mb-both":"mb-none";
 
@@ -721,7 +722,11 @@ function ItemDetail({item,onEdit,onDelete}){
       <div style={{display:"flex",gap:8,marginTop:16}}>
         <button className="btn btn-p btn-sm" onClick={onEdit}><span style={{width:14,height:14,display:"flex"}}>{Ic.edit}</span>Edit</button>
         <button className="btn btn-d btn-sm" onClick={()=>{if(window.confirm("Delete this item?"))onDelete(item.id)}}><span style={{width:14,height:14,display:"flex"}}>{Ic.trash}</span>Delete</button>
+        {userId && <button className="btn btn-o btn-sm" onClick={()=>setShowAddToProd(true)}>🎭 Add to Production</button>}
       </div>
+      {showAddToProd && userId && (
+        <AddToProductionPicker item={item} userId={userId} onClose={()=>setShowAddToProd(false)}/>
+      )}
     </>
   );
 }
@@ -986,8 +991,8 @@ function Inventory({items,onAdd,onEdit,onDelete,userId,plan="free",headerNote=nu
           footer={<><button className="btn btn-o" onClick={()=>setModal(null)}>Cancel</button><button className="btn btn-g" id="form-save-btn">Save Changes</button></>}>
           <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} submitId="form-save-btn" userId={userId}/>
         </Modal>)}
-      {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} onEdit={()=>setModal("e")} onDelete={id=>{onDelete(id);setModal(null);setActive(null)}}/></Modal>}
-      {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={()=>{setShowImport(false);window.location.reload();}}/>}
+      {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} onEdit={()=>setModal("e")} onDelete={id=>{onDelete(id);setModal(null);setActive(null)}}/></Modal>}
+      {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",user?.id).order("added",{ascending:false});if(data)setItems(data);}}/>}
     </div>
   </>
   );
@@ -1968,6 +1973,569 @@ function coerce(key, raw) {
   }
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PRODUCTIONS  (Show Folders)
+// ══════════════════════════════════════════════════════════════════════════════
+
+const PROD_COLORS = [
+  "#d4a843","#c2185b","#7b1fa2","#1565c0","#2e7d32",
+  "#d84315","#00838f","#4e342e","#ad1457","#546e7a",
+];
+
+const PROD_STATUSES = [
+  { key:"needed",      label:"Needed",      color:"#9b93a8" },
+  { key:"confirmed",   label:"Confirmed",   color:"#4caf50" },
+  { key:"checked_out", label:"Checked Out", color:"#42a5f5" },
+  { key:"returned",    label:"Returned",    color:"#d4a843" },
+];
+const PROD_STATUS_MAP = Object.fromEntries(PROD_STATUSES.map(s=>[s.key,s]));
+
+// ── Add-to-Production picker (shown from item detail or card) ─────────────
+function AddToProductionPicker({ item, userId, onClose }) {
+  const [productions, setProductions] = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [saving,      setSaving]      = useState(null);
+  const [done,        setDone]        = useState({});
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await SB.from("productions")
+        .select("*, production_items(item_id)")
+        .eq("org_id", userId)
+        .neq("status","closed")
+        .order("created_at", { ascending: false });
+      setProductions(data || []);
+      setLoading(false);
+    })();
+  }, [userId]);
+
+  const toggle = async (prod) => {
+    const already = prod.production_items?.some(pi => pi.item_id === item.id);
+    setSaving(prod.id);
+    if (already) {
+      await SB.from("production_items")
+        .delete()
+        .eq("production_id", prod.id)
+        .eq("item_id", item.id);
+      setDone(p => ({ ...p, [prod.id]: false }));
+    } else {
+      await SB.from("production_items")
+        .insert({ production_id: prod.id, item_id: item.id, qty_needed: 1 });
+      setDone(p => ({ ...p, [prod.id]: true }));
+    }
+    // Refresh
+    const { data } = await SB.from("productions")
+      .select("*, production_items(item_id)")
+      .eq("org_id", userId)
+      .neq("status","closed")
+      .order("created_at", { ascending: false });
+    setProductions(data || []);
+    setSaving(null);
+  };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.72)", zIndex:3000,
+      display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ width:"100%", maxWidth:400, background:"#fdf6ec",
+        border:"1px solid var(--border)", borderRadius:14, overflow:"hidden",
+        boxShadow:"0 12px 48px rgba(0,0,0,.5)", animation:"su .2s ease" }}>
+        <div style={{ padding:"14px 18px", borderBottom:"1px solid var(--border)",
+          display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div>
+            <div style={{ fontFamily:"var(--serif)", fontSize:16, fontWeight:700 }}>Add to Production</div>
+            <div style={{ fontSize:12, color:"var(--muted)", marginTop:2 }}>{item.name}</div>
+          </div>
+          <button onClick={onClose} style={{ background:"none", border:"1px solid var(--border)",
+            color:"var(--muted)", borderRadius:6, padding:"3px 9px", cursor:"pointer", fontFamily:"inherit" }}>✕</button>
+        </div>
+        <div style={{ padding:14, maxHeight:360, overflowY:"auto" }}>
+          {loading ? (
+            <div style={{ textAlign:"center", padding:24, color:"var(--muted)" }}>Loading…</div>
+          ) : productions.length === 0 ? (
+            <div style={{ textAlign:"center", padding:24 }}>
+              <div style={{ fontSize:32, marginBottom:8 }}>🎭</div>
+              <p style={{ color:"var(--muted)", fontSize:13, marginBottom:12 }}>
+                No active productions yet. Create one on the Productions page first.
+              </p>
+            </div>
+          ) : (
+            productions.map(prod => {
+              const inProd = prod.production_items?.some(pi => pi.item_id === item.id);
+              const isDone = done[prod.id] !== undefined ? done[prod.id] : inProd;
+              return (
+                <div key={prod.id} onClick={() => saving !== prod.id && toggle(prod)}
+                  style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 12px",
+                    borderRadius:8, cursor:"pointer", marginBottom:4,
+                    background: isDone ? "rgba(76,175,80,.1)" : "rgba(255,255,255,.03)",
+                    border:`1px solid ${isDone ? "rgba(76,175,80,.25)" : "var(--border)"}`,
+                    transition:"all .15s" }}>
+                  <div style={{ width:10, height:10, borderRadius:"50%",
+                    background:prod.color||"var(--gold)", flexShrink:0 }}/>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontWeight:600, fontSize:14 }}>{prod.name}</div>
+                    {prod.opening_date && (
+                      <div style={{ fontSize:11, color:"var(--muted)" }}>
+                        Opens {new Date(prod.opening_date).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ fontSize:18, flexShrink:0 }}>
+                    {saving === prod.id ? "⏳" : isDone ? "✅" : "○"}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+        <div style={{ padding:"10px 14px", borderTop:"1px solid var(--border)",
+          textAlign:"center", fontSize:12, color:"var(--muted)" }}>
+          Click a production to add or remove this item
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Production Form ────────────────────────────────────────────────────────
+function ProductionForm({ prod, onSave, onCancel }) {
+  const [f, setF] = useState(prod || {
+    name:"", show_title:"", opening_date:"", closing_date:"",
+    notes:"", color:PROD_COLORS[0], status:"planning"
+  });
+  const s = (k,v) => setF(p => ({ ...p, [k]:v }));
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+      <div className="fg2">
+        <div className="fg fu">
+          <label className="fl">Production Name *</label>
+          <input className="fi" value={f.name} onChange={e=>s("name",e.target.value)}
+            placeholder="e.g. The Wiz — Spring 2026" autoFocus/>
+        </div>
+        <div className="fg">
+          <label className="fl">Show Title</label>
+          <input className="fi" value={f.show_title||""} onChange={e=>s("show_title",e.target.value)}
+            placeholder="The Wiz"/>
+        </div>
+        <div className="fg">
+          <label className="fl">Status</label>
+          <select className="fs" value={f.status} onChange={e=>s("status",e.target.value)}>
+            <option value="planning">Planning</option>
+            <option value="active">Active</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+        <div className="fg">
+          <label className="fl">Opening Date</label>
+          <input className="fi" type="date" value={f.opening_date||""} onChange={e=>s("opening_date",e.target.value)}/>
+        </div>
+        <div className="fg">
+          <label className="fl">Closing Date</label>
+          <input className="fi" type="date" value={f.closing_date||""} onChange={e=>s("closing_date",e.target.value)}/>
+        </div>
+        <div className="fg fu">
+          <label className="fl">Color Label</label>
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:4 }}>
+            {PROD_COLORS.map(c => (
+              <div key={c} onClick={()=>s("color",c)}
+                style={{ width:28, height:28, borderRadius:"50%", background:c, cursor:"pointer",
+                  border: f.color===c ? "3px solid white" : "3px solid transparent",
+                  boxShadow: f.color===c ? `0 0 0 2px ${c}` : "none",
+                  transition:"all .15s" }}/>
+            ))}
+          </div>
+        </div>
+        <div className="fg fu">
+          <label className="fl">Notes</label>
+          <textarea className="ft" value={f.notes||""} onChange={e=>s("notes",e.target.value)}
+            placeholder="Budget notes, director's vision, special requirements…"/>
+        </div>
+      </div>
+      <div style={{ display:"flex", gap:8, justifyContent:"flex-end", paddingTop:10,
+        borderTop:"1px solid var(--border)" }}>
+        <button className="btn btn-o" onClick={onCancel}>Cancel</button>
+        <button className="btn btn-g" disabled={!f.name.trim()} onClick={()=>onSave(f)}
+          style={!f.name.trim()?{opacity:.4}:{}}>
+          {prod ? "Save Changes" : "Create Production"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Production Detail (the folder view) ────────────────────────────────────
+function ProductionDetail({ prod, allItems, userId, onEdit, onDelete, onClose }) {
+  const [prodItems, setProdItems] = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [search,    setSearch]    = useState("");
+
+  const load = useCallback(async () => {
+    const { data } = await SB.from("production_items")
+      .select("*")
+      .eq("production_id", prod.id)
+      .order("added_at");
+    setProdItems(data || []);
+    setLoading(false);
+  }, [prod.id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const updateStatus = async (piId, status) => {
+    await SB.from("production_items").update({ status }).eq("id", piId);
+    setProdItems(p => p.map(x => x.id === piId ? { ...x, status } : x));
+  };
+
+  const removeItem = async (piId) => {
+    await SB.from("production_items").delete().eq("id", piId);
+    setProdItems(p => p.filter(x => x.id !== piId));
+  };
+
+  // Join production_items with allItems
+  const enriched = prodItems.map(pi => ({
+    ...pi,
+    item: allItems.find(i => i.id === pi.item_id)
+  })).filter(pi => {
+    if (!pi.item) return false;
+    if (!search) return true;
+    return pi.item.name.toLowerCase().includes(search.toLowerCase());
+  });
+
+  // Group by category
+  const byCategory = {};
+  enriched.forEach(pi => {
+    const cat = pi.item?.category || "other";
+    if (!byCategory[cat]) byCategory[cat] = [];
+    byCategory[cat].push(pi);
+  });
+
+  const total     = prodItems.length;
+  const confirmed = prodItems.filter(p => p.status === "confirmed" || p.status === "returned").length;
+  const pct       = total > 0 ? Math.round(confirmed / total * 100) : 0;
+
+  // Days until opening
+  const daysUntil = prod.opening_date
+    ? Math.ceil((new Date(prod.opening_date) - new Date()) / 86400000)
+    : null;
+
+  return (
+    <div>
+      {/* Header strip */}
+      <div style={{ display:"flex", alignItems:"flex-start", gap:14, marginBottom:20 }}>
+        <div style={{ width:48, height:48, borderRadius:10, background:prod.color||"var(--gold)",
+          flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:24 }}>🎭</div>
+        <div style={{ flex:1 }}>
+          <div style={{ fontFamily:"var(--serif)", fontSize:20, fontWeight:700 }}>{prod.name}</div>
+          {prod.show_title && <div style={{ fontSize:12, color:"var(--muted)" }}>{prod.show_title}</div>}
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:6 }}>
+            <span style={{ fontSize:11, padding:"2px 8px", borderRadius:8, fontWeight:700,
+              background:"rgba(255,255,255,.08)", color:"var(--muted)" }}>{prod.status}</span>
+            {prod.opening_date && (
+              <span style={{ fontSize:11, padding:"2px 8px", borderRadius:8, fontWeight:700,
+                background: daysUntil !== null && daysUntil <= 14 ? "rgba(212,168,67,.2)" : "rgba(255,255,255,.08)",
+                color: daysUntil !== null && daysUntil <= 14 ? "var(--gold)" : "var(--muted)" }}>
+                {daysUntil !== null && daysUntil > 0
+                  ? `Opens in ${daysUntil} day${daysUntil!==1?"s":""}`
+                  : daysUntil === 0 ? "Opens today!"
+                  : `Opened ${new Date(prod.opening_date).toLocaleDateString()}`}
+              </span>
+            )}
+          </div>
+        </div>
+        <div style={{ display:"flex", gap:6 }}>
+          <button className="btn btn-o btn-sm" onClick={onEdit}>Edit</button>
+          <button className="btn btn-o btn-sm" style={{ color:"var(--red)" }}
+            onClick={()=>{ if(window.confirm("Delete this production?")) onDelete(prod.id); }}>
+            Delete
+          </button>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      {total > 0 && (
+        <div style={{ marginBottom:20 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", fontSize:12,
+            color:"var(--muted)", marginBottom:5 }}>
+            <span>{confirmed} of {total} items confirmed</span>
+            <span style={{ fontWeight:700, color: pct===100?"var(--green)":"var(--ink)" }}>{pct}%</span>
+          </div>
+          <div style={{ height:7, background:"rgba(255,255,255,.08)", borderRadius:4, overflow:"hidden" }}>
+            <div style={{ height:"100%", width:pct+"%", borderRadius:4,
+              background: pct===100 ? "var(--green)" : prod.color||"var(--gold)",
+              transition:"width .5s ease" }}/>
+          </div>
+        </div>
+      )}
+
+      {/* Search */}
+      {total > 3 && (
+        <div className="srch" style={{ marginBottom:14, width:"100%", maxWidth:280 }}>
+          {Ic.search}
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search items…"/>
+        </div>
+      )}
+
+      {/* Items grouped by category */}
+      {loading ? (
+        <div style={{ textAlign:"center", padding:32, color:"var(--muted)" }}>Loading…</div>
+      ) : total === 0 ? (
+        <div style={{ textAlign:"center", padding:36 }}>
+          <div style={{ fontSize:36, marginBottom:10 }}>📦</div>
+          <h3 style={{ fontFamily:"var(--serif)", marginBottom:6 }}>No Items Yet</h3>
+          <p style={{ color:"var(--muted)", fontSize:13, lineHeight:1.6 }}>
+            Open any item in Inventory and click "Add to Production" to start building your list.
+          </p>
+        </div>
+      ) : enriched.length === 0 ? (
+        <div style={{ textAlign:"center", padding:24, color:"var(--muted)" }}>No items match your search.</div>
+      ) : (
+        Object.entries(byCategory).map(([catId, items]) => {
+          const cat = CAT[catId] || CAT.other;
+          return (
+            <div key={catId} style={{ marginBottom:20 }}>
+              <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5,
+                color:cat.color, marginBottom:8, display:"flex", alignItems:"center", gap:6 }}>
+                {cat.icon} {cat.label} ({items.length})
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                {items.map(pi => {
+                  const st = PROD_STATUS_MAP[pi.status] || PROD_STATUS_MAP.needed;
+                  return (
+                    <div key={pi.id} style={{ display:"flex", alignItems:"center", gap:10,
+                      padding:"9px 12px", borderRadius:8,
+                      background:"rgba(255,255,255,.03)", border:"1px solid var(--border)" }}>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontWeight:600, fontSize:13,
+                          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                          {pi.item?.name}
+                        </div>
+                        <div style={{ fontSize:11, color:"var(--muted)", marginTop:1 }}>
+                          {pi.item?.location || pi.item?.condition || ""}
+                          {pi.qty_needed > 1 ? ` · Need ${pi.qty_needed}` : ""}
+                        </div>
+                      </div>
+                      {/* Status toggle */}
+                      <select value={pi.status}
+                        onChange={e => updateStatus(pi.id, e.target.value)}
+                        style={{ background:"var(--bg)", border:`1px solid ${st.color}40`,
+                          borderRadius:6, padding:"3px 7px", fontSize:11, fontWeight:700,
+                          color:st.color, fontFamily:"inherit", cursor:"pointer", outline:"none" }}>
+                        {PROD_STATUSES.map(s => (
+                          <option key={s.key} value={s.key}>{s.label}</option>
+                        ))}
+                      </select>
+                      <button onClick={() => removeItem(pi.id)}
+                        style={{ background:"none", border:"none", color:"var(--muted)",
+                          cursor:"pointer", fontSize:16, padding:"0 2px", lineHeight:1,
+                          display:"flex", alignItems:"center" }}>✕</button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })
+      )}
+      {prod.notes && (
+        <div style={{ marginTop:16, padding:"10px 14px", background:"rgba(255,255,255,.03)",
+          borderRadius:8, border:"1px solid var(--border)" }}>
+          <div style={{ fontSize:11, fontWeight:700, color:"var(--muted)", marginBottom:4,
+            textTransform:"uppercase", letterSpacing:1 }}>Notes</div>
+          <div style={{ fontSize:13, color:"var(--ink)", lineHeight:1.6 }}>{prod.notes}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Productions Page ───────────────────────────────────────────────────────
+function Productions({ userId, allItems }) {
+  const [productions, setProductions] = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [modal,       setModal]       = useState(null); // "new" | "edit" | "detail"
+  const [active,      setActive]      = useState(null);
+  const [filter,      setFilter]      = useState("all"); // all | planning | active | closed
+
+  const load = useCallback(async () => {
+    const { data } = await SB.from("productions")
+      .select("*, production_items(id, status)")
+      .eq("org_id", userId)
+      .order("created_at", { ascending: false });
+    setProductions(data || []);
+    setLoading(false);
+  }, [userId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const saveProd = async (form) => {
+    if (active && modal === "edit") {
+      const { data } = await SB.from("productions")
+        .update(form).eq("id", active.id).select().single();
+      if (data) setProductions(p => p.map(x => x.id === data.id ? { ...x, ...data } : x));
+    } else {
+      const { data } = await SB.from("productions")
+        .insert({ ...form, org_id: userId }).select().single();
+      if (data) setProductions(p => [data, ...p]);
+    }
+    setModal(null); setActive(null);
+  };
+
+  const deleteProd = async (id) => {
+    await SB.from("productions").delete().eq("id", id);
+    setProductions(p => p.filter(x => x.id !== id));
+    setModal(null); setActive(null);
+  };
+
+  const visible = filter === "all" ? productions : productions.filter(p => p.status === filter);
+
+  return (
+    <div style={{ position:"relative" }}>
+      <img src={usp("photo-1503095396549-807759245b35", 1400, 900)} alt="" className="page-bg-img"/>
+      <div style={{ padding:"32px 36px 0" }}>
+        <div className="hero-wrap" style={{ height:220 }}>
+          <img src={usp("photo-1460723237483-7a6dc9d0b212", 1100, 280)} alt="Productions" loading="eager"/>
+          <div className="hero-fade"/>
+          <div className="hero-body">
+            <div className="hero-eyebrow">🎭 Show Planning</div>
+            <h1 className="hero-title" style={{ fontSize:44 }}>Productions</h1>
+            <p className="hero-sub">Create a folder for each show. Track every costume, prop, and piece of gear from wishlist to opening night.</p>
+          </div>
+          <div className="hero-bar"/>
+        </div>
+      </div>
+
+      <div style={{ padding:"24px 36px 56px", position:"relative", zIndex:1 }}>
+        {/* Toolbar */}
+        <div style={{ display:"flex", flexWrap:"wrap", gap:10, marginBottom:20, alignItems:"center" }}>
+          <div className="vtog">
+            {["all","planning","active","closed"].map(f => (
+              <button key={f} className={filter===f?"on":""} onClick={()=>setFilter(f)}
+                style={{ textTransform:"capitalize" }}>{f}</button>
+            ))}
+          </div>
+          <div style={{ marginLeft:"auto" }}>
+            <button className="btn btn-g" onClick={()=>{ setActive(null); setModal("new"); }}>
+              <span style={{ width:15, height:15, display:"flex" }}>{Ic.plus}</span>
+              New Production
+            </button>
+          </div>
+        </div>
+
+        {loading ? (
+          <div style={{ textAlign:"center", padding:48, color:"var(--muted)" }}>Loading…</div>
+        ) : visible.length === 0 ? (
+          <div style={{ textAlign:"center", padding:56 }}>
+            <div style={{ fontSize:48, marginBottom:14 }}>🎭</div>
+            <h3 style={{ fontFamily:"var(--serif)", fontSize:22, marginBottom:8 }}>
+              {filter==="all" ? "No Productions Yet" : `No ${filter} productions`}
+            </h3>
+            <p style={{ color:"var(--muted)", fontSize:13, maxWidth:380, margin:"0 auto 20px", lineHeight:1.6 }}>
+              {filter==="all"
+                ? "Create a production folder for each show. Save items from your inventory to track exactly what you need."
+                : `No shows in ${filter} status.`}
+            </p>
+            {filter==="all" && (
+              <button className="btn btn-g" onClick={()=>{ setActive(null); setModal("new"); }}>
+                + Create First Production
+              </button>
+            )}
+          </div>
+        ) : (
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))", gap:14 }}>
+            {visible.map(prod => {
+              const total     = prod.production_items?.length || 0;
+              const confirmed = prod.production_items?.filter(pi =>
+                pi.status==="confirmed"||pi.status==="returned").length || 0;
+              const pct = total > 0 ? Math.round(confirmed/total*100) : 0;
+              const daysUntil = prod.opening_date
+                ? Math.ceil((new Date(prod.opening_date) - new Date()) / 86400000)
+                : null;
+              return (
+                <div key={prod.id} className="card card-p"
+                  style={{ cursor:"pointer", borderLeft:`4px solid ${prod.color||"var(--gold)"}` }}
+                  onClick={() => { setActive(prod); setModal("detail"); }}>
+                  <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10, marginBottom:10 }}>
+                    <div>
+                      <div style={{ fontFamily:"var(--serif)", fontSize:16, fontWeight:700,
+                        lineHeight:1.3 }}>{prod.name}</div>
+                      {prod.show_title && (
+                        <div style={{ fontSize:12, color:"var(--muted)", marginTop:1 }}>{prod.show_title}</div>
+                      )}
+                    </div>
+                    <span style={{ fontSize:10, padding:"3px 8px", borderRadius:8, fontWeight:800,
+                      textTransform:"uppercase", letterSpacing:.5, flexShrink:0,
+                      background: prod.status==="active" ? "rgba(76,175,80,.15)" :
+                                  prod.status==="closed" ? "rgba(255,255,255,.07)" : "rgba(212,168,67,.12)",
+                      color: prod.status==="active" ? "var(--green)" :
+                             prod.status==="closed" ? "var(--muted)" : "var(--gold)" }}>
+                      {prod.status}
+                    </span>
+                  </div>
+
+                  {/* Progress */}
+                  <div style={{ marginBottom:10 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between",
+                      fontSize:11, color:"var(--muted)", marginBottom:4 }}>
+                      <span>{total} item{total!==1?"s":""}</span>
+                      <span style={{ fontWeight:700, color:pct===100?"var(--green)":undefined }}>{pct}% confirmed</span>
+                    </div>
+                    <div style={{ height:5, background:"rgba(255,255,255,.08)", borderRadius:3, overflow:"hidden" }}>
+                      <div style={{ height:"100%", width:pct+"%", borderRadius:3,
+                        background: pct===100 ? "var(--green)" : prod.color||"var(--gold)",
+                        transition:"width .5s" }}/>
+                    </div>
+                  </div>
+
+                  {/* Dates */}
+                  <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                    {prod.opening_date && (
+                      <span style={{ fontSize:11, color:"var(--muted)" }}>
+                        📅 {daysUntil !== null && daysUntil > 0
+                          ? `Opens in ${daysUntil}d`
+                          : new Date(prod.opening_date).toLocaleDateString()}
+                      </span>
+                    )}
+                    {prod.closing_date && (
+                      <span style={{ fontSize:11, color:"var(--muted)" }}>
+                        → {new Date(prod.closing_date).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      {(modal==="new"||modal==="edit") && (
+        <Modal title={modal==="new"?"New Production":"Edit Production"}
+          onClose={()=>{ setModal(null); setActive(null); }}>
+          <ProductionForm prod={modal==="edit"?active:null}
+            onSave={saveProd}
+            onCancel={()=>{ setModal(null); setActive(null); }}/>
+        </Modal>
+      )}
+      {modal==="detail" && active && (
+        <Modal title="Production Details"
+          onClose={()=>{ setModal(null); setActive(null); load(); }}>
+          <ProductionDetail
+            prod={active}
+            allItems={allItems}
+            userId={userId}
+            onEdit={()=>setModal("edit")}
+            onDelete={deleteProd}
+            onClose={()=>{ setModal(null); setActive(null); load(); }}
+          />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 function CSVImport({ onImport, onClose, userId }) {
   const [step,    setStep]    = useState("upload");   // upload → map → preview → done
   const [headers, setHeaders] = useState([]);
@@ -2071,10 +2639,10 @@ function CSVImport({ onImport, onClose, userId }) {
   const W = { maxWidth:680, width:"100%" };
 
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.78)",zIndex:2000,
+    <div style={{position:"fixed",inset:0,background:"rgba(18,6,0,.78)",zIndex:2000,
       display:"flex",alignItems:"center",justifyContent:"center",padding:16,animation:"fi .15s ease"}}
       onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{...W,background:"var(--card)",border:"1px solid var(--border)",borderRadius:14,
+      <div style={{...W,background:"#fdf6ec",border:"1px solid var(--border)",borderRadius:14,
         maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 12px 56px rgba(0,0,0,.5)",
         animation:"su .2s ease"}}>
 
@@ -2082,7 +2650,7 @@ function CSVImport({ onImport, onClose, userId }) {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
           padding:"16px 22px",borderBottom:"1px solid var(--border)",flexShrink:0}}>
           <div>
-            <h2 style={{fontFamily:"var(--serif)",fontSize:20,marginBottom:2}}>Import from CSV</h2>
+            <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:20,marginBottom:2}}>Import from CSV</h2>
             <div style={{display:"flex",gap:12,marginTop:6}}>
               {["upload","map","preview","done"].map((s,i)=>(
                 <div key={s} style={{display:"flex",alignItems:"center",gap:5,fontSize:11,
@@ -2113,11 +2681,11 @@ function CSVImport({ onImport, onClose, userId }) {
                 borderRadius:10,padding:16}}>
                 <div style={{fontWeight:700,fontSize:13,marginBottom:6,color:"var(--gold)"}}>💡 Two ways to import</div>
                 <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
-                  <strong style={{color:"var(--text)"}}>Option A</strong> — Download our template, fill it in, upload it back.<br/>
-                  <strong style={{color:"var(--text)"}}>Option B</strong> — Upload any spreadsheet you already have. We'll help you match your columns to ours.
+                  <strong style={{color:"var(--ink)"}}>Option A</strong> — Download our template, fill it in, upload it back.<br/>
+                  <strong style={{color:"var(--ink)"}}>Option B</strong> — Upload any spreadsheet you already have. We'll help you match your columns to ours.
                 </p>
                 <button onClick={downloadTemplate} style={{background:"none",border:"1px solid var(--border)",
-                  color:"var(--text)",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:12,
+                  color:"var(--ink)",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:12,
                   fontFamily:"inherit",fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
                   ⬇ Download Template CSV
                 </button>
@@ -2131,7 +2699,7 @@ function CSVImport({ onImport, onClose, userId }) {
                 onDrop={e=>{e.preventDefault();e.currentTarget.style.borderColor="var(--border)";
                   const f=e.dataTransfer.files[0];if(f){const dt=new DataTransfer();dt.items.add(f);fileRef.current.files=dt.files;handleFile({target:{files:[f]}})}}}>
                 <div style={{fontSize:40}}>📂</div>
-                <div style={{fontFamily:"var(--serif)",fontSize:18}}>Drop your CSV here</div>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:18}}>Drop your CSV here</div>
                 <div style={{fontSize:12,color:"var(--muted)"}}>or click to browse — .csv files only</div>
                 <input ref={fileRef} type="file" accept=".csv,text/csv" hidden onChange={handleFile}/>
               </label>
@@ -2146,13 +2714,13 @@ function CSVImport({ onImport, onClose, userId }) {
           {step==="map" && (
             <div>
               <p style={{fontSize:13,color:"var(--muted)",marginBottom:16,lineHeight:1.5}}>
-                We found <strong style={{color:"var(--text)"}}>{headers.length} columns</strong> and <strong style={{color:"var(--text)"}}>{rows.length} rows</strong> in your file.
+                We found <strong style={{color:"var(--ink)"}}>{headers.length} columns</strong> and <strong style={{color:"var(--ink)"}}>{rows.length} rows</strong> in your file.
                 Match each column to a Theatre4u field. We've auto-detected what we can — check and adjust below.
               </p>
 
               <div style={{border:"1px solid var(--border)",borderRadius:10,overflow:"hidden",marginBottom:14}}>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 28px 1fr",gap:0,
-                  background:"rgba(0,0,0,.25)",padding:"8px 14px",fontSize:10,
+                  background:"rgba(18,6,0,.06)",padding:"8px 14px",fontSize:10,
                   textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",fontWeight:700}}>
                   <span>Your Column</span><span/>
                   <span>Maps To</span>
@@ -2172,8 +2740,8 @@ function CSVImport({ onImport, onClose, userId }) {
                         const v=e.target.value;
                         setMapping(p=>{const n={...p};if(v)n[i]=v;else delete n[i];return n;});
                       }}
-                      style={{background:"var(--bg)",border:"1px solid var(--border)",borderRadius:6,
-                        padding:"5px 8px",color:mapping[i]?"var(--text)":"var(--muted)",
+                      style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:6,
+                        padding:"5px 8px",color:mapping[i]?"var(--ink)":"var(--muted)",
                         fontSize:12,fontFamily:"inherit",outline:"none",cursor:"pointer"}}>
                       <option value="">— skip this column —</option>
                       {CSV_FIELDS.map(f=>(
@@ -2222,7 +2790,7 @@ function CSVImport({ onImport, onClose, userId }) {
                 <div style={{overflowX:"auto",maxHeight:320}}>
                   <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                     <thead>
-                      <tr style={{background:"rgba(0,0,0,.3)",position:"sticky",top:0}}>
+                      <tr style={{background:"rgba(18,6,0,.07)",position:"sticky",top:0}}>
                         {["#","Name","Category","Cond.","Qty","Location","Market","Notes"].map(h=>(
                           <th key={h} style={{padding:"7px 10px",textAlign:"left",fontSize:10,
                             textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",fontWeight:700,
@@ -2235,7 +2803,7 @@ function CSVImport({ onImport, onClose, userId }) {
                         const cat=CAT[item.category]||CAT.other;
                         return(
                           <tr key={i} style={{borderTop:"1px solid var(--border)",
-                            background:i%2===0?"transparent":"rgba(255,255,255,.015)"}}>
+                            background:i%2===0?"transparent":"rgba(18,6,0,.03)"}}>
                             <td style={{padding:"6px 10px",color:"var(--muted)"}}>{i+1}</td>
                             <td style={{padding:"6px 10px",fontWeight:600,maxWidth:160,
                               overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</td>
@@ -2288,7 +2856,7 @@ function CSVImport({ onImport, onClose, userId }) {
           {step==="done" && result && (
             <div style={{textAlign:"center",padding:"24px 0"}}>
               <div style={{fontSize:56,marginBottom:16}}>{result.failed===0?"🎉":"⚠️"}</div>
-              <h3 style={{fontFamily:"var(--serif)",fontSize:24,marginBottom:8}}>
+              <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:24,marginBottom:8}}>
                 {result.failed===0?"Import Complete!":"Import Finished with Errors"}
               </h3>
               <div style={{display:"flex",gap:12,justifyContent:"center",marginBottom:20,flexWrap:"wrap"}}>
@@ -2694,7 +3262,7 @@ function AuthOverlay({onAuth}){
         const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName}}});
         if(error)throw error;
         if(data.user){
-          await SB.from("orgs").insert({id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:""});
+          await SB.from("orgs").upsert({id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:""},{onConflict:"id",ignoreDuplicates:false});
           setDone(true);
         }
       } else {
@@ -2803,7 +3371,7 @@ function AuthScreen({onAuth}){
         if(error)throw error;
         if(data.user){
           // create org row
-          await SB.from("orgs").insert({id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:""});
+          await SB.from("orgs").upsert({id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:""},{onConflict:"id",ignoreDuplicates:false});
           setDone(true);
         }
       } else {
@@ -3076,15 +3644,23 @@ export default function App() {
       setAuthChk(true);
     });
     const{data:{subscription}}=SB.auth.onAuthStateChange((_,session)=>{
-      setUser(session?.user||null);
-      if(!session) { setItems([]); setOrg({name:"",type:"",email:"",phone:"",location:"",bio:""}); setLoaded(false); }
+      const u = session?.user||null;
+      setUser(u);
+      if(!session) {
+        setItems([]); setOrg({name:"",type:"",email:"",phone:"",location:"",bio:""});
+        setLoaded(false);
+      } else if(u) {
+        // Ensure data reloads whenever a new session starts
+        // (covers: email confirmation redirect, returning user, invite accept)
+        setLoaded(false);
+      }
     });
     return()=>subscription.unsubscribe();
   },[]);
 
   // ── Load data once logged in ─────────────────────────────────────────────
   useEffect(()=>{
-    if(!user) return;
+    if(!user||loaded) return;
     (async()=>{
       const{data:orgData}=await SB.from("orgs").select("*").eq("id",user.id).single();
       // Admin emails always get District plan regardless of what is stored
@@ -3181,11 +3757,12 @@ export default function App() {
     { id:"dashboard",   label:"Dashboard",   ico:Ic.home    },
     { id:"inventory",   label:"Inventory",   ico:Ic.box     },
     { id:"marketplace", label:"Marketplace", ico:Ic.store   },
+    { id:"productions", label:"Productions", ico:"🎭"       },
     { id:"reports",     label:"Reports",     ico:Ic.chart   },
     ...(plan === "district" ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
     ...(isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
   ];
-  const TITLES = { dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Marketplace", reports:"Reports", settings:"Profile", admin:"Admin Dashboard", district:"District" };
+  const TITLES = { dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Marketplace", productions:"Productions", reports:"Reports", settings:"Profile", admin:"Admin Dashboard", district:"District" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicItemId) return <PublicItemPage itemId={publicItemId} />;
@@ -3268,6 +3845,7 @@ export default function App() {
                     {n.district && <span style={{marginLeft:"auto",fontSize:9,padding:"1px 5px",background:"rgba(66,165,245,.2)",color:"#42a5f5",borderRadius:4,fontWeight:700,letterSpacing:1}}>DIST</span>}
                     {n.id==="inventory"  && items.length>0 && <span className="sb-badge">{activeSchool ? schoolItems.length : items.length}</span>}
                     {n.id==="marketplace"&& listed>0       && <span className="sb-badge">{listed}</span>}
+                    {n.id==="productions"&& <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--gold)"}}>🎭</span>}
                   </div>
                 ))}
               </nav>
@@ -3326,6 +3904,7 @@ export default function App() {
                         />
                   )}
                   {page==="marketplace" && <Marketplace items={items} org={org} plan={plan} activeSchool={activeSchool} allSchoolsMode={plan==="district"}/>}
+                  {page==="productions" && <Productions userId={user?.id} allItems={items}/>}
                   {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan}/>}
                   {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan}/>}
                   {page==="district"    && plan==="district" && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool}/>}
