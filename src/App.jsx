@@ -608,7 +608,7 @@ function ItemForm({item,onSave,onCancel,submitId,userId}){
     setUpl(true);
     const url = userId ? await uploadPhoto(file, userId) : await resizeImg(file);
     if(url) upd("img", url);
-    else alert("Photo upload failed. Please try again.");
+    if(!url){console.error("Photo upload failed"); alert("Photo upload failed — check your internet connection and try again.");}
     setUpl(false);
     if(fr.current)fr.current.value="";
   };
@@ -748,7 +748,7 @@ function Pager({total,page,per,onPage}){
 
 /* ── PAGES ─────────────────────────────────────────────────────────────────── */
 
-function Dashboard({items,org,goInventory}){
+function Dashboard({items,org,goInventory,goMarketplace}){
   const totalQty=items.reduce((s,i)=>s+(i.qty||1),0);
   const listed=items.filter(i=>i.mkt!=="Not Listed").length;
   const withImg=items.filter(i=>i.img).length;
@@ -804,7 +804,7 @@ function Dashboard({items,org,goInventory}){
           <div style={{fontSize:44,marginBottom:12}}>🏪</div>
           <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:8}}>No Listings Yet</h3>
           <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 18px"}}>When you or other programs list items for rent or sale on the Marketplace, they'll be showcased here for the whole community to discover.</p>
-          <button className="btn btn-g" onClick={()=>nav("marketplace")} style={{display:"inline-flex",alignItems:"center",gap:7}}>
+          <button className="btn btn-g" onClick={()=>goMarketplace&&goMarketplace()} style={{display:"inline-flex",alignItems:"center",gap:7}}>
             <span>Browse Marketplace</span>
           </button>
         </div>
@@ -814,7 +814,7 @@ function Dashboard({items,org,goInventory}){
           {CATS.map(cat=>{
             const count=items.filter(it=>it.category===cat.id).length;
             return(
-              <div key={cat.id} className="cat-tile" onClick={goInventory}>
+              <div key={cat.id} className="cat-tile" onClick={()=>goInventory&&goInventory()}>
                 <CatCard catId={cat.id} label={cat.label} icon={cat.icon} width="100%" height={160}>
                   <div className="cat-info"><span className="cat-emo">{cat.icon}</span><span className="cat-name">{cat.label}</span>{count>0&&<div className="cat-cnt">{count} item{count!==1?"s":""}</div>}</div>
                 </CatCard>
@@ -1073,7 +1073,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
         )}
         <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:14,alignItems:"center"}}>
           <div className="srch">{Ic.search}<input value={search} onChange={e=>setSrch(e.target.value)} placeholder="Search listings…"/></div>
-          <select style={{background:"rgba(253,246,236,.9)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"8px 11px",fontSize:14,fontWeight:700,color:"var(--text)",fontFamily:"'Raleway',sans-serif",outline:"none"}} value={catF} onChange={e=>setCatF(e.target.value)}>
+          <select style={{background:"rgba(253,246,236,.9)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"8px 11px",fontSize:14,fontWeight:700,color:"var(--ink)",fontFamily:"'Raleway',sans-serif",outline:"none"}} value={catF} onChange={e=>setCatF(e.target.value)}>
             <option value="all">All Categories</option>{CATS.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
           <div className="vtog"><button className={typeF==="all"?"on":""} onClick={()=>setTypeF("all")}>All</button><button className={typeF==="rent"?"on":""} onClick={()=>setTypeF("rent")}>Rent</button><button className={typeF==="sale"?"on":""} onClick={()=>setTypeF("sale")}>Sale</button></div>
@@ -1111,7 +1111,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
   );
 }
 
-function Reports({ items }) {
+function Reports({ items, plan="free" }) {
   const [tab,setTab] = useState("overview");
   const totalQty  = items.reduce((s,i)=>s+(i.qty||1),0);
   const catData   = CATS.map(cat=>{const ci=items.filter(i=>i.category===cat.id);return{...cat,count:ci.length,qty:ci.reduce((s,i)=>s+(i.qty||1),0),val:ci.reduce((s,i)=>s+((i.sale||0)*(i.qty||1)),0)}}).filter(c=>c.count>0);
@@ -1144,6 +1144,15 @@ function Reports({ items }) {
     const labels=items.map((i,n)=>`<div style="display:inline-block;text-align:center;padding:10px;border:1px dashed #ccc;margin:5px;width:160px;vertical-align:top"><img src="${srcs[n]||""}" width="100" height="100"/><div style="font-size:10px;font-weight:700;margin-top:5px;word-break:break-word">${i.name}</div><div style="font-size:8px;color:#888;margin-top:2px">${i.category} · ${i.id.slice(0,8)}</div></div>`).join("");
     const el=w.document.getElementById("lbl");if(el){el.outerHTML=labels;setTimeout(()=>w.print(),400);}
   };
+
+  if(plan==="free") return(
+    <div style={{padding:"40px 20px",textAlign:"center"}}>
+      <div style={{fontSize:44,marginBottom:14}}>📊</div>
+      <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:10}}>Reports is a Pro Feature</h2>
+      <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Get detailed analytics, condition reports, location breakdowns, and CSV export. Upgrade to Pro to unlock Reports.</p>
+      <UpgradePlans compact={true}/>
+    </div>
+  );
 
   return(
     <div style={{position:"relative"}}>
@@ -1288,14 +1297,14 @@ function Reports({ items }) {
 function UpgradePrompt({ reason, onClose }) {
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{background:"var(--bg2)",border:"1px solid var(--gold)",borderRadius:14,width:"100%",maxWidth:520,padding:28,boxShadow:"0 8px 48px rgba(0,0,0,.5)"}}>
+      <div style={{background:"#fdf6ec",border:"1px solid var(--gold)",borderRadius:14,width:"100%",maxWidth:520,padding:28,boxShadow:"0 8px 48px rgba(0,0,0,.4)"}}>
         <div style={{textAlign:"center",marginBottom:20}}>
           <div style={{fontSize:36,marginBottom:10}}>⭐</div>
           <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:22,marginBottom:8}}>Upgrade to Continue</h2>
-          <p style={{color:"var(--t2)",fontSize:14,lineHeight:1.6}}>{reason}</p>
+          <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.6}}>{reason}</p>
         </div>
         <UpgradePlans compact={true}/>
-        <button onClick={onClose} style={{display:"block",margin:"16px auto 0",background:"none",border:"none",color:"var(--t3)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Maybe later</button>
+        <button onClick={onClose} style={{display:"block",margin:"16px auto 0",background:"none",border:"none",color:"var(--faint)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Maybe later</button>
       </div>
     </div>
   );
@@ -1335,11 +1344,11 @@ function UpgradePlans({ compact = false }) {
   return (
     <div>
       {/* Toggle */}
-      <div style={{display:"flex",alignItems:"center",background:"var(--bg)",border:"1px solid var(--bd)",borderRadius:8,padding:3,width:"fit-content",margin:compact?"0 0 16px":"0 auto 20px"}}>
-        <button onClick={()=>setBilling("monthly")} style={{background:billing==="monthly"?"var(--gold)":"transparent",color:billing==="monthly"?"#1a0f00":"var(--t2)",border:"none",borderRadius:5,padding:"6px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .2s"}}>
+      <div style={{display:"flex",alignItems:"center",background:"var(--parch)",border:"1px solid var(--border)",borderRadius:8,padding:3,width:"fit-content",margin:compact?"0 0 16px":"0 auto 20px"}}>
+        <button onClick={()=>setBilling("monthly")} style={{background:billing==="monthly"?"var(--gold)":"transparent",color:billing==="monthly"?"#1a0f00":"var(--muted)",border:"none",borderRadius:5,padding:"6px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .2s"}}>
           Monthly
         </button>
-        <button onClick={()=>setBilling("annual")} style={{background:billing==="annual"?"var(--gold)":"transparent",color:billing==="annual"?"#1a0f00":"var(--t2)",border:"none",borderRadius:5,padding:"6px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .2s",display:"flex",alignItems:"center",gap:6}}>
+        <button onClick={()=>setBilling("annual")} style={{background:billing==="annual"?"var(--gold)":"transparent",color:billing==="annual"?"#1a0f00":"var(--muted)",border:"none",borderRadius:5,padding:"6px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .2s",display:"flex",alignItems:"center",gap:6}}>
           Annual <span style={{fontSize:10,padding:"1px 6px",background:billing==="annual"?"rgba(0,0,0,.15)":"rgba(212,168,67,.15)",color:billing==="annual"?"#1a0f00":"var(--gold)",borderRadius:9,fontWeight:700}}>Save 17%</span>
         </button>
       </div>
@@ -1379,7 +1388,7 @@ function UpgradePlans({ compact = false }) {
           );
         })}
       </div>
-      <p style={{textAlign:compact?"left":"center",marginTop:12,fontSize:11.5,color:"var(--t3)"}}>All paid plans include a 14-day free trial · No credit card required to start · Cancel any time</p>
+      <p style={{textAlign:compact?"left":"center",marginTop:12,fontSize:11.5,color:"var(--faint)"}}>All paid plans include a 14-day free trial · No credit card required to start · Cancel any time</p>
     </div>
   );
 }
@@ -1718,7 +1727,9 @@ function AdminDashboard({ currentUser }) {
     if (error) { setLoading(false); return; }
     setOrgs(orgData || []);
     // Load item counts per org
-    const { data: itemData } = await SB.from("items").select("org_id");
+    // Use aggregate count approach — only counts items each org owns
+    // Admin can still see counts via the org ownership chain
+    const { data: itemData } = await SB.from("items").select("org_id").neq("mkt","Not Listed");
     const c = {};
     (itemData || []).forEach(i => { c[i.org_id] = (c[i.org_id] || 0) + 1; });
     setCounts(c);
@@ -2044,7 +2055,7 @@ function AddToProductionPicker({ item, userId, onClose }) {
         <div style={{ padding:"14px 18px", borderBottom:"1px solid var(--border)",
           display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div>
-            <div style={{ fontFamily:"var(--serif)", fontSize:16, fontWeight:700 }}>Add to Production</div>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700 }}>Add to Production</div>
             <div style={{ fontSize:12, color:"var(--muted)", marginTop:2 }}>{item.name}</div>
           </div>
           <button onClick={onClose} style={{ background:"none", border:"1px solid var(--border)",
@@ -2319,7 +2330,7 @@ function ProductionDetail({ prod, allItems, userId, onEdit, onDelete, onClose })
                       {/* Status toggle */}
                       <select value={pi.status}
                         onChange={e => updateStatus(pi.id, e.target.value)}
-                        style={{ background:"var(--bg)", border:`1px solid ${st.color}40`,
+                        style={{ background:"var(--parch)", border:`1px solid ${st.color}40`,
                           borderRadius:6, padding:"3px 7px", fontSize:11, fontWeight:700,
                           color:st.color, fontFamily:"inherit", cursor:"pointer", outline:"none" }}>
                         {PROD_STATUSES.map(s => (
@@ -2428,7 +2439,7 @@ function Productions({ userId, allItems }) {
         ) : visible.length === 0 ? (
           <div style={{ textAlign:"center", padding:56 }}>
             <div style={{ fontSize:48, marginBottom:14 }}>🎭</div>
-            <h3 style={{ fontFamily:"var(--serif)", fontSize:22, marginBottom:8 }}>
+            <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:8 }}>
               {filter==="all" ? "No Productions Yet" : `No ${filter} productions`}
             </h3>
             <p style={{ color:"var(--muted)", fontSize:13, maxWidth:380, margin:"0 auto 20px", lineHeight:1.6 }}>
@@ -2458,7 +2469,7 @@ function Productions({ userId, allItems }) {
                   onClick={() => { setActive(prod); setModal("detail"); }}>
                   <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10, marginBottom:10 }}>
                     <div>
-                      <div style={{ fontFamily:"var(--serif)", fontSize:16, fontWeight:700,
+                      <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700,
                         lineHeight:1.3 }}>{prod.name}</div>
                       {prod.show_title && (
                         <div style={{ fontSize:12, color:"var(--muted)", marginTop:1 }}>{prod.show_title}</div>
@@ -2658,7 +2669,7 @@ function CSVImport({ onImport, onClose, userId }) {
                   fontWeight:step===s?700:400}}>
                   <div style={{width:18,height:18,borderRadius:"50%",display:"flex",alignItems:"center",
                     justifyContent:"center",fontSize:9,fontWeight:800,
-                    background:step===s?"var(--gold)":["upload","map","preview","done"].indexOf(step)>i?"var(--green)":"rgba(255,255,255,.1)",
+                    background:step===s?"var(--gold)":["upload","map","preview","done"].indexOf(step)>i?"var(--green)":"rgba(18,6,0,.1)",
                     color:step===s||["upload","map","preview","done"].indexOf(step)>i?"#1a0f00":"var(--muted)"}}>
                     {["upload","map","preview","done"].indexOf(step)>i?"✓":i+1}
                   </div>
@@ -2903,7 +2914,7 @@ function Settings({ org, setOrg, onSeed, user, items, setItems, plan="free", use
           <div className="hero-fade"/>
           <div className="hero-body">
             <div className="hero-eyebrow">⚙️ Configuration</div>
-            <h1 className="hero-title" style={{fontSize:44}}>Settings</h1>
+            <h1 className="hero-title" style={{fontSize:44}}>Profile</h1>
             <p className="hero-sub">{f.name||"Your program"} — manage your profile and data.</p>
           </div>
           <div className="hero-bar"/>
@@ -3070,7 +3081,7 @@ function LandingPage({onSignIn, onSignUp}){
     {n:"01",title:<>Track <em>every</em> item</>,body:"Costumes, props, lighting rigs, audio gear, scripts — every item catalogued with photos, condition notes, storage locations, and tags.",bullets:["Up to 5 photos per item","Custom tags and notes","QR code label per item","Exact storage location tracking"],demo:(
       <div className="lpf-demo">
         {[{ico:"👗",name:"Victorian Ball Gown",loc:"Closet A",cond:"Good",c:"rgba(76,175,80,.12)",t:"#4caf50"},{ico:"🎙️",name:"Shure SM58 Wireless",loc:"Sound Booth",cond:"Excellent",c:"rgba(66,165,245,.12)",t:"#42a5f5"},{ico:"💡",name:"LED Par Can RGBW",loc:"Lighting Store",cond:"New",c:"rgba(76,175,80,.12)",t:"#4caf50"}].map(r=>(
-          <div key={r.name} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"var(--bg)",borderRadius:6,marginBottom:7,border:"1px solid var(--bd)"}}>
+          <div key={r.name} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"var(--parch)",borderRadius:6,marginBottom:7,border:"1px solid var(--border)"}}>
             <span style={{fontSize:20}}>{r.ico}</span>
             <div style={{flex:1,minWidth:0}}><div style={{fontWeight:600,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</div><div style={{fontSize:10,color:"var(--t3)"}}>{r.loc}</div></div>
             <span style={{fontSize:10,padding:"2px 7px",background:r.c,color:r.t,borderRadius:10,flexShrink:0}}>{r.cond}</span>
@@ -3089,7 +3100,7 @@ function LandingPage({onSignIn, onSignUp}){
     {n:"03",title:<>The theatre <em>marketplace</em></>,body:"List your items for rent or sale. Other programs can browse and contact you. Turn idle inventory into income — or find what you need for your next production.",bullets:["Set rental price per week","Or list for outright sale","Filter by category and type","Connect with nearby programs"],demo:(
       <div className="lpf-demo">
         {[{ico:"🪑",name:"Wooden Throne Chair",badge:"For Rent",price:"$30/wk",bc:"rgba(66,165,245,.14)",tc:"#42a5f5"},{ico:"🌫️",name:"Fog Machine 1000W",badge:"For Rent",price:"$20/wk",bc:"rgba(66,165,245,.14)",tc:"#42a5f5"},{ico:"📜",name:"Romeo & Juliet Scripts (30)",badge:"For Sale",price:"$5 ea",bc:"rgba(76,175,80,.14)",tc:"#4caf50"}].map(r=>(
-          <div key={r.name} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"var(--bg)",borderRadius:6,marginBottom:7,border:"1px solid var(--bd)"}}>
+          <div key={r.name} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"var(--parch)",borderRadius:6,marginBottom:7,border:"1px solid var(--border)"}}>
             <span style={{fontSize:20}}>{r.ico}</span>
             <div style={{flex:1,minWidth:0}}><div style={{fontWeight:600,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</div><span style={{fontSize:10,padding:"1px 6px",background:r.bc,color:r.tc,borderRadius:8}}>{r.badge}</span></div>
             <span style={{fontSize:12,fontWeight:700,color:"var(--gold)",flexShrink:0}}>{r.price}</span>
@@ -3255,7 +3266,11 @@ function AuthOverlay({onAuth}){
   const close=()=>{setVisible(false);setErr("");setEmail("");setPass("");setOrgName("");setDone(false);};
 
   const submit=async()=>{
-    setErr("");setLoading(true);
+    setErr("");
+    if(!email.trim()){setErr("Please enter your email address.");return;}
+    if(!pass){setErr("Please enter a password.");return;}
+    if(mode==="signup"&&pass.length<6){setErr("Password must be at least 6 characters.");return;}
+    setLoading(true);
     try{
       if(mode==="signup"){
         if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
@@ -3277,8 +3292,9 @@ function AuthOverlay({onAuth}){
 
   const resetPass=async()=>{
     if(!email){setErr("Enter your email above first.");return;}
-    await SB.auth.resetPasswordForEmail(email,{redirectTo:"https://theatre4u.org"});
-    setErr("Password reset email sent — check your inbox.");
+    const{error:re}=await SB.auth.resetPasswordForEmail(email,{redirectTo:"https://theatre4u.org"});
+    if(re){setErr("Could not send reset email: "+re.message);return;}
+    setErr("✓ Password reset email sent — check your inbox.");
   };
 
   const overlayStyle={position:"fixed",inset:0,background:"rgba(0,0,0,.82)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(4px)"};
@@ -3363,16 +3379,24 @@ function AuthScreen({onAuth}){
   const[legal,setLegal]=useState(null);
 
   const submit=async()=>{
-    setErr("");setLoading(true);
+    setErr("");
+    if(!email.trim()){setErr("Please enter your email address.");return;}
+    if(!pass){setErr("Please enter a password.");return;}
+    if(mode==="signup"&&pass.length<6){setErr("Password must be at least 6 characters.");return;}
+    setLoading(true);
     try{
       if(mode==="signup"){
         if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
         const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName}}});
         if(error)throw error;
         if(data.user){
-          // create org row
           await SB.from("orgs").upsert({id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:""},{onConflict:"id",ignoreDuplicates:false});
-          setDone(true);
+          if(data.session){
+            // Email confirmation is OFF — user is already logged in
+            if(typeof onAuth==="function") onAuth(data.user);
+          } else {
+            setDone(true);
+          }
         }
       } else {
         const{data,error}=await SB.auth.signInWithPassword({email,password:pass});
@@ -3385,8 +3409,9 @@ function AuthScreen({onAuth}){
 
   const resetPass=async()=>{
     if(!email){setErr("Enter your email above first.");return;}
-    await SB.auth.resetPasswordForEmail(email,{redirectTo:"https://theatre4u.org"});
-    setErr("Password reset email sent — check your inbox.");
+    const{error:re}=await SB.auth.resetPasswordForEmail(email,{redirectTo:"https://theatre4u.org"});
+    if(re){setErr("Could not send reset email: "+re.message);return;}
+    setErr("✓ Password reset email sent — check your inbox.");
   };
 
   if(done) return(
@@ -3890,7 +3915,7 @@ export default function App() {
                   <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
                 </div>
               : <div className="fin">
-                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} goInventory={()=>nav("inventory")}/>}
+                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")}/>}
                   {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
