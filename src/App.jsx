@@ -619,7 +619,7 @@ function ItemForm({item,onSave,onCancel,submitId,userId}){
       <div className="fg"><label className="fl">Category</label><select className="fs" value={f.category} onChange={e=>upd("category",e.target.value)}>{CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</select></div>
       <div className="fg"><label className="fl">Condition</label><select className="fs" value={f.condition} onChange={e=>upd("condition",e.target.value)}>{CONDS.map(c=><option key={c}>{c}</option>)}</select></div>
       <div className="fg"><label className="fl">Size</label><select className="fs" value={f.size} onChange={e=>upd("size",e.target.value)}>{SIZES.map(s=><option key={s}>{s}</option>)}</select></div>
-      <div className="fg"><label className="fl">Quantity</label><input className="fi" type="number" min="0" value={f.qty} onChange={e=>upd("qty",parseInt(e.target.value)||0)}/></div>
+      <div className="fg"><label className="fl">Quantity</label><input className="fi" type="number" min="0" step="1" placeholder="1" value={f.qty||""} onChange={e=>upd("qty",parseInt(e.target.value)||0)}/></div>
       <div className="fg"><label className="fl">Availability</label><select className="fs" value={f.avail} onChange={e=>upd("avail",e.target.value)}>{AVAIL.map(a=><option key={a}>{a}</option>)}</select></div>
       <div className="fg"><label className="fl">Location</label><input className="fi" value={f.location} onChange={e=>upd("location",e.target.value)} placeholder="e.g. Costume Closet A"/></div>
       <div className="fg fu sdiv">
@@ -638,8 +638,8 @@ function ItemForm({item,onSave,onCancel,submitId,userId}){
       <div className="fg fu sdiv"><div className="slbl">🏪 Marketplace</div></div>
       <div className="fg"><label className="fl">Listing Status</label><select className="fs" value={f.mkt} onChange={e=>upd("mkt",e.target.value)}>{MKT.map(s=><option key={s}>{s}</option>)}</select></div>
       <div className="fg"/>
-      {showRent&&<div className="fg"><label className="fl">Rental / week ($)</label><input className="fi" type="number" min="0" step="0.01" value={f.rent} onChange={e=>upd("rent",parseFloat(e.target.value)||0)}/></div>}
-      {showSale&&<div className="fg"><label className="fl">Sale Price ($)</label><input className="fi" type="number" min="0" step="0.01" value={f.sale} onChange={e=>upd("sale",parseFloat(e.target.value)||0)}/></div>}
+      {showRent&&<div className="fg"><label className="fl">Rental / week ($)</label><input className="fi" type="number" min="0" step="any" placeholder="e.g. 25" value={f.rent||""} onChange={e=>upd("rent",parseFloat(e.target.value)||0)}/></div>}
+      {showSale&&<div className="fg"><label className="fl">Sale Price ($)</label><input className="fi" type="number" min="0" step="any" placeholder="e.g. 50" value={f.sale||""} onChange={e=>upd("sale",parseFloat(e.target.value)||0)}/></div>}
 
     </div>
   );
