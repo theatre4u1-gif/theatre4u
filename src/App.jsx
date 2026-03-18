@@ -1465,7 +1465,7 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
       clearTimeout(timeout);
       const result = await res.json();
       if (result.success) {
-        setMsg("✓ Invite sent to " + invEmail);
+        setMsg("✓ Invite created for " + invEmail + " — check the Invites tab to copy the link if email doesn't arrive.");
         setInvEmail(""); setInvSchool("");
         setShowInvite(false);
         load();
@@ -1643,7 +1643,13 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {invites.map(inv => (
+                  {invites.map(inv => {
+                    const inviteUrl = `https://theatre4u.org?invite=${inv.token}`;
+                    const copyLink = () => {
+                      navigator.clipboard.writeText(inviteUrl);
+                      alert("Invite link copied! Send it to " + inv.email);
+                    };
+                    return (
                     <tr key={inv.id} style={{ borderTop: "1px solid var(--border)" }}>
                       <td style={{ padding: "9px 14px", fontSize: 13 }}>{inv.email}</td>
                       <td style={{ padding: "9px 14px", fontSize: 13, color: "var(--muted)" }}>{inv.school_name || "—"}</td>
@@ -1658,13 +1664,18 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
                         {new Date(inv.created_at).toLocaleDateString()}
                       </td>
                       <td style={{ padding: "9px 14px" }}>
-                        {inv.status === "pending" && (
-                          <button className="btn btn-o btn-sm" style={{ fontSize: 11, color: "var(--red)" }}
-                            onClick={() => revokeInvite(inv.id)}>Revoke</button>
-                        )}
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          {inv.status === "pending" && (<>
+                            <button className="btn btn-o btn-sm" style={{ fontSize: 11 }}
+                              onClick={copyLink}>📋 Copy Link</button>
+                            <button className="btn btn-o btn-sm" style={{ fontSize: 11, color: "var(--red)" }}
+                              onClick={() => revokeInvite(inv.id)}>Revoke</button>
+                          </>)}
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             )}
