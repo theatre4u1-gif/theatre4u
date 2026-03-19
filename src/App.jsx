@@ -1008,7 +1008,7 @@ const STATE_NAMES = {AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"Cal
 // Free zip code lookup — no API key needed
 async function zipToCoords(zip) {
   try {
-    const res = await fetch(\`https://api.zippopotam.us/us/\${zip}\`);
+    const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
     if (!res.ok) return null;
     const d = await res.json();
     const place = d.places?.[0];
@@ -1177,7 +1177,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
               <div style={{display:"flex",gap:6}}>
                 <input
                   value={zipInput}
-                  onChange={e=>setZipInput(e.target.value.replace(/\D/g,"").slice(0,5))}
+                  onChange={e=>setZipInput(e.target.value.replace(/[^0-9]/g,"").slice(0,5))}
                   onKeyDown={e=>e.key==="Enter"&&applyZip(zipInput)}
                   placeholder="e.g. 92648"
                   style={{width:110,background:"var(--parch)",border:"1.5px solid var(--border)",borderRadius:6,padding:"7px 10px",fontSize:14,fontFamily:"'Raleway',sans-serif",color:"var(--ink)",outline:"none"}}
@@ -3158,7 +3158,7 @@ function Settings({ org, setOrg, onSeed, user, items, setItems, plan="free", use
             </div>
             <div className="fg">
               <label className="fl">Zip Code</label>
-              <input className="fi" value={f.zipcode||""} onChange={e=>upd("zipcode",e.target.value.replace(/\D/g,"").slice(0,5))} placeholder="e.g. 92648" maxLength={5}/>
+              <input className="fi" value={f.zipcode||""} onChange={e=>upd("zipcode",e.target.value.replace(/[^0-9]/g,"").slice(0,5))} placeholder="e.g. 92648" maxLength={5}/>
               <div style={{fontSize:11,color:"var(--muted)",marginTop:3}}>Used to show your listings in location searches</div>
             </div>
             <div className="fg fu"><label className="fl">About Your Program</label><textarea className="ft" value={f.bio||""} onChange={e=>upd("bio",e.target.value)} placeholder="Tell others about your program…"/></div>
