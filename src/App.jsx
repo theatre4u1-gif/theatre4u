@@ -1002,44 +1002,146 @@ function Inventory({items,onAdd,onEdit,onDelete,userId,plan="free",headerNote=nu
   </>
   );
 }
+const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY","DC"];
+const STATE_NAMES = {AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",DE:"Delaware",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming",DC:"Washington DC"};
+
+// Free zip code lookup — no API key needed
+async function zipToCoords(zip) {
+  try {
+    const res = await fetch(\`https://api.zippopotam.us/us/\${zip}\`);
+    if (!res.ok) return null;
+    const d = await res.json();
+    const place = d.places?.[0];
+    if (!place) return null;
+    return {
+      lat: parseFloat(place.latitude),
+      lng: parseFloat(place.longitude),
+      city: place["place name"],
+      state: place["state abbreviation"],
+    };
+  } catch { return null; }
+}
+
+// Haversine distance in miles (client-side for instant filtering)
+function milesBetween(lat1, lng1, lat2, lng2) {
+  const R = 3958.8;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 +
+    Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
+    Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
 function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=false}){
-  const[search,setSrch]=useState("");const[catF,setCatF]=useState("all");
-  const[typeF,setTypeF]=useState("all");const[pg,setPg]=useState(1);
-  const[viewing,setViewing]=useState(null);
-  const[districtItems,setDistrictItems]=useState([]);
-  const[districtOrgs,setDistrictOrgs]=useState({});
-  const[mktTab,setMktTab]=useState("own"); // "own" | "district"
+  const[search,   setSrch]    = useState("");
+  const[catF,     setCatF]    = useState("all");
+  const[typeF,    setTypeF]   = useState("all");
+  const[mktTab,   setMktTab]  = useState("browse"); // "browse" | "mine"
+  const[pg,       setPg]      = useState(1);
+  const[viewing,  setViewing] = useState(null);
+  // Location search
+  const[zipInput, setZipInput]= useState(org?.zipcode||"");
+  const[radius,   setRadius]  = useState("25");   // miles or "state" or "all"
+  const[userCoords,setUserCoords]=useState(null); // {lat,lng,state}
+  const[geoLoading,setGeoLoading]=useState(false);
+  const[geoErr,   setGeoErr]  = useState("");
+  // Cross-org listings
+  const[allListings, setAllListings] = useState([]); // [{...item, org_name, org_state, org_lat, org_lng, org_zipcode}]
+  const[loadingAll,  setLoadingAll]  = useState(false);
   const PP=16;
   const mktCls=m=>m==="For Rent"?"mb-rent":m==="For Sale"?"mb-sale":"mb-both";
 
-  // Load all schools' items when in district mode
-  useEffect(()=>{
-    if(!allSchoolsMode||mktTab!=="district") return;
-    (async()=>{
-      // Get all orgs in same district as current user
-      const{data:myOrg}=await SB.from("orgs").select("district_id").eq("id",(await SB.auth.getUser()).data.user?.id).single();
-      if(!myOrg?.district_id) return;
-      const{data:schools}=await SB.from("orgs").select("id,name").eq("district_id",myOrg.district_id);
-      if(!schools?.length) return;
-      const orgMap={};schools.forEach(s=>orgMap[s.id]=s.name);
-      setDistrictOrgs(orgMap);
-      const ids=schools.map(s=>s.id);
-      const{data:schoolItems}=await SB.from("items").select("*").in("org_id",ids).neq("mkt","Not Listed").eq("avail","In Stock");
-      setDistrictItems(schoolItems||[]);
-    })();
-  },[allSchoolsMode,mktTab]);
+  // Load ALL marketplace listings from ALL orgs (cross-org)
+  const loadAllListings = useCallback(async()=>{
+    setLoadingAll(true);
+    // Join items with org info in one query
+    const{data,error}=await SB.from("items")
+      .select("*, orgs(name,location,state,zipcode,lat,lng,city)")
+      .neq("mkt","Not Listed")
+      .eq("avail","In Stock")
+      .order("added",{ascending:false});
+    if(!error&&data){
+      const flat=data.map(i=>({
+        ...i,
+        org_name:    i.orgs?.name     || "Unknown Program",
+        org_location:i.orgs?.location || "",
+        org_state:   i.orgs?.state    || "",
+        org_zipcode: i.orgs?.zipcode  || "",
+        org_lat:     i.orgs?.lat      || null,
+        org_lng:     i.orgs?.lng      || null,
+      }));
+      setAllListings(flat);
+    }
+    setLoadingAll(false);
+  },[]);
 
-  const sourceItems = mktTab==="district" ? districtItems : items;
-  const listed=useMemo(()=>{
-    let f=sourceItems.filter(i=>i.mkt!=="Not Listed"&&i.avail==="In Stock");
-    if(search){const q=search.toLowerCase();f=f.filter(i=>i.name.toLowerCase().includes(q))}
-    if(catF!=="all")f=f.filter(i=>i.category===catF);
-    if(typeF==="rent")f=f.filter(i=>i.mkt.includes("Rent"));
-    if(typeF==="sale")f=f.filter(i=>i.mkt.includes("Sale"));
+  useEffect(()=>{ if(plan!=="free") loadAllListings(); },[plan,loadAllListings]);
+
+  // Geocode zip when user clicks search or changes zip
+  const applyZip = useCallback(async(zip)=>{
+    if(!zip||zip.length<5){setUserCoords(null);return;}
+    setGeoLoading(true);setGeoErr("");
+    const coords=await zipToCoords(zip.trim());
+    if(coords){ setUserCoords(coords); }
+    else { setGeoErr("Zip code not found. Try again."); setUserCoords(null); }
+    setGeoLoading(false);
+  },[]);
+
+  // Pre-load org zip if set
+  useEffect(()=>{ if(org?.zipcode) applyZip(org.zipcode); },[org?.zipcode]);
+
+  // Filter logic
+  const filtered = useMemo(()=>{
+    // "mine" tab = own items only
+    const source = mktTab==="mine"
+      ? allListings.filter(i=>i.org_id===org?.id)
+      : allListings;
+
+    let f=source;
+
+    // Text search
+    if(search){
+      const q=search.toLowerCase();
+      f=f.filter(i=>i.name.toLowerCase().includes(q)||
+        (i.notes||"").toLowerCase().includes(q)||
+        (i.org_name||"").toLowerCase().includes(q)||
+        (i.tags||[]).some(t=>t.includes(q)));
+    }
+
+    // Category
+    if(catF!=="all") f=f.filter(i=>i.category===catF);
+
+    // Type
+    if(typeF==="rent") f=f.filter(i=>i.mkt.includes("Rent"));
+    if(typeF==="sale") f=f.filter(i=>i.mkt.includes("Sale"));
+
+    // Location filter
+    if(radius==="state"&&userCoords?.state){
+      f=f.filter(i=>i.org_state===userCoords.state||!i.org_state);
+    } else if(radius!=="all"&&userCoords?.lat&&userCoords?.lng){
+      const miles=parseFloat(radius);
+      f=f.filter(i=>{
+        if(!i.org_lat||!i.org_lng) return true; // orgs without coords shown
+        return milesBetween(userCoords.lat,userCoords.lng,i.org_lat,i.org_lng)<=miles;
+      });
+    }
+
+    // Sort: own items first, then by distance if we have coords
+    if(userCoords?.lat&&radius!=="all"&&radius!=="state"){
+      f=[...f].sort((a,b)=>{
+        const da=a.org_lat?milesBetween(userCoords.lat,userCoords.lng,a.org_lat,a.org_lng):9999;
+        const db=b.org_lat?milesBetween(userCoords.lat,userCoords.lng,b.org_lat,b.org_lng):9999;
+        return da-db;
+      });
+    }
+
     return f;
-  },[sourceItems,search,catF,typeF]);
-  const paged=useMemo(()=>listed.slice((pg-1)*PP,pg*PP),[listed,pg]);
-  useEffect(()=>setPg(1),[search,catF,typeF,mktTab]);
+  },[allListings,mktTab,search,catF,typeF,radius,userCoords,org?.id]);
+
+  const paged=useMemo(()=>filtered.slice((pg-1)*PP,pg*PP),[filtered,pg]);
+  useEffect(()=>setPg(1),[search,catF,typeF,radius,userCoords,mktTab]);
+
   if(plan==="free") return(
     <div style={{padding:"40px 20px",textAlign:"center"}}>
       <div style={{fontSize:44,marginBottom:14}}>🏪</div>
@@ -1064,54 +1166,147 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
           <div className="hero-bar"/>
         </div>
       </div>
+
       <div style={{padding:"24px 36px 56px",position:"relative",zIndex:1}}>
-        {/* District tabs */}
-        {allSchoolsMode && (
-          <div className="tabs" style={{marginBottom:16}}>
-            <button className={`tab ${mktTab==="own"?"on":""}`} onClick={()=>setMktTab("own")}>
-              🏫 My School's Listings
-            </button>
-            <button className={`tab ${mktTab==="district"?"on":""}`} onClick={()=>setMktTab("district")}>
-              🏢 All District Schools
-            </button>
+
+        {/* ── Location Search Bar ── */}
+        <div className="card card-p" style={{marginBottom:18,padding:"14px 18px"}}>
+          <div style={{display:"flex",flexWrap:"wrap",gap:10,alignItems:"flex-end"}}>
+            <div style={{flex:"0 0 auto"}}>
+              <label style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>📍 Your Zip Code</label>
+              <div style={{display:"flex",gap:6}}>
+                <input
+                  value={zipInput}
+                  onChange={e=>setZipInput(e.target.value.replace(/\D/g,"").slice(0,5))}
+                  onKeyDown={e=>e.key==="Enter"&&applyZip(zipInput)}
+                  placeholder="e.g. 92648"
+                  style={{width:110,background:"var(--parch)",border:"1.5px solid var(--border)",borderRadius:6,padding:"7px 10px",fontSize:14,fontFamily:"'Raleway',sans-serif",color:"var(--ink)",outline:"none"}}
+                  maxLength={5}
+                />
+                <button className="btn btn-g btn-sm" onClick={()=>applyZip(zipInput)} disabled={geoLoading}>
+                  {geoLoading?"…":"Search"}
+                </button>
+              </div>
+              {geoErr&&<div style={{fontSize:11,color:"var(--red)",marginTop:3}}>{geoErr}</div>}
+              {userCoords&&<div style={{fontSize:11,color:"var(--green)",marginTop:3}}>📍 {userCoords.city}, {userCoords.state}</div>}
+            </div>
+            <div style={{flex:"0 0 auto"}}>
+              <label style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Radius</label>
+              <div style={{display:"flex",gap:4}}>
+                {[["10","10 mi"],["25","25 mi"],["50","50 mi"],["100","100 mi"],["state","Statewide"],["all","All"]].map(([v,l])=>(
+                  <button key={v}
+                    onClick={()=>setRadius(v)}
+                    style={{padding:"6px 10px",fontSize:12,fontWeight:700,borderRadius:6,cursor:"pointer",fontFamily:"'Raleway',sans-serif",border:"1.5px solid",
+                      background:radius===v?"var(--ink)":"transparent",
+                      color:radius===v?"var(--gold)":"var(--muted)",
+                      borderColor:radius===v?"var(--ink)":"var(--border)",
+                      transition:"all .15s"}}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{flex:1,minWidth:180}}>
+              <label style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Search Items</label>
+              <div className="srch" style={{width:"100%",maxWidth:"100%"}}>
+                {Ic.search}
+                <input value={search} onChange={e=>setSrch(e.target.value)} placeholder="Costumes, props, lighting…" style={{width:"100%"}}/>
+              </div>
+            </div>
           </div>
-        )}
-        <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:14,alignItems:"center"}}>
-          <div className="srch">{Ic.search}<input value={search} onChange={e=>setSrch(e.target.value)} placeholder="Search listings…"/></div>
-          <select style={{background:"rgba(253,246,236,.9)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"8px 11px",fontSize:14,fontWeight:700,color:"var(--ink)",fontFamily:"'Raleway',sans-serif",outline:"none"}} value={catF} onChange={e=>setCatF(e.target.value)}>
-            <option value="all">All Categories</option>{CATS.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}
-          </select>
-          <div className="vtog"><button className={typeF==="all"?"on":""} onClick={()=>setTypeF("all")}>All</button><button className={typeF==="rent"?"on":""} onClick={()=>setTypeF("rent")}>Rent</button><button className={typeF==="sale"?"on":""} onClick={()=>setTypeF("sale")}>Sale</button></div>
+          {userCoords&&radius!=="all"&&radius!=="state"&&(
+            <div style={{marginTop:8,fontSize:12,color:"var(--muted)"}}>
+              Showing listings within <strong>{radius} miles</strong> of {userCoords.city}, {userCoords.state}
+              {!userCoords.lat&&" — add your zip to Profile for precise distance filtering"}
+            </div>
+          )}
+          {radius==="state"&&userCoords?.state&&(
+            <div style={{marginTop:8,fontSize:12,color:"var(--muted)"}}>
+              Showing listings in <strong>{STATE_NAMES[userCoords.state]||userCoords.state}</strong>
+            </div>
+          )}
         </div>
-        <div style={{fontSize:13,fontWeight:700,color:"var(--faint)",marginBottom:12}}>{listed.length} listing{listed.length!==1?"s":""}</div>
+
+        {/* ── Tabs + Filters ── */}
+        <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:14,alignItems:"center"}}>
+          <div className="vtog">
+            <button className={mktTab==="browse"?"on":""} onClick={()=>setMktTab("browse")}>🌐 Browse All</button>
+            <button className={mktTab==="mine"?"on":""} onClick={()=>setMktTab("mine")}>🏫 My Listings</button>
+            {allSchoolsMode&&<button className={mktTab==="district"?"on":""} onClick={()=>setMktTab("district")}>🏢 District</button>}
+          </div>
+          <select style={{background:"rgba(253,246,236,.9)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"7px 10px",fontSize:13,fontWeight:700,color:"var(--ink)",fontFamily:"'Raleway',sans-serif",outline:"none"}}
+            value={catF} onChange={e=>setCatF(e.target.value)}>
+            <option value="all">All Categories</option>
+            {CATS.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}
+          </select>
+          <div className="vtog">
+            <button className={typeF==="all"?"on":""} onClick={()=>setTypeF("all")}>All</button>
+            <button className={typeF==="rent"?"on":""} onClick={()=>setTypeF("rent")}>Rent</button>
+            <button className={typeF==="sale"?"on":""} onClick={()=>setTypeF("sale")}>Sale</button>
+          </div>
+        </div>
+
+        <div style={{fontSize:13,fontWeight:700,color:"var(--faint)",marginBottom:12}}>
+          {loadingAll?"Loading listings…":`${filtered.length} listing${filtered.length!==1?"s":""}`}
+          {userCoords&&radius!=="all"&&!loadingAll&&` within ${radius==="state"?STATE_NAMES[userCoords.state]||userCoords.state:radius+" miles"}`}
+        </div>
+
+        {/* ── Listings Grid ── */}
         {paged.length===0
-          ?<div className="empty"><div className="empty-ico">🏪</div><h3>No Listings Yet</h3><p>Mark items as "For Rent" or "For Sale" in your Inventory to display them here.</p></div>
+          ?<div className="empty">
+              <div className="empty-ico">🏪</div>
+              <h3>{mktTab==="mine"?"No Active Listings":"No Listings Found"}</h3>
+              <p>{mktTab==="mine"
+                ?"Mark items as "For Rent" or "For Sale" in Inventory to list them here."
+                :radius!=="all"
+                  ?"Try expanding your search radius or searching All to see listings everywhere."
+                  :"No listings yet — be the first to list items for your community!"}</p>
+            </div>
           :<div className="inv-grid">
-              {paged.map(item=>{
-                const cat=CAT[item.category]||CAT.other;
-                const schoolName = mktTab==="district" ? districtOrgs[item.org_id] : org.name;
-                return(
-                  <div key={item.id} className="inv-card" onClick={()=>setViewing(item)}>
-                    {schoolName&&<div style={{padding:"6px 14px",background:"var(--parch)",borderBottom:"1px solid var(--linen)",fontSize:11,fontWeight:800,color:"var(--amber)",textTransform:"uppercase",letterSpacing:1.5}}>{schoolName}</div>}
-                    <div className="inv-img">{item.img?<img src={item.img} alt={item.name} loading="lazy"/>:<CatCard catId={item.category} width="100%" height={220}><div style={{padding:"0 14px 12px",color:"#fff"}}></div></CatCard>}</div>
-                    <div className="inv-body">
-                      <div className="inv-cat" style={{color:cat.color}}>{cat.icon} {cat.label}</div>
-                      <div className="inv-name">{item.name}</div>
-                      {item.notes&&<p style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:14,color:"var(--muted)",margin:"3px 0 8px",lineHeight:1.5}}>{item.notes.slice(0,80)}{item.notes.length>80?"…":""}</p>}
-                      <div className="inv-meta"><span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span></div>
-                      <div className="inv-foot">
-                        <span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span>
-                        <span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>
-                      </div>
+            {paged.map(item=>{
+              const cat=CAT[item.category]||CAT.other;
+              const isOwn = item.org_id===org?.id;
+              const dist = userCoords?.lat&&item.org_lat
+                ? Math.round(milesBetween(userCoords.lat,userCoords.lng,item.org_lat,item.org_lng))
+                : null;
+              return(
+                <div key={item.id} className="inv-card" onClick={()=>setViewing(item)}>
+                  {/* Org header */}
+                  <div style={{padding:"7px 14px",background:isOwn?"rgba(196,118,26,.12)":"var(--parch)",borderBottom:"1px solid var(--linen)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                    <div style={{fontSize:11,fontWeight:800,color:isOwn?"var(--amber)":"var(--muted)",textTransform:"uppercase",letterSpacing:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                      {isOwn?"⭐ Your Listing":item.org_name}
+                    </div>
+                    <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
+                      {item.org_state&&<span style={{fontSize:10,fontWeight:700,color:"var(--faint)"}}>{item.org_state}</span>}
+                      {dist!==null&&!isOwn&&<span style={{fontSize:10,fontWeight:700,color:"var(--amber)",background:"rgba(196,118,26,.1)",padding:"1px 6px",borderRadius:8}}>~{dist}mi</span>}
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="inv-img">{item.img
+                    ?<img src={item.img} alt={item.name} loading="lazy"/>
+                    :<CatCard catId={item.category} width="100%" height={220}><div style={{padding:"0 14px 12px",color:"#fff"}}></div></CatCard>}
+                  </div>
+                  <div className="inv-body">
+                    <div className="inv-cat" style={{color:cat.color}}>{cat.icon} {cat.label}</div>
+                    <div className="inv-name">{item.name}</div>
+                    {item.notes&&<p style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:14,color:"var(--muted)",margin:"3px 0 8px",lineHeight:1.5}}>{item.notes.slice(0,80)}{item.notes.length>80?"…":""}</p>}
+                    {item.org_location&&!isOwn&&<div style={{fontSize:11,color:"var(--faint)",marginBottom:4}}>📍 {item.org_location}</div>}
+                    <div className="inv-meta"><span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span></div>
+                    <div className="inv-foot">
+                      <span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span>
+                      <span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         }
-        <Pager total={listed.length} page={pg} per={PP} onPage={setPg}/>
+        <Pager total={filtered.length} page={pg} per={PP} onPage={setPg}/>
       </div>
-      {viewing&&<Modal title="Listing Details" onClose={()=>setViewing(null)}><ItemDetail item={viewing} onEdit={()=>{}} onDelete={()=>{}}/></Modal>}
+      {viewing&&<Modal title="Listing Details" onClose={()=>setViewing(null)}>
+        <ItemDetail item={viewing} onEdit={()=>{}} onDelete={()=>{}}
+          schoolName={viewing.org_name&&viewing.org_id!==org?.id?viewing.org_name:null}/>
+      </Modal>}
     </div>
   );
 }
@@ -2953,7 +3148,19 @@ function Settings({ org, setOrg, onSeed, user, items, setItems, plan="free", use
             </div>
             <div className="fg"><label className="fl">Email</label><input className="fi" type="email" value={f.email||""} onChange={e=>upd("email",e.target.value)} placeholder="drama@school.edu"/></div>
             <div className="fg"><label className="fl">Phone</label><input className="fi" value={f.phone||""} onChange={e=>upd("phone",e.target.value)} placeholder="(555) 123-4567"/></div>
-            <div className="fg"><label className="fl">City / Location</label><input className="fi" value={f.location||""} onChange={e=>upd("location",e.target.value)} placeholder="Portland, OR"/></div>
+            <div className="fg"><label className="fl">City / Location</label><input className="fi" value={f.location||""} onChange={e=>upd("location",e.target.value)} placeholder="Huntington Beach, CA"/></div>
+            <div className="fg">
+              <label className="fl">State</label>
+              <select className="fs" value={f.state||""} onChange={e=>upd("state",e.target.value)}>
+                <option value="">Select state…</option>
+                {US_STATES.map(s=><option key={s} value={s}>{STATE_NAMES[s]} ({s})</option>)}
+              </select>
+            </div>
+            <div className="fg">
+              <label className="fl">Zip Code</label>
+              <input className="fi" value={f.zipcode||""} onChange={e=>upd("zipcode",e.target.value.replace(/\D/g,"").slice(0,5))} placeholder="e.g. 92648" maxLength={5}/>
+              <div style={{fontSize:11,color:"var(--muted)",marginTop:3}}>Used to show your listings in location searches</div>
+            </div>
             <div className="fg fu"><label className="fl">About Your Program</label><textarea className="ft" value={f.bio||""} onChange={e=>upd("bio",e.target.value)} placeholder="Tell others about your program…"/></div>
           </div>
           <div style={{display:"flex",gap:10,alignItems:"center",marginTop:18,paddingTop:14,borderTop:"1.5px solid var(--border)"}}>
@@ -3752,8 +3959,14 @@ export default function App() {
 
   const saveOrg = useCallback(async(o)=>{
     setOrg(o);
-    await SB.from("orgs").upsert({...o,id:user.id});
-  },[user]);
+    let update = {...o, id:user.id};
+    // Auto-geocode zipcode when saving profile
+    if(o.zipcode && o.zipcode.length===5 && o.zipcode!==org.zipcode){
+      const coords = await zipToCoords(o.zipcode);
+      if(coords){ update.lat=coords.lat; update.lng=coords.lng; update.state=update.state||coords.state; }
+    }
+    await SB.from("orgs").upsert(update);
+  },[user,org.zipcode]);
 
   const signOut = async()=>{ await SB.auth.signOut(); };
 
