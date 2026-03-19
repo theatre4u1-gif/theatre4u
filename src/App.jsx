@@ -60,6 +60,7 @@ const SHOWCASE = [
   {cat:"fabrics",  name:"Grand Stage Drape",     price:"$60/wk", badge:"For Rent"},
   {cat:"effects",  name:"Fog Machine Pro",       price:"$20/wk", badge:"For Rent"},
   {cat:"props",    name:"Period Prop Set",        price:"$45",    badge:"For Sale"},
+  {cat:"sets",     name:"Victorian Drawing Room",  price:"2wk loan",badge:"For Loan"},
   {cat:"lighting", name:"LED Par Can Array",     price:"$12/wk", badge:"Rent or Sale"},
   {cat:"sound",    name:"Shure Wireless Mic",    price:"$18/wk", badge:"For Rent"},
 ];
@@ -83,7 +84,7 @@ const CAT_MAP = CAT; // alias used by PublicItemPage
 const CONDS = ["New","Excellent","Good","Fair","Poor","For Parts"];
 const SIZES = ["XS","S","M","L","XL","XXL","One Size","N/A"];
 const AVAIL = ["In Stock","In Use","Checked Out","Being Repaired","Lost","Retired"];
-const MKT   = ["Not Listed","For Rent","For Sale","Rent or Sale"];
+const MKT   = ["Not Listed","For Rent","For Sale","Rent or Sale","For Loan"];
 
 // ── QR Code Generator (pure canvas, no dependencies) ─────────────────────────
 // ── QR Code — generated client-side via esm.sh/qrcode ───────────────────────
@@ -304,6 +305,7 @@ body{font-family:'Raleway',sans-serif;-webkit-font-smoothing:antialiased}
 .mb-sale{background:rgba(38,94,42,.1);color:var(--green)}
 .mb-both{background:rgba(196,118,26,.12);color:var(--cog)}
 .mb-none{background:var(--parch);color:var(--faint)}
+.mb-loan{background:rgba(0,131,143,.1);color:#00838f}
 .price{font-family:'Abril Fatface',display;font-size:18px;color:var(--cog)}
 
 /* Bar charts */
@@ -583,7 +585,7 @@ function Modal({title,onClose,children,footer}){
 }
 
 function ItemForm({item,onSave,onCancel,submitId,userId}){
-  const blank={name:"",category:"costumes",condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,avail:"In Stock",img:null,tags:[]};
+  const blank={name:"",category:"costumes",condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,loan_period:2,deposit:0,avail:"In Stock",img:null,tags:[]};
   const[f,setF]=useState(item||blank);
   const[ti,setTi]=useState("");
   const[upl,setUpl]=useState(false);
@@ -603,6 +605,7 @@ function ItemForm({item,onSave,onCancel,submitId,userId}){
   },[f.name,submitId,onSave]);
   const showRent=f.mkt==="For Rent"||f.mkt==="Rent or Sale";
   const showSale=f.mkt==="For Sale"||f.mkt==="Rent or Sale";
+  const showLoan=f.mkt==="For Loan";
   const handlePhoto=async e=>{
     const file=e.target.files?.[0];if(!file)return;
     setUpl(true);
@@ -640,6 +643,8 @@ function ItemForm({item,onSave,onCancel,submitId,userId}){
       <div className="fg"/>
       {showRent&&<div className="fg"><label className="fl">Rental / week ($)</label><input className="fi" type="number" min="0" step="any" placeholder="e.g. 25" value={f.rent||""} onChange={e=>upd("rent",parseFloat(e.target.value)||0)}/></div>}
       {showSale&&<div className="fg"><label className="fl">Sale Price ($)</label><input className="fi" type="number" min="0" step="any" placeholder="e.g. 50" value={f.sale||""} onChange={e=>upd("sale",parseFloat(e.target.value)||0)}/></div>}
+      {showLoan&&<div className="fg"><label className="fl">Loan Period (weeks)</label><input className="fi" type="number" min="1" step="1" placeholder="e.g. 2" value={f.loan_period||""} onChange={e=>upd("loan_period",parseInt(e.target.value)||2)}/></div>}
+      {showLoan&&<div className="fg"><label className="fl">Refundable Deposit ($)</label><input className="fi" type="number" min="0" step="any" placeholder="0 = free loan" value={f.deposit||""} onChange={e=>upd("deposit",parseFloat(e.target.value)||0)}/></div>}
 
     </div>
   );
@@ -651,7 +656,7 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null}){
   const[qr,setQr]=useState(null);
   const[showAddToProd,setShowAddToProd]=useState(false);
   const gfx=CAT_GFX[item.category]||CAT_GFX.other;
-  const mktCls=item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="Rent or Sale"?"mb-both":"mb-none";
+  const mktCls=item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="Rent or Sale"?"mb-both":item.mkt==="For Loan"?"mb-loan":"mb-none";
 
   useEffect(()=>{
     QR.toDataURL("https://theatre4u.org/#/item/"+item.id, 200).then(url=>{if(url)setQr(url);});
@@ -695,6 +700,8 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null}){
         <div className="dt-row"><span className="dt-lbl">Status</span><span className={`mkt-badge ${mktCls}`}>{item.mkt}</span></div>
         {(item.mkt==="For Rent"||item.mkt==="Rent or Sale")&&<div className="dt-row"><span className="dt-lbl">Rental/week</span><span className="price">{fmt$(item.rent)}</span></div>}
         {(item.mkt==="For Sale"||item.mkt==="Rent or Sale")&&<div className="dt-row"><span className="dt-lbl">Sale Price</span><span className="price">{fmt$(item.sale)}</span></div>}
+        {item.mkt==="For Loan"&&<div className="dt-row"><span className="dt-lbl">Loan Period</span><span style={{fontWeight:700,color:"#00838f"}}>{item.loan_period||2} week{(item.loan_period||2)!==1?"s":""}</span></div>}
+        {item.mkt==="For Loan"&&<div className="dt-row"><span className="dt-lbl">Deposit</span><span className="price">{item.deposit>0?fmt$(item.deposit):"None (free loan)"}</span></div>}
       </div>
       <div className="dt-sec">
         <h3 style={{display:"flex",alignItems:"center",gap:7}}>
@@ -893,7 +900,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId,plan="free",headerNote=nu
   const[modal,setModal]=useState(null);const[active,setActive]=useState(null);
   const[showImport,setShowImport]=useState(false);
   const PP=20;
-  const mktCls=m=>m==="For Rent"?"mb-rent":m==="For Sale"?"mb-sale":m==="Rent or Sale"?"mb-both":"mb-none";
+  const mktCls=m=>m==="For Rent"?"mb-rent":m==="For Sale"?"mb-sale":m==="Rent or Sale"?"mb-both":m==="For Loan"?"mb-loan":"mb-none";
   const filtered=useMemo(()=>{
     let f=items;
     if(search){const q=search.toLowerCase();f=f.filter(i=>i.name.toLowerCase().includes(q)||(i.notes||"").toLowerCase().includes(q)||(i.location||"").toLowerCase().includes(q)||(i.tags||[]).some(t=>t.includes(q)))}
@@ -980,7 +987,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId,plan="free",headerNote=nu
                       <div className="inv-name">{item.name}</div>
                       {item.location&&<div style={{fontSize:12,color:"var(--muted)",marginBottom:4,display:"flex",alignItems:"center",gap:3}}>📍 {item.location}</div>}
                       <div className="inv-meta"><span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span>{item.size!=="N/A"&&<span className="chip">{item.size}</span>}<span className="chip">{item.avail}</span></div>
-                      <div className="inv-foot"><span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span>{item.mkt!=="Not Listed"&&<span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>}</div>
+                      <div className="inv-foot"><span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span>{item.mkt==="For Loan"?<span style={{fontSize:12,color:"#00838f",fontWeight:700}}>{item.loan_period||2}wk loan{item.deposit>0?" · "+fmt$(item.deposit)+" dep.":""}</span>:item.mkt!=="Not Listed"&&<span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>}</div>
                     </div>
                   </div>
                 );
@@ -1082,7 +1089,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
   const[allListings, setAllListings] = useState([]); // [{...item, org_name, org_state, org_lat, org_lng, org_zipcode}]
   const[loadingAll,  setLoadingAll]  = useState(false);
   const PP=16;
-  const mktCls=m=>m==="For Rent"?"mb-rent":m==="For Sale"?"mb-sale":"mb-both";
+  const mktCls=m=>m==="For Rent"?"mb-rent":m==="For Sale"?"mb-sale":m==="For Loan"?"mb-loan":"mb-both";
 
   // Load ALL marketplace listings from ALL orgs (cross-org)
   const loadAllListings = useCallback(async()=>{
@@ -1147,6 +1154,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
     // Type
     if(typeF==="rent") f=f.filter(i=>i.mkt.includes("Rent"));
     if(typeF==="sale") f=f.filter(i=>i.mkt.includes("Sale"));
+    if(typeF==="loan") f=f.filter(i=>i.mkt==="For Loan");
 
     // Location filter
     if(radius==="state"&&userCoords?.state){
@@ -1275,6 +1283,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
             <button className={typeF==="all"?"on":""} onClick={()=>setTypeF("all")}>All</button>
             <button className={typeF==="rent"?"on":""} onClick={()=>setTypeF("rent")}>Rent</button>
             <button className={typeF==="sale"?"on":""} onClick={()=>setTypeF("sale")}>Sale</button>
+            <button className={typeF==="loan"?"on":""} onClick={()=>setTypeF("loan")}>Loan</button>
           </div>
         </div>
 
@@ -1325,7 +1334,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
                     <div className="inv-meta"><span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span></div>
                     <div className="inv-foot">
                       <span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span>
-                      <span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>
+                      {item.mkt==="For Loan"?<span style={{fontSize:12,color:"#00838f",fontWeight:700}}>{item.loan_period||2}wk loan{item.deposit>0?" · "+fmt$(item.deposit)+" dep.":""}</span>:<span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>}
                     </div>
                   </div>
                 </div>
@@ -1363,8 +1372,8 @@ function Reports({ items, plan="free" }) {
   ).sort((a,b)=>b[1].qty-a[1].qty);
 
   const csv = () => {
-    const h=["Name","Category","Condition","Size","Qty","Location","Availability","Market","Rent","Sale","Tags","Notes","ID","Added"];
-    const rows=items.map(i=>[i.name,i.category,i.condition,i.size,i.qty,i.location,i.avail,i.mkt,i.rent,i.sale,(i.tags||[]).join(";"),`"${(i.notes||"").replace(/"/g,'""')}"`,i.id,i.added]);
+    const h=["Name","Category","Condition","Size","Qty","Location","Availability","Market","Rent","Sale","Loan Period (wks)","Deposit","Tags","Notes","ID","Added"];
+    const rows=items.map(i=>[i.name,i.category,i.condition,i.size,i.qty,i.location,i.avail,i.mkt,i.rent,i.sale,i.loan_period||"",i.deposit||"",(i.tags||[]).join(";"),`"${(i.notes||"").replace(/"/g,'""')}"`,i.id,i.added]);
     const csv=[h,...rows].map(r=>r.join(",")).join("\n");
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="theatre4u_inventory.csv";a.click();
   };
@@ -2155,7 +2164,9 @@ const CSV_FIELDS = [
   { key:"location",  label:"Location",     required:false, hints:["location","loc","storage","bin","room","where","place"] },
   { key:"avail",     label:"Availability", required:false, hints:["availability","avail","available","status"] },
   { key:"mkt",       label:"Market Status",required:false, hints:["market","mkt","listing","listed","for rent","for sale"] },
-  { key:"rent",      label:"Rental Price", required:false, hints:["rent","rental","rate","per week","weekly"] },
+  { key:"rent",       label:"Rental Price", required:false, hints:["rent","rental","rate","per week","weekly"] },
+  { key:"loan_period",label:"Loan Period",  required:false, hints:["loan period","loan weeks","borrow period","lending period","weeks"] },
+  { key:"deposit",    label:"Deposit",      required:false, hints:["deposit","security","refundable"] },
   { key:"sale",      label:"Sale Price",   required:false, hints:["sale","sell","price","cost","value"] },
   { key:"tags",      label:"Tags",         required:false, hints:["tags","tag","keywords","labels"] },
   { key:"notes",     label:"Notes",        required:false, hints:["notes","note","comments","comment","remarks","details"] },
@@ -2219,7 +2230,8 @@ function coerce(key, raw) {
       const match = MKT.find(m=>m.toLowerCase()===v.toLowerCase());
       return match || "Not Listed";
     }
-    case "qty":  { const n=parseInt(v); return isNaN(n)?1:Math.max(0,n); }
+    case "qty":        { const n=parseInt(v); return isNaN(n)?1:Math.max(0,n); }
+    case "loan_period":{ const n=parseInt(v); return isNaN(n)?2:Math.max(1,n); }
     case "rent":
     case "sale": { const n=parseFloat(v.replace(/[$,]/g,"")); return isNaN(n)?0:Math.max(0,n); }
     case "tags": { return v.split(/[;,|]/).map(t=>t.trim().toLowerCase()).filter(Boolean); }
