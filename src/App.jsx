@@ -439,6 +439,7 @@ tr:hover td{background:rgba(243,230,204,.55)}
 @keyframes fi{from{opacity:0}to{opacity:1}}
 @keyframes su{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes mkt-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 .fin{animation:fi .35s ease}
 
 @media(max-width:900px){
@@ -762,6 +763,18 @@ function Dashboard({items,org,goInventory,goMarketplace}){
   const totalVal=items.reduce((s,i)=>s+((i.sale||0)*(i.qty||1)),0);
   const cc={};items.forEach(i=>{cc[i.category]=(cc[i.category]||0)+(i.qty||1)});
   const maxC=Math.max(1,...Object.values(cc));
+  const [highlights, setHighlights] = useState([]);
+  useEffect(()=>{
+    (async()=>{
+      const{data}=await SB.from("items")
+        .select("*, orgs(name,location)")
+        .neq("mkt","Not Listed")
+        .eq("avail","In Stock")
+        .order("added",{ascending:false})
+        .limit(6);
+      setHighlights(data||[]);
+    })();
+  },[]);
   return(
     <div style={{position:"relative",padding:"32px 36px 56px"}}>
       <img src={usp(BG.dashboard,1400,900)} alt="" className="page-bg-img"/>
@@ -837,16 +850,96 @@ function Dashboard({items,org,goInventory,goMarketplace}){
             <p>Rent or buy costumes, props, lighting and more from programs in your community.</p>
           </div>
         </div>
-        {/* Marketplace Highlights — populated by real listings */}
-        <div className="sh"><h2>Marketplace Highlights</h2><p>Items listed for rent or sale by programs in your community will appear here.</p></div>
-        <div style={{background:"var(--parch)",border:"2px dashed var(--border)",borderRadius:"var(--rl)",padding:"40px 32px",textAlign:"center",marginBottom:36}}>
-          <div style={{fontSize:44,marginBottom:12}}>🏪</div>
-          <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:8}}>No Listings Yet</h3>
-          <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 18px"}}>When you or other programs list items for rent or sale on the Marketplace, they'll be showcased here for the whole community to discover.</p>
-          <button className="btn btn-g" onClick={()=>goMarketplace&&goMarketplace()} style={{display:"inline-flex",alignItems:"center",gap:7}}>
-            <span>Browse Marketplace</span>
-          </button>
-        </div>
+        {/* Marketplace Highlights — auto-scrolling carousel */}
+        <div className="sh"><h2>Marketplace Highlights</h2><p>Items listed for rent or sale by programs in your community.</p></div>
+        {highlights.length===0?(
+          <div style={{background:"var(--parch)",border:"2px dashed var(--border)",borderRadius:"var(--rl)",padding:"40px 32px",textAlign:"center",marginBottom:36}}>
+            <div style={{fontSize:44,marginBottom:12}}>🏪</div>
+            <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:8}}>No Listings Yet</h3>
+            <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 18px"}}>When you or other programs list items for rent or sale on the Marketplace, they'll be showcased here for the whole community to discover.</p>
+            <button className="btn btn-g" onClick={()=>goMarketplace&&goMarketplace()}>Browse Marketplace</button>
+          </div>
+        ):(
+          <div style={{marginBottom:36}}>
+            {/* Carousel track — overflows and animates */}
+            <div style={{position:"relative",overflow:"hidden",borderRadius:"var(--rm)",
+              background:"var(--parch)",border:"1px solid var(--border)",padding:"20px 0",marginBottom:14}}
+              onMouseEnter={e=>e.currentTarget.querySelector(".scroll-track").style.animationPlayState="paused"}
+              onMouseLeave={e=>e.currentTarget.querySelector(".scroll-track").style.animationPlayState="running"}>
+              {/* Fade edges */}
+              <div style={{position:"absolute",left:0,top:0,bottom:0,width:80,
+                background:"linear-gradient(to right,var(--parch),transparent)",zIndex:2,pointerEvents:"none"}}/>
+              <div style={{position:"absolute",right:0,top:0,bottom:0,width:80,
+                background:"linear-gradient(to left,var(--parch),transparent)",zIndex:2,pointerEvents:"none"}}/>
+              {/* Scrolling track — duplicated for seamless loop */}
+              <div className="scroll-track" style={{
+                display:"flex",gap:16,paddingLeft:16,
+                width:"max-content",
+                animation:`mkt-scroll ${highlights.length * 6}s linear infinite`,
+              }}>
+                {[...highlights,...highlights].map((item,i)=>{
+                  const cat=CAT[item.category]||CAT.other;
+                  const orgName=item.orgs?.name||"";
+                  const mktCls=item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="For Loan"?"mb-loan":"mb-both";
+                  return(
+                    <div key={`${item.id}-${i}`}
+                      onClick={()=>goMarketplace&&goMarketplace()}
+                      style={{width:220,flexShrink:0,background:"var(--cream)",borderRadius:"var(--rm)",
+                        border:"1px solid var(--border)",overflow:"hidden",cursor:"pointer",
+                        boxShadow:"var(--sh1)",transition:"transform .2s,box-shadow .2s"}}
+                      onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="var(--sh2)";}}
+                      onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="var(--sh1)";}}>
+                      {/* Image or gradient */}
+                      <div style={{height:140,position:"relative",overflow:"hidden",flexShrink:0}}>
+                        {item.img
+                          ?<img src={item.img} alt={item.name} loading="lazy"
+                              style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                          :<div style={{width:"100%",height:"100%",
+                              background:CAT_GFX[item.category]?.grad||CAT_GFX.other.grad,
+                              display:"flex",alignItems:"center",justifyContent:"center",
+                              fontSize:52,opacity:.85}}>
+                              {cat.icon}
+                            </div>
+                        }
+                        {/* Org badge top-left */}
+                        {orgName&&<div style={{position:"absolute",top:8,left:8,
+                          background:"rgba(0,0,0,.6)",backdropFilter:"blur(4px)",
+                          color:"#fff",fontSize:10,fontWeight:700,padding:"2px 7px",
+                          borderRadius:6,maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                          {orgName}
+                        </div>}
+                        {/* Badge top-right */}
+                        <div style={{position:"absolute",top:8,right:8}}>
+                          <span className={`mkt-badge ${mktCls}`}>{item.mkt}</span>
+                        </div>
+                      </div>
+                      {/* Info */}
+                      <div style={{padding:"10px 12px"}}>
+                        <div style={{fontSize:11,color:cat.color,fontWeight:700,marginBottom:3}}>{cat.icon} {cat.label}</div>
+                        <div style={{fontFamily:"'Lora',serif",fontSize:14,fontWeight:600,lineHeight:1.3,
+                          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:6}}>{item.name}</div>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                          <span style={{fontSize:11,color:"var(--muted)"}}>{item.condition} · ×{item.qty}</span>
+                          <span style={{fontWeight:800,fontSize:13,color:"var(--cog)"}}>
+                            {item.mkt==="For Loan"
+                              ?`${item.loan_period||2}wk loan`
+                              :item.rent>0?fmt$(item.rent)+"/wk"
+                              :item.sale>0?fmt$(item.sale):""}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div style={{textAlign:"center"}}>
+              <button className="btn btn-g" onClick={()=>goMarketplace&&goMarketplace()}>
+                Browse All Listings →
+              </button>
+            </div>
+          </div>
+        )}
         {/* Category gallery */}
         <div className="sh"><h2>Browse by Category</h2><p>Click any category to explore your inventory.</p></div>
         <div className="cat-gallery" style={{marginBottom:36}}>
