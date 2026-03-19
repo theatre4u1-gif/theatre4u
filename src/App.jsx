@@ -772,22 +772,54 @@ function Dashboard({items,org,goInventory,goMarketplace}){
         </div>
         {/* Stats */}
         <div className="stats">
-          {[{ico:"📦",val:totalQty,lbl:"Total Items",col:"#c4761a"},{ico:"📂",val:items.length,lbl:"Entries",col:"#1554a0"},{ico:"🏪",val:listed,lbl:"On Marketplace",col:"#27723a"},{ico:"📷",val:withImg,lbl:"With Photos",col:"#a0144e"},{ico:"💰",val:totalVal>0?fmt$(totalVal):"—",lbl:"Est. Value",col:"#8b3a0f"}].map(s=>(
-            <div key={s.lbl} className="stat" style={{borderTop:`4px solid ${s.col}`}}>
-              <div className="stat-ico">{s.ico}</div>
-              <div className="stat-val">{s.val}</div>
-              <div className="stat-lbl">{s.lbl}</div>
+          {[
+            {ico:"📦",val:totalQty,   lbl:"Total Items",     col:"#c4761a", bg:"photo-1558618666-fcd25c85cd64"}, // organized prop storage
+            {ico:"📂",val:items.length,lbl:"Entries",         col:"#1554a0", bg:"photo-1489987707025-afc232f7ea0f"}, // costume racks
+            {ico:"🏪",val:listed,     lbl:"On Marketplace",  col:"#27723a", bg:"photo-1460723237483-7a6dc9d0b212"}, // stage lit up
+            {ico:"📷",val:withImg,    lbl:"With Photos",     col:"#a0144e", bg:"photo-1516450360452-9312f5e86fc7"}, // stage lighting rigs
+            {ico:"💰",val:totalVal>0?fmt$(totalVal):"—",lbl:"Est. Value",col:"#8b3a0f",bg:"photo-1503095396549-807759245b35"}, // grand theatre
+          ].map(s=>(
+            <div key={s.lbl} className="stat" style={{borderTop:`4px solid ${s.col}`,overflow:"hidden"}}>
+              {/* Background photo with dark overlay */}
+              <img src={usp(s.bg,400,200)} alt="" loading="lazy"
+                style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.13,pointerEvents:"none",userSelect:"none"}}/>
+              <div style={{position:"absolute",inset:0,background:`linear-gradient(135deg,${s.col}18,rgba(18,6,0,.55))`,pointerEvents:"none"}}/>
+              <div style={{position:"relative",zIndex:1}}>
+                <div className="stat-ico">{s.ico}</div>
+                <div className="stat-val">{s.val}</div>
+                <div className="stat-lbl">{s.lbl}</div>
+              </div>
             </div>
           ))}
         </div>
-        {/* Mosaic — gradient tiles */}
+        {/* Mosaic — real photos */}
         <div className="sh"><h2>From the Stage</h2><p>A glimpse of what arts programs are cataloging and sharing nationwide.</p></div>
         <div className="mosaic" style={{marginBottom:32}}>
-          <div className="mc big" style={{background:"linear-gradient(135deg,#0d2b6e,#1565c0,#1976d2)",position:"relative"}}><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:80,opacity:.18,userSelect:"none"}}>🎭</div><div className="mc-lbl">Grand Stage Interiors</div></div>
-          <div className="mc" style={{background:"linear-gradient(135deg,#7b1560,#c2185b,#e91e8c)",position:"relative"}}><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:42,opacity:.22,userSelect:"none"}}>👗</div><div className="mc-lbl">Costumes</div></div>
-          <div className="mc" style={{background:"linear-gradient(135deg,#7f4800,#e65100,#ff9800)",position:"relative"}}><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:42,opacity:.22,userSelect:"none"}}>💡</div><div className="mc-lbl">Stage Lighting</div></div>
-          <div className="mc" style={{background:"linear-gradient(135deg,#006064,#00838f,#00acc1)",position:"relative"}}><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:42,opacity:.22,userSelect:"none"}}>✨</div><div className="mc-lbl">Special Effects</div></div>
-          <div className="mc" style={{background:"linear-gradient(135deg,#1b5e20,#2e7d32,#43a047)",position:"relative"}}><div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:42,opacity:.22,userSelect:"none"}}>🔊</div><div className="mc-lbl">Sound Equipment</div></div>
+          <div className="mc big" style={{position:"relative",overflow:"hidden"}}>
+            <img src={usp("photo-1503095396549-807759245b35",800,400)} alt="Stage" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
+            <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.65) 0%,rgba(0,0,0,.1) 60%)"}}/>
+            <div className="mc-lbl">Grand Stage Interiors</div>
+          </div>
+          <div className="mc" style={{position:"relative",overflow:"hidden"}}>
+            <img src={usp("photo-1489987707025-afc232f7ea0f",400,300)} alt="Costumes" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
+            <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.65) 0%,rgba(0,0,0,.1) 60%)"}}/>
+            <div className="mc-lbl">Costumes</div>
+          </div>
+          <div className="mc" style={{position:"relative",overflow:"hidden"}}>
+            <img src={usp("photo-1516450360452-9312f5e86fc7",400,300)} alt="Lighting" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
+            <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.65) 0%,rgba(0,0,0,.1) 60%)"}}/>
+            <div className="mc-lbl">Stage Lighting</div>
+          </div>
+          <div className="mc" style={{position:"relative",overflow:"hidden"}}>
+            <img src={usp("photo-1558618666-fcd25c85cd64",400,300)} alt="Props" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
+            <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.65) 0%,rgba(0,0,0,.1) 60%)"}}/>
+            <div className="mc-lbl">Props & Sets</div>
+          </div>
+          <div className="mc" style={{position:"relative",overflow:"hidden"}}>
+            <img src={usp("photo-1468359601543-843bfaef291a",400,300)} alt="Sound" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
+            <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.65) 0%,rgba(0,0,0,.1) 60%)"}}/>
+            <div className="mc-lbl">Sound Equipment</div>
+          </div>
         </div>
         {/* Divider 1 */}
         <div className="img-div" style={{marginBottom:32}}>
