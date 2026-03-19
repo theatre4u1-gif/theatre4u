@@ -1257,7 +1257,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
               <div className="empty-ico">🏪</div>
               <h3>{mktTab==="mine"?"No Active Listings":"No Listings Found"}</h3>
               <p>{mktTab==="mine"
-                ?"Mark items as "For Rent" or "For Sale" in Inventory to list them here."
+                ?"Mark items as “For Rent” or “For Sale” in Inventory to list them here."
                 :radius!=="all"
                   ?"Try expanding your search radius or searching All to see listings everywhere."
                   :"No listings yet — be the first to list items for your community!"}</p>
