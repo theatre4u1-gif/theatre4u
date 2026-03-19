@@ -645,7 +645,7 @@ function ItemForm({item,onSave,onCancel,submitId,userId}){
   );
 }
 
-function ItemDetail({item,onEdit,onDelete,userId=null}){
+function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null}){
   const cat=CAT[item.category]||CAT.other;
   const[lb,setLb]=useState(false);
   const[qr,setQr]=useState(null);
@@ -687,7 +687,7 @@ function ItemDetail({item,onEdit,onDelete,userId=null}){
       </div>
       {(item.tags||[]).length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>{item.tags.map(t=><span key={t} style={{background:"rgba(196,118,26,.12)",color:"var(--cog)",fontSize:12.5,fontWeight:700,padding:"3px 9px",borderRadius:3}}>#{t}</span>)}</div>}
       <div className="dt-sec"><h3>Details</h3>
-        {[["Condition",item.condition],["Size",item.size],["Quantity",item.qty],["Availability",item.avail],["Location",item.location||"—"],["Notes",item.notes||"—"],["Added",item.added?new Date(item.added).toLocaleDateString():"—"],["ID",<span style={{fontFamily:"monospace",fontSize:11,color:"var(--faint)"}}>{item.id}</span>]].map(([l,v])=>(
+        {[...(schoolName?[["School Site",<span style={{fontWeight:700,color:"#42a5f5"}}>🏫 {schoolName}</span>]]:[]),["Condition",item.condition],["Size",item.size],["Quantity",item.qty],["Availability",item.avail],["Location",item.location||"—"],["Notes",item.notes||"—"],["Added",item.added?new Date(item.added).toLocaleDateString():"—"],["ID",<span style={{fontFamily:"monospace",fontSize:11,color:"var(--faint)"}}>{item.id}</span>]].map(([l,v])=>(
           <div className="dt-row" key={l}><span className="dt-lbl">{l}</span><span>{v}</span></div>
         ))}
       </div>
@@ -852,7 +852,7 @@ function Dashboard({items,org,goInventory,goMarketplace}){
   );
 }
 
-function Inventory({items,onAdd,onEdit,onDelete,userId,plan="free",headerNote=null}){
+function Inventory({items,onAdd,onEdit,onDelete,userId,plan="free",headerNote=null,schoolName=null}){
     const[upgradeReason,setUpgradeReason]=useState(null);
   const[search,setSrch]=useState("");const[catF,setCatF]=useState("all");
   const[condF,setCondF]=useState("all");const[availF,setAvailF]=useState("all");
@@ -943,8 +943,10 @@ function Inventory({items,onAdd,onEdit,onDelete,userId,plan="free",headerNote=nu
                   <div key={item.id} className="inv-card" onClick={()=>openD(item)}>
                     <div className="inv-img">{item.img?<img src={item.img} alt={item.name} loading="lazy"/>:<CatCard catId={item.category} width="100%" height={220}><div style={{padding:"0 14px 12px",color:"#fff"}}></div></CatCard>}</div>
                     <div className="inv-body">
+                      {schoolName&&<div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:1.5,color:"#42a5f5",marginBottom:4,display:"flex",alignItems:"center",gap:4}}><span>🏫</span>{schoolName}</div>}
                       <div className="inv-cat" style={{color:cat.color}}>{cat.icon} {cat.label}</div>
                       <div className="inv-name">{item.name}</div>
+                      {item.location&&<div style={{fontSize:12,color:"var(--muted)",marginBottom:4,display:"flex",alignItems:"center",gap:3}}>📍 {item.location}</div>}
                       <div className="inv-meta"><span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span>{item.size!=="N/A"&&<span className="chip">{item.size}</span>}<span className="chip">{item.avail}</span></div>
                       <div className="inv-foot"><span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span>{item.mkt!=="Not Listed"&&<span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>}</div>
                     </div>
@@ -966,7 +968,10 @@ function Inventory({items,onAdd,onEdit,onDelete,userId,plan="free",headerNote=nu
                       <td style={{fontFamily:"'Lora',serif",fontWeight:600,fontSize:15,cursor:"pointer",color:"var(--ink)"}} onClick={()=>openD(item)}>{item.name}</td>
                       <td style={{fontWeight:700,color:"var(--muted)"}}>{cat.icon} {cat.label}</td>
                       <td>{item.condition}</td><td style={{fontWeight:800}}>{item.qty}</td>
-                      <td style={{color:"var(--muted)"}}>{item.location||"—"}</td>
+                      <td style={{color:"var(--muted)"}}>
+                        {schoolName&&<div style={{fontSize:10,fontWeight:800,color:"#42a5f5",marginBottom:2}}>🏫 {schoolName}</div>}
+                        {item.location||"—"}
+                      </td>
                       <td>{item.avail}</td>
                       <td><span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span></td>
                       <td><div style={{display:"flex",gap:4}}>
@@ -991,7 +996,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId,plan="free",headerNote=nu
           footer={<><button className="btn btn-o" onClick={()=>setModal(null)}>Cancel</button><button className="btn btn-g" id="form-save-btn">Save Changes</button></>}>
           <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} submitId="form-save-btn" userId={userId}/>
         </Modal>)}
-      {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} onEdit={()=>setModal("e")} onDelete={id=>{onDelete(id);setModal(null);setActive(null)}}/></Modal>}
+      {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={()=>setModal("e")} onDelete={id=>{onDelete(id);setModal(null);setActive(null)}}/></Modal>}
       {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",user?.id).order("added",{ascending:false});if(data)setItems(data);}}/>}
     </div>
   </>
@@ -3936,6 +3941,7 @@ export default function App() {
                           onEdit={async(item)=>{ const{data}=await SB.from("items").update(item).eq("id",item.id).select().single(); if(data) setSchoolItems(p=>p.map(x=>x.id===item.id?data:x)); }}
                           onDelete={async(id)=>{ await SB.from("items").delete().eq("id",id); setSchoolItems(p=>p.filter(x=>x.id!==id)); }}
                           userId={activeSchool.id} plan={plan}
+                          schoolName={activeSchool.name}
                           headerNote={<div style={{padding:"8px 12px",background:"rgba(66,165,245,.1)",border:"1px solid rgba(66,165,245,.2)",borderRadius:7,marginBottom:12,fontSize:12,color:"#42a5f5"}}>🏫 Editing inventory for <strong>{activeSchool.name}</strong></div>}
                         />
                   )}
