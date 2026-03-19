@@ -1097,7 +1097,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
     setLoadingAll(true);
     // Join items with org info in one query
     const{data,error}=await SB.from("items")
-      .select("*, orgs(name,location,state,zipcode,lat,lng,city)")
+      .select("*, orgs(name,location,state,zipcode,lat,lng)")
       .neq("mkt","Not Listed")
       .eq("avail","In Stock")
       .order("added",{ascending:false});
