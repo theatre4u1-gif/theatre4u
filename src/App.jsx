@@ -4269,12 +4269,15 @@ function normalizeImageUrl(url) {
   if (!url) return null;
   const u = url.trim();
   if (!u.startsWith("http")) return null;
-  // Google Drive: https://drive.google.com/file/d/FILE_ID/view
-  const gDrive = u.match(/drive\.google\.com\/file\/d\/([^/]+)/);
-  if (gDrive) return `https://drive.google.com/uc?export=view&id=${gDrive[1]}`;
-  // Google Drive open link
+  // Google Drive file/d/ link → thumbnail API (uc?export=view is blocked by browsers for embedding)
+  const gDrive = u.match(/drive\.google\.com\/file\/d\/([^/?]+)/);
+  if (gDrive) return `https://drive.google.com/thumbnail?id=${gDrive[1]}&sz=w800`;
+  // Google Drive open?id= link
   const gOpen = u.match(/drive\.google\.com\/open\?id=([^&]+)/);
-  if (gOpen) return `https://drive.google.com/uc?export=view&id=${gOpen[1]}`;
+  if (gOpen) return `https://drive.google.com/thumbnail?id=${gOpen[1]}&sz=w800`;
+  // Google Drive uc?id= or uc?export=view&id= (already processed or pasted directly)
+  const gUc = u.match(/drive\.google\.com\/uc[^?]*\?.*[?&]id=([^&]+)/);
+  if (gUc) return `https://drive.google.com/thumbnail?id=${gUc[1]}&sz=w800`;
   // Dropbox
   if (u.includes("dropbox.com")) {
     return u.replace("www.dropbox.com","dl.dropboxusercontent.com")
@@ -4453,7 +4456,7 @@ function CSVImport({ onImport, onClose, userId }) {
                 <input ref={fileRef} type="file" accept=".csv,text/csv" hidden onChange={handleFile}/>
               </label>
 
-              <div style={{background:"rgba(66,165,245,.06)",border:"1px solid rgba(66,165,245,.18)",borderRadius:9,padding:"11px 14px",fontSize:12,color:"var(--muted)",lineHeight:1.65}}><strong style={{color:"#42a5f5"}}>📷 Adding Photos via Image URL</strong> — Add a column called <strong style={{color:"var(--ink)"}}>Image URL</strong> or <strong style={{color:"var(--ink)"}}>Photo URL</strong> with a public link to each photo. Google Drive and Dropbox share links are converted automatically. For Google Drive: right-click the file → Share → "Anyone with the link" → Copy link → paste in your CSV.</div>
+              <div style={{background:"rgba(66,165,245,.06)",border:"1px solid rgba(66,165,245,.18)",borderRadius:9,padding:"11px 14px",fontSize:12,color:"var(--muted)",lineHeight:1.65}}><strong style={{color:"#42a5f5"}}>📷 Adding Photos via Image URL</strong> — Add a column called <strong style={{color:"var(--ink)"}}>Image URL</strong> with a public Google Drive or Dropbox share link. For Google Drive: right-click → Share → "Anyone with the link" → Copy link → paste in your CSV. Links are automatically converted to embeddable format.</div>
               <div style={{fontSize:11,color:"var(--muted)",textAlign:"center"}}>
                 Supports exports from Google Sheets, Excel, Airtable, and most inventory apps.
               </div>
@@ -4522,7 +4525,7 @@ function CSVImport({ onImport, onClose, userId }) {
           {/* ── STEP 3: PREVIEW ── */}
           {step==="preview" && (
             <div>
-              {(()=>{const withImg=parsed.filter(i=>i.img).length;return withImg>0&&(<div style={{background:"rgba(66,165,245,.08)",border:"1px solid rgba(66,165,245,.2)",borderRadius:8,padding:"8px 12px",marginBottom:10,fontSize:12,color:"var(--muted)"}}>📷 <strong style={{color:"#42a5f5"}}>{withImg}</strong> of {parsed.length} items have image URLs — photos will be linked from the source.</div>);})()} 
+              {(()=>{const withImg=parsed.filter(i=>i.img).length;return withImg>0&&(<div style={{background:"rgba(66,165,245,.08)",border:"1px solid rgba(66,165,245,.2)",borderRadius:8,padding:"8px 12px",marginBottom:10,fontSize:12,color:"var(--muted)"}}>📷 <strong style={{color:"#42a5f5"}}>{withImg}</strong> of {parsed.length} items have image URLs.</div>);})()} 
               <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16}}>
                 <div style={{flex:1,background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.2)",
                   borderRadius:8,padding:"10px 14px",textAlign:"center"}}>
