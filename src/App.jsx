@@ -656,6 +656,7 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null}){
   const[lb,setLb]=useState(false);
   const[qr,setQr]=useState(null);
   const[showAddToProd,setShowAddToProd]=useState(false);
+  const[showCal,setShowCal]=useState(false);
   const gfx=CAT_GFX[item.category]||CAT_GFX.other;
   const mktCls=item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="Rent or Sale"?"mb-both":item.mkt==="For Loan"?"mb-loan":"mb-none";
 
@@ -705,6 +706,26 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null}){
         {item.mkt==="For Loan"&&<div className="dt-row"><span className="dt-lbl">Deposit</span><span className="price">{item.deposit>0?fmt$(item.deposit):"None (free loan)"}</span></div>}
       </div>
       <div className="dt-sec">
+        <h3 style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <span style={{display:"flex",alignItems:"center",gap:7}}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            Availability
+          </span>
+          <button className="btn btn-o btn-sm" style={{fontSize:11}} onClick={()=>setShowCal(c=>!c)}>
+            {showCal?"Hide":"Show"} Calendar
+          </button>
+        </h3>
+        {showCal && (
+          <div style={{marginTop:8}}>
+            <AvailabilityCalendar
+              itemId={item.id}
+              isOwner={!!userId}
+              userId={userId}
+            />
+          </div>
+        )}
+      </div>
+      <div className="dt-sec">
         <h3 style={{display:"flex",alignItems:"center",gap:7}}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><path d="M21 14h-3v3"/><path d="M21 21h-3v-3"/></svg>
           QR Code Label
@@ -736,6 +757,299 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null}){
         <AddToProductionPicker item={item} userId={userId} onClose={()=>setShowAddToProd(false)}/>
       )}
     </>
+  );
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// AVAILABILITY CALENDAR
+// ══════════════════════════════════════════════════════════════════════════════
+
+const MONTH_NAMES = ["January","February","March","April","May","June",
+  "July","August","September","October","November","December"];
+const DAY_NAMES = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+
+// Returns all dates a block covers as "YYYY-MM-DD" strings
+function blockDates(b) {
+  const dates = new Set();
+  const d = new Date(b.start_date + "T00:00:00");
+  const end = new Date(b.end_date + "T00:00:00");
+  while (d <= end) {
+    dates.add(d.toISOString().slice(0,10));
+    d.setDate(d.getDate() + 1);
+  }
+  return dates;
+}
+
+function toYMD(d) {
+  return d.toISOString().slice(0,10);
+}
+
+// ── AvailabilityCalendar ───────────────────────────────────────────────────────
+// isOwner = true  → owner can add/remove blocks
+// isOwner = false → read-only, shows availability to potential renters
+function AvailabilityCalendar({ itemId, isOwner, userId }) {
+  const today = new Date();
+  const [year,  setYear]   = useState(today.getFullYear());
+  const [month, setMonth]  = useState(today.getMonth());
+  const [blocks, setBlocks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  // Selection state (owner only)
+  const [selStart, setSelStart] = useState(null);
+  const [selEnd,   setSelEnd]   = useState(null);
+  const [selHover, setSelHover] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [label,    setLabel]    = useState("");
+  const [blockType,setBlockType]= useState("blocked");
+  const [saving,   setSaving]   = useState(false);
+
+  const loadBlocks = useCallback(async () => {
+    const { data } = await SB.from("availability_blocks")
+      .select("*").eq("item_id", itemId).order("start_date");
+    setBlocks(data || []);
+    setLoading(false);
+  }, [itemId]);
+
+  useEffect(() => { loadBlocks(); }, [loadBlocks]);
+
+  // All blocked dates as a map: "YYYY-MM-DD" → block object
+  const blockedMap = useMemo(() => {
+    const m = {};
+    blocks.forEach(b => {
+      blockDates(b).forEach(d => { m[d] = b; });
+    });
+    return m;
+  }, [blocks]);
+
+  // Calendar grid for current month
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay    = new Date(year, month, 1).getDay();
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const ymd = (d) => `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+
+  // Determine if a date is in current selection range
+  const inSelection = (d) => {
+    if (!selStart) return false;
+    const anchor = selEnd || selHover;
+    if (!anchor) return ymd(d) === selStart;
+    const a = selStart < anchor ? selStart : anchor;
+    const b = selStart < anchor ? anchor : selStart;
+    return ymd(d) >= a && ymd(d) <= b;
+  };
+
+  const handleDayClick = (d) => {
+    if (!isOwner) return;
+    const dateStr = ymd(d);
+    if (!selStart || selEnd) {
+      setSelStart(dateStr); setSelEnd(null); setSelHover(null); setShowForm(false);
+    } else {
+      const a = selStart < dateStr ? selStart : dateStr;
+      const b = selStart < dateStr ? dateStr : selStart;
+      setSelStart(a); setSelEnd(b);
+      setShowForm(true);
+    }
+  };
+
+  const saveBlock = async () => {
+    if (!selStart || !selEnd) return;
+    setSaving(true);
+    const { error } = await SB.from("availability_blocks").insert({
+      item_id: itemId, org_id: userId,
+      start_date: selStart, end_date: selEnd,
+      label: label.trim() || null, block_type: blockType,
+    });
+    if (!error) {
+      await loadBlocks();
+      setSelStart(null); setSelEnd(null); setSelHover(null);
+      setShowForm(false); setLabel(""); setBlockType("blocked");
+    }
+    setSaving(false);
+  };
+
+  const deleteBlock = async (blockId) => {
+    await SB.from("availability_blocks").delete().eq("id", blockId);
+    setBlocks(p => p.filter(b => b.id !== blockId));
+  };
+
+  const blockColor = (type) =>
+    type === "confirmed" ? "#c2185b" :
+    type === "pending"   ? "#d35400" : "#546e7a";
+
+  const prevMonth = () => { if(month===0){setMonth(11);setYear(y=>y-1);}else setMonth(m=>m-1); };
+  const nextMonth = () => { if(month===11){setMonth(0);setYear(y=>y+1);}else setMonth(m=>m+1); };
+
+  const isToday = (d) => {
+    return year===today.getFullYear() && month===today.getMonth() && d===today.getDate();
+  };
+  const isPast = (d) => {
+    const dt = new Date(year, month, d);
+    dt.setHours(0,0,0,0);
+    const t = new Date(); t.setHours(0,0,0,0);
+    return dt < t;
+  };
+
+  return (
+    <div>
+      {/* Calendar header */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+        <button onClick={prevMonth} className="btn btn-o btn-sm" style={{padding:"4px 10px"}}>‹</button>
+        <div style={{fontFamily:"'Lora',serif",fontWeight:600,fontSize:15}}>
+          {MONTH_NAMES[month]} {year}
+        </div>
+        <button onClick={nextMonth} className="btn btn-o btn-sm" style={{padding:"4px 10px"}}>›</button>
+      </div>
+
+      {/* Day headers */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
+        {DAY_NAMES.map(d=>(
+          <div key={d} style={{textAlign:"center",fontSize:10,fontWeight:800,
+            color:"var(--muted)",padding:"2px 0",textTransform:"uppercase",letterSpacing:.5}}>{d}</div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
+        {cells.map((d, i) => {
+          if (!d) return <div key={`e${i}`}/>;
+          const dateStr = ymd(d);
+          const block = blockedMap[dateStr];
+          const sel   = inSelection(d);
+          const past  = isPast(d);
+          const todayCell = isToday(d);
+
+          const bg = block
+            ? blockColor(block.block_type) + (past?"44":"88")
+            : sel ? "rgba(196,118,26,.35)"
+            : "transparent";
+
+          return (
+            <div key={d}
+              onClick={() => !past && handleDayClick(d)}
+              onMouseEnter={() => isOwner && selStart && !selEnd && setSelHover(dateStr)}
+              title={block?.label || (block ? "Unavailable" : "Available")}
+              style={{
+                aspectRatio:"1",
+                display:"flex",alignItems:"center",justifyContent:"center",
+                fontSize:12,fontWeight:todayCell?800:400,
+                borderRadius:5,
+                background:bg,
+                color: block ? "#fff" : past ? "var(--faint)" : sel ? "var(--ink)" : "var(--ink)",
+                cursor: past ? "default" : isOwner ? "pointer" : "default",
+                border: todayCell ? "2px solid var(--gold)" : "2px solid transparent",
+                transition:"background .1s",
+                opacity: past ? .5 : 1,
+                position:"relative",
+              }}>
+              {d}
+              {block && block.block_type === "confirmed" && (
+                <div style={{position:"absolute",bottom:1,left:"50%",transform:"translateX(-50%)",
+                  width:4,height:4,borderRadius:"50%",background:"#fff"}}/>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Legend */}
+      <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:10,fontSize:11,color:"var(--muted)"}}>
+        <span style={{display:"flex",alignItems:"center",gap:4}}>
+          <span style={{width:12,height:12,borderRadius:3,background:"#546e7a88",display:"inline-block"}}/>Blocked
+        </span>
+        <span style={{display:"flex",alignItems:"center",gap:4}}>
+          <span style={{width:12,height:12,borderRadius:3,background:"#d3540088",display:"inline-block"}}/>Pending
+        </span>
+        <span style={{display:"flex",alignItems:"center",gap:4}}>
+          <span style={{width:12,height:12,borderRadius:3,background:"#c2185b88",display:"inline-block"}}/>Confirmed
+        </span>
+        <span style={{display:"flex",alignItems:"center",gap:4}}>
+          <span style={{width:12,height:12,borderRadius:3,border:"2px solid var(--gold)",display:"inline-block"}}/>Today
+        </span>
+      </div>
+
+      {/* Owner: add block form */}
+      {isOwner && (
+        <div style={{marginTop:14}}>
+          {!selStart && !showForm && (
+            <p style={{fontSize:12,color:"var(--muted)",fontStyle:"italic"}}>
+              Click a start date, then an end date to block a range.
+            </p>
+          )}
+          {selStart && !selEnd && (
+            <p style={{fontSize:12,color:"var(--amber)",fontWeight:600}}>
+              Start: {selStart} — now click an end date
+              <button onClick={()=>setSelStart(null)} style={{marginLeft:8,background:"none",border:"none",
+                color:"var(--muted)",cursor:"pointer",fontSize:11}}>cancel</button>
+            </p>
+          )}
+          {showForm && selStart && selEnd && (
+            <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,
+              padding:14,marginTop:8,animation:"su .2s ease"}}>
+              <div style={{fontSize:13,fontWeight:700,marginBottom:10}}>
+                Block {selStart} → {selEnd}
+              </div>
+              <div className="fg2">
+                <div className="fg">
+                  <label className="fl">Type</label>
+                  <select className="fs" value={blockType} onChange={e=>setBlockType(e.target.value)}>
+                    <option value="blocked">Blocked / Unavailable</option>
+                    <option value="pending">Pending Request</option>
+                    <option value="confirmed">Confirmed Booking</option>
+                  </select>
+                </div>
+                <div className="fg">
+                  <label className="fl">Label (optional)</label>
+                  <input className="fi" value={label} onChange={e=>setLabel(e.target.value)}
+                    placeholder="e.g. Spring Musical 2026"/>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:7,marginTop:12}}>
+                <button className="btn btn-o btn-sm" onClick={()=>{setShowForm(false);setSelStart(null);setSelEnd(null);}}>Cancel</button>
+                <button className="btn btn-g btn-sm" onClick={saveBlock} disabled={saving}>
+                  {saving?"Saving…":"Block These Dates"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Existing blocks list */}
+      {blocks.length > 0 && (
+        <div style={{marginTop:16}}>
+          <div style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,
+            color:"var(--muted)",marginBottom:8}}>Blocked Periods</div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {blocks.map(b => (
+              <div key={b.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 10px",
+                borderRadius:7,background:"var(--parch)",border:"1px solid var(--border)"}}>
+                <div style={{width:10,height:10,borderRadius:"50%",flexShrink:0,
+                  background:blockColor(b.block_type)}}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:700}}>{b.start_date} → {b.end_date}</div>
+                  {b.label&&<div style={{fontSize:11,color:"var(--muted)"}}>{b.label}</div>}
+                </div>
+                <span style={{fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:6,
+                  background:blockColor(b.block_type)+"22",color:blockColor(b.block_type)}}>
+                  {b.block_type}
+                </span>
+                {isOwner && (
+                  <button onClick={()=>deleteBlock(b.id)}
+                    style={{background:"none",border:"none",color:"var(--muted)",
+                      cursor:"pointer",fontSize:14,padding:"0 2px",lineHeight:1}}>✕</button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {loading && (
+        <div style={{textAlign:"center",padding:20,color:"var(--muted)",fontSize:12}}>Loading availability…</div>
+      )}
+    </div>
   );
 }
 
