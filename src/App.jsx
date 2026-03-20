@@ -2410,11 +2410,17 @@ function AdminDashboard({ currentUser }) {
 
   const setPlanFor = async (orgId, newPlan) => {
     setSaving(orgId);
-    const { error } = await SB.from("orgs").update({ plan: newPlan }).eq("id", orgId);
+    const { error } = await SB.rpc("admin_set_plan", {
+      target_org_id: orgId,
+      new_plan: newPlan
+    });
     if (!error) {
       setOrgs(p => p.map(o => o.id === orgId ? { ...o, plan: newPlan } : o));
-      setMsg("Plan updated!");
-      setTimeout(() => setMsg(""), 2000);
+      setMsg("✓ Plan updated to " + newPlan + "!");
+      setTimeout(() => setMsg(""), 3000);
+    } else {
+      setMsg("Error: " + error.message);
+      setTimeout(() => setMsg(""), 4000);
     }
     setSaving(null);
   };
