@@ -4269,21 +4269,16 @@ function normalizeImageUrl(url) {
   if (!url) return null;
   const u = url.trim();
   if (!u.startsWith("http")) return null;
-  // Google Drive file/d/ link → thumbnail API (uc?export=view is blocked by browsers for embedding)
   const gDrive = u.match(/drive\.google\.com\/file\/d\/([^/?]+)/);
   if (gDrive) return `https://drive.google.com/thumbnail?id=${gDrive[1]}&sz=w800`;
-  // Google Drive open?id= link
   const gOpen = u.match(/drive\.google\.com\/open\?id=([^&]+)/);
   if (gOpen) return `https://drive.google.com/thumbnail?id=${gOpen[1]}&sz=w800`;
-  // Google Drive uc?id= or uc?export=view&id= (already processed or pasted directly)
   const gUc = u.match(/drive\.google\.com\/uc[^?]*\?.*[?&]id=([^&]+)/);
   if (gUc) return `https://drive.google.com/thumbnail?id=${gUc[1]}&sz=w800`;
-  // Dropbox
   if (u.includes("dropbox.com")) {
     return u.replace("www.dropbox.com","dl.dropboxusercontent.com")
             .replace(/[?&]dl=0/,"").replace(/[?&]raw=0/,"") + (u.includes("?")?"&":"?") + "raw=1";
   }
-  // Direct image URL
   if (/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(u)) return u;
   return u;
 }
@@ -4456,7 +4451,7 @@ function CSVImport({ onImport, onClose, userId }) {
                 <input ref={fileRef} type="file" accept=".csv,text/csv" hidden onChange={handleFile}/>
               </label>
 
-              <div style={{background:"rgba(66,165,245,.06)",border:"1px solid rgba(66,165,245,.18)",borderRadius:9,padding:"11px 14px",fontSize:12,color:"var(--muted)",lineHeight:1.65}}><strong style={{color:"#42a5f5"}}>📷 Adding Photos via Image URL</strong> — Add a column called <strong style={{color:"var(--ink)"}}>Image URL</strong> with a public Google Drive or Dropbox share link. For Google Drive: right-click → Share → "Anyone with the link" → Copy link → paste in your CSV. Links are automatically converted to embeddable format.</div>
+              <div style={{background:"rgba(66,165,245,.06)",border:"1px solid rgba(66,165,245,.18)",borderRadius:9,padding:"11px 14px",fontSize:12,color:"var(--muted)",lineHeight:1.65}}><strong style={{color:"#42a5f5"}}>📷 Adding Photos via Image URL</strong> — Add a column called <strong style={{color:"var(--ink)"}}>Image URL</strong> with a public Google Drive or Dropbox share link. For Google Drive: right-click → Share → "Anyone with the link" → Copy link → paste in your CSV.</div>
               <div style={{fontSize:11,color:"var(--muted)",textAlign:"center"}}>
                 Supports exports from Google Sheets, Excel, Airtable, and most inventory apps.
               </div>
@@ -5003,7 +4998,7 @@ function LandingPage({onSignIn, onSignUp}){
 }
 
 // ── Auth Overlay (modal over landing page) ────────────────────────────────────
-function AuthOverlay({onAuth}){
+function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
   const[visible,setVisible]=useState(false);
   const[mode,setMode]=useState("login");
   const[email,setEmail]=useState("");
@@ -5018,6 +5013,16 @@ function AuthOverlay({onAuth}){
     window.__t4u_show_auth=(m)=>{setMode(m||"login");setErr("");setVisible(true);};
     return()=>{delete window.__t4u_show_auth;};
   },[]);
+
+  // Auto-open signup form when an invite token is present
+  useEffect(()=>{
+    if(pendingInvite&&!visible){
+      setMode("signup");
+      setVisible(true);
+      if(inviteInfo?.email) setEmail(inviteInfo.email);
+      if(inviteInfo?.school_name) setOrgName(inviteInfo.school_name);
+    }
+  },[pendingInvite,inviteInfo]);
 
   if(!visible) return null;
 
@@ -5064,8 +5069,14 @@ function AuthOverlay({onAuth}){
     <div style={overlayStyle} onClick={e=>e.target===e.currentTarget&&close()}>
       <div style={{...cardStyle,textAlign:"center"}}>
         <div style={{fontSize:52,marginBottom:12}}>🎭</div>
-        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:"#d4a843",marginBottom:8}}>Check your email!</h2>
-        <p style={{color:"#9b93a8",fontSize:14,lineHeight:1.6,marginBottom:24}}>We sent a confirmation link to <strong style={{color:"#ede8df"}}>{email}</strong>. Click it to activate your account.</p>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:"#d4a843",marginBottom:8}}>
+          {inviteInfo?"Almost there!":"Check your email!"}
+        </h2>
+        <p style={{color:"#9b93a8",fontSize:14,lineHeight:1.6,marginBottom:24}}>
+          {inviteInfo
+            ?<>We sent a confirmation link to <strong style={{color:"#ede8df"}}>{email}</strong>. Click it to activate your account and you'll be automatically linked to {inviteInfo.district_name||"your district"}.</>
+            :<>We sent a confirmation link to <strong style={{color:"#ede8df"}}>{email}</strong>. Click it to activate your account.</>}
+        </p>
         <button onClick={()=>{setDone(false);setMode("login");}} style={{background:"#1d1925",border:"1px solid #282333",color:"#ede8df",padding:"10px 24px",borderRadius:6,cursor:"pointer",fontSize:14,fontFamily:"'DM Sans',sans-serif"}}>Back to Sign In</button>
       </div>
     </div>
@@ -5081,6 +5092,20 @@ function AuthOverlay({onAuth}){
           </div>
           <button onClick={close} style={{background:"none",border:"1px solid #282333",borderRadius:6,color:"#9b93a8",cursor:"pointer",padding:"4px 9px",fontSize:14,lineHeight:1}}>×</button>
         </div>
+        {/* Invite banner */}
+        {pendingInvite&&inviteInfo&&(
+          <div style={{background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.28)",borderRadius:10,padding:"12px 14px",marginBottom:18,display:"flex",gap:10,alignItems:"flex-start"}}>
+            <span style={{fontSize:20,flexShrink:0}}>🎭</span>
+            <div>
+              <div style={{fontWeight:700,fontSize:13,color:"#d4a843",marginBottom:2}}>You've been invited!</div>
+              <div style={{fontSize:12.5,color:"#c8c0d4",lineHeight:1.5}}>
+                {inviteInfo.district_name?<>Join <strong style={{color:"#ede8df"}}>{inviteInfo.district_name}</strong> on Theatre4u.</>:"You've been invited to join a district on Theatre4u."}
+                {inviteInfo.school_name&&<> Your school: <strong style={{color:"#ede8df"}}>{inviteInfo.school_name}</strong>.</>}
+              </div>
+              <div style={{fontSize:11,color:"#685f76",marginTop:3}}>Create your free account below to accept the invitation.</div>
+            </div>
+          </div>
+        )}
         {/* Tabs */}
         <div style={{display:"flex",borderBottom:"2px solid #282333",marginBottom:22,gap:2}}>
           {["login","signup"].map(m=>(
@@ -5428,6 +5453,18 @@ export default function App() {
     }
     return localStorage.getItem("t4u_pending_invite") || null;
   });
+  const [inviteInfo, setInviteInfo] = useState(null);
+
+  // Fetch invite details when a token is present (public RPC, no auth needed)
+  useEffect(()=>{
+    if(!pendingInvite||user) return;
+    (async()=>{
+      try{
+        const{data}=await SB.rpc("get_invite_by_token",{p_token:pendingInvite});
+        if(data&&data.length>0) setInviteInfo(data[0]);
+      }catch(e){ console.warn("Could not load invite info:", e); }
+    })();
+  },[pendingInvite,user]);
 
   // ── Auth listener ────────────────────────────────────────────────────────
   useEffect(()=>{
@@ -5614,7 +5651,7 @@ export default function App() {
           window.__t4u_show_auth&&window.__t4u_show_auth("signup");
         }}
       />
-      <AuthOverlay onAuth={u=>{setUser(u);}} />
+      <AuthOverlay onAuth={u=>{setUser(u);}} pendingInvite={pendingInvite} inviteInfo={inviteInfo}/>
     </>
   );
 
