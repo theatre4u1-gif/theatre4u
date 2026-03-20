@@ -3409,6 +3409,202 @@ function Messages({ userId, orgName, openConvId, onClearOpenConv }) {
   );
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SHOP  (Supplier Directory)
+// ══════════════════════════════════════════════════════════════════════════════
+
+const SUPPLIERS = [
+  {
+    category:"costumes", label:"Costumes & Wigs",  icon:"👗",  color:"#b5174f",
+    suppliers:[
+      { name:"Roma Costume",          url:"https://www.romacostume.com",          tag:"Dropship Ready",    desc:"24-hour shipping, formal dropship program, CSV product feeds and daily inventory reports. One of the most dropship-ready costume suppliers available." },
+      { name:"EZCosplay",             url:"https://www.ezcosplay.com",            tag:"Wholesale",         desc:"Wholesale and dropship program with no style or quantity limits. Free repackaging with your branding. Start with single-unit samples." },
+      { name:"Norcostco",             url:"https://www.norcostco.com",            tag:"Professional",      desc:"Nationwide supplier with same-day shipping, costume rental plots for 500+ shows, wigs, hats, and props. Contact for reseller account." },
+    ]
+  },
+  {
+    category:"lighting", label:"Stage Lighting",    icon:"💡",  color:"#d35400",
+    suppliers:[
+      { name:"Stage Lighting Store",  url:"https://www.stagelightingstore.com",   tag:"49,000+ Products",  desc:"Ellipsoidals, gels, moving lights, truss, rigging, audio and visual technology for everything from school plays to professional productions." },
+      { name:"Creative Stage Lighting",url:"https://www.creativestagelighting.com",tag:"47 Years",         desc:"Moving lights, LED, control consoles, power distribution, and custom cables. A one-call partner for any production." },
+      { name:"BMI Supply",            url:"https://www.bmisupply.com",            tag:"Technical Theatre", desc:"Leading technical theatre supplier for lighting, rigging, and audio. Contact directly about reseller accounts." },
+    ]
+  },
+  {
+    category:"makeup",   label:"Makeup & FX",       icon:"💄",  color:"#a0144e",
+    suppliers:[
+      { name:"Ben Nye",               url:"https://www.bennye.com",               tag:"Gold Standard",     desc:"The gold standard for stage makeup. Authorized dealer network — apply via their site to become a licensed reseller and list their full product line." },
+      { name:"Mehron",                url:"https://www.mehron.com",               tag:"Authorized Dealer", desc:"Professional stage and FX makeup for schools, theatres, and professionals globally. Apply for authorized dealer/reseller account directly." },
+      { name:"Graftobian",            url:"https://www.graftobian.com",           tag:"Stage & FX",        desc:"Professional stage and FX makeup brand working with authorized dealers. Great for schools and community theatres." },
+    ]
+  },
+  {
+    category:"props",    label:"Props & Scenery",    icon:"🎭",  color:"#6a1b8a",
+    suppliers:[
+      { name:"Rose Brand",            url:"https://www.rosebrand.com",            tag:"Same-Day Shipping", desc:"Fabrics, hardware, rigging, gaffer tape, scenic paints, flame retardants, and flooring. Up to 65% off remnants. Very wholesale-friendly." },
+      { name:"A to Z Theatrical",     url:"https://www.atoztheatrical.com",       tag:"Period Props",      desc:"Extensive inventory of props, hand props, costume accessories, décor, and furniture across many eras. Plus custom fabrication." },
+      { name:"Theatre House",         url:"https://www.theatrehouse.com",         tag:"Schools & Unis",    desc:"Full line of theatrical supply including props, costumes, elastic, and fabric. Ships quickly and works with purchase orders." },
+    ]
+  },
+  {
+    category:"tools",    label:"Consumables & Supplies", icon:"🧰", color:"#374549",
+    suppliers:[
+      { name:"Rose Brand",            url:"https://www.rosebrand.com",            tag:"Best Single Source", desc:"Gaffer, duct, spike, electrical, and masking tapes. Scenic paint, flame retardant, and dance floor products." },
+      { name:"MainStage",             url:"https://www.mainstage.com",            tag:"100+ Brands",        desc:"Theatrical paint, lamps, color media, hardware, fabric, lighting fixtures, and makeup from more than 100 top companies." },
+      { name:"Theatre Supplies Group",url:"https://www.theatresuppliesgroup.com", tag:"International",      desc:"One-stop shop for theatre consumables — gaffer tape, mic belts, air duster, markers, and more. UK and international shipping." },
+    ]
+  },
+];
+
+const DROPSHIP_PLATFORMS = [
+  { name:"Wholesale2B",      url:"https://www.wholesale2b.com",      best:"Costumes, props, cosplay — integrates with Shopify" },
+  { name:"Inventory Source", url:"https://www.inventorysource.com",  best:"Morris Costumes with auto-sync and multi-channel listing" },
+  { name:"TopDawg",          url:"https://www.topdawg.com",          best:"500k+ US products, 2–5 day shipping, API integration" },
+];
+
+function Shop() {
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [showPlatforms, setShowPlatforms]   = useState(false);
+
+  const visible = activeCategory === "all"
+    ? SUPPLIERS
+    : SUPPLIERS.filter(s => s.category === activeCategory);
+
+  return (
+    <div style={{position:"relative"}}>
+      <img src={usp(BG.marketplace,1400,900)} alt="" className="page-bg-img"/>
+      <div style={{padding:"32px 36px 0"}}>
+        <div className="hero-wrap" style={{height:240}}>
+          <img src={usp("photo-1558618666-fcd25c85cd64",1100,300)} alt="Shop" loading="eager"/>
+          <div className="hero-fade"/>
+          <div className="hero-body">
+            <div className="hero-eyebrow">🛍️ Supplier Directory</div>
+            <h1 className="hero-title" style={{fontSize:44}}>Shop</h1>
+            <p className="hero-sub">Vetted suppliers for costumes, lighting, makeup, props, and consumables — trusted by theatre programs nationwide.</p>
+          </div>
+          <div className="hero-bar"/>
+        </div>
+      </div>
+
+      <div style={{padding:"24px 36px 56px",position:"relative",zIndex:1}}>
+
+        {/* Notice banner */}
+        <div style={{background:"rgba(196,118,26,.08)",border:"1px solid rgba(196,118,26,.2)",
+          borderRadius:10,padding:"12px 16px",marginBottom:22,display:"flex",
+          alignItems:"flex-start",gap:12}}>
+          <span style={{fontSize:20,flexShrink:0}}>💡</span>
+          <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>
+            <strong style={{color:"var(--ink)"}}>Theatre4u Supplier Directory</strong> — These are vetted suppliers trusted by theatre programs.
+            Clicking "Visit Supplier" opens their site in a new tab. In the future, Theatre4u may earn affiliate commissions on purchases made through these links.
+          </div>
+        </div>
+
+        {/* Category filter tabs */}
+        <div className="tabs" style={{marginBottom:20}}>
+          <button className={`tab ${activeCategory==="all"?"on":""}`} onClick={()=>setActiveCategory("all")}>All</button>
+          {SUPPLIERS.map(s=>(
+            <button key={s.category} className={`tab ${activeCategory===s.category?"on":""}`}
+              onClick={()=>setActiveCategory(s.category)}>
+              {s.icon} {s.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Supplier groups */}
+        {visible.map(group=>(
+          <div key={group.category} style={{marginBottom:32}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+              <div style={{width:36,height:36,borderRadius:8,
+                background:group.color+"22",border:`1px solid ${group.color}44`,
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>
+                {group.icon}
+              </div>
+              <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:20,color:"var(--ink)"}}>{group.label}</h2>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:14}}>
+              {group.suppliers.map(sup=>(
+                <div key={sup.name} className="card"
+                  style={{display:"flex",flexDirection:"column",overflow:"hidden",transition:"transform .2s,box-shadow .2s"}}
+                  onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="var(--sh2)";}}
+                  onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="";}}>
+                  {/* Color bar */}
+                  <div style={{height:4,background:`linear-gradient(90deg,${group.color},${group.color}88)`}}/>
+                  <div style={{padding:"14px 16px",flex:1,display:"flex",flexDirection:"column"}}>
+                    <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,marginBottom:8}}>
+                      <div style={{fontFamily:"'Lora',serif",fontSize:16,fontWeight:600,color:"var(--ink)"}}>{sup.name}</div>
+                      <span style={{fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:8,
+                        background:group.color+"18",color:group.color,
+                        whiteSpace:"nowrap",flexShrink:0,letterSpacing:.5,textTransform:"uppercase"}}>
+                        {sup.tag}
+                      </span>
+                    </div>
+                    <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.6,flex:1,marginBottom:14}}>{sup.desc}</p>
+                    <a href={sup.url} target="_blank" rel="noreferrer"
+                      className="btn btn-o btn-sm"
+                      style={{textDecoration:"none",display:"inline-flex",alignItems:"center",
+                        gap:6,justifyContent:"center",fontWeight:700}}>
+                      Visit Supplier →
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {/* Dropship platforms section */}
+        <div className="card card-p" style={{marginTop:8}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+            cursor:"pointer"}} onClick={()=>setShowPlatforms(!showPlatforms)}>
+            <div>
+              <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:18,marginBottom:2}}>
+                📦 Dropship Aggregator Platforms
+              </h3>
+              <p style={{fontSize:13,color:"var(--muted)"}}>Multi-category platforms for fast product onboarding</p>
+            </div>
+            <span style={{fontSize:20,color:"var(--muted)",transition:"transform .2s",
+              transform:showPlatforms?"rotate(180deg)":""}}>▾</span>
+          </div>
+          {showPlatforms&&(
+            <div style={{marginTop:16,display:"grid",
+              gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12}}>
+              {DROPSHIP_PLATFORMS.map(p=>(
+                <div key={p.name} style={{background:"var(--parch)",border:"1px solid var(--border)",
+                  borderRadius:10,padding:"14px 16px"}}>
+                  <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>{p.name}</div>
+                  <div style={{fontSize:12,color:"var(--muted)",marginBottom:10,lineHeight:1.5}}>{p.best}</div>
+                  <a href={p.url} target="_blank" rel="noreferrer"
+                    className="btn btn-o btn-sm"
+                    style={{textDecoration:"none",display:"inline-flex",fontSize:12}}>
+                    Visit →
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Bottom CTA */}
+        <div style={{textAlign:"center",marginTop:32,padding:"28px",
+          background:"rgba(196,118,26,.06)",border:"1px solid rgba(196,118,26,.15)",borderRadius:14}}>
+          <div style={{fontSize:32,marginBottom:10}}>🤝</div>
+          <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:20,marginBottom:6}}>Are you a supplier?</h3>
+          <p style={{color:"var(--muted)",fontSize:13,maxWidth:420,margin:"0 auto 14px",lineHeight:1.6}}>
+            Want to be listed in the Theatre4u supplier directory? We're building relationships with theatre-focused suppliers.
+          </p>
+          <a href="mailto:hello@theatre4u.org?subject=Supplier Directory Inquiry"
+            className="btn btn-g"
+            style={{textDecoration:"none",display:"inline-flex",alignItems:"center",gap:6}}>
+            Contact Us →
+          </a>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 function CSVImport({ onImport, onClose, userId }) {
   const [step,    setStep]    = useState("upload");   // upload → map → preview → done
   const [headers, setHeaders] = useState([]);
@@ -4676,12 +4872,13 @@ export default function App() {
     { id:"dashboard",   label:"Dashboard",   ico:Ic.home    },
     { id:"inventory",   label:"Inventory",   ico:Ic.box     },
     { id:"marketplace", label:"Marketplace", ico:Ic.store   },
+    { id:"shop",        label:"Shop",        ico:"🛍️"       },
     { id:"productions", label:"Productions", ico:"🎭"       },
     { id:"reports",     label:"Reports",     ico:Ic.chart   },
     ...(plan === "district" ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
     ...(isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
   ];
-  const TITLES = { messages:"Messages", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Marketplace", productions:"Productions", reports:"Reports", settings:"Profile", admin:"Admin Dashboard", district:"District" };
+  const TITLES = { messages:"Messages", dashboard:"Dashboard", shop:"Shop", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Marketplace", productions:"Productions", reports:"Reports", settings:"Profile", admin:"Admin Dashboard", district:"District" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicItemId) return <PublicItemPage itemId={publicItemId} />;
@@ -4827,6 +5024,7 @@ export default function App() {
                   )}
                   {page==="marketplace" && <Marketplace items={items} org={org} plan={plan} activeSchool={activeSchool} allSchoolsMode={plan==="district"}/>}
                   {page==="productions" && <Productions userId={user?.id} allItems={items}/>}
+                  {page==="shop"        && <Shop/>}
                   {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan}/>}
                   {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan}/>}
                   {page==="district"    && plan==="district" && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool}/>}
