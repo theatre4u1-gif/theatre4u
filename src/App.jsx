@@ -2321,8 +2321,8 @@ function Reports({ items, plan="free" }) {
   ).sort((a,b)=>b[1].qty-a[1].qty);
 
   const csv = () => {
-    const h=["Name","Category","Condition","Size","Qty","Location","Availability","Market","Rent","Sale","Loan Period (wks)","Deposit","Tags","Notes","ID","Added"];
-    const rows=items.map(i=>[i.name,i.category,i.condition,i.size,i.qty,i.location,i.avail,i.mkt,i.rent,i.sale,i.loan_period||"",i.deposit||"",(i.tags||[]).join(";"),`"${(i.notes||"").replace(/"/g,'""')}"`,i.id,i.added]);
+    const h=["Name","Category","Condition","Size","Qty","Location","Availability","Market","Rent","Sale","Loan Period (wks)","Deposit","Tags","Image URL","Notes","ID","Added"];
+    const rows=items.map(i=>[i.name,i.category,i.condition,i.size,i.qty,i.location,i.avail,i.mkt,i.rent,i.sale,i.loan_period||"",i.deposit||"",(i.tags||[]).join(";"),i.img||"",`"${(i.notes||"").replace(/"/g,'""')}"`,i.id,i.added]);
     const csv=[h,...rows].map(r=>r.join(",")).join("\n");
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="theatre4u_inventory.csv";a.click();
   };
@@ -3111,7 +3111,7 @@ function AdminDashboard({ currentUser }) {
 
 // Our canonical fields and how to auto-detect them from messy column names
 const CSV_FIELDS = [
-  { key:"name",      label:"Item Name",    required:true,  hints:["name","item","title","description","desc"] },
+  { key:"name",      label:"Item Name",    required:true,  hints:["name","item","title","item name"] },
   { key:"category",  label:"Category",     required:false, hints:["category","cat","type","kind"] },
   { key:"condition", label:"Condition",    required:false, hints:["condition","cond","quality","state"] },
   { key:"size",      label:"Size",         required:false, hints:["size","sz"] },
@@ -3124,6 +3124,8 @@ const CSV_FIELDS = [
   { key:"deposit",    label:"Deposit",      required:false, hints:["deposit","security","refundable"] },
   { key:"sale",      label:"Sale Price",   required:false, hints:["sale","sell","price","cost","value"] },
   { key:"tags",      label:"Tags",         required:false, hints:["tags","tag","keywords","labels"] },
+  { key:"description",label:"Description", required:false, hints:["description","desc","item description","about","overview"] },
+  { key:"img",       label:"Image URL",    required:false, hints:["image","image url","photo","photo url","img","picture","url","photo link","image link"] },
   { key:"notes",     label:"Notes",        required:false, hints:["notes","note","comments","comment","remarks","details"] },
 ];
 
@@ -3190,6 +3192,7 @@ function coerce(key, raw) {
     case "rent":
     case "sale": { const n=parseFloat(v.replace(/[$,]/g,"")); return isNaN(n)?0:Math.max(0,n); }
     case "tags": { return v.split(/[;,|]/).map(t=>t.trim().toLowerCase()).filter(Boolean); }
+    case "img":  { return normalizeImageUrl(v); }
     default:     return v;
   }
 }
@@ -4262,6 +4265,26 @@ function Messages({ userId, orgName, openConvId, onClearOpenConv }) {
 
 
 
+function normalizeImageUrl(url) {
+  if (!url) return null;
+  const u = url.trim();
+  if (!u.startsWith("http")) return null;
+  // Google Drive: https://drive.google.com/file/d/FILE_ID/view
+  const gDrive = u.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+  if (gDrive) return `https://drive.google.com/uc?export=view&id=${gDrive[1]}`;
+  // Google Drive open link
+  const gOpen = u.match(/drive\.google\.com\/open\?id=([^&]+)/);
+  if (gOpen) return `https://drive.google.com/uc?export=view&id=${gOpen[1]}`;
+  // Dropbox
+  if (u.includes("dropbox.com")) {
+    return u.replace("www.dropbox.com","dl.dropboxusercontent.com")
+            .replace(/[?&]dl=0/,"").replace(/[?&]raw=0/,"") + (u.includes("?")?"&":"?") + "raw=1";
+  }
+  // Direct image URL
+  if (/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(u)) return u;
+  return u;
+}
+
 function CSVImport({ onImport, onClose, userId }) {
   const [step,    setStep]    = useState("upload");   // upload → map → preview → done
   const [headers, setHeaders] = useState([]);
@@ -4297,7 +4320,7 @@ function CSVImport({ onImport, onClose, userId }) {
 
   // Download our template
   const downloadTemplate = () => {
-    const h = ["Name","Category","Condition","Size","Qty","Location","Availability","Market","Rent","Sale","Tags","Notes"];
+    const h = ["Name","Category","Condition","Size","Qty","Location","Availability","Market","Rent","Sale","Tags","Image URL","Notes"];
     const ex = [
       ["Victorian Ball Gown","costumes","Good","M","1","Costume Closet A","In Stock","For Rent","25","0","period;formal","Used in A Christmas Carol"],
       ["Fog Machine 1000W","effects","Excellent","N/A","2","Effects Cage","In Stock","For Rent","20","0","atmosphere","Includes remote"],
@@ -4320,7 +4343,7 @@ function CSVImport({ onImport, onClose, userId }) {
       const item = {
         category: "other", condition: "Good", size: "N/A",
         qty: 1, avail: "In Stock", mkt: "Not Listed",
-        rent: 0, sale: 0, tags: [], notes: "", location: ""
+        rent: 0, sale: 0, tags: [], notes: "", location: "", img: null, description: ""
       };
       Object.entries(mapping).forEach(([colIdx, fieldKey]) => {
         const raw = row[parseInt(colIdx)];
@@ -4430,6 +4453,7 @@ function CSVImport({ onImport, onClose, userId }) {
                 <input ref={fileRef} type="file" accept=".csv,text/csv" hidden onChange={handleFile}/>
               </label>
 
+              <div style={{background:"rgba(66,165,245,.06)",border:"1px solid rgba(66,165,245,.18)",borderRadius:9,padding:"11px 14px",fontSize:12,color:"var(--muted)",lineHeight:1.65}}><strong style={{color:"#42a5f5"}}>📷 Adding Photos via Image URL</strong> — Add a column called <strong style={{color:"var(--ink)"}}>Image URL</strong> or <strong style={{color:"var(--ink)"}}>Photo URL</strong> with a public link to each photo. Google Drive and Dropbox share links are converted automatically. For Google Drive: right-click the file → Share → "Anyone with the link" → Copy link → paste in your CSV.</div>
               <div style={{fontSize:11,color:"var(--muted)",textAlign:"center"}}>
                 Supports exports from Google Sheets, Excel, Airtable, and most inventory apps.
               </div>
@@ -4498,6 +4522,7 @@ function CSVImport({ onImport, onClose, userId }) {
           {/* ── STEP 3: PREVIEW ── */}
           {step==="preview" && (
             <div>
+              {(()=>{const withImg=parsed.filter(i=>i.img).length;return withImg>0&&(<div style={{background:"rgba(66,165,245,.08)",border:"1px solid rgba(66,165,245,.2)",borderRadius:8,padding:"8px 12px",marginBottom:10,fontSize:12,color:"var(--muted)"}}>📷 <strong style={{color:"#42a5f5"}}>{withImg}</strong> of {parsed.length} items have image URLs — photos will be linked from the source.</div>);})()} 
               <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16}}>
                 <div style={{flex:1,background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.2)",
                   borderRadius:8,padding:"10px 14px",textAlign:"center"}}>
@@ -4517,7 +4542,7 @@ function CSVImport({ onImport, onClose, userId }) {
                   <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                     <thead>
                       <tr style={{background:"rgba(18,6,0,.07)",position:"sticky",top:0}}>
-                        {["#","Name","Category","Cond.","Qty","Location","Market","Notes"].map(h=>(
+                        {["#","Photo","Name","Category","Cond.","Qty","Location","Market","Notes"].map(h=>(
                           <th key={h} style={{padding:"7px 10px",textAlign:"left",fontSize:10,
                             textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",fontWeight:700,
                             whiteSpace:"nowrap"}}>{h}</th>
@@ -4531,6 +4556,9 @@ function CSVImport({ onImport, onClose, userId }) {
                           <tr key={i} style={{borderTop:"1px solid var(--border)",
                             background:i%2===0?"transparent":"rgba(18,6,0,.03)"}}>
                             <td style={{padding:"6px 10px",color:"var(--muted)"}}>{i+1}</td>
+                            <td style={{padding:"4px 8px"}}>
+                              {item.img?<img src={item.img} alt="" style={{width:36,height:36,borderRadius:4,objectFit:"cover",border:"1px solid var(--border)"}} onError={e=>e.target.style.display="none"}/>:<span style={{color:"var(--faint)"}}>—</span>}
+                            </td>
                             <td style={{padding:"6px 10px",fontWeight:600,maxWidth:160,
                               overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</td>
                             <td style={{padding:"6px 10px",whiteSpace:"nowrap"}}>{cat.icon} {cat.label}</td>
@@ -4549,7 +4577,7 @@ function CSVImport({ onImport, onClose, userId }) {
                         );
                       })}
                       {parsed.length>100&&(
-                        <tr><td colSpan={8} style={{padding:"8px 10px",textAlign:"center",
+                        <tr><td colSpan={9} style={{padding:"8px 10px",textAlign:"center",
                           color:"var(--muted)",fontSize:11,borderTop:"1px solid var(--border)"}}>
                           + {parsed.length-100} more rows not shown in preview
                         </td></tr>
