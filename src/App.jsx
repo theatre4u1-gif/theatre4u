@@ -5386,10 +5386,16 @@ export default function App() {
   const [pendingReqCount, setPendingReqCount] = useState(0);
   const [schoolItems,setSchoolItems]     = useState([]);
   const [schoolLoading,setSchoolLoading] = useState(false);
-  // Invite token from URL
+  // Invite token from URL — persisted in localStorage so it survives
+  // Supabase's email confirmation redirect (which strips query params)
   const [pendingInvite,setPendingInvite] = useState(() => {
     const p = new URLSearchParams(window.location.search);
-    return p.get("invite") || null;
+    const fromUrl = p.get("invite");
+    if (fromUrl) {
+      localStorage.setItem("t4u_pending_invite", fromUrl);
+      return fromUrl;
+    }
+    return localStorage.getItem("t4u_pending_invite") || null;
   });
 
   // ── Auth listener ────────────────────────────────────────────────────────
@@ -5520,13 +5526,17 @@ export default function App() {
         .eq("token", pendingInvite)
         .eq("status", "pending")
         .single();
-      if (!invite) { setPendingInvite(null); return; }
+      if (!invite) { localStorage.removeItem("t4u_pending_invite"); setPendingInvite(null); return; }
       // Link org to district + mark invite accepted
       await SB.from("orgs").update({ district_id: invite.district_id, role: "school_admin" }).eq("id", user.id);
       await SB.from("district_invites").update({ status: "accepted", accepted_at: new Date().toISOString() }).eq("id", invite.id);
-      // Clean URL
+      // Clean URL and clear stored token
       window.history.replaceState({}, "", window.location.pathname);
+      localStorage.removeItem("t4u_pending_invite");
       setPendingInvite(null);
+      // Reload org data to pick up new district_id
+      const { data: updatedOrg } = await SB.from("orgs").select("*").eq("id", user.id).single();
+      if (updatedOrg) setOrg(updatedOrg);
       alert(`✓ You've joined ${invite.districts?.name || "the district"}! Welcome to Theatre4u.`);
     })();
   }, [user, pendingInvite]);
