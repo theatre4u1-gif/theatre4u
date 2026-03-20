@@ -1487,6 +1487,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
   const[pg,       setPg]      = useState(1);
   const[viewing,   setViewing]   = useState(null);
   const[contactItem,setContactItem] = useState(null);
+  const[requestItem, setRequestItem]  = useState(null);
   // Location search
   const[zipInput, setZipInput]= useState(org?.zipcode||"");
   const[radius,   setRadius]  = useState("25");   // miles or "state" or "all"
@@ -1744,7 +1745,16 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
                       <span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span>
                       {item.mkt==="For Loan"?<span style={{fontSize:12,color:"#00838f",fontWeight:700}}>{item.loan_period||2}wk loan{item.deposit>0?" · "+fmt$(item.deposit)+" dep.":""}</span>:<span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>}
                     </div>
-                    {!isOwn&&<button className="btn btn-o btn-sm btn-full" style={{marginTop:8,fontSize:12}} onClick={e=>{e.stopPropagation();setContactItem(item);}}>💬 Contact Program</button>}
+                    {!isOwn&&<div style={{display:"flex",gap:6,marginTop:8}}>
+                      <button className="btn btn-g btn-sm" style={{flex:1,fontSize:12}}
+                        onClick={e=>{e.stopPropagation();setRequestItem(item);}}>
+                        📋 Request
+                      </button>
+                      <button className="btn btn-o btn-sm" style={{flex:1,fontSize:12}}
+                        onClick={e=>{e.stopPropagation();setContactItem(item);}}>
+                        💬 Message
+                      </button>
+                    </div>}
                   </div>
                 </div>
               );
@@ -1766,6 +1776,527 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
         onOpen={convId=>{setOpenConvId(convId); window.__t4u_nav_messages&&window.__t4u_nav_messages(convId);}}
         onClose={()=>setContactItem(null)}
       />}
+      {requestItem&&<RequestItemModal
+        item={requestItem}
+        currentUserId={org?.id}
+        currentOrgName={org?.name}
+        currentOrgEmail={org?.email}
+        onClose={()=>setRequestItem(null)}
+        onSuccess={()=>{ window.__t4u_nav_requests&&window.__t4u_nav_requests(); }}
+      />}
+    </div>
+  );
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// RENTAL REQUEST FLOW
+// ══════════════════════════════════════════════════════════════════════════════
+
+const NOTIFY_URL = "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/request-notify";
+
+async function notifyRequest(type, requestId) {
+  try {
+    const { data: { session } } = await SB.auth.getSession();
+    if (!session) return;
+    fetch(NOTIFY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
+      body: JSON.stringify({ type, request_id: requestId })
+    });
+  } catch {}
+}
+
+// ── Request Form Modal ────────────────────────────────────────────────────────
+function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail, onClose, onSuccess }) {
+  const today     = new Date().toISOString().slice(0,10);
+  const isRent    = item.mkt === "For Rent" || item.mkt === "Rent or Sale";
+  const isLoan    = item.mkt === "For Loan";
+  const isSale    = item.mkt === "For Sale" || item.mkt === "Rent or Sale";
+  const isBoth    = item.mkt === "Rent or Sale";
+  const [type,    setType]    = useState(isRent?"rent":isLoan?"loan":"buy");
+  const [start,   setStart]   = useState(today);
+  const [end,     setEnd]     = useState("");
+  const [qty,     setQty]     = useState(1);
+  const [msg,     setMsg]     = useState("");
+  const [sending, setSending] = useState(false);
+  const [err,     setErr]     = useState("");
+  const [conflict,setConflict]= useState(false);
+  const [blocks,  setBlocks]  = useState([]);
+  const needsDates = type !== "buy";
+
+  // Load availability blocks to warn about conflicts
+  useEffect(()=>{
+    SB.from("availability_blocks").select("*").eq("item_id", item.id)
+      .then(({data})=>setBlocks(data||[]));
+  },[item.id]);
+
+  // Check if selected dates conflict with blocks
+  useEffect(()=>{
+    if (!start || !end || !needsDates) { setConflict(false); return; }
+    const s = new Date(start), e = new Date(end);
+    const hasConflict = blocks.some(b => {
+      const bs = new Date(b.start_date), be = new Date(b.end_date);
+      return s <= be && e >= bs;
+    });
+    setConflict(hasConflict);
+  },[start,end,blocks,needsDates]);
+
+  const submit = async () => {
+    if (!msg.trim()) { setErr("Please include a message to the owner."); return; }
+    if (needsDates && (!start || !end)) { setErr("Please select start and end dates."); return; }
+    if (needsDates && end < start) { setErr("End date must be after start date."); return; }
+    setSending(true); setErr("");
+    const agreed = type==="rent" ? item.rent : type==="loan" ? (item.deposit||0) : item.sale;
+    const { data, error } = await SB.from("rental_requests").insert({
+      item_id:        item.id,
+      item_name:      item.name,
+      item_type:      type,
+      owner_id:       item.org_id,
+      requester_id:   currentUserId,
+      requester_name: currentOrgName,
+      requester_email:currentOrgEmail,
+      start_date:     needsDates ? start : null,
+      end_date:       needsDates ? end   : null,
+      qty_requested:  qty,
+      message:        msg.trim(),
+      agreed_price:   agreed,
+      status:         "pending",
+    }).select().single();
+    if (error) { setErr(error.message); setSending(false); return; }
+    notifyRequest("new_request", data.id);
+    onSuccess?.();
+    onClose();
+    setSending(false);
+  };
+
+  const typeColor = { rent:"#1554a0", loan:"#00838f", buy:"#27723a" };
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:3000,
+      display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{width:"100%",maxWidth:500,background:"var(--cream)",border:"1px solid var(--border)",
+        borderRadius:14,overflow:"hidden",boxShadow:"0 12px 48px rgba(0,0,0,.4)",animation:"su .2s ease"}}>
+        {/* Header */}
+        <div style={{padding:"14px 18px",borderBottom:"1px solid var(--border)",
+          background:"var(--parch)",display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
+          <div>
+            <div style={{fontFamily:"'Playfair Display',serif",fontSize:17,fontWeight:700}}>Request Item</div>
+            <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>{item.name}</div>
+          </div>
+          <button onClick={onClose} style={{background:"none",border:"1px solid var(--border)",
+            color:"var(--muted)",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>✕</button>
+        </div>
+
+        <div style={{padding:18,display:"flex",flexDirection:"column",gap:14}}>
+          {/* Type selector if multiple options */}
+          {isBoth && (
+            <div>
+              <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:6}}>Request Type</label>
+              <div style={{display:"flex",gap:8}}>
+                {[["rent","🔑 Rent"],["buy","🛒 Buy"]].map(([v,l])=>(
+                  <button key={v} onClick={()=>setType(v)}
+                    style={{flex:1,padding:"8px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",
+                      fontWeight:700,fontSize:13,border:"2px solid",transition:"all .15s",
+                      background:type===v?typeColor[v]:"transparent",
+                      color:type===v?"#fff":"var(--muted)",
+                      borderColor:type===v?typeColor[v]:"var(--border)"}}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Date range — shown for rent and loan */}
+          {needsDates && (
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <div>
+                <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Start Date</label>
+                <input type="date" value={start} min={today}
+                  onChange={e=>setStart(e.target.value)}
+                  style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--border)",
+                    borderRadius:7,padding:"8px 10px",fontSize:13,fontFamily:"'Raleway',sans-serif",
+                    color:"var(--ink)",outline:"none",boxSizing:"border-box"}}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>End Date</label>
+                <input type="date" value={end} min={start||today}
+                  onChange={e=>setEnd(e.target.value)}
+                  style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--border)",
+                    borderRadius:7,padding:"8px 10px",fontSize:13,fontFamily:"'Raleway',sans-serif",
+                    color:"var(--ink)",outline:"none",boxSizing:"border-box"}}/>
+              </div>
+            </div>
+          )}
+
+          {/* Conflict warning */}
+          {conflict && (
+            <div style={{background:"rgba(194,24,91,.08)",border:"1px solid rgba(194,24,91,.25)",
+              borderRadius:8,padding:"10px 12px",fontSize:12,color:"#c2185b",display:"flex",gap:8}}>
+              <span>⚠️</span>
+              <span>These dates overlap with an existing booking. The owner may not be able to fulfil this request — you can still send it and they will confirm availability.</span>
+            </div>
+          )}
+
+          {/* Quantity */}
+          <div>
+            <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Quantity Needed</label>
+            <input type="number" value={qty} min={1} max={item.qty||99}
+              onChange={e=>setQty(Math.max(1,parseInt(e.target.value)||1))}
+              style={{width:80,background:"var(--parch)",border:"1.5px solid var(--border)",
+                borderRadius:7,padding:"8px 10px",fontSize:13,fontFamily:"'Raleway',sans-serif",
+                color:"var(--ink)",outline:"none"}}/>
+            <span style={{fontSize:12,color:"var(--muted)",marginLeft:8}}>{item.qty} available</span>
+          </div>
+
+          {/* Pricing summary */}
+          {(item.rent>0||item.sale>0||item.deposit>0) && (
+            <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:8,padding:"10px 14px",fontSize:13}}>
+              {type==="rent"&&item.rent>0&&<div>Rental rate: <strong style={{color:"var(--cog)"}}>{fmt$(item.rent)}/week</strong></div>}
+              {type==="buy" &&item.sale>0&&<div>Sale price:  <strong style={{color:"var(--cog)"}}>{fmt$(item.sale)}</strong></div>}
+              {type==="loan"&&<div>Free loan{item.deposit>0?` · Deposit: `+fmt$(item.deposit):""}</div>}
+              {type==="loan"&&item.loan_period&&<div style={{color:"var(--muted)",fontSize:12,marginTop:2}}>Loan period: {item.loan_period} week{item.loan_period!==1?"s":""}</div>}
+            </div>
+          )}
+
+          {/* Message */}
+          <div>
+            <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Message to Owner *</label>
+            <textarea value={msg} onChange={e=>setMsg(e.target.value)} rows={3}
+              placeholder={needsDates
+                ?"Hi! We're interested in this item for our Spring production. Is it available for those dates?"
+                :"Hi! We'd like to purchase this item. Is it still available?"}
+              style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--border)",
+                borderRadius:8,padding:"8px 11px",fontSize:13,fontFamily:"'Raleway',sans-serif",
+                color:"var(--ink)",outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+          </div>
+
+          {err && <div style={{color:"var(--red)",fontSize:12,background:"rgba(194,24,91,.06)",
+            border:"1px solid rgba(194,24,91,.2)",borderRadius:6,padding:"8px 11px"}}>{err}</div>}
+
+          <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+            <button className="btn btn-o" onClick={onClose}>Cancel</button>
+            <button className="btn btn-g" onClick={submit} disabled={sending||!msg.trim()}>
+              {sending?"Sending…":"Send Request →"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Requests Page ──────────────────────────────────────────────────────────────
+function Requests({ userId, orgName, orgEmail }) {
+  const [tab,       setTab]      = useState("incoming");
+  const [requests,  setRequests] = useState([]);
+  const [loading,   setLoading]  = useState(true);
+  const [acting,    setActing]   = useState(null); // requestId being acted on
+  const [declineId, setDeclineId]= useState(null); // showing decline reason form
+  const [reason,    setReason]   = useState("");
+
+  const load = useCallback(async () => {
+    const col = tab === "incoming" ? "owner_id" : "requester_id";
+    const { data } = await SB.from("rental_requests")
+      .select("*").eq(col, userId)
+      .order("created_at", { ascending: false });
+
+    // Attach org names
+    const ids = new Set();
+    (data||[]).forEach(r => { ids.add(r.owner_id); ids.add(r.requester_id); });
+    const { data: orgs } = await SB.from("orgs").select("id,name,email").in("id",[...ids]);
+    const orgMap = {};
+    (orgs||[]).forEach(o => orgMap[o.id] = o);
+
+    setRequests((data||[]).map(r => ({
+      ...r,
+      ownerOrg:     orgMap[r.owner_id],
+      requesterOrg: orgMap[r.requester_id],
+    })));
+    setLoading(false);
+  }, [userId, tab]);
+
+  useEffect(() => { setLoading(true); load(); }, [load]);
+
+  // Realtime updates
+  useEffect(() => {
+    const ch = SB.channel("requests-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "rental_requests" },
+        () => load())
+      .subscribe();
+    return () => SB.removeChannel(ch);
+  }, [load]);
+
+  const accept = async (req) => {
+    setActing(req.id);
+    // 1. Block the availability calendar
+    let blockId = null;
+    if (req.start_date && req.end_date) {
+      const { data: block } = await SB.from("availability_blocks").insert({
+        item_id:    req.item_id,
+        org_id:     userId,
+        start_date: req.start_date,
+        end_date:   req.end_date,
+        label:      `${req.item_type==="loan"?"Loan":"Rental"} — ${req.requesterOrg?.name||req.requester_name||"Requester"}`,
+        block_type: "confirmed",
+      }).select().single();
+      blockId = block?.id;
+    }
+
+    // 2. Open or reuse a conversation thread
+    let convId = null;
+    const { data: existingConv } = await SB.from("conversations")
+      .select("id").eq("org_a", userId).eq("org_b", req.requester_id).single();
+    if (existingConv) {
+      convId = existingConv.id;
+    } else {
+      const { data: newConv } = await SB.from("conversations").insert({
+        item_id:      req.item_id,
+        org_a:        userId,
+        org_b:        req.requester_id,
+        item_name:    req.item_name,
+        last_message: `Request accepted for ${req.item_name}`,
+        last_at:      new Date().toISOString(),
+      }).select().single();
+      convId = newConv?.id;
+    }
+
+    // Auto-send acceptance message in chat
+    if (convId) {
+      const dateStr = req.start_date ? ` (${req.start_date} → ${req.end_date})` : "";
+      await SB.from("messages").insert({
+        conversation_id: convId,
+        sender_id:       userId,
+        body: `✅ Great news! I've accepted your ${req.item_type} request for "${req.item_name}"${dateStr}. Let's coordinate the details here.`,
+      });
+      await SB.from("conversations").update({
+        last_message: `Request accepted — let's coordinate!`,
+        last_at: new Date().toISOString()
+      }).eq("id", convId);
+    }
+
+    // 3. Update request status
+    await SB.from("rental_requests").update({
+      status:      "accepted",
+      block_id:    blockId,
+      conversation_id: convId,
+      updated_at:  new Date().toISOString(),
+    }).eq("id", req.id);
+
+    notifyRequest("accepted", req.id);
+    await load();
+    setActing(null);
+  };
+
+  const decline = async (req) => {
+    setActing(req.id);
+    await SB.from("rental_requests").update({
+      status:         "declined",
+      decline_reason: reason.trim() || null,
+      updated_at:     new Date().toISOString(),
+    }).eq("id", req.id);
+    notifyRequest("declined", req.id);
+    setDeclineId(null); setReason("");
+    await load();
+    setActing(null);
+  };
+
+  const markReturned = async (req) => {
+    setActing(req.id);
+    // Unblock calendar
+    if (req.block_id) {
+      await SB.from("availability_blocks").delete().eq("id", req.block_id);
+    }
+    await SB.from("rental_requests").update({
+      status:     "returned",
+      updated_at: new Date().toISOString(),
+    }).eq("id", req.id);
+    notifyRequest("returned", req.id);
+    await load();
+    setActing(null);
+  };
+
+  const cancel = async (req) => {
+    setActing(req.id);
+    await SB.from("rental_requests").update({
+      status: "cancelled", updated_at: new Date().toISOString()
+    }).eq("id", req.id);
+    await load();
+    setActing(null);
+  };
+
+  const statusColor = { pending:"#d35400", accepted:"#27723a", declined:"#c2185b", returned:"#546e7a", cancelled:"#9e9e9e" };
+  const statusIcon  = { pending:"⏳", accepted:"✅", declined:"❌", returned:"📦", cancelled:"🚫" };
+  const typeLabel   = { rent:"Rental", loan:"Loan", buy:"Purchase" };
+  const typeColor   = { rent:"#1554a0", loan:"#00838f", buy:"#27723a" };
+
+  const pending   = requests.filter(r => r.status === "pending").length;
+  const accepted  = requests.filter(r => r.status === "accepted").length;
+
+  return (
+    <div style={{position:"relative"}}>
+      <img src={usp(BG.dashboard,1400,900)} alt="" className="page-bg-img"/>
+      <div style={{padding:"32px 36px 0"}}>
+        <div className="hero-wrap" style={{height:200}}>
+          <img src={usp("photo-1503095396549-807759245b35",1100,260)} alt="Requests" loading="eager"/>
+          <div className="hero-fade"/>
+          <div className="hero-body">
+            <div className="hero-eyebrow">📋 Transaction Centre</div>
+            <h1 className="hero-title" style={{fontSize:42}}>Requests</h1>
+            <p className="hero-sub">Manage rental, loan, and purchase requests for your items.</p>
+          </div>
+          <div className="hero-bar"/>
+        </div>
+      </div>
+
+      <div style={{padding:"24px 36px 56px",position:"relative",zIndex:1}}>
+        {/* Tabs */}
+        <div className="tabs" style={{marginBottom:20}}>
+          <button className={`tab ${tab==="incoming"?"on":""}`} onClick={()=>setTab("incoming")}>
+            Incoming {pending>0&&<span style={{background:"var(--red)",color:"#fff",borderRadius:8,
+              padding:"1px 6px",fontSize:10,fontWeight:800,marginLeft:4}}>{pending}</span>}
+          </button>
+          <button className={`tab ${tab==="outgoing"?"on":""}`} onClick={()=>setTab("outgoing")}>
+            My Requests {accepted>0&&tab==="outgoing"&&<span style={{background:"var(--green)",color:"#fff",borderRadius:8,
+              padding:"1px 6px",fontSize:10,fontWeight:800,marginLeft:4}}>{accepted}</span>}
+          </button>
+        </div>
+
+        {loading ? (
+          <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading requests…</div>
+        ) : requests.length === 0 ? (
+          <div className="empty">
+            <div className="empty-ico">{tab==="incoming"?"📬":"📤"}</div>
+            <h3>{tab==="incoming"?"No Incoming Requests":"No Outgoing Requests"}</h3>
+            <p>{tab==="incoming"
+              ?"When other programs request your listed items, they'll appear here."
+              :"When you request items from the Marketplace, they'll appear here."}</p>
+          </div>
+        ) : (
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            {requests.map(req => {
+              const otherOrg = tab==="incoming" ? req.requesterOrg : req.ownerOrg;
+              const isActive = acting === req.id;
+              return (
+                <div key={req.id} className="card" style={{overflow:"hidden"}}>
+                  {/* Status bar */}
+                  <div style={{height:4,background:statusColor[req.status]||"#ccc"}}/>
+                  <div style={{padding:"14px 18px"}}>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:10,alignItems:"flex-start",marginBottom:12}}>
+                      {/* Left: item info */}
+                      <div style={{flex:1,minWidth:200}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:4}}>
+                          <span style={{fontFamily:"'Lora',serif",fontSize:17,fontWeight:700}}>{req.item_name}</span>
+                          <span style={{fontSize:11,fontWeight:800,padding:"2px 8px",borderRadius:6,
+                            background:typeColor[req.item_type]+"18",color:typeColor[req.item_type]}}>
+                            {typeLabel[req.item_type]||req.item_type}
+                          </span>
+                          <span style={{fontSize:11,fontWeight:800,padding:"2px 8px",borderRadius:6,
+                            background:statusColor[req.status]+"18",color:statusColor[req.status]}}>
+                            {statusIcon[req.status]} {req.status}
+                          </span>
+                        </div>
+                        <div style={{fontSize:13,color:"var(--muted)"}}>
+                          {tab==="incoming"?"From":"To"}: <strong>{otherOrg?.name||"Unknown Program"}</strong>
+                        </div>
+                      </div>
+                      {/* Right: dates + price */}
+                      <div style={{textAlign:"right",flexShrink:0}}>
+                        {req.start_date&&<div style={{fontSize:13,fontWeight:700,color:"var(--ink)"}}>
+                          {req.start_date} → {req.end_date}
+                        </div>}
+                        {req.agreed_price>0&&<div style={{fontSize:13,color:"var(--cog)",fontWeight:700}}>
+                          {req.item_type==="rent"?fmt$(req.agreed_price)+"/wk":fmt$(req.agreed_price)}
+                        </div>}
+                        <div style={{fontSize:11,color:"var(--faint)",marginTop:2}}>
+                          Qty: {req.qty_requested}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Message */}
+                    {req.message&&(
+                      <div style={{background:"var(--parch)",border:"1px solid var(--border)",
+                        borderRadius:7,padding:"9px 12px",fontSize:13,color:"var(--muted)",
+                        lineHeight:1.5,marginBottom:12,fontStyle:"italic"}}>
+                        "{req.message}"
+                      </div>
+                    )}
+
+                    {/* Decline reason */}
+                    {req.status==="declined"&&req.decline_reason&&(
+                      <div style={{background:"rgba(194,24,91,.06)",border:"1px solid rgba(194,24,91,.15)",
+                        borderRadius:7,padding:"8px 12px",fontSize:12,color:"#c2185b",marginBottom:12}}>
+                        Reason: {req.decline_reason}
+                      </div>
+                    )}
+
+                    {/* Decline reason form */}
+                    {declineId===req.id&&(
+                      <div style={{marginBottom:12}}>
+                        <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",
+                          letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>
+                          Reason for declining (optional)
+                        </label>
+                        <input className="fi" value={reason} onChange={e=>setReason(e.target.value)}
+                          placeholder="e.g. Already booked for those dates"
+                          style={{width:"100%",marginBottom:8}}/>
+                        <div style={{display:"flex",gap:6}}>
+                          <button className="btn btn-d btn-sm" onClick={()=>decline(req)} disabled={isActive}>
+                            {isActive?"…":"Confirm Decline"}
+                          </button>
+                          <button className="btn btn-o btn-sm" onClick={()=>setDeclineId(null)}>Cancel</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+                      {/* Incoming pending — owner accepts or declines */}
+                      {tab==="incoming"&&req.status==="pending"&&(<>
+                        <button className="btn btn-g btn-sm" onClick={()=>accept(req)} disabled={isActive}>
+                          {isActive?"Processing…":"✅ Accept"}
+                        </button>
+                        <button className="btn btn-d btn-sm" onClick={()=>setDeclineId(req.id)} disabled={isActive}>
+                          ❌ Decline
+                        </button>
+                      </>)}
+
+                      {/* Incoming accepted — owner marks returned */}
+                      {tab==="incoming"&&req.status==="accepted"&&(
+                        <button className="btn btn-o btn-sm" onClick={()=>markReturned(req)} disabled={isActive}>
+                          {isActive?"…":"📦 Mark as Returned"}
+                        </button>
+                      )}
+
+                      {/* Outgoing pending — requester can cancel */}
+                      {tab==="outgoing"&&req.status==="pending"&&(
+                        <button className="btn btn-d btn-sm" onClick={()=>cancel(req)} disabled={isActive}>
+                          {isActive?"…":"Cancel Request"}
+                        </button>
+                      )}
+
+                      {/* Link to conversation if exists */}
+                      {req.conversation_id&&(
+                        <button className="btn btn-o btn-sm" onClick={()=>window.__t4u_nav_messages&&window.__t4u_nav_messages(req.conversation_id)}>
+                          💬 Open Chat
+                        </button>
+                      )}
+
+                      <div style={{marginLeft:"auto",fontSize:11,color:"var(--faint)",
+                        display:"flex",alignItems:"center"}}>
+                        {new Date(req.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -4850,8 +5381,9 @@ export default function App() {
   const [authChk,setAuthChk] = useState(false);
   // District: activeSchool = null means "own account", otherwise = school org object
   const [activeSchool,setActiveSchool]   = useState(null);
-  const [unreadCount, setUnreadCount]    = useState(0);
-  const [openConvId,  setOpenConvId]     = useState(null);
+  const [unreadCount,   setUnreadCount]   = useState(0);
+  const [openConvId,    setOpenConvId]    = useState(null);
+  const [pendingReqCount, setPendingReqCount] = useState(0);
   const [schoolItems,setSchoolItems]     = useState([]);
   const [schoolLoading,setSchoolLoading] = useState(false);
   // Invite token from URL
@@ -4899,6 +5431,12 @@ export default function App() {
         .eq("read", false)
         .neq("sender_id", user.id);
       setUnreadCount(unread || 0);
+      // Load pending request count (incoming)
+      const { count: reqCount } = await SB.from("rental_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_id", user.id)
+        .eq("status", "pending");
+      setPendingReqCount(reqCount || 0);
     })();
   },[user]);
 
@@ -4955,7 +5493,8 @@ export default function App() {
   // Expose for cross-component navigation
   useEffect(()=>{
     window.__t4u_nav_messages = (convId) => { setOpenConvId(convId); setPage("messages"); setMob(false); };
-    return () => { delete window.__t4u_nav_messages; };
+    window.__t4u_nav_requests = ()       => { setPage("requests"); setMob(false); };
+    return () => { delete window.__t4u_nav_messages; delete window.__t4u_nav_requests; };
   },[]);
   const isDesk = typeof window !== "undefined" && window.innerWidth > 900;
   const listed = items.filter(i=>i.mkt!=="Not Listed").length;
@@ -4995,6 +5534,7 @@ export default function App() {
   const isAdmin = isAdminEmail(user?.email);
   const NAV = [
     { id:"messages",    label:"Messages",    ico:"💬"       },
+    { id:"requests",    label:"Requests",    ico:"📋"       },
     { id:"dashboard",   label:"Dashboard",   ico:Ic.home    },
     { id:"inventory",   label:"Inventory",   ico:Ic.box     },
     { id:"marketplace", label:"Marketplace", ico:Ic.store   },
@@ -5003,7 +5543,7 @@ export default function App() {
     ...(plan === "district" ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
     ...(isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
   ];
-  const TITLES = { messages:"Messages", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Marketplace", productions:"Productions", reports:"Reports", settings:"Profile", admin:"Admin Dashboard", district:"District" };
+  const TITLES = { messages:"Messages", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Marketplace", productions:"Productions", reports:"Reports", settings:"Profile", admin:"Admin Dashboard", district:"District" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicItemId) return <PublicItemPage itemId={publicItemId} />;
@@ -5084,7 +5624,8 @@ export default function App() {
                     <span>{n.label}</span>
                     {n.admin && <span style={{marginLeft:"auto",fontSize:9,padding:"1px 5px",background:"rgba(212,168,67,.2)",color:"var(--gold)",borderRadius:4,fontWeight:700,letterSpacing:1}}>ADMIN</span>}
                     {n.district && <span style={{marginLeft:"auto",fontSize:9,padding:"1px 5px",background:"rgba(66,165,245,.2)",color:"#42a5f5",borderRadius:4,fontWeight:700,letterSpacing:1}}>DIST</span>}
-                    {n.id==="messages"   && unreadCount>0  && <span className="sb-badge" style={{background:"var(--red)",color:"#fff"}}>{unreadCount}</span>}
+                    {n.id==="messages"   && unreadCount>0    && <span className="sb-badge" style={{background:"var(--red)",color:"#fff"}}>{unreadCount}</span>}
+                    {n.id==="requests"   && pendingReqCount>0 && <span className="sb-badge" style={{background:"var(--red)",color:"#fff"}}>{pendingReqCount}</span>}
                     {n.id==="inventory"  && items.length>0 && <span className="sb-badge">{activeSchool ? schoolItems.length : items.length}</span>}
                     {n.id==="marketplace"&& listed>0       && <span className="sb-badge">{listed}</span>}
                     {n.id==="productions"&& <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--gold)"}}>🎭</span>}
@@ -5132,6 +5673,11 @@ export default function App() {
                   <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
                 </div>
               : <div className="fin">
+                  {page==="requests"    && <Requests userId={user?.id} orgName={org?.name} orgEmail={org?.email}
+                    onUnreadChange={async()=>{
+                      const{count}=await SB.from("rental_requests").select("id",{count:"exact",head:true}).eq("owner_id",user?.id).eq("status","pending");
+                      setPendingReqCount(count||0);
+                    }}/>}
                   {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
                   {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")}/>}
                   {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan}/>}
