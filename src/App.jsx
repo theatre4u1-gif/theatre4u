@@ -6217,7 +6217,7 @@ function PublicItemPage({ itemId }) {
         <span style={{fontSize:26}}>🎭</span>
         <div>
           <div style={{fontFamily:"'Abril Fatface',display",fontSize:18,color:"var(--gold)",lineHeight:1}}>Theatre4u</div>
-          <div style={{fontSize:10,color:"rgba(255,255,255,.4)",letterSpacing:2,textTransform:"uppercase"}}>Inventory & Marketplace</div>
+          <div style={{fontSize:10,color:"rgba(255,255,255,.4)",letterSpacing:2,textTransform:"uppercase"}}>Inventory · Marketplace · Community</div>
         </div>
         <a href="https://theatre4u.org" style={{marginLeft:"auto",fontSize:12,color:"var(--gold)",textDecoration:"none",border:"1px solid rgba(212,168,67,.3)",borderRadius:6,padding:"5px 12px"}}>Visit Site →</a>
       </div>
@@ -6585,7 +6585,7 @@ export default function App() {
               <div className="sb-logo">
                 <span className="sb-glyph">🎭</span>
                 <div className="sb-name">Theatre4u</div>
-                <div className="sb-sub">Inventory & Marketplace</div>
+                <div className="sb-sub">Inventory · Marketplace · Community</div>
                 <div style={{marginTop:8,display:"flex",alignItems:"center",gap:6}}>
                   <span style={{padding:"2px 8px",background:plan==="free"?"rgba(255,255,255,.08)":plan==="pro"?"rgba(212,168,67,.2)":"rgba(66,165,245,.2)",color:plan==="free"?"rgba(255,255,255,.35)":plan==="pro"?"var(--gold)":"#42a5f5",borderRadius:9,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>
                     {plan==="free"?"Free Plan":plan==="pro"?"Pro":"District"}
