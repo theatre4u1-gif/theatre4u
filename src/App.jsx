@@ -4849,6 +4849,291 @@ function Prop28Page({org, userId, items=[], plan="pro"}) {
   </div>);
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COMMUNITY BOARD
+// ══════════════════════════════════════════════════════════════════════════════
+const POST_TYPES = [
+  { id:"show",         label:"Upcoming Show",    icon:"🎭", color:"#7b1fa2", desc:"Share your production dates and ticket info" },
+  { id:"audition",     label:"Audition Notice",  icon:"🎤", color:"#1565c0", desc:"Looking for cast or crew members" },
+  { id:"photo",        label:"Production Photos", icon:"📸", color:"#c2185b", desc:"Share photos from your recent shows" },
+  { id:"wanted",       label:"Item Wanted",       icon:"🔍", color:"#d84315", desc:"Looking for a specific prop, costume, or equipment" },
+  { id:"announcement", label:"Announcement",      icon:"📢", color:"#2e7d32", desc:"News, updates, or anything else" },
+];
+const PT = Object.fromEntries(POST_TYPES.map(p=>[p.id,p]));
+
+function CommunityPostForm({initial, onSave, onCancel}) {
+  const blank = {type:"show",title:"",body:"",show_title:"",venue:"",location:"",start_date:"",end_date:"",ticket_url:"",contact_email:"",tags:[]};
+  const [f,setF] = useState(initial||blank);
+  const [tagInput,setTagInput] = useState("");
+  const upd = (k,v)=>setF(p=>({...p,[k]:v}));
+  const addTag=()=>{const t=tagInput.trim().toLowerCase();if(t&&!(f.tags||[]).includes(t))upd("tags",[...(f.tags||[]),t]);setTagInput("");};
+  const valid = f.title.trim() && f.type;
+
+  return(<div className="fg2">
+    <div className="fg fu">
+      <label className="fl">Post Type</label>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+        {POST_TYPES.map(pt=>(
+          <button key={pt.id} type="button" onClick={()=>upd("type",pt.id)}
+            style={{padding:"8px 14px",borderRadius:8,border:"1.5px solid",fontFamily:"inherit",fontSize:13,fontWeight:600,cursor:"pointer",
+              background:f.type===pt.id?pt.color+"22":"var(--parch)",
+              color:f.type===pt.id?pt.color:"var(--muted)",
+              borderColor:f.type===pt.id?pt.color:"var(--border)"}}>
+            {pt.icon} {pt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+    <div className="fg fu"><label className="fl">Title *</label><input className="fi" value={f.title} onChange={e=>upd("title",e.target.value)} placeholder={f.type==="show"?"e.g. Tickets Now Available — Into the Woods":f.type==="audition"?"e.g. Seeking Leads & Ensemble for Spring Musical":f.type==="wanted"?"e.g. Looking for Wizard of Oz costume set":"Title"} autoFocus/></div>
+    {(f.type==="show"||f.type==="audition")&&<>
+      <div className="fg"><label className="fl">Show Title</label><input className="fi" value={f.show_title||""} onChange={e=>upd("show_title",e.target.value)} placeholder="Into the Woods"/></div>
+      <div className="fg"><label className="fl">Venue</label><input className="fi" value={f.venue||""} onChange={e=>upd("venue",e.target.value)} placeholder="Lincoln High Auditorium"/></div>
+    </>}
+    {f.type==="show"&&<>
+      <div className="fg"><label className="fl">Opening Date</label><input className="fi" type="date" value={f.start_date||""} onChange={e=>upd("start_date",e.target.value)}/></div>
+      <div className="fg"><label className="fl">Closing Date</label><input className="fi" type="date" value={f.end_date||""} onChange={e=>upd("end_date",e.target.value)}/></div>
+      <div className="fg"><label className="fl">Ticket Link (optional)</label><input className="fi" type="url" value={f.ticket_url||""} onChange={e=>upd("ticket_url",e.target.value)} placeholder="https://..."/></div>
+    </>}
+    {f.type==="audition"&&<>
+      <div className="fg"><label className="fl">Audition Date(s)</label><input className="fi" type="date" value={f.start_date||""} onChange={e=>upd("start_date",e.target.value)}/></div>
+      <div className="fg"><label className="fl">Contact Email</label><input className="fi" type="email" value={f.contact_email||""} onChange={e=>upd("contact_email",e.target.value)} placeholder="director@school.edu"/></div>
+    </>}
+    <div className="fg fu"><label className="fl">{f.type==="photo"?"Caption / Description":f.type==="audition"?"What You're Looking For":"Details"}</label><textarea className="ft" value={f.body||""} onChange={e=>upd("body",e.target.value)} placeholder={f.type==="show"?"Tell the community about your production...":f.type==="audition"?"Describe the roles available, experience needed, rehearsal schedule...":f.type==="wanted"?"Describe exactly what you're looking for...":"What would you like to share?"}/></div>
+    <div className="fg">
+      <label className="fl">Location / City</label>
+      <input className="fi" value={f.location||""} onChange={e=>upd("location",e.target.value)} placeholder="San Diego, CA"/>
+    </div>
+    <div className="fg fu">
+      <label className="fl">Tags</label>
+      <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:4}}>{(f.tags||[]).map(t=><span key={t} className="mt" style={{cursor:"pointer"}} onClick={()=>upd("tags",f.tags.filter(x=>x!==t))}>{t} ×</span>)}</div>
+      <div style={{display:"flex",gap:6}}><input className="fi" value={tagInput} onChange={e=>setTagInput(e.target.value)} placeholder="musical, drama, comedy..." style={{flex:1}} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addTag();}}}/><button className="btn btn-o btn-sm" onClick={addTag}>Add</button></div>
+    </div>
+    <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10,paddingTop:14,borderTop:"1.5px solid var(--border)",gridColumn:"1/-1"}}>
+      <button className="btn btn-o" onClick={onCancel}>Cancel</button>
+      <button className="btn btn-g" disabled={!valid} style={!valid?{opacity:.4}:{}} onClick={()=>onSave(f)}>{initial?"Save Changes":"Post to Community"}</button>
+    </div>
+  </div>);
+}
+
+function CommunityPostCard({post, orgName, onEdit, onDelete, isOwn}) {
+  const pt = PT[post.type]||PT.announcement;
+  const [expanded,setExpanded] = useState(false);
+  const hasMore = post.body && post.body.length > 160;
+
+  return(
+    <div className="card" style={{marginBottom:14,overflow:"hidden",border:`1px solid ${pt.color}22`}}>
+      {/* Header stripe */}
+      <div style={{height:4,background:`linear-gradient(90deg,${pt.color},${pt.color}88)`}}/>
+      <div style={{padding:"14px 18px"}}>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:8}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,flex:1,minWidth:0}}>
+            <div style={{width:40,height:40,borderRadius:10,background:pt.color+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{pt.icon}</div>
+            <div style={{minWidth:0}}>
+              <div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:pt.color,marginBottom:2}}>{pt.label}</div>
+              <div style={{fontFamily:"'Abril Fatface',display",fontSize:17,lineHeight:1.2,color:"var(--ink)"}}>{post.title}</div>
+            </div>
+          </div>
+          {isOwn&&<div style={{display:"flex",gap:4,flexShrink:0}}>
+            <button className="ico-btn" onClick={()=>onEdit(post)}>{Ic.edit}</button>
+            <button className="ico-btn" style={{color:"var(--red)"}} onClick={()=>onDelete(post.id)}>{Ic.trash}</button>
+          </div>}
+        </div>
+
+        {/* Show/audition meta */}
+        {(post.show_title||post.venue||post.start_date)&&(
+          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:10}}>
+            {post.show_title&&<span style={{padding:"2px 9px",background:"var(--parch)",borderRadius:6,fontSize:12,fontWeight:600,color:"var(--ink)"}}>{post.show_title}</span>}
+            {post.venue&&<span style={{padding:"2px 9px",background:"var(--parch)",borderRadius:6,fontSize:12,color:"var(--muted)"}}>📍 {post.venue}</span>}
+            {post.start_date&&<span style={{padding:"2px 9px",background:pt.color+"15",borderRadius:6,fontSize:12,fontWeight:600,color:pt.color}}>📅 {new Date(post.start_date).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}{post.end_date&&post.end_date!==post.start_date?" – "+new Date(post.end_date).toLocaleDateString("en-US",{month:"short",day:"numeric"}):""}  </span>}
+          </div>
+        )}
+
+        {/* Body */}
+        {post.body&&(
+          <div style={{fontSize:13.5,color:"var(--muted)",lineHeight:1.7,marginBottom:10}}>
+            {expanded||!hasMore ? post.body : post.body.slice(0,160)+"…"}
+            {hasMore&&<button onClick={()=>setExpanded(!expanded)} style={{marginLeft:5,background:"none",border:"none",color:pt.color,cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit"}}>{expanded?"Show less":"Read more"}</button>}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{width:24,height:24,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),var(--amber))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>🎭</div>
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:"var(--ink)"}}>{orgName}</div>
+              {post.location&&<div style={{fontSize:11,color:"var(--faint)"}}>{post.location}</div>}
+            </div>
+          </div>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            {(post.tags||[]).slice(0,3).map(t=><span key={t} className="mt">#{t}</span>)}
+            {post.ticket_url&&<a href={post.ticket_url} target="_blank" rel="noreferrer" className="btn btn-o btn-sm" style={{fontSize:11,padding:"3px 10px"}}>🎟️ Tickets</a>}
+            {post.contact_email&&<a href={`mailto:${post.contact_email}`} className="btn btn-o btn-sm" style={{fontSize:11,padding:"3px 10px"}}>✉️ Contact</a>}
+            <div style={{fontSize:11,color:"var(--faint)"}}>{new Date(post.created_at).toLocaleDateString()}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CommunityPage({userId, org, plan}) {
+  const [posts,    setPosts]   = useState([]);
+  const [orgs,     setOrgs]    = useState({});
+  const [loading,  setLoading] = useState(true);
+  const [typeF,    setTypeF]   = useState("all");
+  const [search,   setSearch]  = useState("");
+  const [modal,    setModal]   = useState(null);
+  const [active,   setActive]  = useState(null);
+  const [saving,   setSaving]  = useState(false);
+  const [msg,      setMsg]     = useState("");
+
+  const load = useCallback(async()=>{
+    setLoading(true);
+    const{data}=await SB.from("community_posts").select("*").eq("status","active").order("created_at",{ascending:false}).limit(100);
+    setPosts(data||[]);
+    // Load org names for posts
+    const ids=[...new Set((data||[]).map(p=>p.org_id))];
+    if(ids.length>0){
+      const{data:orgData}=await SB.from("orgs").select("id,name").in("id",ids);
+      const map={};(orgData||[]).forEach(o=>{map[o.id]=o.name;});
+      setOrgs(map);
+    }
+    setLoading(false);
+  },[]);
+
+  useEffect(()=>{load();},[load]);
+
+  const save = async(f)=>{
+    setSaving(true);
+    const row={...f,org_id:userId,status:"active"};
+    if(active&&modal==="edit"){
+      const{data}=await SB.from("community_posts").update(row).eq("id",active.id).select().single();
+      if(data){setPosts(p=>p.map(x=>x.id===data.id?data:x));setMsg("✓ Post updated");}
+    } else {
+      const{data}=await SB.from("community_posts").insert(row).select().single();
+      if(data){setPosts(p=>[data,...p]);setMsg("✓ Post published!");}
+    }
+    setModal(null);setActive(null);setSaving(false);
+    setTimeout(()=>setMsg(""),3000);
+  };
+
+  const deletePost = async(id)=>{
+    if(!window.confirm("Delete this post?"))return;
+    await SB.from("community_posts").update({status:"archived"}).eq("id",id);
+    setPosts(p=>p.filter(x=>x.id!==id));
+  };
+
+  const filtered = posts.filter(p=>{
+    if(typeF!=="all"&&p.type!==typeF)return false;
+    if(search){const q=search.toLowerCase();return p.title.toLowerCase().includes(q)||(p.body||"").toLowerCase().includes(q)||(p.show_title||"").toLowerCase().includes(q)||(p.location||"").toLowerCase().includes(q)||(p.tags||[]).some(t=>t.includes(q));}
+    return true;
+  });
+
+  const myPosts = posts.filter(p=>p.org_id===userId);
+
+  return(
+    <div style={{position:"relative"}}>
+      <img src={usp("photo-1503095396549-807759245b35",1400,900)} alt="" className="page-bg-img"/>
+      <div style={{padding:"32px 36px 0"}}>
+        <div className="hero-wrap" style={{height:230}}>
+          <img src={usp("photo-1503095396549-807759245b35",1100,290)} alt="Community" loading="eager"/>
+          <div className="hero-fade"/>
+          <div className="hero-body">
+            <div className="hero-eyebrow">🎪 Theatre Community</div>
+            <h1 className="hero-title" style={{fontSize:44}}>Community Board</h1>
+            <p className="hero-sub">Upcoming shows, audition notices, production photos, and wanted items — from programmes across the network.</p>
+          </div>
+          <div className="hero-bar"/>
+        </div>
+      </div>
+
+      <div style={{padding:"24px 36px 56px",position:"relative",zIndex:1}}>
+        {/* Actions bar */}
+        <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:20,alignItems:"center"}}>
+          <div className="srch" style={{position:"relative",flex:1,minWidth:220}}>
+            <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"var(--muted)",display:"flex",pointerEvents:"none"}}>{Ic.search}</span>
+            <input className="fi" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search shows, auditions, wanted items…" style={{paddingLeft:34,width:"100%"}}/>
+          </div>
+          <div style={{display:"flex",gap:0,border:"1px solid var(--border)",borderRadius:6,overflow:"hidden"}}>
+            {[["all","All"],["show","🎭 Shows"],["audition","🎤 Auditions"],["photo","📸 Photos"],["wanted","🔍 Wanted"],["announcement","📢 News"]].map(([id,label])=>(
+              <button key={id} onClick={()=>setTypeF(id)} style={{background:typeF===id?"var(--gold)":"transparent",color:typeF===id?"#1a0f00":"var(--muted)",border:"none",padding:"7px 12px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
+            {msg&&<span style={{color:"var(--green)",fontWeight:700,fontSize:13}}>{msg}</span>}
+            <button className="btn btn-g" onClick={()=>{setActive(null);setModal("add");}}>+ Share Something</button>
+          </div>
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 320px",gap:24,alignItems:"start"}}>
+          {/* Main feed */}
+          <div>
+            <div style={{fontSize:12,color:"var(--muted)",marginBottom:12,fontWeight:600}}>{filtered.length} post{filtered.length!==1?"s":""}{typeF!=="all"?` · ${PT[typeF]?.label}`:""}</div>
+            {loading
+              ?<div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading community posts…</div>
+              :filtered.length===0
+                ?<div className="empty">
+                    <div className="empty-ico">🎪</div>
+                    <h3>Be the first to post</h3>
+                    <p>Share your upcoming show, post an audition notice, or let the community know what items you're looking for.</p>
+                    <button className="btn btn-g" onClick={()=>{setActive(null);setModal("add");}}>+ Share Something</button>
+                  </div>
+                :filtered.map(post=>(
+                    <CommunityPostCard key={post.id} post={post} orgName={orgs[post.org_id]||"A Theatre Program"} isOwn={post.org_id===userId} onEdit={p=>{setActive(p);setModal("edit");}} onDelete={deletePost}/>
+                  ))
+            }
+          </div>
+
+          {/* Sidebar */}
+          <div style={{position:"sticky",top:80}}>
+            {/* Your posts */}
+            {myPosts.length>0&&(
+              <div className="card card-p" style={{marginBottom:16}}>
+                <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:16,marginBottom:12}}>Your Posts</h3>
+                {myPosts.slice(0,5).map(p=>(
+                  <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid var(--linen)"}}>
+                    <span style={{fontSize:16}}>{PT[p.type]?.icon||"📢"}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.title}</div>
+                      <div style={{fontSize:10,color:"var(--muted)"}}>{new Date(p.created_at).toLocaleDateString()}</div>
+                    </div>
+                    <button className="ico-btn" style={{flexShrink:0,color:"var(--red)"}} onClick={()=>deletePost(p.id)}>{Ic.trash}</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* What to post guide */}
+            <div className="card card-p" style={{background:"linear-gradient(135deg,rgba(212,168,67,.08),rgba(212,168,67,.03))",borderColor:"rgba(212,168,67,.25)"}}>
+              <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:16,marginBottom:12,color:"var(--gold)"}}>What to Share</h3>
+              {POST_TYPES.map(pt=>(
+                <div key={pt.id} style={{display:"flex",gap:8,padding:"7px 0",borderBottom:"1px solid var(--linen)"}}>
+                  <span style={{fontSize:18,flexShrink:0}}>{pt.icon}</span>
+                  <div>
+                    <div style={{fontSize:12,fontWeight:700,color:pt.color}}>{pt.label}</div>
+                    <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.4}}>{pt.desc}</div>
+                  </div>
+                </div>
+              ))}
+              <div style={{marginTop:10,fontSize:11,color:"var(--muted)",lineHeight:1.5}}>Open to all Theatre4u members — free and Pro alike.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {(modal==="add"||modal==="edit")&&(
+        <Modal title={modal==="add"?"Share with the Community":"Edit Post"} onClose={()=>{setModal(null);setActive(null);}}>
+          <CommunityPostForm initial={modal==="edit"?active:null} onSave={save} onCancel={()=>{setModal(null);setActive(null);}}/>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // THEATRE CREDITS PAGE
 // ══════════════════════════════════════════════════════════════════════════════
@@ -5252,191 +5537,192 @@ const PRIVACY_CONTENT = [
 // ── Landing Page ──────────────────────────────────────────────────────────────
 function LandingPage({onSignIn, onSignUp}){
   const[scrolled,setScrolled]=useState(false);
-  const[curtain,setCurtain]=useState("closed");
   useEffect(()=>{
-    requestAnimationFrame(()=>{setCurtain("open");setTimeout(()=>setCurtain("hidden"),800);});
-    const h=()=>setScrolled(window.scrollY>40);
+    const h=()=>setScrolled(window.scrollY>60);
     window.addEventListener("scroll",h,{passive:true});
     return()=>window.removeEventListener("scroll",h);
   },[]);
 
-  const CATS_LP=[
-    {id:"costumes",label:"Costumes",icon:"👗"},{id:"props",label:"Props",icon:"🎭"},
-    {id:"sets",label:"Sets & Scenery",icon:"🏛️"},{id:"lighting",label:"Lighting",icon:"💡"},
-    {id:"sound",label:"Sound",icon:"🔊"},{id:"scripts",label:"Scripts & Music",icon:"📜"},
-    {id:"makeup",label:"Makeup & Wigs",icon:"💄"},{id:"furniture",label:"Stage Furniture",icon:"🪑"},
-    {id:"fabrics",label:"Fabrics & Drapes",icon:"🧵"},{id:"tools",label:"Tools",icon:"🔧"},
-    {id:"effects",label:"Special Effects",icon:"✨"},{id:"other",label:"Other",icon:"📦"},
+  const features=[
+    {icon:"📦",title:"Inventory That Actually Works",desc:"Catalog every costume, prop, light, and sound item your program owns. Add photos from your phone, tag by production, print QR labels for storage bins. No more mystery boxes."},
+    {icon:"🏪",title:"Borrow What You Need",desc:"Browse thousands of items listed by other programmes nationwide. Rent a fog machine for the weekend. Borrow a set of Victorian costumes. List your own items and earn revenue between shows."},
+    {icon:"🪙",title:"Theatre Credits",desc:"Lend your items for free and earn credits. Spend those credits to reduce what you pay when you borrow. The more you share, the less you spend — a community that rewards generosity."},
+    {icon:"📋",title:"Prop 28 Compliance (CA)",desc:"California schools: Theatre4u automatically tracks your arts purchases, generates your CDE-required annual report, handles the Supplement vs. Supplant attestation, and exports everything for your board meeting."},
+    {icon:"📱",title:"Mobile App for Backstage",desc:"Add items by taking a photo. Scan QR labels to look up anything in seconds. Log Prop 28 purchases from anywhere. Available on iPhone and Android — no app store required."},
+    {icon:"🎪",title:"Community Board",desc:"Post audition notices, share upcoming show dates, upload production photos, and find items you need. A regional bulletin board for the performing arts community."},
   ];
 
-  const FEATS=[
-    {n:"01",title:<>Track <em>every</em> item</>,body:"Costumes, props, lighting rigs, audio gear, scripts — every item catalogued with photos, condition notes, storage locations, and tags.",bullets:["Up to 5 photos per item","Custom tags and notes","QR code label per item","Exact storage location tracking"],demo:(
-      <div className="lpf-demo">
-        {[{ico:"👗",name:"Victorian Ball Gown",loc:"Closet A",cond:"Good",c:"rgba(76,175,80,.12)",t:"#4caf50"},{ico:"🎙️",name:"Shure SM58 Wireless",loc:"Sound Booth",cond:"Excellent",c:"rgba(66,165,245,.12)",t:"#42a5f5"},{ico:"💡",name:"LED Par Can RGBW",loc:"Lighting Store",cond:"New",c:"rgba(76,175,80,.12)",t:"#4caf50"}].map(r=>(
-          <div key={r.name} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"var(--parch)",borderRadius:6,marginBottom:7,border:"1px solid var(--border)"}}>
-            <span style={{fontSize:20}}>{r.ico}</span>
-            <div style={{flex:1,minWidth:0}}><div style={{fontWeight:600,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</div><div style={{fontSize:10,color:"var(--t3)"}}>{r.loc}</div></div>
-            <span style={{fontSize:10,padding:"2px 7px",background:r.c,color:r.t,borderRadius:10,flexShrink:0}}>{r.cond}</span>
+  const plans=[
+    {name:"Free",price:"$0",period:"forever",color:"rgba(255,255,255,.15)",textColor:"rgba(255,255,255,.7)",features:["Up to 50 inventory items","QR labels","Browse marketplace","Productions tracking","Community Board"],cta:"Get Started",primary:false},
+    {name:"Pro",price:"$12",period:"/month",annual:"$120/year",color:"linear-gradient(135deg,var(--gold),var(--goldd))",textColor:"#1a0f00",features:["Unlimited inventory","Full marketplace access","Theatre Credits","Reports & CSV export","Prop 28 compliance","Mobile app","Messages & requests"],cta:"Start Pro",primary:true},
+    {name:"District",price:"$49",period:"/month",annual:"$500/year",color:"linear-gradient(135deg,#1565c0,#0d47a1)",textColor:"#fff",features:["Everything in Pro","Up to 6 school sites","District dashboard","Shared marketplace","District Prop 28 rollup","Priority support"],cta:"Start District",primary:false},
+  ];
+
+  const steps=[
+    {n:"1",title:"Create your free account",desc:"Sign up in 60 seconds. No credit card needed. Your first 50 items are always free."},
+    {n:"2",title:"Add your first items",desc:"Take photos on your phone or upload from your computer. Fill in the basic details — name, category, condition, location."},
+    {n:"3",title:"List items in the marketplace",desc:"Mark items For Rent, For Sale, or For Loan. Other programmes can see them immediately."},
+    {n:"4",title:"Start borrowing and earning",desc:"Find what you need from other programmes. Accept requests for your items and earn Theatre Credits."},
+  ];
+
+  return(<div style={{background:"var(--ink)",minHeight:"100vh",color:"var(--linen)",fontFamily:"'DM Sans',sans-serif"}}>
+    
+    {/* ── Sticky Nav ── */}
+    <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:1000,padding:"0 32px",height:64,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?"rgba(13,10,8,.97)":"transparent",borderBottom:scrolled?"1px solid rgba(255,255,255,.08)":"none",backdropFilter:scrolled?"blur(12px)":"none",transition:"all .3s"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{width:34,height:34,background:"linear-gradient(135deg,var(--gold),var(--goldd))",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🎭</div>
+        <span style={{fontFamily:"'Abril Fatface',display",fontSize:20,color:"var(--gold)"}}>Theatre4u</span>
+      </div>
+      <div style={{display:"flex",gap:10,alignItems:"center"}}>
+        <button onClick={onSignIn} style={{background:"none",border:"1px solid rgba(255,255,255,.25)",color:"rgba(255,255,255,.8)",padding:"7px 16px",borderRadius:7,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:600}}>Sign In</button>
+        <button onClick={onSignUp} style={{background:"linear-gradient(135deg,var(--gold),var(--goldd))",border:"none",color:"#1a0f00",padding:"7px 18px",borderRadius:7,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:800}}>Get Started Free →</button>
+      </div>
+    </nav>
+
+    {/* ── Hero ── */}
+    <div style={{position:"relative",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",padding:"120px 24px 80px",overflow:"hidden"}}>
+      {/* Background image */}
+      <img src={usp("photo-1503095396549-807759245b35",1600,900)} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.2,pointerEvents:"none"}}/>
+      <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,rgba(13,10,8,.7) 0%,rgba(13,10,8,.5) 50%,rgba(13,10,8,.95) 100%)",pointerEvents:"none"}}/>
+      <div style={{position:"relative",zIndex:1,maxWidth:760}}>
+        <div style={{display:"inline-flex",alignItems:"center",gap:7,padding:"4px 14px",background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.3)",borderRadius:20,fontSize:12,fontWeight:700,color:"var(--gold)",textTransform:"uppercase",letterSpacing:1,marginBottom:20}}>
+          🎭 The Platform for Theatre Programs
+        </div>
+        <h1 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(42px,7vw,76px)",lineHeight:1.05,marginBottom:20,color:"#fff"}}>
+          Everything your theatre program needs —{" "}
+          <span style={{color:"var(--gold)"}}>in one place</span>
+        </h1>
+        <p style={{fontSize:"clamp(16px,2.5vw,20px)",color:"rgba(255,255,255,.7)",lineHeight:1.7,marginBottom:36,maxWidth:600,margin:"0 auto 36px"}}>
+          Inventory management, a prop & costume marketplace, Prop 28 compliance tracking, and a community board for theatre programs of every size.
+        </p>
+        <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+          <button onClick={onSignUp} style={{background:"linear-gradient(135deg,var(--gold),var(--goldd))",border:"none",color:"#1a0f00",padding:"14px 32px",borderRadius:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:16,fontWeight:800,boxShadow:"0 4px 24px rgba(212,168,67,.4)"}}>
+            Get Started Free — No credit card →
+          </button>
+          <button onClick={onSignIn} style={{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.2)",color:"#fff",padding:"14px 24px",borderRadius:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:15,fontWeight:600}}>
+            Sign In
+          </button>
+        </div>
+        <div style={{marginTop:20,fontSize:12,color:"rgba(255,255,255,.4)"}}>
+          Free plan available · Pro from $12/month · No contracts
+        </div>
+      </div>
+    </div>
+
+    {/* ── Social proof strip ── */}
+    <div style={{background:"rgba(212,168,67,.08)",borderTop:"1px solid rgba(212,168,67,.15)",borderBottom:"1px solid rgba(212,168,67,.15)",padding:"16px 32px",display:"flex",flexWrap:"wrap",gap:24,justifyContent:"center",alignItems:"center"}}>
+      {[["📦","Inventory management"],["🏪","Peer marketplace"],["🪙","Theatre Credits"],["📋","Prop 28 compliance"],["📱","Mobile app"],["🎪","Community board"]].map(([ico,lbl])=>(
+        <div key={lbl} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,fontWeight:600,color:"rgba(255,255,255,.7)"}}>
+          <span style={{fontSize:16}}>{ico}</span>{lbl}
+        </div>
+      ))}
+    </div>
+
+    {/* ── Features ── */}
+    <div style={{padding:"80px 32px",maxWidth:1100,margin:"0 auto"}}>
+      <div style={{textAlign:"center",marginBottom:52}}>
+        <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>What Theatre4u does</div>
+        <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(32px,5vw,48px)",color:"#fff",lineHeight:1.15}}>Built for busy drama directors</h2>
+        <p style={{fontSize:16,color:"rgba(255,255,255,.55)",marginTop:12,maxWidth:520,margin:"12px auto 0"}}>Not a generic inventory tool. Not a generic marketplace. Built specifically for school and community theatre.</p>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:20}}>
+        {features.map(f=>(
+          <div key={f.title} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:14,padding:"24px 22px",transition:"all .2s"}}
+            onMouseEnter={e=>{e.currentTarget.style.background="rgba(212,168,67,.08)";e.currentTarget.style.borderColor="rgba(212,168,67,.25)";}}
+            onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.04)";e.currentTarget.style.borderColor="rgba(255,255,255,.08)";}}>
+            <div style={{fontSize:32,marginBottom:12}}>{f.icon}</div>
+            <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:19,color:"#fff",marginBottom:8,lineHeight:1.2}}>{f.title}</h3>
+            <p style={{fontSize:13.5,color:"rgba(255,255,255,.55)",lineHeight:1.7}}>{f.desc}</p>
           </div>
         ))}
       </div>
-    )},
-    {n:"02",title:<><em>QR labels</em> for everything</>,body:"Every item gets a unique QR code. Print it, stick it on the bin. Scan it with any phone to pull up full details instantly.",bullets:["One-click print from any browser","Scan with any smartphone","Instant item lookup by ID","Print all labels in bulk from Reports"],demo:(
-      <div className="lpf-demo" style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
-        <div style={{background:"#fff",padding:14,borderRadius:10}}>
-          <canvas ref={el=>{if(!el)return;const ctx=el.getContext("2d");const s=96;el.width=s;el.height=s;ctx.fillStyle="#fff";ctx.fillRect(0,0,s,s);const c=s/25;const draw=(x,y,w,h,fill)=>{ctx.fillStyle=fill;ctx.fillRect(x*c,y*c,w*c,h*c)};draw(0,0,7,7,"#1a1520");draw(1,1,5,5,"#fff");draw(2,2,3,3,"#1a1520");draw(18,0,7,7,"#1a1520");draw(19,1,5,5,"#fff");draw(20,2,3,3,"#1a1520");draw(0,18,7,7,"#1a1520");draw(1,19,5,5,"#fff");draw(2,20,3,3,"#1a1520");for(let i=0;i<25;i++)for(let j=0;j<25;j++){if((i<8&&j<8)||(i<8&&j>=18)||(i>=18&&j<8))continue;if(((i*13+j*7+i+j)%4===0))draw(j,i,1,1,"#1a1520");}draw(11,11,3,3,"#d4a843");}} width={96} height={96} style={{display:"block"}}/>
-        </div>
-        <div style={{textAlign:"center"}}><div style={{fontSize:11,fontWeight:600}}>Victorian Ball Gown</div><div style={{fontSize:10,color:"var(--t3)",fontFamily:"monospace"}}>T4U · Costume Closet A</div></div>
-      </div>
-    )},
-    {n:"03",title:<>The theatre <em>marketplace</em></>,body:"List your items for rent or sale. Other programs can browse and contact you. Turn idle inventory into income — or find what you need for your next production.",bullets:["Set rental price per week","Or list for outright sale","Filter by category and type","Connect with nearby programs"],demo:(
-      <div className="lpf-demo">
-        {[{ico:"🪑",name:"Wooden Throne Chair",badge:"For Rent",price:"$30/wk",bc:"rgba(66,165,245,.14)",tc:"#42a5f5"},{ico:"🌫️",name:"Fog Machine 1000W",badge:"For Rent",price:"$20/wk",bc:"rgba(66,165,245,.14)",tc:"#42a5f5"},{ico:"📜",name:"Romeo & Juliet Scripts (30)",badge:"For Sale",price:"$5 ea",bc:"rgba(76,175,80,.14)",tc:"#4caf50"}].map(r=>(
-          <div key={r.name} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"var(--parch)",borderRadius:6,marginBottom:7,border:"1px solid var(--border)"}}>
-            <span style={{fontSize:20}}>{r.ico}</span>
-            <div style={{flex:1,minWidth:0}}><div style={{fontWeight:600,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</div><span style={{fontSize:10,padding:"1px 6px",background:r.bc,color:r.tc,borderRadius:8}}>{r.badge}</span></div>
-            <span style={{fontSize:12,fontWeight:700,color:"var(--gold)",flexShrink:0}}>{r.price}</span>
-          </div>
-        ))}
-      </div>
-    )},
-  ];
+    </div>
 
-  const TESTI=[
-    {text:"We used to track everything in a spreadsheet nobody updated. Now the whole team can see what we have in real time. The QR labels alone changed how we store everything.",name:"Sarah M.",role:"Drama Director, Lincoln High School"},
-    {text:"Rented out our fog machines and wireless mics to three other schools last semester. Covered our subscription for the year. The marketplace actually works.",name:"James T.",role:"Technical Director, Riverside Community Theatre"},
-    {text:"Finally know what we actually own. Scanned an old bin backstage and found $800 worth of equipment we had forgotten about. Worth every penny.",name:"Patricia K.",role:"Performing Arts Coordinator, District 47"},
-  ];
-
-  // Pricing uses shared UPGRADE_PLANS + STRIPE_LINKS constants and UpgradePlans component
-
-  return(
-    <div className="lp">
-      <div className="lp-grain"/>
-      {curtain!=="hidden"&&(
-        <div className={"lp-ct"+(curtain==="open"?" open":"")}>
-          <div className="lp-ctl"/><div className="lp-ctr"/>
+    {/* ── How it works ── */}
+    <div style={{background:"rgba(255,255,255,.03)",borderTop:"1px solid rgba(255,255,255,.06)",borderBottom:"1px solid rgba(255,255,255,.06)",padding:"72px 32px"}}>
+      <div style={{maxWidth:900,margin:"0 auto"}}>
+        <div style={{textAlign:"center",marginBottom:48}}>
+          <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>Get started in minutes</div>
+          <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(28px,4vw,42px)",color:"#fff"}}>How it works</h2>
         </div>
-      )}
-      {/* Nav */}
-      <nav className={"lpn"+(scrolled?" lpns":"")}>
-        <div className="lpnl"><div className="lpni">🎭</div><div className="lpnt">Theatre4u</div></div>
-        <div className="lpnr">
-          <button className="lp-btns2" style={{padding:"8px 20px",fontSize:13}} onClick={onSignIn}>Sign In</button>
-          <button className="lp-btnp" style={{padding:"8px 22px",fontSize:13}} onClick={onSignUp}>🎭 Get Started Free</button>
-        </div>
-      </nav>
-      {/* Hero */}
-      <section className="lph">
-        <div className="lph-curtl"/><div className="lph-curtr"/><div className="lph-line"/>
-        <div className="lph-ew">Theatre Inventory Management</div>
-        <h1 className="lph-h">The Inventory <em>&amp;</em><br/><b>Marketplace</b><br/><span style={{fontSize:"clamp(38px,6vw,80px)",fontStyle:"normal",color:"var(--t1)",fontWeight:300}}>for Theatre Programs</span></h1>
-        <p className="lph-sub">Track every costume, prop, and piece of equipment your program owns. List items for rent or sale. Generate QR labels for every storage bin. All in one place.</p>
-        <div className="lph-btns">
-          <button className="lp-btnp" onClick={onSignUp}><span>🎭</span> Start for Free</button>
-          <button className="lp-btns2" onClick={()=>document.getElementById("lp-features")?.scrollIntoView({behavior:"smooth"})}>See How It Works</button>
-        </div>
-        <div className="lph-stats">
-          {[["12","Item categories"],["5","Photos per item"],["∞","Inventory entries"],["1-click","QR printing"]].map(([n,l])=>(
-            <div key={l} style={{textAlign:"center"}}><div className="lph-sn">{n}</div><div className="lph-sl">{l}</div></div>
-          ))}
-        </div>
-      </section>
-      <hr className="lp-divider"/>
-      {/* Features */}
-      <section id="lp-features" style={{background:"var(--bg2)",borderBottom:"1px solid var(--bd)"}}>
-        <div className="lps" style={{paddingBottom:20}}>
-          <div className="lps-lbl">How It Works</div>
-          <h2 className="lps-title">Everything your program needs,<br/><em>nothing it doesn&apos;t</em></h2>
-          <p className="lps-sub">Simple enough to set up in an afternoon. Powerful enough to run your whole program.</p>
-        </div>
-        <div className="lps" style={{paddingTop:60}}>
-          {FEATS.map((f,i)=>(
-            <div key={f.n} className={"lpf-row"+(i%2===1?" rev":"")}>
-              <div className="lpf-vis">{f.demo}</div>
-              <div>
-                <div className="lpf-n">{f.n}</div>
-                <h3 className="lpf-title">{f.title}</h3>
-                <p className="lpf-body">{f.body}</p>
-                <ul className="lpf-ul">{f.bullets.map(b=><li key={b}>{b}</li>)}</ul>
-              </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:24}}>
+          {steps.map(s=>(
+            <div key={s.n} style={{textAlign:"center"}}>
+              <div style={{width:48,height:48,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),var(--goldd))",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Abril Fatface',display",fontSize:22,color:"#1a0f00",margin:"0 auto 14px"}}>{s.n}</div>
+              <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:16,color:"#fff",marginBottom:7}}>{s.title}</h3>
+              <p style={{fontSize:13,color:"rgba(255,255,255,.5)",lineHeight:1.6}}>{s.desc}</p>
             </div>
           ))}
         </div>
-      </section>
-      <hr className="lp-divider"/>
-      {/* Categories */}
-      <section style={{background:"var(--bg)"}}>
-        <div className="lps">
-          <div className="lps-lbl">12 Categories</div>
-          <h2 className="lps-title">Every corner of your <em>theatre</em></h2>
-          <p className="lps-sub">From leading costume to the tools in the scene shop &mdash; every type of item has a home.</p>
-          <div className="lp-cats">
-            {CATS_LP.map(c=>(
-              <div key={c.id} className="lp-cat" onClick={onSignUp}>
-                <div className="lp-cat-ico">{c.icon}</div>
-                <div className="lp-cat-lbl">{c.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-      <hr className="lp-divider"/>
-      {/* Testimonials */}
-      <section style={{background:"var(--bg2)",borderTop:"1px solid var(--bd)",borderBottom:"1px solid var(--bd)"}}>
-        <div className="lps">
-          <div className="lps-lbl">What Directors Say</div>
-          <h2 className="lps-title">Trusted by theatre programs <em>everywhere</em></h2>
-          <div className="lp-tg">
-            {TESTI.map(t=>(
-              <div key={t.name} className="lp-tc">
-                <div className="lp-tt">{t.text}</div>
-                <div className="lp-tn">{t.name}</div>
-                <div className="lp-tr">{t.role}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-      <hr className="lp-divider"/>
-      {/* Pricing */}
-      <section style={{background:"var(--bg)"}}>
-        <div className="lps">
-          <div className="lps-lbl">Simple Pricing</div>
-          <h2 className="lps-title">Start free. <em>Grow</em> when you&apos;re ready.</h2>
-          <p className="lps-sub">No credit card required. No surprise fees. Cancel any time.</p>
-          <UpgradePlans />
-        </div>
-      </section>
-      {/* CTA */}
-      <div className="lp-cta">
-        <div style={{position:"relative",zIndex:1}}>
-          <div className="lps-lbl" style={{marginBottom:16}}>Ready?</div>
-          <h2 className="lps-title" style={{marginBottom:20}}>Your program deserves<br/><em>better than a spreadsheet.</em></h2>
-          <p style={{color:"var(--t2)",fontSize:16,marginBottom:44,fontFamily:"'Cormorant Garamond',serif",fontStyle:"italic",maxWidth:480,margin:"0 auto 44px"}}>Join drama directors and technical coordinators who finally know what they own.</p>
-          <button className="lp-btnp" style={{fontSize:16,padding:"16px 44px"}} onClick={onSignUp}><span>🎭</span> Open Theatre4u &mdash; It&apos;s Free</button>
-        </div>
       </div>
-      {/* Footer */}
-      <footer className="lp-ft">
-        <div>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
-            <div className="lpni" style={{width:28,height:28,fontSize:14}}>🎭</div>
-            <span style={{fontFamily:"'Playfair Display',serif",fontSize:16,color:"var(--gold)"}}>Theatre4u</span>
-          </div>
-          <div className="lp-fc">Inventory &amp; Marketplace for Theatre Programs</div>
-        </div>
-        <div className="lp-fl">
-          <button onClick={onSignIn}>Sign In</button>
-          <button>hello@theatre4u.org</button>
-        </div>
-        <div className="lp-fc">&copy; {new Date().getFullYear()} Theatre4u. Built for the arts community.</div>
-      </footer>
     </div>
-  );
+
+    {/* ── Pricing ── */}
+    <div style={{padding:"80px 32px",maxWidth:1000,margin:"0 auto"}}>
+      <div style={{textAlign:"center",marginBottom:48}}>
+        <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>Simple, honest pricing</div>
+        <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(28px,4vw,42px)",color:"#fff"}}>Plans for every programme</h2>
+        <p style={{fontSize:14,color:"rgba(255,255,255,.45)",marginTop:10}}>Annual plans available — save up to 2 months free</p>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:20}}>
+        {plans.map(p=>(
+          <div key={p.name} style={{borderRadius:16,overflow:"hidden",border:p.primary?"1px solid rgba(212,168,67,.4)":"1px solid rgba(255,255,255,.1)",position:"relative",boxShadow:p.primary?"0 8px 40px rgba(212,168,67,.2)":"none"}}>
+            {p.primary&&<div style={{position:"absolute",top:14,right:14,background:"var(--gold)",color:"#1a0f00",fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:10,textTransform:"uppercase",letterSpacing:.5}}>Most Popular</div>}
+            <div style={{background:p.color,padding:"28px 24px 20px"}}>
+              <div style={{fontFamily:"'Abril Fatface',display",fontSize:24,color:p.textColor,marginBottom:4}}>{p.name}</div>
+              <div style={{display:"flex",alignItems:"baseline",gap:4}}>
+                <span style={{fontFamily:"'Abril Fatface',display",fontSize:42,color:p.textColor}}>{p.price}</span>
+                <span style={{fontSize:14,color:p.textColor,opacity:.7}}>{p.period}</span>
+              </div>
+              {p.annual&&<div style={{fontSize:11,color:p.textColor,opacity:.6,marginTop:3}}>{p.annual} · save 2 months</div>}
+            </div>
+            <div style={{background:"rgba(255,255,255,.04)",padding:"20px 24px 24px"}}>
+              <div style={{display:"flex",flexDirection:"column",gap:9,marginBottom:20}}>
+                {p.features.map(f=>(
+                  <div key={f} style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:"rgba(255,255,255,.75)"}}>
+                    <span style={{color:"var(--gold)",fontWeight:800,flexShrink:0}}>✓</span>{f}
+                  </div>
+                ))}
+              </div>
+              <button onClick={onSignUp} style={{width:"100%",padding:"11px",borderRadius:9,border:"none",background:p.primary?"linear-gradient(135deg,var(--gold),var(--goldd))":"rgba(255,255,255,.12)",color:p.primary?"#1a0f00":"rgba(255,255,255,.85)",fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>
+                {p.cta} →
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* ── Final CTA ── */}
+    <div style={{textAlign:"center",padding:"72px 32px 96px",borderTop:"1px solid rgba(255,255,255,.06)"}}>
+      <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(28px,5vw,52px)",color:"#fff",marginBottom:16,lineHeight:1.15}}>
+        Ready to get your<br/><span style={{color:"var(--gold)"}}>theatre organized?</span>
+      </h2>
+      <p style={{fontSize:16,color:"rgba(255,255,255,.5)",marginBottom:32,maxWidth:440,margin:"0 auto 32px"}}>Join theatre programmes already using Theatre4u to manage inventory, share resources, and connect with their community.</p>
+      <button onClick={onSignUp} style={{background:"linear-gradient(135deg,var(--gold),var(--goldd))",border:"none",color:"#1a0f00",padding:"16px 40px",borderRadius:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:18,fontWeight:800,boxShadow:"0 4px 32px rgba(212,168,67,.45)"}}>
+        Start Free — No credit card required →
+      </button>
+      <div style={{marginTop:14,fontSize:12,color:"rgba(255,255,255,.3)"}}>Free plan · No contracts · Cancel anytime</div>
+    </div>
+
+    {/* Footer */}
+    <div style={{borderTop:"1px solid rgba(255,255,255,.06)",padding:"24px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
+      <div style={{display:"flex",alignItems:"center",gap:8}}>
+        <div style={{width:26,height:26,background:"linear-gradient(135deg,var(--gold),var(--goldd))",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🎭</div>
+        <span style={{fontFamily:"'Abril Fatface',display",fontSize:15,color:"var(--gold)"}}>Theatre4u</span>
+        <span style={{fontSize:12,color:"rgba(255,255,255,.3)"}}>© 2026</span>
+      </div>
+      <div style={{display:"flex",gap:18,fontSize:12,color:"rgba(255,255,255,.35)"}}>
+        <a href="/help.html" target="_blank" style={{color:"rgba(255,255,255,.35)",textDecoration:"none"}} onMouseEnter={e=>e.target.style.color="var(--gold)"} onMouseLeave={e=>e.target.style.color="rgba(255,255,255,.35)"}>Help Center</a>
+        <span style={{cursor:"pointer"}} onClick={onSignIn}>Sign In</span>
+        <span style={{cursor:"pointer"}} onClick={onSignUp}>Sign Up</span>
+        <span>hello@theatre4u.org</span>
+      </div>
+    </div>
+  </div>);
 }
 
-// ── Auth Overlay (modal over landing page) ────────────────────────────────────
+
 function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
   const[visible,setVisible]=useState(false);
   const[mode,setMode]=useState("login");
@@ -6050,6 +6336,7 @@ export default function App() {
     { id:"dashboard",   label:"Dashboard",   ico:Ic.home    },
     { id:"inventory",   label:"Inventory",   ico:Ic.box     },
     { id:"marketplace", label:"Marketplace", ico:Ic.store   },
+    { id:"community",   label:"Community",   ico:"🎪", community:true },
     { id:"productions", label:"Productions", ico:"🎭"       },
     { id:"reports",     label:"Reports",     ico:Ic.chart   },
     ...(plan !== "free" || isAdmin ? [{ id:"credits", label:"Credits",  ico:"🪙", credits:true }] : []),
@@ -6057,7 +6344,7 @@ export default function App() {
     ...(plan === "district" ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
     ...(isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
   ];
-  const TITLES = { messages:"Messages", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Marketplace", productions:"Productions", reports:"Reports", settings:"Profile", admin:"Admin Dashboard", district:"District", credits:"Theatre Credits", prop28:"Prop 28 Compliance" };
+  const TITLES = { messages:"Messages", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Marketplace", productions:"Productions", reports:"Reports", settings:"Profile", admin:"Admin Dashboard", district:"District", credits:"Theatre Credits", prop28:"Prop 28 Compliance", community:"Community Board" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicItemId) return <PublicItemPage itemId={publicItemId} />;
@@ -6135,6 +6422,7 @@ export default function App() {
                          : n.district ? {marginTop:4, color: page===n.id ? undefined : "rgba(66,165,245,.75)"}
                          : n.prop28   ? {color: page===n.id ? undefined : "rgba(82,199,132,.8)"}
                          : n.credits  ? {color: page===n.id ? undefined : "rgba(212,168,67,.75)"}
+                         : n.community ? {color: page===n.id ? undefined : "rgba(82,153,224,.85)"}
                          : {}}>
                     <span className="sb-ico">{n.admin ? "🔧" : n.district ? "🏢" : n.ico}</span>
                     <span>{n.label}</span>
@@ -6234,6 +6522,7 @@ export default function App() {
                   {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan}/>}
                   {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan}/>}
                   {page==="district"    && plan==="district" && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool}/>}
+                  {page==="community"   && <CommunityPage userId={user?.id} org={org} plan={plan}/>}
                   {page==="credits"     && (plan!=="free"||isAdmin) && <CreditsPage userId={user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
                   {page==="credits"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:10}}>Theatre Credits is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true}/></div>}
                   {page==="prop28"      && (plan!=="free"||isAdmin) && <Prop28Page org={org} userId={user?.id} items={items} plan={plan}/>}
