@@ -213,6 +213,17 @@ import { createElement as h, useState, useEffect, useCallback, useRef, useMemo }
 import { createRoot } from "https://esm.sh/react-dom@18/client";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// ── Browser / OS detection ───────────────────────────────────────────────────
+const ua = navigator.userAgent;
+const isIOS     = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+const isAndroid = /Android/.test(ua);
+const isMobile  = isIOS || isAndroid;
+const isChrome  = /CriOS|Chrome/.test(ua) && !/Edg/.test(ua);
+const isSafari  = /Safari/.test(ua) && !/Chrome|CriOS/.test(ua);
+const isIOSChrome = isIOS && isChrome;
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                  || window.navigator.standalone === true;
+
 // ── Supabase ──────────────────────────────────────────────────────────────────
 const SB = createClient(
   "https://ldmmphwivnnboyhlxipl.supabase.co",
@@ -329,6 +340,83 @@ function Toast({toast}) {
 // ── ══════════════════════════════════════════
 // ── AUTH SCREEN
 // ── ══════════════════════════════════════════
+
+// ── Install Banner ────────────────────────────────────────────────────────────
+function InstallBanner() {
+  const [dismissed, setDismissed] = useState(
+    () => localStorage.getItem('t4u_install_dismissed') === '1'
+  );
+
+  if (dismissed || isStandalone) return null;
+
+  const dismiss = () => {
+    localStorage.setItem('t4u_install_dismissed', '1');
+    setDismissed(true);
+  };
+
+  // iOS Chrome — can't install as PWA, offer to open in Safari
+  if (isIOSChrome) return h("div",{style:{
+    background:"linear-gradient(135deg,rgba(212,168,67,.18),rgba(212,168,67,.08))",
+    border:"1px solid rgba(212,168,67,.35)",margin:"0 16px 12px",borderRadius:12,
+    padding:"12px 14px",display:"flex",gap:10,alignItems:"flex-start"}},
+    h("span",{style:{fontSize:20,flexShrink:0}},"🧭"),
+    h("div",{style:{flex:1}},
+      h("div",{style:{fontWeight:700,fontSize:13,color:"var(--gold)",marginBottom:2}},"Install on your iPhone"),
+      h("div",{style:{fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:8}},
+        "For the best experience, open this page in ",h("strong",{style:{color:"var(--text)"}},"Safari"),
+        ", then tap Share → Add to Home Screen."
+      ),
+      h("a",{
+        href:"safari-web-content://theatre4u.org/app",
+        onClick:e=>{
+          e.preventDefault();
+          // Copy URL and prompt to open in Safari
+          if(navigator.clipboard){navigator.clipboard.writeText("https://theatre4u.org/app");}
+          alert("URL copied! Paste it into Safari and use Share → Add to Home Screen to install the app.");
+        },
+        style:{fontSize:12,color:"var(--gold)",fontWeight:700,textDecoration:"underline",cursor:"pointer"}
+      },"Copy link to open in Safari →")
+    ),
+    h("button",{onClick:dismiss,style:{background:"none",border:"none",color:"var(--muted)",fontSize:18,cursor:"pointer",lineHeight:1,padding:"0 2px",flexShrink:0}},"×")
+  );
+
+  // iOS Safari — show Add to Home Screen instructions
+  if (isIOS && isSafari) return h("div",{style:{
+    background:"linear-gradient(135deg,rgba(212,168,67,.18),rgba(212,168,67,.08))",
+    border:"1px solid rgba(212,168,67,.35)",margin:"0 16px 12px",borderRadius:12,
+    padding:"12px 14px",display:"flex",gap:10,alignItems:"center"}},
+    h("span",{style:{fontSize:20,flexShrink:0}},"📱"),
+    h("div",{style:{flex:1}},
+      h("div",{style:{fontWeight:700,fontSize:13,color:"var(--gold)",marginBottom:2}},"Install this app"),
+      h("div",{style:{fontSize:12,color:"var(--muted)",lineHeight:1.5}},
+        "Tap the Share button ",h("span",{style:{fontSize:14}},"⎙")," at the bottom, then ",
+        h("strong",{style:{color:"var(--text)"}},"Add to Home Screen"),
+        " to install."
+      )
+    ),
+    h("button",{onClick:dismiss,style:{background:"none",border:"none",color:"var(--muted)",fontSize:18,cursor:"pointer",lineHeight:1,padding:"0 2px",flexShrink:0}},"×")
+  );
+
+  // Android Chrome — show Add to Home Screen instructions
+  if (isAndroid && isChrome) return h("div",{style:{
+    background:"linear-gradient(135deg,rgba(82,199,132,.14),rgba(82,199,132,.05))",
+    border:"1px solid rgba(82,199,132,.3)",margin:"0 16px 12px",borderRadius:12,
+    padding:"12px 14px",display:"flex",gap:10,alignItems:"center"}},
+    h("span",{style:{fontSize:20,flexShrink:0}},"📲"),
+    h("div",{style:{flex:1}},
+      h("div",{style:{fontWeight:700,fontSize:13,color:"var(--green)",marginBottom:2}},"Install this app"),
+      h("div",{style:{fontSize:12,color:"var(--muted)",lineHeight:1.5}},
+        "Tap the three-dot menu ",h("span",{style:{fontSize:16}},"⋮")," then ",
+        h("strong",{style:{color:"var(--text)"}},"Add to Home Screen"),
+        " to install."
+      )
+    ),
+    h("button",{onClick:dismiss,style:{background:"none",border:"none",color:"var(--muted)",fontSize:18,cursor:"pointer",lineHeight:1,padding:"0 2px",flexShrink:0}},"×")
+  );
+
+  return null; // Desktop or already installed
+}
+
 function AuthScreen({onAuth}) {
   const [email, setEmail] = useState("");
   const [pass, setPass]   = useState("");
@@ -943,8 +1031,22 @@ function ProfileTab({user, org, onSignOut}) {
         h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid var(--border)",fontSize:14}},
           h("span",null,"App Version"),h("span",{style:{color:"var(--muted)"}},"1.0.0")
         ),
+        h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid var(--border)",fontSize:14}},
+          h("span",null,"Browser"),
+          h("span",{style:{fontSize:12,fontWeight:700,color:isIOSChrome?"var(--gold)":isStandalone?"var(--green)":"var(--muted)"}},
+            isStandalone ? "✓ Installed as app"
+            : isIOSChrome ? "Chrome on iOS"
+            : isIOS && isSafari ? "Safari (installable)"
+            : isAndroid ? "Android Chrome"
+            : "Web browser"
+          )
+        ),
         h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",fontSize:14}},
           h("span",null,"Backend"),h("span",{style:{color:"var(--green)",fontSize:12,fontWeight:700}},"● Connected")
+        ),
+        isIOSChrome && !isStandalone && h("div",{style:{marginTop:10,padding:"10px 12px",background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,fontSize:12,color:"var(--muted)",lineHeight:1.6}},
+          "💡 Everything works in Chrome! To install as a home screen app, open ",
+          h("strong",{style:{color:"var(--text)"}},"theatre4u.org/app")," in Safari and use Share → Add to Home Screen."
         )
       ),
       h("button",{className:"btn btn-danger btn-full",onClick:onSignOut,style:{marginBottom:32}},"Sign Out")
@@ -1258,6 +1360,7 @@ function App() {
     viewItem && h(ItemDetail,{item:viewItem,onBack:()=>setViewItem(null),onEdited:handleItemEdited,onDeleted:handleItemDeleted,userId:user.id}),
     // Tab content
     !viewItem && h("div",{style:{flex:1,overflow:"hidden",display:"flex",flexDirection:"column"}},
+      !isStandalone && h(InstallBanner,null),
       tab==="home"      && h(HomeTab,{items,org,onAddItem:()=>setAddOpen(true),onViewItem:handleViewItem}),
       tab==="scan"      && h(ScanTab,{items,onViewItem:handleViewItem}),
       tab==="inventory" && h(InventoryTab,{items,onViewItem:handleViewItem,onAddItem:()=>setAddOpen(true)}),
