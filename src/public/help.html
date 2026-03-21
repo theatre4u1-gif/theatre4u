@@ -95,14 +95,16 @@ a:hover{text-decoration:underline}
 
 /* ── FAQ ── */
 .faq{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
-.faq-item{border-bottom:1px solid var(--border)}
-.faq-item:last-child{border-bottom:none}
-.faq-q{padding:14px 18px;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--card);transition:background .12s;user-select:none}
-.faq-q:hover{background:var(--bg2)}
-.faq-q .arr{font-size:18px;color:var(--faint);transition:transform .2s;flex-shrink:0}
-.faq-q.open .arr{transform:rotate(90deg);color:var(--gold)}
-.faq-a{padding:0 18px 14px;font-size:13.5px;color:var(--muted);line-height:1.7;display:none}
-.faq-a.open{display:block}
+details.faq-item{border-bottom:1px solid var(--border)}
+details.faq-item:last-child{border-bottom:none}
+details.faq-item summary{padding:14px 18px;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--card);transition:background .12s;user-select:none;list-style:none}
+details.faq-item summary::-webkit-details-marker{display:none}
+details.faq-item summary::marker{display:none}
+details.faq-item summary:hover{background:var(--bg2)}
+details.faq-item summary .arr{font-size:18px;color:var(--faint);transition:transform .2s;flex-shrink:0;margin-left:auto}
+details.faq-item[open] summary .arr{transform:rotate(90deg);color:var(--gold)}
+details.faq-item[open] summary{background:var(--bg2)}
+.faq-a{padding:10px 18px 16px;font-size:13.5px;color:var(--muted);line-height:1.7}
 
 /* ── Callout boxes ── */
 .callout{padding:14px 16px;border-radius:var(--rs);margin-bottom:14px;font-size:13.5px;line-height:1.6;display:flex;gap:10px;align-items:flex-start}
@@ -681,12 +683,12 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
           <h2>Frequently Asked Questions</h2>
         </div>
         <div class="faq">
-          <div class="faq-item">
-            <div class="faq-q" onclick="toggleFaq(this)"><span>Can I use Theatre4u without upgrading to Pro?</span><span class="arr">›</span></div>
+          <details class="faq-item">
+            <summary><span>Can I use Theatre4u without upgrading to Pro?</span><span class="arr">›</span></summary>
             <div class="faq-a">Yes. The free plan lets you catalog up to 50 items, create productions, print QR labels, and browse the marketplace. To list items for others to rent/borrow or to send requests, you'll need a Pro plan.</div>
-          </div>
-          <div class="faq-item">
-            <div class="faq-q" onclick="toggleFaq(this)"><span>How does payment work between programs?</span><span class="arr">›</span></div>
+          </details>
+          <details class="faq-item">
+            <summary><span>How does payment work between programs?</span><span class="arr">›</span></summary>
             <div class="faq-a">
               <strong>Theatre4u records and communicates the agreed price — but does not process cash payments between organizations.</strong>
               <br><br>
@@ -696,31 +698,31 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
               <br><br>
               Both parties are responsible for completing payment as agreed. Theatre4u is not liable for non-payment between organizations.
             </div>
-          </div>
-          <div class="faq-item">
-            <div class="faq-q" onclick="toggleFaq(this)"><span>What happens to my credits if I cancel my Pro subscription?</span><span class="arr">›</span></div>
+          </details>
+          <details class="faq-item">
+            <summary><span>What happens to my credits if I cancel my Pro subscription?</span><span class="arr">›</span></summary>
             <div class="faq-a">Your credits are frozen — they don't disappear, but you can't earn or spend them while on the free plan. They're restored the moment you re-subscribe. If you close your account entirely, credits are permanently forfeited.</div>
-          </div>
-          <div class="faq-item">
-            <div class="faq-q" onclick="toggleFaq(this)"><span>Is the mobile app available in the App Store?</span><span class="arr">›</span></div>
+          </details>
+          <details class="faq-item">
+            <summary><span>Is the mobile app available in the App Store?</span><span class="arr">›</span></summary>
             <div class="faq-a">Not currently. The mobile app is a Progressive Web App (PWA) — you install it directly from your browser by going to theatre4u.org/app and using "Add to Home Screen". It functions exactly like a native app with no App Store required.</div>
-          </div>
-          <div class="faq-item">
-            <div class="faq-q" onclick="toggleFaq(this)"><span>Do I need to be in California to use Prop 28 tracking?</span><span class="arr">›</span></div>
+          </details>
+          <details class="faq-item">
+            <summary><span>Do I need to be in California to use Prop 28 tracking?</span><span class="arr">›</span></summary>
             <div class="faq-a">No — Prop 28 is a California program, but the tracking feature is available to any Pro or District subscriber. If you're outside California, you can use the purchase log and reporting tools to track any arts funding expenditures you need to report to your state or district.</div>
-          </div>
-          <div class="faq-item">
-            <div class="faq-q" onclick="toggleFaq(this)"><span>Can multiple people at my school use the same account?</span><span class="arr">›</span></div>
+          </details>
+          <details class="faq-item">
+            <summary><span>Can multiple people at my school use the same account?</span><span class="arr">›</span></summary>
             <div class="faq-a">Yes — you can share your login credentials with co-directors, tech directors, or costume managers. One account represents one organization. If you need separate logins for each person, that's on our roadmap for a future update.</div>
-          </div>
-          <div class="faq-item">
-            <div class="faq-q" onclick="toggleFaq(this)"><span>What image formats can I upload for item photos?</span><span class="arr">›</span></div>
+          </details>
+          <details class="faq-item">
+            <summary><span>What image formats can I upload for item photos?</span><span class="arr">›</span></summary>
             <div class="faq-a">JPG, PNG, GIF, and WebP are all supported. Photos are automatically compressed and resized to ensure fast loading. Maximum 5 photos per item. You can also link to publicly-shared Google Drive or Dropbox images via the Image URL field in CSV import.</div>
-          </div>
-          <div class="faq-item">
-            <div class="faq-q" onclick="toggleFaq(this)"><span>How do I get my school's IT department to whitelist Theatre4u emails?</span><span class="arr">›</span></div>
+          </details>
+          <details class="faq-item">
+            <summary><span>How do I get my school's IT department to whitelist Theatre4u emails?</span><span class="arr">›</span></summary>
             <div class="faq-a">Ask your IT administrator to whitelist the domain <strong>theatre4u.org</strong> and the sending address <strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c9a1aca5a5a689bda1aca8bdbbacfdbce7a6bbae">[email&#160;protected]</a></strong>. Emails are sent via Resend using the domain theatre4u.org. If invite emails aren't arriving, this is almost always the cause.</div>
-          </div>
+          </details>
         </div>
       </section>
 
