@@ -6148,13 +6148,13 @@ export default function App() {
                     </div>
                   )}
                   {(plan==="pro"||plan==="district"||isAdmin)&&(
-                    <a href="/app" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
+                    <a href="/app.html" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
                       style={{color:"var(--gold)",borderColor:"rgba(212,168,67,.3)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                       📱 Mobile App
                     </a>
                   )}
                   {(plan==="pro"||plan==="district"||isAdmin)&&(
-                    <a href="/help" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
+                    <a href="/help.html" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
                       style={{color:"rgba(255,255,255,.6)",borderColor:"rgba(255,255,255,.12)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                       ❓ Help & Tutorials
                     </a>
