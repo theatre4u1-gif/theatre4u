@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Theatre4u"/>
+<meta name="theme-color" content="#0a0a0f"/>
+<title>Theatre4u</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0a0a0f;--bg2:#111118;--bg3:#181820;--card:#1c1c26;--card2:#22222e;
+  --border:#2a2a38;--border2:#363648;
+  --gold:#d4a843;--gold2:#f0c866;--goldd:#8a6a20;
+  --red:#e05252;--green:#52c784;--blue:#5299e0;--teal:#52c7b8;
+  --text:#f0ede8;--muted:#8a8aa0;--faint:#4a4a5e;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bot:env(safe-area-inset-bottom,0px);
+  --nav-h:68px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overflow:hidden;overscroll-behavior:none}
+#root{height:100%;display:flex;flex-direction:column}
+
+/* ── Scrollable content area ── */
+.screen{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-bottom:calc(var(--nav-h) + var(--safe-bot) + 12px)}
+.screen::-webkit-scrollbar{display:none}
+
+/* ── Bottom nav ── */
+.bnav{position:fixed;bottom:0;left:0;right:0;height:calc(var(--nav-h) + var(--safe-bot));padding-bottom:var(--safe-bot);background:rgba(10,10,15,.95);border-top:1px solid var(--border);backdrop-filter:blur(20px);display:flex;align-items:center;justify-content:space-around;z-index:100}
+.bnav-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 16px;cursor:pointer;opacity:.45;transition:opacity .2s;-webkit-user-select:none;user-select:none;position:relative}
+.bnav-item.on{opacity:1}
+.bnav-item svg{width:22px;height:22px}
+.bnav-item span{font-size:10px;font-weight:600;letter-spacing:.3px}
+.bnav-item .badge{position:absolute;top:4px;right:8px;background:var(--red);color:#fff;border-radius:8px;font-size:9px;font-weight:800;padding:1px 5px;min-width:16px;text-align:center}
+
+/* ── FAB ── */
+.fab{position:fixed;bottom:calc(var(--nav-h) + var(--safe-bot) + 16px);right:20px;width:58px;height:58px;background:linear-gradient(135deg,var(--gold),var(--goldd));border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(212,168,67,.45);cursor:pointer;z-index:99;transition:transform .15s,box-shadow .15s;border:none}
+.fab:active{transform:scale(.92);box-shadow:0 2px 10px rgba(212,168,67,.3)}
+.fab svg{width:26px;height:26px;color:#1a1000}
+
+/* ── Page header ── */
+.ph{padding:calc(var(--safe-top) + 16px) 20px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.ph h1{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--text)}
+.ph .logo{display:flex;align-items:center;gap:8px}
+.ph .logo-mark{width:32px;height:32px;background:linear-gradient(135deg,var(--gold),var(--goldd));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.ph .logo-text{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--gold)}
+
+/* ── Cards ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.card-p{padding:16px}
+
+/* ── Search ── */
+.search-wrap{padding:0 16px 12px;flex-shrink:0}
+.search-input{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:11px 14px 11px 40px;font-size:15px;color:var(--text);font-family:'DM Sans',sans-serif;outline:none;-webkit-appearance:none;position:relative}
+.search-input::placeholder{color:var(--faint)}
+.search-input:focus{border-color:var(--gold)}
+.search-wrap .si{position:relative}
+.search-wrap .si svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:var(--faint);pointer-events:none}
+
+/* ── Item list row ── */
+.item-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;-webkit-user-select:none;user-select:none;background:var(--card)}
+.item-row:active{background:var(--card2)}
+.item-row:last-child{border-bottom:none}
+.item-thumb{width:52px;height:52px;border-radius:10px;object-fit:cover;flex-shrink:0;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:24px;overflow:hidden}
+.item-thumb img{width:100%;height:100%;object-fit:cover}
+.item-info{flex:1;min-width:0}
+.item-name{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.item-sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;flex-shrink:0}
+.mb-rent{background:rgba(82,153,224,.15);color:var(--blue)}
+.mb-sale{background:rgba(82,199,132,.15);color:var(--green)}
+.mb-loan{background:rgba(82,199,184,.15);color:var(--teal)}
+.mb-none{background:rgba(255,255,255,.06);color:var(--faint)}
+.mb-both{background:rgba(212,168,67,.15);color:var(--gold)}
+
+/* ── Stat cards ── */
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 16px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:4px}
+.stat-val{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:700;color:var(--gold);line-height:1}
+.stat-lbl{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+
+/* ── Section header ── */
+.sec-hd{padding:0 16px 10px;display:flex;align-items:center;justify-content:space-between}
+.sec-hd h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted)}
+.sec-hd a{font-size:12px;color:var(--gold);font-weight:600}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:12px 20px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:opacity .15s,transform .1s;-webkit-user-select:none;user-select:none}
+.btn:active{opacity:.8;transform:scale(.97)}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--goldd));color:#1a1000}
+.btn-ghost{background:var(--card2);color:var(--text);border:1px solid var(--border)}
+.btn-danger{background:rgba(224,82,82,.12);color:var(--red);border:1px solid rgba(224,82,82,.25)}
+.btn-full{width:100%}
+.btn-sm{padding:8px 14px;font-size:13px;border-radius:8px}
+
+/* ── Modal / Sheet ── */
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;flex-direction:column;justify-content:flex-end;animation:fadeIn .15s ease}
+.sheet{background:var(--bg2);border-radius:22px 22px 0 0;padding:0 0 calc(var(--safe-bot) + 16px);max-height:92vh;overflow-y:auto;animation:slideUp .2s cubic-bezier(.32,0,.67,0) forwards;-webkit-overflow-scrolling:touch}
+.sheet::-webkit-scrollbar{display:none}
+.sheet-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:12px auto 0}
+.sheet-hd{padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.sheet-hd h2{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700}
+.sheet-bd{padding:16px 20px}
+
+/* ── Full screen overlay ── */
+.full-overlay{position:fixed;inset:0;background:var(--bg);z-index:300;display:flex;flex-direction:column;animation:fadeIn .15s ease}
+
+/* ── Form ── */
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.fl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
+.fi,.fs,.ft{background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font-size:15px;color:var(--text);font-family:'DM Sans',sans-serif;outline:none;width:100%;-webkit-appearance:none}
+.fi:focus,.fs:focus,.ft:focus{border-color:var(--gold)}
+.fi::placeholder{color:var(--faint)}
+.fs option{background:var(--bg2)}
+.ft{resize:none;min-height:70px}
+
+/* ── Category grid ── */
+.cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.cat-btn{background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:all .15s;-webkit-user-select:none;user-select:none}
+.cat-btn.on{border-color:var(--gold);background:rgba(212,168,67,.12)}
+.cat-btn:active{opacity:.7}
+.cat-btn .ci{font-size:22px}
+.cat-btn .cl{font-size:9px;font-weight:700;color:var(--muted);text-align:center;text-transform:uppercase;letter-spacing:.3px;line-height:1.2}
+.cat-btn.on .cl{color:var(--gold)}
+
+/* ── Photo area ── */
+.photo-area{width:100%;aspect-ratio:4/3;background:var(--card);border-radius:14px;border:2px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;overflow:hidden;position:relative;margin-bottom:14px}
+.photo-area img{width:100%;height:100%;object-fit:cover}
+.photo-area .pa-icon{font-size:36px;opacity:.4}
+.photo-area .pa-txt{font-size:13px;color:var(--muted);font-weight:500}
+.photo-area .pa-rm{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.75);border:none;color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px}
+
+/* ── Camera view ── */
+.cam-view{flex:1;position:relative;background:#000;overflow:hidden}
+.cam-view video{width:100%;height:100%;object-fit:cover}
+.cam-view canvas{position:absolute;inset:0;width:100%;height:100%}
+.cam-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.qr-frame{width:220px;height:220px;border:3px solid var(--gold);border-radius:18px;box-shadow:0 0 0 2000px rgba(0,0,0,.55);position:relative}
+.qr-corner{position:absolute;width:24px;height:24px;border-color:var(--gold2);border-style:solid}
+.qr-corner.tl{top:-3px;left:-3px;border-width:4px 0 0 4px;border-radius:4px 0 0 0}
+.qr-corner.tr{top:-3px;right:-3px;border-width:4px 4px 0 0;border-radius:0 4px 0 0}
+.qr-corner.bl{bottom:-3px;left:-3px;border-width:0 0 4px 4px;border-radius:0 0 0 4px}
+.qr-corner.br{bottom:-3px;right:-3px;border-width:0 4px 4px 0;border-radius:0 0 4px 0}
+.scan-line{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);animation:scanMove 2s ease-in-out infinite}
+@keyframes scanMove{0%,100%{top:10%}50%{top:88%}}
+.cam-actions{padding:20px;display:flex;flex-direction:column;gap:12px;flex-shrink:0}
+
+/* ── Item detail ── */
+.detail-hero{width:100%;aspect-ratio:16/10;background:var(--card);position:relative;overflow:hidden}
+.detail-hero img{width:100%;height:100%;object-fit:cover}
+.detail-hero .hero-grad{position:absolute;inset:0;background:linear-gradient(to top,rgba(10,10,15,1) 0%,rgba(10,10,15,.4) 50%,transparent 100%)}
+.detail-hero .hero-cat{position:absolute;top:calc(var(--safe-top) + 12px);left:16px;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700;color:var(--gold);display:flex;align-items:center;gap:5px}
+.detail-hero .back-btn{position:absolute;top:calc(var(--safe-top) + 8px);right:16px;width:38px;height:38px;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);border-radius:50%;display:flex;align-items:center;justify-content:center;border:none;color:var(--text);cursor:pointer}
+.detail-title{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;line-height:1.2;margin-bottom:6px}
+.detail-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.detail-row:last-child{border-bottom:none}
+.detail-row .lbl{font-size:13px;color:var(--muted)}
+.detail-row .val{font-size:14px;font-weight:600;text-align:right;max-width:60%}
+
+/* ── Auth screen ── */
+.auth-screen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:32px;padding-top:calc(var(--safe-top) + 32px)}
+.auth-logo{text-align:center}
+.auth-logo .glyph{font-size:64px;margin-bottom:12px;display:block}
+.auth-logo h1{font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:700;color:var(--gold);letter-spacing:1px}
+.auth-logo p{font-size:14px;color:var(--muted);margin-top:4px;font-style:italic}
+.auth-form{width:100%;max-width:360px;display:flex;flex-direction:column;gap:12px}
+
+/* ── QR display ── */
+.qr-box{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.qr-box img{border-radius:8px;border:1px solid var(--border2)}
+
+/* ── Loading / empty ── */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:14px;color:var(--muted)}
+.loading .spin{width:32px;height:32px;border:2.5px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite}
+.empty{text-align:center;padding:50px 20px}
+.empty .ei{font-size:44px;opacity:.3;margin-bottom:12px}
+.empty h3{font-family:'Cormorant Garamond',serif;font-size:22px;margin-bottom:6px}
+.empty p{font-size:13px;color:var(--muted);line-height:1.6}
+
+/* ── Toast ── */
+.toast{position:fixed;top:calc(var(--safe-top) + 12px);left:16px;right:16px;z-index:999;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:12px 16px;font-size:14px;font-weight:600;text-align:center;animation:fadeIn .2s ease;box-shadow:0 4px 24px rgba(0,0,0,.4)}
+.toast.ok{border-color:rgba(82,199,132,.4);color:var(--green)}
+.toast.err{border-color:rgba(224,82,82,.4);color:var(--red)}
+
+/* ── Condition dots ── */
+.cond-grid{display:flex;gap:8px;flex-wrap:wrap}
+.cond-btn{padding:8px 14px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;font-weight:600;cursor:pointer;background:var(--card);color:var(--muted);transition:all .12s;-webkit-user-select:none;user-select:none}
+.cond-btn.on{border-color:var(--gold);color:var(--gold);background:rgba(212,168,67,.1)}
+
+/* ── Divider ── */
+.div{height:1px;background:var(--border);margin:16px 0}
+
+/* ── Offline banner ── */
+.offline-bar{background:rgba(224,82,82,.15);border-bottom:1px solid rgba(224,82,82,.3);padding:8px 16px;font-size:12px;font-weight:600;color:var(--red);text-align:center;display:flex;align-items:center;justify-content:center;gap:6px}
+
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Page transitions ── */
+.fin{animation:fadeIn .2s ease}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="module">
+import { createElement as h, useState, useEffect, useCallback, useRef, useMemo } from "https://esm.sh/react@18";
+import { createRoot } from "https://esm.sh/react-dom@18/client";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+// ── Supabase ──────────────────────────────────────────────────────────────────
+const SB = createClient(
+  "https://ldmmphwivnnboyhlxipl.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA"
+);
+
+// ── QR Code generator ─────────────────────────────────────────────────────────
+let _qrMod = null;
+async function genQR(text, size=180) {
+  try {
+    if (!_qrMod) _qrMod = await import("https://esm.sh/qrcode@1.5.3");
+    return await _qrMod.toDataURL(text, { width:size, margin:2, color:{dark:"#000",light:"#fff"} });
+  } catch { return null; }
+}
+
+// ── jsQR for scanning ──────────────────────────────────────────────────────────
+let _jsQR = null;
+async function loadJsQR() {
+  if (_jsQR) return _jsQR;
+  // Load via script tag since jsQR doesn't work cleanly as ESM
+  return new Promise(res => {
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js";
+    s.onload = () => { _jsQR = window.jsQR; res(_jsQR); };
+    s.onerror = () => res(null);
+    document.head.appendChild(s);
+  });
+}
+
+// ── Image resize ──────────────────────────────────────────────────────────────
+function resizeImg(file, maxW=800, q=0.82) {
+  return new Promise(res => {
+    const r = new FileReader();
+    r.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement("canvas");
+        let w=img.width, hh=img.height;
+        if(w>maxW){hh=Math.round((maxW/w)*hh);w=maxW;}
+        c.width=w; c.height=hh;
+        c.getContext("2d").drawImage(img,0,0,w,hh);
+        res(c.toDataURL("image/jpeg",q));
+      };
+      img.src = e.target.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+
+async function uploadPhoto(file, userId) {
+  const dataUrl = await resizeImg(file, 800, 0.82);
+  const res2 = await fetch(dataUrl);
+  const blob = await res2.blob();
+  const path = userId + "/" + Date.now() + ".jpg";
+  const { error } = await SB.storage.from("item-photos").upload(path, blob, { contentType:"image/jpeg", upsert:false });
+  if (error) { console.error(error); return null; }
+  const { data } = SB.storage.from("item-photos").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const CATS = [
+  {id:"costumes", label:"Costumes",    icon:"👗"},
+  {id:"props",    label:"Props",       icon:"🎭"},
+  {id:"sets",     label:"Sets",        icon:"🏛️"},
+  {id:"lighting", label:"Lighting",    icon:"💡"},
+  {id:"sound",    label:"Sound",       icon:"🔊"},
+  {id:"scripts",  label:"Scripts",     icon:"📜"},
+  {id:"makeup",   label:"Makeup",      icon:"💄"},
+  {id:"furniture",label:"Furniture",   icon:"🪑"},
+  {id:"fabrics",  label:"Fabrics",     icon:"🧵"},
+  {id:"tools",    label:"Tools",       icon:"🔧"},
+  {id:"effects",  label:"Effects",     icon:"✨"},
+  {id:"other",    label:"Other",       icon:"📦"},
+];
+const CAT = Object.fromEntries(CATS.map(c=>[c.id,c]));
+const CONDS = ["New","Excellent","Good","Fair","Poor","For Parts"];
+const AVAIL = ["In Stock","In Use","Checked Out","Being Repaired","Lost","Retired"];
+const MKT   = ["Not Listed","For Rent","For Sale","Rent or Sale","For Loan"];
+const fmt$ = n => "$" + Number(n||0).toFixed(2);
+
+// ── Icons (SVG) ───────────────────────────────────────────────────────────────
+const Ic = {
+  home:   (s=24)=>h("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2"},h("path",{d:"m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"}),h("path",{d:"M9 22V12h6v10"})),
+  box:    (s=24)=>h("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2"},h("path",{d:"M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"})),
+  qr:     (s=24)=>h("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2"},h("rect",{x:"3",y:"3",width:"7",height:"7"}),h("rect",{x:"14",y:"3",width:"7",height:"7"}),h("rect",{x:"3",y:"14",width:"7",height:"7"}),h("rect",{x:"14",y:"14",width:"3",height:"3"}),h("path",{d:"M21 14h-3v3"}),h("path",{d:"M21 21h-3v-3"})),
+  plus:   (s=24)=>h("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2"},h("path",{d:"M12 5v14M5 12h14"})),
+  user:   (s=24)=>h("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2"},h("path",{d:"M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"}),h("circle",{cx:"12",cy:"7",r:"4"})),
+  search: (s=24)=>h("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2"},h("circle",{cx:"11",cy:"11",r:"8"}),h("path",{d:"m21 21-4.35-4.35"})),
+  cam:    (s=24)=>h("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2"},h("path",{d:"M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"}),h("circle",{cx:"12",cy:"13",r:"4"})),
+  x:      (s=24)=>h("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2"},h("path",{d:"M18 6 6 18M6 6l12 12"})),
+  back:   (s=24)=>h("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2"},h("path",{d:"m15 18-6-6 6-6"})),
+  edit:   (s=24)=>h("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2"},h("path",{d:"M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"}),h("path",{d:"M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"})),
+  trash:  (s=24)=>h("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2"},h("path",{d:"M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"})),
+  check:  (s=24)=>h("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2"},h("polyline",{points:"20 6 9 17 4 12"})),
+  flash:  (s=24)=>h("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2"},h("polygon",{points:"13 2 3 14 12 14 11 22 21 10 12 10 13 2"})),
+  loc:    (s=24)=>h("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2"},h("path",{d:"M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"}),h("circle",{cx:"12",cy:"10",r:"3"})),
+};
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function useToast() {
+  const [toast, setToast] = useState(null);
+  const show = useCallback((msg, type="ok", ms=2500) => {
+    setToast({msg,type});
+    setTimeout(()=>setToast(null),ms);
+  },[]);
+  return [toast, show];
+}
+function Toast({toast}) {
+  if(!toast) return null;
+  return h("div",{className:`toast ${toast.type}`},toast.msg);
+}
+
+// ── ══════════════════════════════════════════
+// ── AUTH SCREEN
+// ── ══════════════════════════════════════════
+function AuthScreen({onAuth}) {
+  const [email, setEmail] = useState("");
+  const [pass, setPass]   = useState("");
+  const [err, setErr]     = useState("");
+  const [loading, setL]   = useState(false);
+
+  const submit = async () => {
+    setErr(""); setL(true);
+    const {data,error} = await SB.auth.signInWithPassword({email,password:pass});
+    if (error) { setErr(error.message); setL(false); return; }
+    onAuth(data.user);
+  };
+
+  return h("div",{className:"auth-screen fin"},
+    h("div",{className:"auth-logo"},
+      h("span",{className:"glyph"},"🎭"),
+      h("h1",null,"Theatre4u"),
+      h("p",null,"Inventory & Marketplace")
+    ),
+    h("div",{className:"auth-form"},
+      h("div",{className:"fg"},
+        h("label",{className:"fl"},"Email"),
+        h("input",{className:"fi",type:"email",value:email,onChange:e=>setEmail(e.target.value),placeholder:"you@school.edu",autoCapitalize:"none",inputMode:"email"})
+      ),
+      h("div",{className:"fg"},
+        h("label",{className:"fl"},"Password"),
+        h("input",{className:"fi",type:"password",value:pass,onChange:e=>setPass(e.target.value),placeholder:"••••••••",
+          onKeyDown:e=>e.key==="Enter"&&submit()})
+      ),
+      err && h("div",{style:{fontSize:13,color:"var(--red)",textAlign:"center",padding:"4px 0"}},err),
+      h("button",{className:"btn btn-gold btn-full",style:{marginTop:8},onClick:submit,disabled:loading},
+        loading?"Signing in…":"Sign In →"
+      ),
+      h("div",{style:{textAlign:"center",fontSize:12,color:"var(--muted)",marginTop:12}},
+        "Use the same login as theatre4u.org"
+      )
+    )
+  );
+}
+
+// ── ══════════════════════════════════════════
+// ── ITEM DETAIL SCREEN
+// ── ══════════════════════════════════════════
+function ItemDetail({item, onBack, onEdited, onDeleted, userId}) {
+  const cat = CAT[item.category] || CAT.other;
+  const [qr, setQr]     = useState(null);
+  const [editing, setEd]= useState(false);
+  const [delConf, setDC]= useState(false);
+  const [toast, showT]  = useToast();
+  const mktCls = item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="For Loan"?"mb-loan":item.mkt==="Rent or Sale"?"mb-both":"mb-none";
+
+  useEffect(()=>{ genQR("https://theatre4u.org/#/item/"+item.id, 160).then(setQr); },[item.id]);
+
+  const deleteItem = async () => {
+    await SB.from("items").delete().eq("id", item.id);
+    onDeleted(item.id);
+  };
+
+  return h("div",{className:"full-overlay"},
+    h(Toast,{toast}),
+    // Hero
+    h("div",{className:"detail-hero"},
+      item.img
+        ? h("img",{src:item.img,alt:item.name})
+        : h("div",{style:{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:72,opacity:.3}},cat.icon),
+      h("div",{className:"hero-grad"}),
+      h("div",{className:"hero-cat"},h("span",null,cat.icon)," ",cat.label),
+      h("button",{className:"back-btn",onClick:onBack},Ic.back(20))
+    ),
+    // Content
+    h("div",{className:"screen",style:{paddingBottom:100}},
+      h("div",{style:{padding:"16px 20px 0"}},
+        h("div",{className:"detail-title"},item.name),
+        item.location && h("div",{style:{display:"flex",alignItems:"center",gap:5,color:"var(--muted)",fontSize:13,marginBottom:8}},Ic.loc(14)," ",item.location),
+        h("div",{style:{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}},
+          h("span",{className:`item-badge ${mktCls}`},item.mkt),
+          item.condition && h("span",{className:"item-badge mb-none"},item.condition),
+          h("span",{className:"item-badge mb-none"},"×",item.qty||1),
+          item.avail && item.avail!=="In Stock" && h("span",{className:"item-badge mb-none"},item.avail)
+        ),
+        h("div",{className:"card"},
+          h("div",{style:{padding:"4px 16px"}},
+            [
+              ["Category", cat.icon+" "+cat.label],
+              ["Condition", item.condition],
+              ["Size", item.size],
+              ["Quantity", item.qty],
+              ["Availability", item.avail],
+              ["Location", item.location||"—"],
+              item.mkt!=="Not Listed"&&item.rent>0 && ["Rental Rate", fmt$(item.rent)+"/week"],
+              item.mkt!=="Not Listed"&&item.sale>0 && ["Sale Price", fmt$(item.sale)],
+              item.mkt==="For Loan"&&item.loan_period && ["Loan Period", item.loan_period+" weeks"],
+              item.notes && ["Notes", item.notes],
+            ].filter(Boolean).map(([l,v],i)=>
+              h("div",{key:i,className:"detail-row"},
+                h("span",{className:"lbl"},l),
+                h("span",{className:"val"},v)
+              )
+            )
+          )
+        ),
+        item.tags&&item.tags.length>0 && h("div",{style:{display:"flex",gap:6,flexWrap:"wrap",marginTop:14}},
+          item.tags.map(t=>h("span",{key:t,style:{padding:"3px 9px",background:"rgba(212,168,67,.1)",color:"var(--gold)",borderRadius:6,fontSize:12,fontWeight:600}},"#",t))
+        ),
+        // QR Code
+        qr && h("div",{style:{marginTop:16}},
+          h("div",{className:"qr-box"},
+            h("div",{style:{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)"}},"QR Label"),
+            h("img",{src:qr,width:160,height:160,alt:"QR"}),
+            h("div",{style:{fontSize:11,color:"var(--muted)",fontFamily:"monospace"}},item.id.slice(0,16)+"…")
+          )
+        )
+      )
+    ),
+    // Action buttons
+    h("div",{style:{position:"fixed",bottom:0,left:0,right:0,padding:"12px 20px",background:"rgba(10,10,15,.95)",borderTop:"1px solid var(--border)",display:"flex",gap:10,paddingBottom:"calc(var(--safe-bot) + 12px)"}},
+      h("button",{className:"btn btn-ghost",style:{flex:1},onClick:()=>setEd(true)},Ic.edit(16)," Edit"),
+      delConf
+        ? h("button",{className:"btn btn-danger",style:{flex:1},onClick:deleteItem},"Confirm Delete")
+        : h("button",{className:"btn btn-ghost",style:{flex:1,color:"var(--red)",borderColor:"rgba(224,82,82,.3)"},onClick:()=>setDC(true)},Ic.trash(16)," Delete")
+    ),
+    editing && h(EditSheet,{item,onClose:()=>setEd(false),onSaved:updated=>{setEd(false);onEdited(updated);showT("✓ Saved");},userId})
+  );
+}
+
+
+// ── ══════════════════════════════════════════
+// ── EDIT SHEET
+// ── ══════════════════════════════════════════
+function EditSheet({item, onClose, onSaved, userId}) {
+  const [f, setF] = useState({...item});
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUpl] = useState(false);
+  const upd = (k,v) => setF(p=>({...p,[k]:v}));
+  const fileRef = useRef();
+
+  const handlePhoto = async e => {
+    const file = e.target.files?.[0]; if(!file) return;
+    setUpl(true);
+    const url = await uploadPhoto(file, userId);
+    if(url) upd("img", url);
+    setUpl(false);
+  };
+
+  const save = async () => {
+    setSaving(true);
+    const {data,error} = await SB.from("items").update(f).eq("id",f.id).select().single();
+    if(!error && data) onSaved(data);
+    setSaving(false);
+  };
+
+  return h("div",{className:"sheet-overlay",onClick:e=>e.target===e.currentTarget&&onClose()},
+    h("div",{className:"sheet"},
+      h("div",{className:"sheet-handle"}),
+      h("div",{className:"sheet-hd"},
+        h("h2",null,"Edit Item"),
+        h("button",{style:{background:"none",border:"none",color:"var(--muted)",cursor:"pointer"},onClick:onClose},Ic.x(22))
+      ),
+      h("div",{className:"sheet-bd"},
+        // Photo
+        h("div",{className:"photo-area",style:{aspectRatio:"16/9"},onClick:()=>!uploading&&fileRef.current?.click()},
+          f.img
+            ? [h("img",{key:"img",src:f.img,alt:""}),
+               h("button",{key:"rm",className:"pa-rm",onClick:e=>{e.stopPropagation();upd("img",null)}},"×")]
+            : [h("div",{key:"i",className:"pa-icon"},"📷"),h("div",{key:"t",className:"pa-txt"},uploading?"Uploading…":"Tap to change photo")],
+          h("input",{ref:fileRef,type:"file",accept:"image/*",capture:"environment",hidden:true,onChange:handlePhoto})
+        ),
+        h("div",{className:"fg"},h("label",{className:"fl"},"Name"),h("input",{className:"fi",value:f.name||"",onChange:e=>upd("name",e.target.value)})),
+        h("div",{className:"fg"},h("label",{className:"fl"},"Location"),h("input",{className:"fi",value:f.location||"",onChange:e=>upd("location",e.target.value),placeholder:"e.g. Costume Closet A"})),
+        h("div",{className:"fg"},
+          h("label",{className:"fl"},"Condition"),
+          h("div",{className:"cond-grid"},
+            CONDS.map(c=>h("button",{key:c,className:`cond-btn${f.condition===c?" on":""}`,onClick:()=>upd("condition",c)},c))
+          )
+        ),
+        h("div",{className:"fg"},h("label",{className:"fl"},"Availability"),h("select",{className:"fs",value:f.avail,onChange:e=>upd("avail",e.target.value)},AVAIL.map(a=>h("option",{key:a},a)))),
+        h("div",{className:"fg"},h("label",{className:"fl"},"Marketplace"),h("select",{className:"fs",value:f.mkt,onChange:e=>upd("mkt",e.target.value)},MKT.map(m=>h("option",{key:m},m)))),
+        h("div",{className:"fg"},h("label",{className:"fl"},"Notes"),h("textarea",{className:"ft",value:f.notes||"",onChange:e=>upd("notes",e.target.value),rows:3})),
+        h("button",{className:"btn btn-gold btn-full",onClick:save,disabled:saving||!f.name?.trim()},saving?"Saving…":"Save Changes")
+      )
+    )
+  );
+}
+
+// ── ══════════════════════════════════════════
+// ── ADD ITEM SHEET
+// ── ══════════════════════════════════════════
+function AddSheet({onClose, onAdded, userId}) {
+  const [step, setStep] = useState("photo"); // photo | details
+  const [f, setF] = useState({name:"",category:"costumes",condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,avail:"In Stock",tags:[],img:null});
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUpl] = useState(false);
+  const fileRef = useRef();
+  const upd = (k,v) => setF(p=>({...p,[k]:v}));
+
+  const handlePhoto = async e => {
+    const file = e.target.files?.[0]; if(!file) return;
+    setUpl(true);
+    const url = await uploadPhoto(file, userId);
+    if(url) { upd("img", url); setStep("details"); }
+    else setStep("details");
+    setUpl(false);
+  };
+
+  const skipPhoto = () => setStep("details");
+
+  const save = async () => {
+    if(!f.name.trim()) return;
+    setSaving(true);
+    const row = {...f, org_id:userId, added:new Date().toISOString()};
+    const {data,error} = await SB.from("items").insert(row).select().single();
+    if(!error && data) { onAdded(data); onClose(); }
+    setSaving(false);
+  };
+
+  if(step==="photo") return h("div",{className:"sheet-overlay",onClick:e=>e.target===e.currentTarget&&onClose()},
+    h("div",{className:"sheet"},
+      h("div",{className:"sheet-handle"}),
+      h("div",{className:"sheet-hd"},
+        h("h2",null,"Add Item"),
+        h("button",{style:{background:"none",border:"none",color:"var(--muted)",cursor:"pointer"},onClick:onClose},Ic.x(22))
+      ),
+      h("div",{className:"sheet-bd"},
+        h("p",{style:{fontSize:14,color:"var(--muted)",marginBottom:20,lineHeight:1.6}},"Start with a photo — it takes just a few seconds and makes your inventory searchable and visual."),
+        h("label",{className:"photo-area",style:{aspectRatio:"4/3",cursor:"pointer"}},
+          uploading
+            ? h("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",gap:10}},
+                h("div",{className:"spin"}),h("span",{style:{color:"var(--muted)",fontSize:13}},"Uploading…"))
+            : f.img
+              ? h("img",{src:f.img,alt:""})
+              : [h("div",{key:"i",className:"pa-icon"},"📷"),h("div",{key:"t",className:"pa-txt"},"Tap to take photo")],
+          h("input",{ref:fileRef,type:"file",accept:"image/*",capture:"environment",hidden:true,onChange:handlePhoto})
+        ),
+        h("div",{style:{display:"flex",gap:10,marginTop:4}},
+          h("button",{className:"btn btn-gold",style:{flex:2},onClick:()=>fileRef.current?.click()},Ic.cam(17)," Take Photo"),
+          h("button",{className:"btn btn-ghost",style:{flex:1},onClick:skipPhoto},"Skip →")
+        )
+      )
+    )
+  );
+
+  return h("div",{className:"sheet-overlay",onClick:e=>e.target===e.currentTarget&&onClose()},
+    h("div",{className:"sheet"},
+      h("div",{className:"sheet-handle"}),
+      h("div",{className:"sheet-hd"},
+        h("h2",null,"Item Details"),
+        h("button",{style:{background:"none",border:"none",color:"var(--muted)",cursor:"pointer"},onClick:()=>setStep("photo")},Ic.back(22))
+      ),
+      h("div",{className:"sheet-bd"},
+        f.img && h("div",{style:{marginBottom:14,borderRadius:10,overflow:"hidden",height:160,position:"relative"}},
+          h("img",{src:f.img,alt:"",style:{width:"100%",height:"100%",objectFit:"cover"}}),
+          h("button",{onClick:()=>upd("img",null),style:{position:"absolute",top:8,right:8,background:"rgba(0,0,0,.7)",border:"none",color:"#fff",borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:16}},"×")
+        ),
+        h("div",{className:"fg"},
+          h("label",{className:"fl"},"Item Name *"),
+          h("input",{className:"fi",value:f.name,onChange:e=>upd("name",e.target.value),placeholder:"e.g. Victorian Ball Gown",autoFocus:true})
+        ),
+        h("div",{className:"fg"},
+          h("label",{className:"fl"},"Category"),
+          h("div",{className:"cat-grid"},
+            CATS.map(c=>h("div",{key:c.id,className:`cat-btn${f.category===c.id?" on":""}`,onClick:()=>upd("category",c.id)},
+              h("span",{className:"ci"},c.icon),
+              h("span",{className:"cl"},c.label)
+            ))
+          )
+        ),
+        h("div",{className:"fg"},
+          h("label",{className:"fl"},"Condition"),
+          h("div",{className:"cond-grid"},
+            CONDS.map(c=>h("button",{key:c,className:`cond-btn${f.condition===c?" on":""}`,onClick:()=>upd("condition",c)},c))
+          )
+        ),
+        h("div",{className:"fg"},
+          h("label",{className:"fl"},"Location"),
+          h("input",{className:"fi",value:f.location,onChange:e=>upd("location",e.target.value),placeholder:"Costume Closet A"})
+        ),
+        h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
+          h("div",{className:"fg"},
+            h("label",{className:"fl"},"Quantity"),
+            h("input",{className:"fi",type:"number",min:"1",value:f.qty,onChange:e=>upd("qty",parseInt(e.target.value)||1)})
+          ),
+          h("div",{className:"fg"},
+            h("label",{className:"fl"},"Marketplace"),
+            h("select",{className:"fs",value:f.mkt,onChange:e=>upd("mkt",e.target.value)},
+              MKT.map(m=>h("option",{key:m},m))
+            )
+          )
+        ),
+        h("div",{className:"fg"},
+          h("label",{className:"fl"},"Notes"),
+          h("textarea",{className:"ft",value:f.notes,onChange:e=>upd("notes",e.target.value),placeholder:"Care instructions, production history…",rows:2})
+        ),
+        h("button",{className:"btn btn-gold btn-full",onClick:save,disabled:saving||!f.name.trim()},
+          saving?"Saving…":h("span",{style:{display:"flex",alignItems:"center",gap:6,justifyContent:"center"}},Ic.check(18)," Add to Inventory")
+        )
+      )
+    )
+  );
+}
+
+// ── ══════════════════════════════════════════
+// ── QR SCANNER
+// ── ══════════════════════════════════════════
+function QRScanner({onFound, onClose}) {
+  const videoRef = useRef();
+  const canvasRef = useRef();
+  const animRef = useRef();
+  const [scanning, setScanning] = useState(true);
+  const [manualId, setManualId] = useState("");
+  const [err, setErr] = useState("");
+  const [flash, setFlash] = useState(false);
+  const streamRef = useRef();
+
+  useEffect(()=>{
+    let active = true;
+    (async()=>{
+      const jsQR = await loadJsQR();
+      if(!jsQR){setErr("QR scanner unavailable");return;}
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:{ideal:1280},height:{ideal:720}}});
+        if(!active){stream.getTracks().forEach(t=>t.stop());return;}
+        streamRef.current = stream;
+        if(videoRef.current){videoRef.current.srcObject=stream;videoRef.current.play();}
+        const scan = ()=>{
+          if(!active||!scanning) return;
+          const v=videoRef.current; const c=canvasRef.current;
+          if(v&&v.readyState===4&&c){
+            c.width=v.videoWidth; c.height=v.videoHeight;
+            const ctx=c.getContext("2d");
+            ctx.drawImage(v,0,0);
+            const img=ctx.getImageData(0,0,c.width,c.height);
+            const code=jsQR(img.data,img.width,img.height,{inversionAttempts:"dontInvert"});
+            if(code){
+              const d=code.data;
+              const id=d.replace(/^https?:\/\/theatre4u\.org\/#\/item\//,"").replace(/^T4U:/,"").split(":")[0];
+              setScanning(false);
+              onFound(id);
+              return;
+            }
+          }
+          animRef.current=requestAnimationFrame(scan);
+        };
+        animRef.current=requestAnimationFrame(scan);
+      }catch(e){setErr("Camera access denied. Please allow camera permission and try again.");}
+    })();
+    return()=>{ active=false; cancelAnimationFrame(animRef.current); streamRef.current?.getTracks().forEach(t=>t.stop()); };
+  },[]);
+
+  const toggleFlash = async ()=>{
+    const track=streamRef.current?.getVideoTracks()[0];
+    if(!track)return;
+    try{await track.applyConstraints({advanced:[{torch:!flash}]});setFlash(f=>!f);}catch{}
+  };
+
+  const searchManual = ()=>{
+    if(manualId.trim()) onFound(manualId.trim());
+  };
+
+  return h("div",{className:"full-overlay",style:{background:"#000"}},
+    // Camera
+    h("div",{className:"cam-view"},
+      h("video",{ref:videoRef,playsInline:true,muted:true,style:{width:"100%",height:"100%",objectFit:"cover"}}),
+      h("canvas",{ref:canvasRef,style:{display:"none"}}),
+      h("div",{className:"cam-overlay"},
+        h("div",{style:{color:"rgba(255,255,255,.7)",fontSize:13,marginBottom:20,textShadow:"0 1px 4px rgba(0,0,0,.8)"}},scanning?"Point at a Theatre4u QR label":"Found!"),
+        h("div",{className:"qr-frame"},
+          h("div",{className:"qr-corner tl"}),h("div",{className:"qr-corner tr"}),
+          h("div",{className:"qr-corner bl"}),h("div",{className:"qr-corner br"}),
+          scanning && h("div",{className:"scan-line"})
+        ),
+        err && h("div",{style:{color:"var(--red)",marginTop:20,fontSize:13,textShadow:"0 1px 4px rgba(0,0,0,.8)",maxWidth:280,textAlign:"center"}},err)
+      ),
+      // Top controls
+      h("div",{style:{position:"absolute",top:`calc(var(--safe-top) + 12px)`,left:16,right:16,display:"flex",justifyContent:"space-between"}},
+        h("button",{onClick:onClose,style:{background:"rgba(0,0,0,.6)",border:"none",color:"#fff",borderRadius:50,width:40,height:40,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}},Ic.x(20)),
+        h("button",{onClick:toggleFlash,style:{background:flash?"rgba(212,168,67,.8)":"rgba(0,0,0,.6)",border:"none",color:flash?"#1a1000":"#fff",borderRadius:50,width:40,height:40,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}},Ic.flash(20))
+      )
+    ),
+    // Manual entry
+    h("div",{style:{background:"var(--bg)",padding:"16px 20px",paddingBottom:"calc(var(--safe-bot) + 16px)"}},
+      h("div",{style:{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:8}},"Or enter ID manually"),
+      h("div",{style:{display:"flex",gap:8}},
+        h("input",{className:"fi",value:manualId,onChange:e=>setManualId(e.target.value),placeholder:"Paste item ID or URL…",style:{flex:1},onKeyDown:e=>e.key==="Enter"&&searchManual()}),
+        h("button",{className:"btn btn-gold",onClick:searchManual},"Find")
+      )
+    )
+  );
+}
+
+
+// ── ══════════════════════════════════════════
+// ── HOME TAB
+// ── ══════════════════════════════════════════
+function HomeTab({items, org, onAddItem, onViewItem}) {
+  const totalQty = items.reduce((s,i)=>s+(i.qty||1),0);
+  const listed   = items.filter(i=>i.mkt!=="Not Listed").length;
+  const recent   = items.slice(0,6);
+
+  return h("div",{className:"screen fin"},
+    // Header
+    h("div",{className:"ph"},
+      h("div",{className:"logo"},
+        h("div",{className:"logo-mark"},"🎭"),
+        h("span",{className:"logo-text"},"Theatre4u")
+      ),
+      h("div",{style:{fontSize:12,color:"var(--muted)",textAlign:"right",lineHeight:1.4}},
+        h("div",{style:{fontWeight:700,color:"var(--text)",fontSize:14}},org?.name||"My Inventory"),
+        h("div",null,"Mobile")
+      )
+    ),
+    // Stats
+    h("div",{className:"stats-row"},
+      h("div",{className:"stat-card"},h("div",{className:"stat-val"},totalQty),h("div",{className:"stat-lbl"},"Total Items")),
+      h("div",{className:"stat-card"},h("div",{className:"stat-val"},items.length),h("div",{className:"stat-lbl"},"Entries")),
+      h("div",{className:"stat-card"},h("div",{className:"stat-val"},listed),h("div",{className:"stat-lbl"},"Listed")),
+      h("div",{className:"stat-card"},h("div",{className:"stat-val"},items.filter(i=>i.img).length),h("div",{className:"stat-lbl"},"With Photos"))
+    ),
+    // Quick add
+    h("div",{style:{padding:"0 16px 16px"}},
+      h("button",{className:"btn btn-gold btn-full",onClick:onAddItem,style:{fontSize:16,padding:16}},
+        Ic.plus(20)," Add New Item"
+      )
+    ),
+    // Recent
+    recent.length>0 && h("div",null,
+      h("div",{className:"sec-hd"},h("h3",null,"Recent Items")),
+      h("div",{className:"card"},
+        recent.map((item,i)=>{
+          const cat=CAT[item.category]||CAT.other;
+          const mktCls=item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="For Loan"?"mb-loan":item.mkt==="Rent or Sale"?"mb-both":"mb-none";
+          return h("div",{key:item.id,className:"item-row",onClick:()=>onViewItem(item)},
+            h("div",{className:"item-thumb"},
+              item.img
+                ? h("img",{src:item.img,alt:item.name,loading:"lazy"})
+                : h("span",null,cat.icon)
+            ),
+            h("div",{className:"item-info"},
+              h("div",{className:"item-name"},item.name),
+              h("div",{className:"item-sub"},cat.label,(item.location?" · "+item.location:""))
+            ),
+            h("span",{className:`item-badge ${mktCls}`},item.mkt==="Not Listed"?"Stock":item.mkt)
+          );
+        })
+      )
+    ),
+    items.length===0 && h("div",{className:"empty"},
+      h("div",{className:"ei"},"🎭"),
+      h("h3",null,"Ready to catalog?"),
+      h("p",null,"Tap the button above to add your first item, or use the Scan tab to look up existing items."),
+    )
+  );
+}
+
+// ── ══════════════════════════════════════════
+// ── INVENTORY TAB
+// ── ══════════════════════════════════════════
+function InventoryTab({items, onViewItem, onAddItem}) {
+  const [search, setSearch] = useState("");
+  const [catF, setCatF]     = useState("all");
+
+  const filtered = useMemo(()=>{
+    let f=items;
+    if(search){const q=search.toLowerCase();f=f.filter(i=>i.name.toLowerCase().includes(q)||(i.location||"").toLowerCase().includes(q)||(i.notes||"").toLowerCase().includes(q));}
+    if(catF!=="all") f=f.filter(i=>i.category===catF);
+    return f;
+  },[items,search,catF]);
+
+  return h("div",{style:{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}},
+    h("div",{style:{padding:"calc(var(--safe-top) + 12px) 16px 4px",flexShrink:0}},
+      h("h1",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:700,marginBottom:12}},"Inventory"),
+      h("div",{className:"search-wrap",style:{padding:0,marginBottom:10}},
+        h("div",{className:"si"},
+          Ic.search(17),
+          h("input",{className:"search-input",value:search,onChange:e=>setSearch(e.target.value),placeholder:"Search items…",type:"search"})
+        )
+      ),
+      // Cat filter pills
+      h("div",{style:{display:"flex",gap:7,overflowX:"auto",paddingBottom:8}},
+        h("button",{
+          style:{flexShrink:0,padding:"5px 12px",borderRadius:20,border:"1.5px solid",fontFamily:"'DM Sans',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",
+            background:catF==="all"?"var(--gold)":"var(--card)",color:catF==="all"?"#1a1000":"var(--muted)",borderColor:catF==="all"?"var(--gold)":"var(--border)"},
+          onClick:()=>setCatF("all")},"All"),
+        CATS.map(c=>h("button",{key:c.id,
+          style:{flexShrink:0,padding:"5px 12px",borderRadius:20,border:"1.5px solid",fontFamily:"'DM Sans',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",
+            background:catF===c.id?"var(--gold)":"var(--card)",color:catF===c.id?"#1a1000":"var(--muted)",borderColor:catF===c.id?"var(--gold)":"var(--border)"},
+          onClick:()=>setCatF(c.id)},c.icon," ",c.label))
+      )
+    ),
+    h("div",{className:"screen",style:{paddingBottom:"calc(var(--nav-h) + var(--safe-bot) + 12px)"}},
+      h("div",{style:{padding:"0 16px 6px",fontSize:12,color:"var(--muted)"}},filtered.length," items"),
+      filtered.length===0
+        ? h("div",{className:"empty"},h("div",{className:"ei"},"📦"),h("h3",null,search?"No results":"No items yet"),h("p",null,search?"Try a different search.":"Add your first item to get started."))
+        : h("div",{className:"card"},
+            filtered.map((item,i)=>{
+              const cat=CAT[item.category]||CAT.other;
+              const mktCls=item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="For Loan"?"mb-loan":item.mkt==="Rent or Sale"?"mb-both":"mb-none";
+              return h("div",{key:item.id,className:"item-row",onClick:()=>onViewItem(item)},
+                h("div",{className:"item-thumb"},
+                  item.img?h("img",{src:item.img,alt:item.name,loading:"lazy"}):h("span",null,cat.icon)
+                ),
+                h("div",{className:"item-info"},
+                  h("div",{className:"item-name"},item.name),
+                  h("div",{className:"item-sub"},cat.icon," ",cat.label,(item.location?" · "+item.location:""),(item.avail&&item.avail!=="In Stock"?" · ⚠ "+item.avail:""))
+                ),
+                h("div",{style:{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4,flexShrink:0}},
+                  h("span",{className:`item-badge ${mktCls}`},item.mkt==="Not Listed"?"Stock":item.mkt),
+                  h("span",{style:{fontSize:11,color:"var(--faint)"}},"×",item.qty||1)
+                )
+              );
+            })
+          )
+    )
+  );
+}
+
+// ── ══════════════════════════════════════════
+// ── SCAN TAB
+// ── ══════════════════════════════════════════
+function ScanTab({items, onViewItem}) {
+  const [scanning, setScanning] = useState(false);
+  const [result, setResult]     = useState(null);
+  const [toast, showT]          = useToast();
+
+  const handleFound = async (id) => {
+    setScanning(false);
+    // First try local items
+    const clean = id.trim().toLowerCase();
+    const local = items.find(i=>i.id.toLowerCase()===clean||i.name.toLowerCase().includes(clean));
+    if(local){ setResult(local); return; }
+    // Try DB
+    const {data} = await SB.from("items").select("*").eq("id",clean).single();
+    if(data){ setResult(data); return; }
+    showT("Item not found for: "+id,"err");
+  };
+
+  if(scanning) return h(QRScanner,{onFound:handleFound,onClose:()=>setScanning(false)});
+
+  return h("div",{className:"screen fin"},
+    h("div",{className:"ph"},h("h1",null,"Scan")),
+    h("div",{style:{padding:"0 16px"}},
+      h("div",{style:{background:"var(--card)",border:"1px solid var(--border)",borderRadius:16,overflow:"hidden",marginBottom:20}},
+        h("div",{style:{aspectRatio:"1",background:"linear-gradient(135deg,#1a1a2e,#0f0f1a)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:20,cursor:"pointer"},onClick:()=>setScanning(true)},
+          h("div",{style:{fontSize:72,opacity:.8}},"📷"),
+          h("div",{style:{textAlign:"center"}},
+            h("div",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:700,color:"var(--gold)"}},
+              "Scan QR Label"
+            ),
+            h("div",{style:{fontSize:13,color:"var(--muted)",marginTop:4}},"Point camera at any Theatre4u QR code")
+          ),
+          h("div",{style:{background:"linear-gradient(135deg,var(--gold),var(--goldd))",color:"#1a1000",padding:"12px 28px",borderRadius:10,fontWeight:700,fontSize:15}},
+            "Open Scanner"
+          )
+        )
+      ),
+      result && h("div",null,
+        h("div",{className:"sec-hd"},h("h3",null,"Scan Result")),
+        h("div",{className:"card"},
+          h("div",{className:"item-row",onClick:()=>onViewItem(result)},
+            h("div",{className:"item-thumb"},result.img?h("img",{src:result.img,alt:""}):h("span",null,(CAT[result.category]||CAT.other).icon)),
+            h("div",{className:"item-info"},
+              h("div",{className:"item-name"},result.name),
+              h("div",{className:"item-sub"},(CAT[result.category]||CAT.other).label,(result.location?" · "+result.location:""))
+            ),
+            h("span",{style:{color:"var(--gold)",fontSize:13}},">")
+          )
+        ),
+        h("button",{className:"btn btn-ghost btn-full",style:{marginTop:10},onClick:()=>{setResult(null);setScanning(true);}},
+          "Scan Another"
+        )
+      )
+    ),
+    h(Toast,{toast})
+  );
+}
+
+// ── ══════════════════════════════════════════
+// ── PROFILE TAB
+// ── ══════════════════════════════════════════
+function ProfileTab({user, org, onSignOut}) {
+  const [f, setF]     = useState(org||{});
+  const [saved, setSaved] = useState(false);
+  const upd = (k,v)=>setF(p=>({...p,[k]:v}));
+
+  const save = async ()=>{
+    await SB.from("orgs").update(f).eq("id",user.id);
+    setSaved(true); setTimeout(()=>setSaved(false),2000);
+  };
+
+  return h("div",{className:"screen fin"},
+    h("div",{className:"ph"},h("h1",null,"Profile")),
+    h("div",{style:{padding:"0 16px"}},
+      h("div",{style:{textAlign:"center",padding:"20px 0 24px"}},
+        h("div",{style:{width:72,height:72,background:"linear-gradient(135deg,var(--gold),var(--goldd))",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,margin:"0 auto 12px"}},"🎭"),
+        h("div",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:700}},org?.name||"Your Program"),
+        h("div",{style:{fontSize:13,color:"var(--muted)",marginTop:3}},user?.email),
+        org?.plan&&h("div",{style:{display:"inline-block",marginTop:8,padding:"3px 12px",background:"rgba(212,168,67,.15)",color:"var(--gold)",borderRadius:12,fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}},org.plan," plan")
+      ),
+      h("div",{className:"card card-p",style:{marginBottom:16}},
+        h("div",{style:{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:14}},"Organization"),
+        h("div",{className:"fg"},h("label",{className:"fl"},"Name"),h("input",{className:"fi",value:f.name||"",onChange:e=>upd("name",e.target.value)})),
+        h("div",{className:"fg"},h("label",{className:"fl"},"Location"),h("input",{className:"fi",value:f.location||"",onChange:e=>upd("location",e.target.value),placeholder:"City, State"})),
+        h("div",{className:"fg"},h("label",{className:"fl"},"Email"),h("input",{className:"fi",type:"email",value:f.email||"",onChange:e=>upd("email",e.target.value)})),
+        h("button",{className:"btn btn-gold btn-full",style:{marginTop:4},onClick:save},
+          saved?"✓ Saved!":"Save Changes"
+        )
+      ),
+      h("div",{className:"card card-p",style:{marginBottom:16}},
+        h("div",{style:{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:14}},"Platform"),
+        h("a",{href:"https://theatre4u.org",target:"_blank",rel:"noreferrer",style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid var(--border)",textDecoration:"none",color:"var(--text)",fontSize:14}},
+          h("span",null,"Open Theatre4u Web"),h("span",{style:{color:"var(--muted)"}},"→")
+        ),
+        h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid var(--border)",fontSize:14}},
+          h("span",null,"App Version"),h("span",{style:{color:"var(--muted)"}},"1.0.0")
+        ),
+        h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",fontSize:14}},
+          h("span",null,"Backend"),h("span",{style:{color:"var(--green)",fontSize:12,fontWeight:700}},"● Connected")
+        )
+      ),
+      h("button",{className:"btn btn-danger btn-full",onClick:onSignOut,style:{marginBottom:32}},"Sign Out")
+    )
+  );
+}
+
+// ── ══════════════════════════════════════════
+// ── ROOT APP
+// ── ══════════════════════════════════════════
+
+// ── ══════════════════════════════════════════
+// ── PROP 28 MOBILE TAB
+// ── ══════════════════════════════════════════
+const DISCIPLINES_M = ["Music","Visual Arts","Dance","Theater","Media Arts","Multiple"];
+const GRADES_M = ["TK","K","1","2","3","4","5","6","7","8","9","10","11","12"];
+const CURRENT_YEAR = "2024-2025";
+
+function Prop28MobileTab({userId, org, items=[]}) {
+  const [tab, setTab]         = useState("log");  // log | add
+  const [purchases, setPurch] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm]       = useState(null);
+  const [saving, setSaving]   = useState(false);
+  const [toast, showT]        = useToast();
+
+  const blank = {
+    item_description:"", arts_discipline:"Theater", grade_levels:[],
+    students_served:"", cost:"", funding_source:"100% Prop 28",
+    supplement_not_supplant:true, date_purchased:new Date().toISOString().slice(0,10),
+    vendor:"", item_id:"", school_year:CURRENT_YEAR,
+  };
+
+  useEffect(()=>{
+    (async()=>{
+      const{data}=await SB.from("prop28_purchases").select("*").eq("org_id",userId).eq("school_year",CURRENT_YEAR).order("date_purchased",{ascending:false}).limit(50);
+      setPurch(data||[]);
+      setLoading(false);
+    })();
+  },[userId]);
+
+  const save = async()=>{
+    if(!form.item_description.trim()||!form.cost||!form.students_served) return;
+    setSaving(true);
+    const row={...form,org_id:userId,cost:parseFloat(form.cost)||0,students_served:parseInt(form.students_served)||0};
+    const{data,error}=await SB.from("prop28_purchases").insert(row).select().single();
+    if(!error&&data){
+      setPurch(p=>[data,...p]);
+      setForm(null);
+      setTab("log");
+      showT("✓ Purchase logged for Prop 28");
+    } else { showT("Error: "+(error?.message||"Save failed"),"err"); }
+    setSaving(false);
+  };
+
+  const toggleGrade = g=>{
+    const cur=form.grade_levels||[];
+    setForm(p=>({...p,grade_levels:cur.includes(g)?cur.filter(x=>x!==g):[...cur,g]}));
+  };
+
+  const totalSpent = purchases.reduce((s,p)=>s+parseFloat(p.cost||0),0);
+  const upd = (k,v)=>setForm(p=>({...p,[k]:v}));
+
+  if(form!==null) return h("div",{style:{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}},
+    h(Toast,{toast}),
+    h("div",{style:{padding:"calc(var(--safe-top) + 12px) 16px 10px",borderBottom:"1px solid var(--border)",background:"var(--bg2)",flexShrink:0,display:"flex",alignItems:"center",gap:12}},
+      h("button",{onClick:()=>setForm(null),style:{background:"none",border:"none",color:"var(--muted)",cursor:"pointer",display:"flex",alignItems:"center"}},Ic.back(20)),
+      h("h1",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:700}},"Log Prop 28 Purchase")
+    ),
+    h("div",{className:"screen",style:{paddingBottom:100}},
+      h("div",{style:{padding:"16px"}},
+        // Item from inventory?
+        items.length>0&&h("div",{className:"fg",style:{marginBottom:14}},
+          h("label",{className:"fl"},"Link to Inventory Item"),
+          h("select",{className:"fs",value:form.item_id||"",onChange:e=>{
+            const item=items.find(i=>i.id===e.target.value);
+            if(item) upd("item_description",item.name);
+            upd("item_id",e.target.value||null);
+          }},
+            h("option",{value:""},"— Manual entry —"),
+            items.map(i=>h("option",{key:i.id,value:i.id},i.name))
+          )
+        ),
+        h("div",{className:"fg"},
+          h("label",{className:"fl"},"Item Description *"),
+          h("input",{className:"fi",value:form.item_description,onChange:e=>upd("item_description",e.target.value),placeholder:'e.g. "Sheet music for spring musical"',autoFocus:true})
+        ),
+        h("div",{className:"fg"},
+          h("label",{className:"fl"},"Arts Discipline"),
+          h("select",{className:"fs",value:form.arts_discipline,onChange:e=>upd("arts_discipline",e.target.value)},
+            DISCIPLINES_M.map(d=>h("option",{key:d},d))
+          )
+        ),
+        h("div",{className:"fg"},
+          h("label",{className:"fl"},"Grade Levels Served *"),
+          h("div",{style:{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}},
+            GRADES_M.map(g=>h("button",{key:g,type:"button",onClick:()=>toggleGrade(g),
+              style:{padding:"6px 10px",borderRadius:6,border:"1.5px solid",fontFamily:"'DM Sans',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",
+                background:(form.grade_levels||[]).includes(g)?"var(--green)":"var(--bg3)",
+                color:(form.grade_levels||[]).includes(g)?"#fff":"var(--muted)",
+                borderColor:(form.grade_levels||[]).includes(g)?"var(--green)":"var(--border)"}},g)),
+            h("button",{type:"button",onClick:()=>setForm(p=>({...p,grade_levels:[...GRADES_M]})),
+              style:{padding:"6px 10px",borderRadius:6,border:"1.5px solid var(--border)",background:"transparent",color:"var(--muted)",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"All")
+          )
+        ),
+        h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
+          h("div",{className:"fg"},
+            h("label",{className:"fl"},"Students Served *"),
+            h("input",{className:"fi",type:"number",min:"0",value:form.students_served,onChange:e=>upd("students_served",e.target.value),placeholder:"150",inputMode:"numeric"})
+          ),
+          h("div",{className:"fg"},
+            h("label",{className:"fl"},"Cost ($) *"),
+            h("input",{className:"fi",type:"number",min:"0",step:"0.01",value:form.cost,onChange:e=>upd("cost",e.target.value),placeholder:"0.00",inputMode:"decimal"})
+          )
+        ),
+        h("div",{className:"fg"},
+          h("label",{className:"fl"},"Date Purchased"),
+          h("input",{className:"fi",type:"date",value:form.date_purchased||"",onChange:e=>upd("date_purchased",e.target.value)})
+        ),
+        h("div",{className:"fg"},
+          h("label",{className:"fl"},"Vendor"),
+          h("input",{className:"fi",value:form.vendor||"",onChange:e=>upd("vendor",e.target.value),placeholder:"Amazon, J.W. Pepper, etc."})
+        ),
+        h("div",{className:"fg"},
+          h("label",{className:"fl"},"Funding Source"),
+          h("select",{className:"fs",value:form.funding_source,onChange:e=>upd("funding_source",e.target.value)},
+            h("option",null,"100% Prop 28"),h("option",null,"Split Funding")
+          )
+        ),
+        h("div",{className:"fg"},
+          h("label",{className:"fl"},"Supplement vs. Supplant"),
+          h("div",{style:{display:"flex",gap:8}},
+            h("button",{type:"button",onClick:()=>upd("supplement_not_supplant",true),
+              style:{flex:1,padding:10,borderRadius:8,border:"1.5px solid",fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",
+                background:form.supplement_not_supplant?"rgba(82,199,132,.15)":"var(--bg3)",
+                color:form.supplement_not_supplant?"var(--green)":"var(--muted)",
+                borderColor:form.supplement_not_supplant?"var(--green)":"var(--border)"}},"✓ New/Expanded"),
+            h("button",{type:"button",onClick:()=>upd("supplement_not_supplant",false),
+              style:{flex:1,padding:10,borderRadius:8,border:"1.5px solid",fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",
+                background:form.supplement_not_supplant===false?"rgba(224,82,82,.15)":"var(--bg3)",
+                color:form.supplement_not_supplant===false?"var(--red)":"var(--muted)",
+                borderColor:form.supplement_not_supplant===false?"var(--red)":"var(--border)"}},"✗ Replacing")
+          )
+        )
+      )
+    ),
+    h("div",{style:{position:"fixed",bottom:0,left:0,right:0,padding:"12px 16px",paddingBottom:"calc(var(--safe-bot) + 12px)",background:"rgba(10,10,15,.95)",borderTop:"1px solid var(--border)"}},
+      h("button",{className:"btn btn-gold btn-full",onClick:save,disabled:saving||!form.item_description.trim()||!form.cost||!form.students_served||(form.grade_levels||[]).length===0},
+        saving?"Saving…":"Log Prop 28 Purchase"
+      )
+    )
+  );
+
+  return h("div",{style:{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}},
+    h(Toast,{toast}),
+    h("div",{style:{padding:"calc(var(--safe-top) + 12px) 16px 12px",flexShrink:0}},
+      h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}},
+        h("h1",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:700}},"Prop 28"),
+        h("button",{className:"btn btn-gold btn-sm",onClick:()=>setForm({...blank})},Ic.plus(15)," Log Purchase")
+      ),
+      // Stats bar
+      h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:4}},
+        h("div",{className:"card card-p",style:{padding:"10px 12px",textAlign:"center"}},
+          h("div",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:22,color:"#52c784",fontWeight:700}},"$"+totalSpent.toFixed(2)),
+          h("div",{style:{fontSize:10,color:"var(--muted)",fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginTop:2}},"Total Spent "+CURRENT_YEAR)
+        ),
+        h("div",{className:"card card-p",style:{padding:"10px 12px",textAlign:"center"}},
+          h("div",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:22,color:"var(--gold)",fontWeight:700}},purchases.length),
+          h("div",{style:{fontSize:10,color:"var(--muted)",fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginTop:2}},"Purchases Logged")
+        )
+      ),
+      h("div",{style:{fontSize:11,color:"var(--muted)",marginTop:6,textAlign:"center"}},"Manage full reports at theatre4u.org/prop28")
+    ),
+    h("div",{className:"screen"},
+      loading
+        ? h("div",{className:"loading"},h("div",{className:"spin"}))
+        : purchases.length===0
+          ? h("div",{className:"empty"},
+              h("div",{className:"ei"},"📋"),
+              h("h3",null,"No Prop 28 Purchases"),
+              h("p",null,"Log arts purchases made with Prop 28 funds. They sync automatically with your full compliance dashboard on theatre4u.org."),
+              h("button",{className:"btn btn-gold",onClick:()=>setForm({...blank})},"+ Log First Purchase")
+            )
+          : h("div",{className:"card"},
+              purchases.map((p,i)=>{
+                const col={Music:"#5299e0","Visual Arts":"#e05299",Dance:"#e07a52",Theater:"#8c52e0","Media Arts":"#52c7b8",Multiple:"#7a8c99"}[p.arts_discipline]||"#7a8c99";
+                return h("div",{key:p.id,className:"item-row"},
+                  h("div",{style:{width:48,height:48,borderRadius:10,background:col+"22",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:2}},
+                    h("span",{style:{fontSize:10,fontWeight:800,color:col,textAlign:"center",lineHeight:1.1}},p.arts_discipline.slice(0,6))
+                  ),
+                  h("div",{className:"item-info"},
+                    h("div",{className:"item-name"},p.item_description),
+                    h("div",{className:"item-sub"},(p.date_purchased||"")," · ",(p.grade_levels||[]).join(", ")||"—"," · ",p.students_served," students")
+                  ),
+                  h("div",{style:{flexShrink:0,textAlign:"right"}},
+                    h("div",{style:{fontWeight:700,fontSize:14,color:"#52c784"}},"$"+parseFloat(p.cost||0).toFixed(2)),
+                    h("div",{style:{fontSize:10,color:p.supplement_not_supplant?"var(--green)":"var(--red)",fontWeight:600,marginTop:2}},
+                      p.supplement_not_supplant?"✓ SNS":"⚠ Review")
+                  )
+                );
+              })
+            )
+    )
+  );
+}
+
+function App() {
+  const [user, setUser]       = useState(null);
+  const [org, setOrg]         = useState(null);
+  const [items, setItems]     = useState([]);
+  const [tab, setTab]         = useState("home");
+  const [loading, setLoading] = useState(true);
+  const [authChk, setAuthChk] = useState(false);
+  const [viewItem, setViewItem] = useState(null);
+  const [addOpen, setAddOpen]   = useState(false);
+  const [online, setOnline]     = useState(navigator.onLine);
+  const [toast, showT]          = useToast();
+
+  // Online/offline detection
+  useEffect(()=>{
+    const on=()=>setOnline(true); const off=()=>setOnline(false);
+    window.addEventListener("online",on); window.addEventListener("offline",off);
+    return()=>{window.removeEventListener("online",on);window.removeEventListener("offline",off);};
+  },[]);
+
+  // Auth
+  useEffect(()=>{
+    SB.auth.getSession().then(({data:{session}})=>{
+      setUser(session?.user||null); setAuthChk(true);
+    });
+    const{data:{subscription}}=SB.auth.onAuthStateChange((_,session)=>{
+      setUser(session?.user||null);
+      if(!session){setItems([]);setOrg(null);setLoading(true);}
+    });
+    return()=>subscription.unsubscribe();
+  },[]);
+
+  // Load data
+  useEffect(()=>{
+    if(!user) return;
+    (async()=>{
+      setLoading(true);
+      const{data:orgData}=await SB.from("orgs").select("*").eq("id",user.id).single();
+      if(orgData) setOrg(orgData);
+      const{data:itemData}=await SB.from("items").select("*").eq("org_id",user.id).order("added",{ascending:false});
+      if(itemData) setItems(itemData);
+      setLoading(false);
+    })();
+  },[user]);
+
+  const handleItemAdded = useCallback(item=>{
+    setItems(p=>[item,...p]);
+    showT("✓ Item added to inventory");
+  },[]);
+
+  const handleItemEdited = useCallback(updated=>{
+    setItems(p=>p.map(i=>i.id===updated.id?updated:i));
+    if(viewItem?.id===updated.id) setViewItem(updated);
+    showT("✓ Saved");
+  },[viewItem]);
+
+  const handleItemDeleted = useCallback(id=>{
+    setItems(p=>p.filter(i=>i.id!==id));
+    setViewItem(null);
+    showT("Item deleted","ok");
+  },[]);
+
+  const handleViewItem = useCallback(item=>{
+    setViewItem(item); setTab("home");
+  },[]);
+
+  const signOut = async()=>{await SB.auth.signOut();setUser(null);};
+
+  if(!authChk) return h("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",flexDirection:"column",gap:16}},
+    h("div",{style:{fontSize:52}},"🎭"),
+    h("div",{style:{width:32,height:32,border:"2.5px solid var(--border2)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}})
+  );
+
+  if(!user) return h(AuthScreen,{onAuth:setUser});
+
+  if(loading) return h("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",gap:16}},
+    h("div",{style:{fontSize:52}},"🎭"),
+    h("div",{className:"loading"},h("div",{className:"spin"}),h("span",{style:{color:"var(--muted)",fontSize:14}},"Loading inventory…"))
+  );
+
+  // Plan gate — free users see upgrade screen
+  const isPro = org?.plan === "pro" || org?.plan === "district" || org?.email === "theatre4u1@gmail.com";
+  if(!isPro) return h("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",padding:32,textAlign:"center",gap:20}},
+    h("div",{style:{fontSize:64}},"📱"),
+    h("div",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:32,fontWeight:700,color:"#d4a843"}},"Pro Feature"),
+    h("p",{style:{fontSize:15,color:"var(--muted)",lineHeight:1.7,maxWidth:320}},
+      "The Theatre4u mobile app is included with Pro and District plans. Upgrade at theatre4u.org to unlock mobile inventory management, Prop 28 tracking, and QR scanning."
+    ),
+    h("a",{href:"https://theatre4u.org",style:{background:"linear-gradient(135deg,#d4a843,#8a6a20)",color:"#1a1000",padding:"14px 32px",borderRadius:10,fontWeight:700,fontSize:16,textDecoration:"none"}},"Upgrade at theatre4u.org →"),
+    h("button",{onClick:signOut,style:{background:"none",border:"none",color:"var(--muted)",fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",marginTop:8}},"Sign out")
+  );
+
+  const isPro = org?.plan === "pro" || org?.plan === "district" || org?.email === "theatre4u1@gmail.com";
+  const navItems = [
+    {id:"home",    label:"Home",       icon:Ic.home},
+    {id:"scan",    label:"Scan",       icon:Ic.qr},
+    {id:"inventory",label:"Items",     icon:Ic.box},
+    ...(isPro ? [{id:"prop28", label:"Prop 28",  icon:Ic.check}] : []),
+    {id:"profile", label:"Profile",    icon:Ic.user},
+  ];
+
+  return h("div",{id:"app",style:{display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
+    Toast&&h(Toast,{toast}),
+    !online && h("div",{className:"offline-bar"},"⚡ Offline — some features may be unavailable"),
+    // View item detail (full screen)
+    viewItem && h(ItemDetail,{item:viewItem,onBack:()=>setViewItem(null),onEdited:handleItemEdited,onDeleted:handleItemDeleted,userId:user.id}),
+    // Tab content
+    !viewItem && h("div",{style:{flex:1,overflow:"hidden",display:"flex",flexDirection:"column"}},
+      tab==="home"      && h(HomeTab,{items,org,onAddItem:()=>setAddOpen(true),onViewItem:handleViewItem}),
+      tab==="scan"      && h(ScanTab,{items,onViewItem:handleViewItem}),
+      tab==="inventory" && h(InventoryTab,{items,onViewItem:handleViewItem,onAddItem:()=>setAddOpen(true)}),
+      tab==="prop28"    && h(Prop28MobileTab,{userId:user.id,org,items}),
+      tab==="profile"   && h(ProfileTab,{user,org,onSignOut:signOut})
+    ),
+    // Bottom nav
+    !viewItem && h("div",{className:"bnav"},
+      navItems.map(n=>h("div",{key:n.id,className:`bnav-item${tab===n.id?" on":""}`,onClick:()=>setTab(n.id)},
+        n.icon(22),
+        h("span",null,n.label)
+      ))
+    ),
+    // FAB — only on home and inventory
+    !viewItem && (tab==="home"||tab==="inventory") && h("button",{className:"fab",onClick:()=>setAddOpen(true)},Ic.plus(26)),
+    // Add sheet
+    addOpen && h(AddSheet,{onClose:()=>setAddOpen(false),onAdded:handleItemAdded,userId:user.id})
+  );
+}
+
+createRoot(document.getElementById("root")).render(h(App,null));
+</script>
+
+<!-- PWA Manifest inline -->
+<script>
+const manifest = {
+  name:"Theatre4u",short_name:"Theatre4u",description:"Inventory & Marketplace for Theatre Programs",
+  start_url:"/",display:"standalone",background_color:"#0a0a0f",theme_color:"#0a0a0f",
+  orientation:"portrait",
+  icons:[
+    {src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23d4a843'/><text y='.9em' font-size='72' x='12'>🎭</text></svg>",sizes:"any",type:"image/svg+xml"}
+  ]
+};
+const blob=new Blob([JSON.stringify(manifest)],{type:"application/json"});
+const url=URL.createObjectURL(blob);
+const link=document.createElement("link");
+link.rel="manifest";link.href=url;
+document.head.appendChild(link);
+</script>
+</body>
+</html>
