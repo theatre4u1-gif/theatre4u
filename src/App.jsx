@@ -1263,7 +1263,7 @@ function Dashboard({items,org,goInventory,goMarketplace,goCommunity}){
           <img src={usp(BG.dashboard,1200,480)} alt="Grand Theatre" loading="eager"/>
           <div className="hero-fade"/>
           <div className="hero-body">
-            <div className="hero-eyebrow">🎭 Theatre Inventory & Marketplace</div>
+            <div className="hero-eyebrow">🎭 Inventory · Marketplace · Community</div>
             <h1 className="hero-title">{org.name?`Welcome,\n${org.name}`:"Welcome to\nTheatre4u"}</h1>
             <p className="hero-sub">Everything your program owns — cataloged, photographed, and ready to share with the wider arts community.</p>
           </div>
@@ -1477,7 +1477,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId,plan="free",headerNote=nu
         <span style={{fontSize:13,color:atLimit?"var(--red)":"var(--gold)",fontWeight:600}}>
           {atLimit?"⚠️ Item limit reached — upgrade to add more items.":"⚡ "+items.length+"/50 items used on free plan."}
         </span>
-        <button className="btn btn-g" style={{padding:"5px 14px",fontSize:12}} onClick={()=>setUpgradeReason("Upgrade to Pro for unlimited inventory, marketplace listings, and more.")}>Upgrade →</button>
+        <button className="btn btn-g" style={{padding:"5px 14px",fontSize:12}} onClick={()=>setUpgradeReason("Upgrade to Pro for unlimited inventory, marketplace access, Theatre Credits, and more.")}>Upgrade →</button>
       </div>
     )}
     <div style={{position:"relative"}}>
@@ -5701,7 +5701,7 @@ function LegalModal({title, onClose, children}){
 
 const TERMS_CONTENT = [
   ["1. Acceptance of Terms","By accessing or using Theatre4u at theatre4u.org, you agree to be bound by these Terms of Service. If you do not agree, please do not use the Service. Theatre4u is operated by its founder based in California, USA."],
-  ["2. Description of Service","Theatre4u is a cloud-based inventory management and marketplace platform for theatre programs, schools, community theatres, and performing arts organizations. We reserve the right to modify or discontinue the Service at any time with reasonable notice."],
+  ["2. Description of Service","Theatre4u is a cloud-based inventory management, marketplace, and community platform for theatre programs, schools, community theatres, and performing arts organizations. We reserve the right to modify or discontinue the Service at any time with reasonable notice."],
   ["3. Account Registration","You must create an account with accurate information and are responsible for maintaining confidentiality of your credentials. You must be at least 18 years old, or have authorization of a parent, guardian, or school administrator if a minor acting on behalf of an organization."],
   ["4. Subscription Plans and Payments","Theatre4u offers free and paid plans billed monthly via Stripe. Subscriptions auto-renew unless cancelled. All fees are non-refundable except as required by law. We may change pricing with 30 days notice to current subscribers."],
   ["5. User Content","You retain ownership of content you upload. By uploading, you grant us a license to store and display it solely to provide the Service. You are responsible for ensuring your content does not infringe third-party rights or violate applicable laws."],
@@ -5785,7 +5785,7 @@ function LandingPage({onSignIn, onSignUp}){
           <span style={{color:"var(--gold)"}}>in one place</span>
         </h1>
         <p style={{fontSize:"clamp(16px,2.5vw,20px)",color:"rgba(255,255,255,.7)",lineHeight:1.7,marginBottom:36,maxWidth:600,margin:"0 auto 36px"}}>
-          Inventory management, a prop & costume marketplace, Prop 28 compliance tracking, and a community board for theatre programs of every size.
+          Inventory management, a peer marketplace, Theatre Credits, Prop 28 compliance tracking, and a community board — built for theatre programs of every size.
         </p>
         <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
           <button onClick={onSignUp} style={{background:"linear-gradient(135deg,var(--gold),var(--goldd))",border:"none",color:"#1a0f00",padding:"14px 32px",borderRadius:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:16,fontWeight:800,boxShadow:"0 4px 24px rgba(212,168,67,.4)"}}>
@@ -5815,7 +5815,7 @@ function LandingPage({onSignIn, onSignUp}){
       <div style={{textAlign:"center",marginBottom:52}}>
         <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>What Theatre4u does</div>
         <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(32px,5vw,48px)",color:"#fff",lineHeight:1.15}}>Built for busy drama directors</h2>
-        <p style={{fontSize:16,color:"rgba(255,255,255,.55)",marginTop:12,maxWidth:520,margin:"12px auto 0"}}>Not a generic inventory tool. Not a generic marketplace. Built specifically for school and community theatre.</p>
+        <p style={{fontSize:16,color:"rgba(255,255,255,.55)",marginTop:12,maxWidth:520,margin:"12px auto 0"}}>Not a generic inventory tool. Not a generic marketplace. Built specifically for theatre programs, schools, and the broader performing arts community.</p>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:20}}>
         {features.map(f=>(
@@ -6126,7 +6126,7 @@ function AuthScreen({onAuth}){
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{fontSize:52,marginBottom:6}}>🎭</div>
           <div style={{fontFamily:"'Abril Fatface',display",fontSize:36,color:"var(--gold)",letterSpacing:1}}>Theatre4u</div>
-          <div style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:15,color:"rgba(255,255,255,.5)",marginTop:2}}>Inventory & Marketplace</div>
+          <div style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:15,color:"rgba(255,255,255,.5)",marginTop:2}}>Inventory · Marketplace · Community</div>
         </div>
         {/* Card */}
         <div style={{background:"var(--cream)",borderRadius:16,padding:"36px 36px 32px",boxShadow:"0 16px 56px rgba(0,0,0,.5)"}}>
