@@ -1,10 +1,5 @@
 {
-  "redirects": [
-    { "source": "/help", "destination": "/help.html", "permanent": false },
-    { "source": "/app",  "destination": "/app.html",  "permanent": false }
-  ],
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/((?!help.html|app.html|assets/).*)", "destination": "/index.html" }
   ]
 }
