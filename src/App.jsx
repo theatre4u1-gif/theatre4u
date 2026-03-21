@@ -4788,8 +4788,7 @@ function Prop28Page({org, userId, items=[], plan="pro"}) {
   const exportCSV = ()=>{
     const h=["School Year","Date","Item Description","Arts Discipline","Grade Levels","Students","Cost","Funding","SNS","Vendor","Linked Item","Notes"];
     const rows=purchases.map(p=>[p.school_year,p.date_purchased||"",`"${(p.item_description||"").replace(/"/g,'""')}"`,p.arts_discipline,`"${(p.grade_levels||[]).join(", ")}"`,p.students_served,p.cost,p.funding_source,p.supplement_not_supplant?"Yes":"No",p.vendor||"",p.items?.name||"",`"${(p.notes||"").replace(/"/g,'""')}"`]);
-    const csv=[h,...rows].map(r=>r.join(",")).join("
-");
+    const csv=[h,...rows].map(r=>r.join(",")).join("\n");
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=`prop28_${year}.csv`;a.click();
   };
 
