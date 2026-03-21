@@ -1819,17 +1819,29 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
   const [end,     setEnd]     = useState("");
   const [qty,     setQty]     = useState(1);
   const [msg,     setMsg]     = useState("");
-  const [sending, setSending] = useState(false);
-  const [err,     setErr]     = useState("");
-  const [conflict,setConflict]= useState(false);
-  const [blocks,  setBlocks]  = useState([]);
+  const [sending,   setSending]   = useState(false);
+  const [err,       setErr]       = useState("");
+  const [conflict,  setConflict]  = useState(false);
+  const [blocks,    setBlocks]    = useState([]);
+  const [myCredits, setMyCredits] = useState(0);
+  const [useCredits,setUseCredits]= useState(false);
+  const [creditAmt, setCreditAmt] = useState(0);
   const needsDates = type !== "buy";
 
-  // Load availability blocks to warn about conflicts
+  // Load availability blocks + my credit balance
   useEffect(()=>{
     SB.from("availability_blocks").select("*").eq("item_id", item.id)
       .then(({data})=>setBlocks(data||[]));
+    SB.rpc("get_my_credit_balance").then(({data})=>setMyCredits(data||0));
   },[item.id]);
+
+  // Recalculate credit amount when toggled (50% cap, whole credits only)
+  useEffect(()=>{
+    if(!useCredits||type==="loan") { setCreditAmt(0); return; }
+    const price = type==="rent" ? (item.rent||0) : (item.sale||0);
+    const maxCreditCover = Math.floor(price * 0.5);
+    setCreditAmt(Math.min(myCredits, maxCreditCover));
+  },[useCredits, type, item.rent, item.sale, myCredits]);
 
   // Check if selected dates conflict with blocks
   useEffect(()=>{
@@ -1847,7 +1859,20 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
     if (needsDates && (!start || !end)) { setErr("Please select start and end dates."); return; }
     if (needsDates && end < start) { setErr("End date must be after start date."); return; }
     setSending(true); setErr("");
-    const agreed = type==="rent" ? item.rent : type==="loan" ? (item.deposit||0) : item.sale;
+    const basePrice = type==="rent" ? item.rent : type==="loan" ? (item.deposit||0) : item.sale;
+    const finalPrice = Math.max(0, basePrice - creditAmt);
+
+    // Spend credits atomically if using them
+    if(creditAmt > 0 && useCredits) {
+      const{data:spendResult}=await SB.rpc("spend_credits",{
+        p_org_id: currentUserId, p_amount: creditAmt,
+        p_type: "spend_rental",
+        p_description: `Applied ${creditAmt} credits to ${item.name} ${type}`,
+        p_item_id: item.id
+      });
+      if(!spendResult?.success){ setErr(spendResult?.error||"Could not apply credits."); setSending(false); return; }
+    }
+
     const { data, error } = await SB.from("rental_requests").insert({
       item_id:        item.id,
       item_name:      item.name,
@@ -1859,8 +1884,10 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
       start_date:     needsDates ? start : null,
       end_date:       needsDates ? end   : null,
       qty_requested:  qty,
-      message:        msg.trim(),
-      agreed_price:   agreed,
+      message:        msg.trim() + (creditAmt>0?`
+
+[${creditAmt} Theatre Credits applied — cash due: $${finalPrice.toFixed(2)}]`:""),
+      agreed_price:   finalPrice,
       status:         "pending",
     }).select().single();
     if (error) { setErr(error.message); setSending(false); return; }
@@ -1961,6 +1988,44 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
             </div>
           )}
 
+          {/* Credits toggle — only for rent/buy, only if user has credits */}
+          {myCredits > 0 && type !== "loan" && (item.rent > 0 || item.sale > 0) && (
+            <div style={{background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.25)",borderRadius:10,padding:"12px 14px"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:useCredits?10:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:20}}>🪙</span>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:13,color:"var(--gold)"}}>Apply Theatre Credits</div>
+                    <div style={{fontSize:11,color:"var(--muted)"}}>You have {myCredits.toLocaleString()} credits available</div>
+                  </div>
+                </div>
+                <label style={{position:"relative",display:"inline-block",width:42,height:24,cursor:"pointer"}}>
+                  <input type="checkbox" checked={useCredits} onChange={e=>setUseCredits(e.target.checked)}
+                    style={{opacity:0,width:0,height:0}}/>
+                  <span style={{position:"absolute",inset:0,background:useCredits?"var(--green)":"var(--border)",borderRadius:12,transition:".25s"}}>
+                    <span style={{position:"absolute",height:18,width:18,left:useCredits?20:3,bottom:3,background:"#fff",borderRadius:"50%",transition:".25s"}}/>
+                  </span>
+                </label>
+              </div>
+              {useCredits && creditAmt > 0 && (
+                <div style={{background:"rgba(0,0,0,.04)",borderRadius:7,padding:"8px 10px",fontSize:13}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                    <span style={{color:"var(--muted)"}}>Original price</span>
+                    <span style={{fontWeight:700}}>${type==="rent"?(item.rent||0).toFixed(2):(item.sale||0).toFixed(2)}{type==="rent"?"/wk":""}</span>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:3,color:"var(--green)"}}>
+                    <span>Credits applied ({creditAmt})</span>
+                    <span style={{fontWeight:700}}>−${creditAmt.toFixed(2)}</span>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",paddingTop:6,borderTop:"1px solid var(--linen)"}}>
+                    <span style={{fontWeight:800}}>Cash due</span>
+                    <span style={{fontFamily:"'Abril Fatface',display",fontSize:18,color:"var(--cog)"}}>${Math.max(0,(type==="rent"?(item.rent||0):(item.sale||0))-creditAmt).toFixed(2)}</span>
+                  </div>
+                  <div style={{fontSize:11,color:"var(--muted)",marginTop:6}}>Up to 50% of the price can be covered by credits.</div>
+                </div>
+              )}
+            </div>
+          )}
           {/* Message */}
           <div>
             <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Message to Owner *</label>
@@ -4269,14 +4334,14 @@ function normalizeImageUrl(url) {
   if (!url) return null;
   const u = url.trim();
   if (!u.startsWith("http")) return null;
-  const gDrive = u.match(/drive\.google\.com\/file\/d\/([^/?]+)/);
-  if (gDrive) return `https://drive.google.com/thumbnail?id=${gDrive[1]}&sz=w800`;
-  const gOpen = u.match(/drive\.google\.com\/open\?id=([^&]+)/);
-  if (gOpen) return `https://drive.google.com/thumbnail?id=${gOpen[1]}&sz=w800`;
-  const gUc = u.match(/drive\.google\.com\/uc[^?]*\?.*[?&]id=([^&]+)/);
-  if (gUc) return `https://drive.google.com/thumbnail?id=${gUc[1]}&sz=w800`;
-  if (u.includes("dropbox.com")) return u.replace("www.dropbox.com","dl.dropboxusercontent.com").replace(/[?&]dl=0/,"").replace(/[?&]raw=0/,"")+(u.includes("?")?"&":"?")+"raw=1";
-  if (/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(u)) return u;
+  const gD=u.match(/drive\.google\.com\/file\/d\/([^/?]+)/);
+  if(gD) return `https://drive.google.com/thumbnail?id=${gD[1]}&sz=w800`;
+  const gO=u.match(/drive\.google\.com\/open\?id=([^&]+)/);
+  if(gO) return `https://drive.google.com/thumbnail?id=${gO[1]}&sz=w800`;
+  const gU=u.match(/drive\.google\.com\/uc[^?]*\?.*[?&]id=([^&]+)/);
+  if(gU) return `https://drive.google.com/thumbnail?id=${gU[1]}&sz=w800`;
+  if(u.includes("dropbox.com")) return u.replace("www.dropbox.com","dl.dropboxusercontent.com").replace(/[?&]dl=0/,"").replace(/[?&]raw=0/,"")+(u.includes("?")?"&":"?")+"raw=1";
+  if(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(u)) return u;
   return u;
 }
 
@@ -4634,170 +4699,55 @@ function CSVImport({ onImport, onClose, userId }) {
 }
 
 
+
 // ══════════════════════════════════════════════════════════════════════════════
 // PROP 28 COMPLIANCE TRACKING
 // ══════════════════════════════════════════════════════════════════════════════
-
 const DISCIPLINES = ["Music","Visual Arts","Dance","Theater","Media Arts","Multiple"];
 const GRADE_OPTIONS = ["TK","K","1","2","3","4","5","6","7","8","9","10","11","12"];
 const SCHOOL_YEARS = ["2024-2025","2025-2026","2023-2024","2022-2023"];
 
-// ── Purchase Form ──────────────────────────────────────────────────────────────
 function Prop28PurchaseForm({initial, onSave, onCancel, items=[]}) {
-  const blank = {
-    item_description:"", arts_discipline:"Theater", grade_levels:[],
-    students_served:"", cost:"", funding_source:"100% Prop 28", other_funding:"",
-    supplement_not_supplant:true, date_purchased:"", vendor:"", item_id:"", notes:"",
-    school_year: SCHOOL_YEARS[0],
-  };
-  const [f, setF] = useState(initial || blank);
-  const upd = (k,v) => setF(p=>({...p,[k]:v}));
-
-  const toggleGrade = (g) => {
-    const current = f.grade_levels || [];
-    upd("grade_levels", current.includes(g) ? current.filter(x=>x!==g) : [...current,g]);
-  };
-
-  const valid = f.item_description.trim() && f.students_served && f.cost && f.grade_levels?.length > 0;
-
-  return (
-    <div className="fg2">
-      <div className="fg fu">
-        <label className="fl">Item Description *</label>
-        <input className="fi" value={f.item_description} onChange={e=>upd("item_description",e.target.value)}
-          placeholder='e.g. "Sheet music — musical theater repertoire" or "Stage lighting gels"' autoFocus/>
-      </div>
-      <div className="fg">
-        <label className="fl">Arts Discipline *</label>
-        <select className="fs" value={f.arts_discipline} onChange={e=>upd("arts_discipline",e.target.value)}>
-          {DISCIPLINES.map(d=><option key={d}>{d}</option>)}
-        </select>
-      </div>
-      <div className="fg">
-        <label className="fl">School Year</label>
-        <select className="fs" value={f.school_year} onChange={e=>upd("school_year",e.target.value)}>
-          {SCHOOL_YEARS.map(y=><option key={y}>{y}</option>)}
-        </select>
-      </div>
-      <div className="fg fu">
-        <label className="fl">Grade Levels Served *</label>
-        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}}>
-          {GRADE_OPTIONS.map(g=>(
-            <button key={g} type="button" onClick={()=>toggleGrade(g)}
-              style={{padding:"5px 10px",borderRadius:6,border:"1.5px solid",fontFamily:"inherit",fontSize:12,fontWeight:700,cursor:"pointer",transition:"all .12s",
-                background:(f.grade_levels||[]).includes(g)?"var(--green)":"var(--parch)",
-                color:(f.grade_levels||[]).includes(g)?"#fff":"var(--muted)",
-                borderColor:(f.grade_levels||[]).includes(g)?"var(--green)":"var(--border)"}}>
-              {g}
-            </button>
-          ))}
-          <button type="button" onClick={()=>upd("grade_levels",[...GRADE_OPTIONS])}
-            style={{padding:"5px 10px",borderRadius:6,border:"1.5px solid var(--border)",background:"transparent",color:"var(--muted)",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-            All
-          </button>
-          <button type="button" onClick={()=>upd("grade_levels",[])}
-            style={{padding:"5px 10px",borderRadius:6,border:"1.5px solid var(--border)",background:"transparent",color:"var(--muted)",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-            Clear
-          </button>
-        </div>
-      </div>
-      <div className="fg">
-        <label className="fl">Students Served *</label>
-        <input className="fi" type="number" min="0" value={f.students_served}
-          onChange={e=>upd("students_served",parseInt(e.target.value)||"")} placeholder="e.g. 150"/>
-      </div>
-      <div className="fg">
-        <label className="fl">Cost ($) *</label>
-        <input className="fi" type="number" min="0" step="0.01" value={f.cost}
-          onChange={e=>upd("cost",parseFloat(e.target.value)||"")} placeholder="0.00"/>
-      </div>
-      <div className="fg">
-        <label className="fl">Funding Source</label>
-        <select className="fs" value={f.funding_source} onChange={e=>upd("funding_source",e.target.value)}>
-          <option>100% Prop 28</option>
-          <option>Split Funding</option>
-        </select>
-      </div>
-      {f.funding_source==="Split Funding"&&(
-        <div className="fg">
-          <label className="fl">Other Funding Source(s)</label>
-          <input className="fi" value={f.other_funding||""} onChange={e=>upd("other_funding",e.target.value)}
-            placeholder="e.g. Title I, Site Budget"/>
-        </div>
-      )}
-      <div className="fg">
-        <label className="fl">Date Purchased</label>
-        <input className="fi" type="date" value={f.date_purchased||""} onChange={e=>upd("date_purchased",e.target.value)}/>
-      </div>
-      <div className="fg">
-        <label className="fl">Vendor / Source</label>
-        <input className="fi" value={f.vendor||""} onChange={e=>upd("vendor",e.target.value)}
-          placeholder="e.g. Amazon, J.W. Pepper, Theatre4u"/>
-      </div>
-      {items.length>0&&(
-        <div className="fg fu">
-          <label className="fl">Link to Inventory Item (optional)</label>
-          <select className="fs" value={f.item_id||""} onChange={e=>upd("item_id",e.target.value||null)}>
-            <option value="">— Not linked to inventory item —</option>
-            {items.map(i=><option key={i.id} value={i.id}>{i.name}</option>)}
-          </select>
-          <div style={{fontSize:11,color:"var(--muted)",marginTop:3}}>Link this purchase to an item already in your inventory for unified tracking.</div>
-        </div>
-      )}
-      <div className="fg fu sdiv">
-        <div className="slbl" style={{color:"var(--green)"}}>✓ Supplement vs. Supplant</div>
-        <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-          <div style={{flex:1}}>
-            <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
-              Does this purchase support <strong>new or expanded</strong> arts programming — not replacing funding for previously established arts resources?
-            </p>
-            <div style={{display:"flex",gap:10}}>
-              {[true,false].map(v=>(
-                <button key={String(v)} type="button"
-                  onClick={()=>upd("supplement_not_supplant",v)}
-                  style={{padding:"8px 20px",borderRadius:8,border:"1.5px solid",fontFamily:"inherit",fontSize:14,fontWeight:700,cursor:"pointer",
-                    background:f.supplement_not_supplant===v?(v?"rgba(38,94,42,.15)":"rgba(139,26,42,.1)"):"var(--parch)",
-                    color:f.supplement_not_supplant===v?(v?"var(--green)":"var(--red)"):"var(--muted)",
-                    borderColor:f.supplement_not_supplant===v?(v?"var(--green)":"var(--red)"):"var(--border)"}}>
-                  {v?"✓ Yes — New/Expanded":"✗ No — Replacing existing"}
-                </button>
-              ))}
-            </div>
-            {f.supplement_not_supplant===false&&(
-              <div style={{marginTop:8,padding:"8px 12px",background:"rgba(139,26,42,.08)",border:"1px solid rgba(139,26,42,.2)",borderRadius:7,fontSize:12,color:"var(--red)"}}>
-                ⚠️ This purchase may not qualify for Prop 28 reporting. Prop 28 funds must supplement, not supplant, existing arts budgets.
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-      <div className="fg fu">
-        <label className="fl">Notes</label>
-        <textarea className="ft" value={f.notes||""} onChange={e=>upd("notes",e.target.value)}
-          placeholder="Additional context, purchase order numbers, etc."/>
-      </div>
-      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10,paddingTop:14,borderTop:"1.5px solid var(--border)",gridColumn:"1/-1"}}>
-        <button className="btn btn-o" onClick={onCancel}>Cancel</button>
-        <button className="btn btn-g" disabled={!valid} style={!valid?{opacity:.4}:{}} onClick={()=>onSave(f)}>
-          {initial?"Save Changes":"Log Purchase"}
-        </button>
-      </div>
+  const blank = {item_description:"",arts_discipline:"Theater",grade_levels:[],students_served:"",cost:"",funding_source:"100% Prop 28",other_funding:"",supplement_not_supplant:true,date_purchased:"",vendor:"",item_id:"",notes:"",school_year:SCHOOL_YEARS[0]};
+  const [f,setF] = useState(initial||blank);
+  const upd = (k,v)=>setF(p=>({...p,[k]:v}));
+  const toggleGrade = g=>{const cur=f.grade_levels||[];upd("grade_levels",cur.includes(g)?cur.filter(x=>x!==g):[...cur,g]);};
+  const valid = f.item_description.trim()&&f.students_served&&f.cost&&(f.grade_levels||[]).length>0;
+  return(<div className="fg2">
+    <div className="fg fu"><label className="fl">Item Description *</label><input className="fi" value={f.item_description} onChange={e=>upd("item_description",e.target.value)} placeholder='e.g. "Sheet music — musical theater repertoire"' autoFocus/></div>
+    <div className="fg"><label className="fl">Arts Discipline *</label><select className="fs" value={f.arts_discipline} onChange={e=>upd("arts_discipline",e.target.value)}>{DISCIPLINES.map(d=><option key={d}>{d}</option>)}</select></div>
+    <div className="fg"><label className="fl">School Year</label><select className="fs" value={f.school_year} onChange={e=>upd("school_year",e.target.value)}>{SCHOOL_YEARS.map(y=><option key={y}>{y}</option>)}</select></div>
+    <div className="fg fu"><label className="fl">Grade Levels Served *</label><div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}}>{GRADE_OPTIONS.map(g=><button key={g} type="button" onClick={()=>toggleGrade(g)} style={{padding:"5px 10px",borderRadius:6,border:"1.5px solid",fontFamily:"inherit",fontSize:12,fontWeight:700,cursor:"pointer",background:(f.grade_levels||[]).includes(g)?"var(--green)":"var(--parch)",color:(f.grade_levels||[]).includes(g)?"#fff":"var(--muted)",borderColor:(f.grade_levels||[]).includes(g)?"var(--green)":"var(--border)"}}>{g}</button>)}<button type="button" onClick={()=>upd("grade_levels",[...GRADE_OPTIONS])} style={{padding:"5px 10px",borderRadius:6,border:"1.5px solid var(--border)",background:"transparent",color:"var(--muted)",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>All</button><button type="button" onClick={()=>upd("grade_levels",[])} style={{padding:"5px 10px",borderRadius:6,border:"1.5px solid var(--border)",background:"transparent",color:"var(--muted)",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Clear</button></div></div>
+    <div className="fg"><label className="fl">Students Served *</label><input className="fi" type="number" min="0" value={f.students_served} onChange={e=>upd("students_served",parseInt(e.target.value)||"")} placeholder="e.g. 150"/></div>
+    <div className="fg"><label className="fl">Cost ($) *</label><input className="fi" type="number" min="0" step="0.01" value={f.cost} onChange={e=>upd("cost",parseFloat(e.target.value)||"")} placeholder="0.00"/></div>
+    <div className="fg"><label className="fl">Funding Source</label><select className="fs" value={f.funding_source} onChange={e=>upd("funding_source",e.target.value)}><option>100% Prop 28</option><option>Split Funding</option></select></div>
+    {f.funding_source==="Split Funding"&&<div className="fg"><label className="fl">Other Funding</label><input className="fi" value={f.other_funding||""} onChange={e=>upd("other_funding",e.target.value)} placeholder="e.g. Title I, Site Budget"/></div>}
+    <div className="fg"><label className="fl">Date Purchased</label><input className="fi" type="date" value={f.date_purchased||""} onChange={e=>upd("date_purchased",e.target.value)}/></div>
+    <div className="fg"><label className="fl">Vendor</label><input className="fi" value={f.vendor||""} onChange={e=>upd("vendor",e.target.value)} placeholder="e.g. Amazon, J.W. Pepper"/></div>
+    {items.length>0&&<div className="fg fu"><label className="fl">Link to Inventory Item (optional)</label><select className="fs" value={f.item_id||""} onChange={e=>upd("item_id",e.target.value||null)}><option value="">— Not linked —</option>{items.map(i=><option key={i.id} value={i.id}>{i.name}</option>)}</select></div>}
+    <div className="fg fu" style={{borderTop:"1px solid var(--border)",paddingTop:12}}>
+      <label className="fl" style={{marginBottom:6}}>Supplement vs. Supplant *</label>
+      <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.5,marginBottom:10}}>Does this purchase support <strong>new or expanded</strong> programming — not replacing existing arts funding?</p>
+      <div style={{display:"flex",gap:10}}>{[true,false].map(v=><button key={String(v)} type="button" onClick={()=>upd("supplement_not_supplant",v)} style={{padding:"8px 20px",borderRadius:8,border:"1.5px solid",fontFamily:"inherit",fontSize:13,fontWeight:700,cursor:"pointer",background:f.supplement_not_supplant===v?(v?"rgba(38,94,42,.15)":"rgba(139,26,42,.1)"):"var(--parch)",color:f.supplement_not_supplant===v?(v?"var(--green)":"var(--red)"):"var(--muted)",borderColor:f.supplement_not_supplant===v?(v?"var(--green)":"var(--red)"):"var(--border)"}}>{v?"✓ Yes — New/Expanded":"✗ No — Replacing"}</button>)}</div>
     </div>
-  );
+    <div className="fg fu"><label className="fl">Notes</label><textarea className="ft" value={f.notes||""} onChange={e=>upd("notes",e.target.value)}/></div>
+    <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10,paddingTop:14,borderTop:"1.5px solid var(--border)",gridColumn:"1/-1"}}>
+      <button className="btn btn-o" onClick={onCancel}>Cancel</button>
+      <button className="btn btn-g" disabled={!valid} style={!valid?{opacity:.4}:{}} onClick={()=>onSave(f)}>{ initial?"Save Changes":"Log Purchase"}</button>
+    </div>
+  </div>);
 }
 
-// ── Main Prop 28 Page ──────────────────────────────────────────────────────────
 function Prop28Page({org, userId, items=[], plan="pro"}) {
-  const [tab,         setTab]        = useState("purchases");
-  const [purchases,   setPurchases]  = useState([]);
-  const [report,      setReport]     = useState(null);
-  const [loading,     setLoading]    = useState(true);
-  const [year,        setYear]       = useState(SCHOOL_YEARS[0]);
-  const [modal,       setModal]      = useState(null); // "add"|"edit"
-  const [active,      setActive]     = useState(null);
-  const [saving,      setSaving]     = useState(false);
-  const [msg,         setMsg]        = useState("");
-  const [exportLoading,setExportL]  = useState(false);
+  const [tab,setTab]           = useState("purchases");
+  const [purchases,setPurchases] = useState([]);
+  const [report,setReport]     = useState(null);
+  const [loading,setLoading]   = useState(true);
+  const [year,setYear]         = useState(SCHOOL_YEARS[0]);
+  const [modal,setModal]       = useState(null);
+  const [active,setActive]     = useState(null);
+  const [saving,setSaving]     = useState(false);
+  const [msg,setMsg]           = useState("");
 
   const load = useCallback(async()=>{
     setLoading(true);
@@ -4807,410 +4757,312 @@ function Prop28Page({org, userId, items=[], plan="pro"}) {
     setReport(rData||null);
     setLoading(false);
   },[userId,year]);
-
   useEffect(()=>{load();},[load]);
 
   const savePurchase = async(f)=>{
     setSaving(true);
-    const row={...f, org_id:userId, cost:parseFloat(f.cost)||0, students_served:parseInt(f.students_served)||0};
-    if(active&&modal==="edit"){
-      const{data}=await SB.from("prop28_purchases").update(row).eq("id",active.id).select("*, items(name)").single();
-      if(data) setPurchases(p=>p.map(x=>x.id===data.id?data:x));
-    } else {
-      const{data}=await SB.from("prop28_purchases").insert(row).select("*, items(name)").single();
-      if(data) setPurchases(p=>[data,...p]);
-    }
-    setModal(null); setActive(null); setSaving(false);
-    setMsg("✓ Purchase logged"); setTimeout(()=>setMsg(""),2500);
+    const row={...f,org_id:userId,cost:parseFloat(f.cost)||0,students_served:parseInt(f.students_served)||0};
+    if(active&&modal==="edit"){const{data}=await SB.from("prop28_purchases").update(row).eq("id",active.id).select("*, items(name)").single();if(data)setPurchases(p=>p.map(x=>x.id===data.id?data:x));}
+    else{const{data}=await SB.from("prop28_purchases").insert(row).select("*, items(name)").single();if(data)setPurchases(p=>[data,...p]);}
+    setModal(null);setActive(null);setSaving(false);setMsg("✓ Purchase logged");setTimeout(()=>setMsg(""),2500);
   };
-
-  const deletePurchase = async(id)=>{
-    if(!window.confirm("Delete this purchase record?")) return;
-    await SB.from("prop28_purchases").delete().eq("id",id);
-    setPurchases(p=>p.filter(x=>x.id!==id));
-  };
-
+  const deletePurchase = async(id)=>{if(!window.confirm("Delete this purchase?"))return;await SB.from("prop28_purchases").delete().eq("id",id);setPurchases(p=>p.filter(x=>x.id!==id));};
   const saveReport = async(updates)=>{
     setSaving(true);
-    if(report?.id){
-      const{data}=await SB.from("prop28_reports").update({...updates,org_id:userId,school_year:year}).eq("id",report.id).select().single();
-      if(data) setReport(data);
-    } else {
-      const{data}=await SB.from("prop28_reports").insert({...updates,org_id:userId,school_year:year}).select().single();
-      if(data) setReport(data);
-    }
-    setSaving(false);
-    setMsg("✓ Saved"); setTimeout(()=>setMsg(""),2000);
+    if(report?.id){const{data}=await SB.from("prop28_reports").update({...updates,org_id:userId,school_year:year}).eq("id",report.id).select().single();if(data)setReport(data);}
+    else{const{data}=await SB.from("prop28_reports").insert({...updates,org_id:userId,school_year:year}).select().single();if(data)setReport(data);}
+    setSaving(false);setMsg("✓ Saved");setTimeout(()=>setMsg(""),2000);
   };
-
   const attestSAS = async()=>{
-    if(!window.confirm("By clicking OK, you formally attest that all purchases recorded for "+year+" supplement (not supplant) existing arts education budgets, as required by Proposition 28.")) return;
-    saveReport({sas_attested:true, sas_attested_by:org?.name||"Administrator", sas_attested_at:new Date().toISOString()});
+    if(!window.confirm("Formally attest that all "+year+" purchases supplement (not supplant) existing arts budgets?"))return;
+    saveReport({sas_attested:true,sas_attested_by:org?.name||"Administrator",sas_attested_at:new Date().toISOString()});
   };
 
-  // ── Summary stats ──
   const totalSpent = purchases.reduce((s,p)=>s+parseFloat(p.cost||0),0);
-  const totalStudents = purchases.length>0 ? Math.max(...purchases.map(p=>p.students_served||0)) : 0;
+  const totalStudents = purchases.length>0?Math.max(...purchases.map(p=>p.students_served||0)):0;
   const byDiscipline = purchases.reduce((acc,p)=>{acc[p.arts_discipline]=(acc[p.arts_discipline]||0)+parseFloat(p.cost||0);return acc;},{});
   const nonCompliant = purchases.filter(p=>p.supplement_not_supplant===false).length;
-  const fmt$p = n => "$" + Number(n||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fmt$p = n=>"$"+Number(n||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+  const discColors = {Music:"#1565c0",Theater:"#7b1fa2","Visual Arts":"#c2185b",Dance:"#d84315","Media Arts":"#00838f",Multiple:"#546e7a"};
 
-  // ── CSV export ──
   const exportCSV = ()=>{
-    const h = ["School Year","Date","Item Description","Arts Discipline","Grade Levels","Students Served","Cost","Funding Source","Other Funding","Supplement Not Supplant","Vendor","Linked Item","Notes"];
-    const rows = purchases.map(p=>[
-      p.school_year, p.date_purchased||"", `"${(p.item_description||"").replace(/"/g,'""')}"`,
-      p.arts_discipline, `"${(p.grade_levels||[]).join(", ")}"`,
-      p.students_served, p.cost, p.funding_source, p.other_funding||"",
-      p.supplement_not_supplant?"Yes":"No", p.vendor||"", p.items?.name||"", `"${(p.notes||"").replace(/"/g,'""')}"`
-    ]);
-    const csv=[h,...rows].map(r=>r.join(",")).join("\n");
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
-    a.download=`prop28_${year}_${(org?.name||"report").replace(/[^a-z0-9]/gi,"_")}.csv`;
-    a.click();
+    const h=["School Year","Date","Item Description","Arts Discipline","Grade Levels","Students","Cost","Funding","SNS","Vendor","Linked Item","Notes"];
+    const rows=purchases.map(p=>[p.school_year,p.date_purchased||"",`"${(p.item_description||"").replace(/"/g,'""')}"`,p.arts_discipline,`"${(p.grade_levels||[]).join(", ")}"`,p.students_served,p.cost,p.funding_source,p.supplement_not_supplant?"Yes":"No",p.vendor||"",p.items?.name||"",`"${(p.notes||"").replace(/"/g,'""')}"`]);
+    const csv=[h,...rows].map(r=>r.join(",")).join("
+");
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=`prop28_${year}.csv`;a.click();
   };
 
-  // ── PDF-style print report ──
   const printReport = ()=>{
-    const disciplineRows = Object.entries(byDiscipline).map(([d,cost])=>{
-      const dPurchases = purchases.filter(p=>p.arts_discipline===d);
-      const grades = [...new Set(dPurchases.flatMap(p=>p.grade_levels||[]))].join(", ");
-      const students = Math.max(...dPurchases.map(p=>p.students_served||0));
-      return `<tr><td>${d}</td><td>${dPurchases.length}</td><td>${grades||"—"}</td><td>${students}</td><td>$${cost.toFixed(2)}</td></tr>`;
-    }).join("");
-    const itemRows = purchases.map(p=>`<tr><td>${p.date_purchased||"—"}</td><td>${p.item_description}</td><td>${p.arts_discipline}</td><td>${(p.grade_levels||[]).join(", ")}</td><td>${p.students_served}</td><td>$${parseFloat(p.cost||0).toFixed(2)}</td><td>${p.funding_source}</td></tr>`).join("");
     const w=window.open("","_blank");if(!w)return;
-    w.document.write(`<html><head><title>Prop 28 Report — ${year}</title>
-    <style>body{font-family:Georgia,serif;max-width:900px;margin:40px auto;padding:0 20px;color:#111}h1{color:#1a5c1a;border-bottom:3px solid #1a5c1a;padding-bottom:10px}h2{color:#333;margin-top:30px;border-bottom:1px solid #ccc;padding-bottom:5px}table{width:100%;border-collapse:collapse;margin:12px 0}th{background:#1a5c1a;color:#fff;padding:8px 10px;text-align:left;font-size:12px}td{padding:7px 10px;border-bottom:1px solid #ddd;font-size:12px}tr:nth-child(even)td{background:#f8f8f8}.narrative{background:#f9f9f9;border:1px solid #ddd;border-radius:6px;padding:16px;margin:10px 0;font-style:italic}.attest{background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:12px;margin:10px 0;font-size:12px}.checklist{list-style:none;padding:0}.checklist li{padding:6px 0;border-bottom:1px solid #eee;font-size:13px}.total{font-weight:bold;background:#e8f5e9!important}@media print{button{display:none}}</style>
-    </head><body>
-    <h1>🎭 Proposition 28 — Annual Expenditure Report</h1>
-    <p><strong>Organization:</strong> ${org?.name||"School"} &nbsp;|&nbsp; <strong>School Year:</strong> ${year} &nbsp;|&nbsp; <strong>Generated:</strong> ${new Date().toLocaleDateString()}</p>
-    <h2>Summary by Arts Discipline</h2>
-    <table><thead><tr><th>Discipline</th><th>Purchases</th><th>Grade Levels</th><th>Students Served</th><th>Total Cost</th></tr></thead>
-    <tbody>${disciplineRows}<tr class="total"><td><strong>TOTAL</strong></td><td><strong>${purchases.length}</strong></td><td>—</td><td><strong>${totalStudents}</strong></td><td><strong>${fmt$p(totalSpent)}</strong></td></tr></tbody></table>
-    <h2>Itemized Purchase Log</h2>
-    <table><thead><tr><th>Date</th><th>Item Description</th><th>Discipline</th><th>Grades</th><th>Students</th><th>Cost</th><th>Funding</th></tr></thead>
-    <tbody>${itemRows}</tbody></table>
-    ${report?.narrative?`<h2>Narrative Description</h2><div class="narrative">${report.narrative}</div>`:""}
-    ${report?.sas_attested?`<h2>Supplement vs. Supplant Attestation</h2><div class="attest">✅ <strong>${report.sas_attested_by||"Administrator"}</strong> formally attests that all Prop 28 expenditures recorded for ${year} supplement (not supplant) existing arts education budgets, in compliance with California Education Code.<br>Attested: ${report.sas_attested_at?new Date(report.sas_attested_at).toLocaleDateString():"—"}</div>`:""}
-    <h2>Administrative Checklist</h2>
-    <ul class="checklist">
-      <li>${report?.report_generated?"☑":"☐"} Annual expenditure report generated</li>
-      <li>${report?.board_approved?"☑":"☐"} Approved by local school board${report?.board_approval_date?" ("+new Date(report.board_approval_date).toLocaleDateString()+")":""}</li>
-      <li>${report?.posted_to_website?"☑":"☐"} Posted to LEA website</li>
-      <li>${report?.submitted_to_cde?"☑":"☐"} Submitted to CDE Arts and Music in Schools Portal</li>
-    </ul>
-    <p style="margin-top:30px;font-size:11px;color:#888">Generated by Theatre4u Prop 28 Compliance Tracker · theatre4u.org · ${new Date().toLocaleDateString()}</p>
-    <script>window.print();<\/script></body></html>`);
+    const discRows=Object.entries(byDiscipline).map(([d,cost])=>{const dp=purchases.filter(p=>p.arts_discipline===d);const grades=[...new Set(dp.flatMap(p=>p.grade_levels||[]))].join(", ");const stu=Math.max(...dp.map(p=>p.students_served||0));return`<tr><td>${d}</td><td>${dp.length}</td><td>${grades||"—"}</td><td>${stu}</td><td>$${cost.toFixed(2)}</td></tr>`;}).join("");
+    const itemRows=purchases.map(p=>`<tr><td>${p.date_purchased||"—"}</td><td>${p.item_description}</td><td>${p.arts_discipline}</td><td>${(p.grade_levels||[]).join(", ")}</td><td>${p.students_served}</td><td>$${parseFloat(p.cost||0).toFixed(2)}</td><td>${p.funding_source}</td></tr>`).join("");
+    w.document.write(`<html><head><title>Prop 28 — ${year}</title><style>body{font-family:Georgia,serif;max-width:900px;margin:40px auto;padding:0 20px}h1{color:#1a5c1a;border-bottom:3px solid #1a5c1a;padding-bottom:10px}table{width:100%;border-collapse:collapse;margin:12px 0}th{background:#1a5c1a;color:#fff;padding:8px 10px;text-align:left;font-size:12px}td{padding:7px 10px;border-bottom:1px solid #ddd;font-size:12px}.total{font-weight:bold;background:#e8f5e9!important}</style></head><body><h1>🎭 Prop 28 Annual Report — ${org?.name||""} — ${year}</h1><h2>By Discipline</h2><table><thead><tr><th>Discipline</th><th>#</th><th>Grades</th><th>Students</th><th>Cost</th></tr></thead><tbody>${discRows}<tr class="total"><td>TOTAL</td><td>${purchases.length}</td><td>—</td><td>${totalStudents}</td><td>${fmt$p(totalSpent)}</td></tr></tbody></table><h2>Itemized Purchases</h2><table><thead><tr><th>Date</th><th>Item</th><th>Discipline</th><th>Grades</th><th>Students</th><th>Cost</th><th>Funding</th></tr></thead><tbody>${itemRows}</tbody></table>${report?.narrative?`<h2>Narrative</h2><p style="line-height:1.7">${report.narrative}</p>`:""}${report?.sas_attested?`<h2>Attestation</h2><p>✅ Attested by ${report.sas_attested_by} on ${report.sas_attested_at?new Date(report.sas_attested_at).toLocaleDateString():""}</p>`:""}${report?.board_approved?`<p>✅ Board approved${report.board_approval_date?" — "+new Date(report.board_approval_date).toLocaleDateString():""}</p>`:""}<p style="font-size:11px;color:#888;margin-top:30px">Generated by Theatre4u · theatre4u.org</p><script>window.print();<\/script></body></html>`);
     w.document.close();
   };
 
-  const disciplineColors = {Music:"#1565c0",Theater:"#7b1fa2","Visual Arts":"#c2185b",Dance:"#d84315","Media Arts":"#00838f",Multiple:"#546e7a"};
+  return(<div style={{position:"relative"}}>
+    <img src={usp(BG.reports,1400,900)} alt="" className="page-bg-img"/>
+    <div style={{padding:"32px 36px 0"}}>
+      <div className="hero-wrap" style={{height:230}}>
+        <img src={usp(BG.reports,1100,290)} alt="Prop 28" loading="eager"/>
+        <div className="hero-fade"/><div className="hero-body">
+          <div className="hero-eyebrow">🏫 California Arts Funding</div>
+          <h1 className="hero-title" style={{fontSize:44}}>Prop 28 Compliance</h1>
+          <p className="hero-sub">Log purchases, track spending by discipline, generate your CDE annual report — all in one place.</p>
+        </div><div className="hero-bar"/>
+      </div>
+    </div>
+    <div style={{padding:"24px 36px 56px",position:"relative",zIndex:1}}>
+      <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:20,alignItems:"center"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}><label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)"}}>School Year</label><select value={year} onChange={e=>setYear(e.target.value)} style={{background:"var(--parch)",border:"1.5px solid var(--border)",borderRadius:7,padding:"6px 10px",fontSize:14,fontWeight:700,color:"var(--text)",fontFamily:"'Raleway',sans-serif",outline:"none"}}>{SCHOOL_YEARS.map(y=><option key={y}>{y}</option>)}</select></div>
+        <div style={{marginLeft:"auto",display:"flex",gap:8}}>{msg&&<span style={{color:"var(--green)",fontWeight:700,fontSize:13,alignSelf:"center"}}>{msg}</span>}<button className="btn btn-o btn-sm" onClick={exportCSV}>📊 Export CSV</button><button className="btn btn-o btn-sm" onClick={printReport}>🖨️ Print</button><button className="btn btn-g" onClick={()=>{setActive(null);setModal("add");}}>+ Log Purchase</button></div>
+      </div>
+      {nonCompliant>0&&<div style={{background:"rgba(139,26,42,.08)",border:"1px solid rgba(139,26,42,.25)",borderRadius:10,padding:"10px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:10}}><span>⚠️</span><span style={{fontSize:13,color:"var(--red)",fontWeight:600}}>{nonCompliant} purchase{nonCompliant!==1?"s":""} flagged as possibly supplanting existing arts funding.</span></div>}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:20}}>
+        {[{ico:"💰",val:fmt$p(totalSpent),lbl:"Total Spent",col:"var(--green)"},{ico:"🛍️",val:purchases.length,lbl:"Purchases"},{ico:"🎓",val:totalStudents.toLocaleString(),lbl:"Students"},{ico:"🎭",val:Object.keys(byDiscipline).length,lbl:"Disciplines"}].map(s=><div key={s.lbl} className="card card-p" style={{textAlign:"center",padding:"14px 10px"}}><div style={{fontSize:22,marginBottom:4}}>{s.ico}</div><div style={{fontFamily:"'Abril Fatface',display",fontSize:22,color:s.col||"var(--ink)"}}>{s.val}</div><div style={{fontSize:10,color:"var(--muted)",marginTop:2,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>{s.lbl}</div></div>)}
+      </div>
+      <div className="tabs" style={{marginBottom:18}}>{[["purchases","📋 Purchase Log"],["dashboard","📊 Dashboard"],["narrative","📝 Narrative & Checklist"]].map(([t,l])=><button key={t} className={`tab ${tab===t?"on":""}`} onClick={()=>setTab(t)}>{l}</button>)}</div>
+      {tab==="purchases"&&<>{loading?<div style={{textAlign:"center",padding:40,color:"var(--muted)"}}>Loading…</div>:purchases.length===0?<div className="empty"><div className="empty-ico">📋</div><h3>No Prop 28 Purchases Logged</h3><p>Start logging arts purchases made with Prop 28 funds.</p><button className="btn btn-g" onClick={()=>{setActive(null);setModal("add");}}>+ Log First Purchase</button></div>:<div className="card" style={{overflow:"hidden"}}><div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr style={{background:"var(--parch)"}}>{["Date","Item","Discipline","Grades","Students","Cost","Funding","SNS",""].map(h=><th key={h} style={{padding:"10px 12px",textAlign:"left",fontSize:10,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",fontWeight:700,borderBottom:"1px solid var(--border)",whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead><tbody>{purchases.map((p,i)=><tr key={p.id} style={{borderBottom:"1px solid var(--linen)",background:i%2===0?"transparent":"rgba(243,230,204,.3)"}}><td style={{padding:"9px 12px",fontSize:12,color:"var(--muted)",whiteSpace:"nowrap"}}>{p.date_purchased||"—"}</td><td style={{padding:"9px 12px",fontWeight:600,fontSize:13,maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.item_description}{p.items?.name&&<div style={{fontSize:10,color:"var(--amber)",marginTop:1}}>🔗 {p.items.name}</div>}</td><td style={{padding:"9px 12px"}}><span style={{padding:"2px 8px",borderRadius:8,fontSize:11,fontWeight:700,background:(discColors[p.arts_discipline]||"#546e7a")+"22",color:discColors[p.arts_discipline]||"#546e7a"}}>{p.arts_discipline}</span></td><td style={{padding:"9px 12px",fontSize:11,color:"var(--muted)"}}>{(p.grade_levels||[]).join(", ")||"—"}</td><td style={{padding:"9px 12px",fontWeight:700}}>{(p.students_served||0).toLocaleString()}</td><td style={{padding:"9px 12px",fontFamily:"'Abril Fatface',display",fontSize:16,color:"var(--green)"}}>{fmt$p(p.cost)}</td><td style={{padding:"9px 12px",fontSize:11,color:p.funding_source==="100% Prop 28"?"var(--muted)":"var(--amber)"}}>{p.funding_source}</td><td style={{padding:"9px 12px",textAlign:"center"}}>{p.supplement_not_supplant?<span style={{color:"var(--green)",fontSize:16}} title="Compliant">✓</span>:<span style={{color:"var(--red)",fontSize:16}} title="Review needed">⚠️</span>}</td><td style={{padding:"9px 12px"}}><div style={{display:"flex",gap:5}}><button className="ico-btn" onClick={()=>{setActive(p);setModal("edit");}}>{Ic.edit}</button><button className="ico-btn" style={{color:"var(--red)"}} onClick={()=>deletePurchase(p.id)}>{Ic.trash}</button></div></td></tr>)}<tr style={{background:"rgba(38,94,42,.06)"}}><td colSpan={5} style={{padding:"10px 12px",fontFamily:"'Abril Fatface',display",fontSize:16}}>TOTAL</td><td style={{padding:"10px 12px",fontFamily:"'Abril Fatface',display",fontSize:20,color:"var(--green)"}}>{fmt$p(totalSpent)}</td><td colSpan={3}/></tr></tbody></table></div></div>}</>}
+      {tab==="dashboard"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+        <div className="card card-p"><h3 style={{fontFamily:"'Abril Fatface',display",fontSize:18,marginBottom:16}}>By Discipline</h3>{Object.entries(byDiscipline).length===0?<p style={{color:"var(--muted)",fontSize:13}}>No purchases yet.</p>:Object.entries(byDiscipline).sort((a,b)=>b[1]-a[1]).map(([d,cost])=>{const pct=totalSpent>0?Math.round((cost/totalSpent)*100):0;const col=discColors[d]||"#546e7a";return<div key={d} style={{marginBottom:12}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:13,fontWeight:700,color:col}}>{d}</span><span style={{fontSize:13,fontWeight:800}}>{fmt$p(cost)} <span style={{color:"var(--muted)",fontWeight:400,fontSize:12}}>({pct}%)</span></span></div><div style={{height:8,background:"var(--linen)",borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:pct+"%",background:col,borderRadius:4}}/></div></div>;})}</div>
+        <div className="card card-p"><h3 style={{fontFamily:"'Abril Fatface',display",fontSize:18,marginBottom:16}}>Grade Coverage</h3><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{GRADE_OPTIONS.map(g=>{const cov=purchases.some(p=>(p.grade_levels||[]).includes(g));return<div key={g} style={{width:44,height:44,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",background:cov?"rgba(38,94,42,.12)":"var(--parch)",border:"1.5px solid",borderColor:cov?"var(--green)":"var(--border)"}}><span style={{fontSize:12,fontWeight:800,color:cov?"var(--green)":"var(--faint)"}}>{g}</span></div>})}</div><div style={{marginTop:10,fontSize:12,color:"var(--muted)"}}>{[...new Set(purchases.flatMap(p=>p.grade_levels||[]))].length} of 14 grades covered</div></div>
+      </div>}
+      {tab==="narrative"&&<div style={{display:"flex",flexDirection:"column",gap:16}}>
+        <div className="card card-p"><h3 style={{fontFamily:"'Abril Fatface',display",fontSize:20,marginBottom:6}}>📝 Narrative</h3><p style={{color:"var(--muted)",fontSize:13,marginBottom:12,lineHeight:1.6}}>Required by CDE. Explain how funds were used to develop or expand arts education this year.</p><textarea className="ft" value={report?.narrative||""} onChange={e=>setReport(p=>({...p,narrative:e.target.value}))} style={{minHeight:160}} placeholder="Type your narrative here…"/><button className="btn btn-g btn-sm" style={{marginTop:10}} onClick={()=>saveReport({narrative:report?.narrative||""})} disabled={saving}>{saving?"Saving…":"Save Narrative"}</button></div>
+        <div className="card card-p" style={{borderColor:report?.sas_attested?"rgba(38,94,42,.3)":"var(--border)"}}><h3 style={{fontFamily:"'Abril Fatface',display",fontSize:20,marginBottom:6}}>✅ Supplement vs. Supplant</h3><p style={{color:"var(--muted)",fontSize:13,marginBottom:14,lineHeight:1.6}}>Formally attest that Prop 28 funds supplemented — not supplanted — existing arts budgets.</p>{report?.sas_attested?<div style={{background:"rgba(38,94,42,.1)",border:"1px solid rgba(38,94,42,.25)",borderRadius:8,padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}><span style={{fontSize:28}}>✅</span><div><div style={{fontWeight:700,color:"var(--green)",marginBottom:2}}>Attested by {report.sas_attested_by}</div><div style={{fontSize:12,color:"var(--muted)"}}>{report.sas_attested_at?new Date(report.sas_attested_at).toLocaleString():"—"}</div></div><button className="btn btn-o btn-sm" style={{marginLeft:"auto",color:"var(--red)"}} onClick={()=>saveReport({sas_attested:false,sas_attested_by:null,sas_attested_at:null})}>Revoke</button></div>:<button className="btn btn-g" onClick={attestSAS}>Sign & Attest — {org?.name||"Administrator"}</button>}</div>
+        <div className="card card-p"><h3 style={{fontFamily:"'Abril Fatface',display",fontSize:20,marginBottom:14}}>☑️ Checklist</h3><div style={{display:"flex",flexDirection:"column",gap:12}}>{[{key:"report_generated",label:"Annual report generated",note:"Use the Print button above"},{key:"board_approved",label:"Approved by school board",hasDate:true,dateKey:"board_approval_date"},{key:"posted_to_website",label:"Posted to LEA website"},{key:"submitted_to_cde",label:"Submitted to CDE portal",link:"https://www.cde.ca.gov/ci/ar/as/prop28.asp"}].map(item=><div key={item.key} style={{display:"flex",alignItems:"flex-start",gap:12,padding:"12px 14px",background:report?.[item.key]?"rgba(38,94,42,.07)":"var(--parch)",borderRadius:10,border:"1.5px solid",borderColor:report?.[item.key]?"rgba(38,94,42,.3)":"var(--border)"}}><input type="checkbox" checked={!!report?.[item.key]} onChange={e=>saveReport({[item.key]:e.target.checked})} style={{width:20,height:20,marginTop:1,cursor:"pointer",accentColor:"var(--green)"}}/><div style={{flex:1}}><div style={{fontWeight:700,fontSize:14,color:report?.[item.key]?"var(--green)":"var(--text)"}}>{item.label}</div>{item.note&&<div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{item.note}</div>}{item.link&&<a href={item.link} target="_blank" rel="noreferrer" style={{fontSize:11,color:"var(--amber)",marginTop:2,display:"block"}}>→ CDE Portal</a>}{item.hasDate&&report?.[item.key]&&<div style={{marginTop:6,display:"flex",alignItems:"center",gap:8}}><label style={{fontSize:11,fontWeight:700,color:"var(--muted)"}}>Date:</label><input type="date" value={report?.[item.dateKey]||""} onChange={e=>saveReport({[item.dateKey]:e.target.value})} style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:5,padding:"3px 7px",fontSize:12,fontFamily:"inherit"}}/></div>}</div></div>)}</div>{report&&(()=>{const done=[report.report_generated,report.board_approved,report.posted_to_website,report.submitted_to_cde,report.sas_attested].filter(Boolean).length;return<div style={{marginTop:16,padding:"12px 16px",background:done===5?"rgba(38,94,42,.12)":"rgba(212,168,67,.08)",border:"1px solid",borderColor:done===5?"rgba(38,94,42,.3)":"rgba(212,168,67,.2)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"space-between"}}><span style={{fontWeight:700,fontSize:14,color:done===5?"var(--green)":"var(--amber)"}}>{done===5?"🎉 Compliance complete!":"📋 "+done+"/5 complete"}</span>{report.status!=="finalized"&&done===5&&<button className="btn btn-g btn-sm" onClick={()=>saveReport({status:"finalized"})}>Finalize</button>}{report.status==="finalized"&&<span style={{fontSize:12,background:"rgba(38,94,42,.15)",color:"var(--green)",padding:"2px 10px",borderRadius:8,fontWeight:700}}>FINALIZED</span>}</div>})()}</div>}
+      </div>}
+    </div>
+    {(modal==="add"||modal==="edit")&&<Modal title={modal==="add"?"Log Prop 28 Purchase":"Edit Purchase"} onClose={()=>{setModal(null);setActive(null);}}><Prop28PurchaseForm initial={modal==="edit"?active:null} items={items} onSave={savePurchase} onCancel={()=>{setModal(null);setActive(null);}}/></Modal>}
+  </div>);
+}
 
-  return(
-    <div style={{position:"relative"}}>
-      <img src={usp(BG.reports,1400,900)} alt="" className="page-bg-img"/>
-      <div style={{padding:"32px 36px 0"}}>
-        <div className="hero-wrap" style={{height:230}}>
-          <img src={usp(BG.reports,1100,290)} alt="Prop 28" loading="eager"/>
-          <div className="hero-fade"/>
+// ══════════════════════════════════════════════════════════════════════════════
+// THEATRE CREDITS PAGE
+// ══════════════════════════════════════════════════════════════════════════════
+function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
+  const [ledger,   setLedger]   = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [tab,      setTab]      = useState("overview");
+  const [adminOrg, setAdminOrg] = useState("");
+  const [adminAmt, setAdminAmt] = useState("");
+  const [adminMsg, setAdminMsg] = useState("");
+  const [adminSaving, setAS]    = useState(false);
+  const isAdmin = ADMIN_EMAILS?.includes?.(org?.email);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data } = await SB.from("credit_ledger")
+      .select("*").eq("org_id", userId)
+      .order("created_at", { ascending: false }).limit(100);
+    setLedger(data || []);
+    const { data: bal } = await SB.rpc("get_my_credit_balance");
+    onBalanceChange?.(bal || 0);
+    setLoading(false);
+  }, [userId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const totalEarned = ledger.filter(r => r.amount > 0).reduce((s, r) => s + r.amount, 0);
+  const totalSpent  = Math.abs(ledger.filter(r => r.amount < 0).reduce((s, r) => s + r.amount, 0));
+
+  const typeIcon = {
+    welcome_bonus:   "🎉", catalog_bonus: "📸", rental_earn: "🔑",
+    loan_earn:       "🤝", early_return_bonus: "⚡", referral_earn: "👥",
+    spend_rental:    "🛒", spend_deposit: "🔒", admin_adjust: "🔧", expire: "⏰",
+  };
+  const typeLabel = {
+    welcome_bonus:   "Welcome Bonus",    catalog_bonus:   "Catalog Milestone",
+    rental_earn:     "Rental Completed", loan_earn:       "Loan Completed",
+    early_return_bonus: "Early Return",  referral_earn:   "Referral Bonus",
+    spend_rental:    "Credits Applied",  spend_deposit:   "Deposit Covered",
+    admin_adjust:    "Admin Adjustment", expire:          "Credits Expired",
+  };
+
+  const adminAward = async () => {
+    if (!adminOrg || !adminAmt) return;
+    setAS(true);
+    await SB.rpc("admin_award_credits", {
+      p_org_id: adminOrg, p_amount: parseInt(adminAmt), p_description: adminMsg || "Admin adjustment"
+    });
+    setAS(false); setAdminOrg(""); setAdminAmt(""); setAdminMsg("");
+    load();
+  };
+
+  return (
+    <div style={{ position: "relative" }}>
+      <img src={usp(BG.dashboard, 1400, 900)} alt="" className="page-bg-img" />
+      <div style={{ padding: "32px 36px 0" }}>
+        <div className="hero-wrap" style={{ height: 210 }}>
+          <img src={usp(BG.dashboard, 1100, 270)} alt="Credits" loading="eager" />
+          <div className="hero-fade" />
           <div className="hero-body">
-            <div className="hero-eyebrow">🏫 California Arts Funding</div>
-            <h1 className="hero-title" style={{fontSize:44}}>Prop 28 Compliance</h1>
-            <p className="hero-sub">Track arts funding purchases, generate CDE-ready reports, and satisfy annual compliance requirements — all in one place.</p>
+            <div className="hero-eyebrow">🪙 Theatre Economy</div>
+            <h1 className="hero-title" style={{ fontSize: 44 }}>Theatre Credits</h1>
+            <p className="hero-sub">Earn credits by sharing your inventory. Spend them to borrow what you need for less.</p>
           </div>
-          <div className="hero-bar"/>
+          <div className="hero-bar" />
         </div>
       </div>
 
-      <div style={{padding:"24px 36px 56px",position:"relative",zIndex:1}}>
+      <div style={{ padding: "24px 36px 56px", position: "relative", zIndex: 1 }}>
 
-        {/* Year selector + actions */}
-        <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:20,alignItems:"center"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)"}}>School Year</label>
-            <select value={year} onChange={e=>setYear(e.target.value)}
-              style={{background:"var(--parch)",border:"1.5px solid var(--border)",borderRadius:7,padding:"6px 10px",fontSize:14,fontWeight:700,color:"var(--text)",fontFamily:"'Raleway',sans-serif",outline:"none"}}>
-              {SCHOOL_YEARS.map(y=><option key={y}>{y}</option>)}
-            </select>
-          </div>
-          <div style={{marginLeft:"auto",display:"flex",gap:8}}>
-            {msg&&<span style={{color:"var(--green)",fontWeight:700,fontSize:13,alignSelf:"center"}}>{msg}</span>}
-            <button className="btn btn-o btn-sm" onClick={exportCSV}>📊 Export CSV</button>
-            <button className="btn btn-o btn-sm" onClick={printReport}>🖨️ Print Report</button>
-            <button className="btn btn-g" onClick={()=>{setActive(null);setModal("add");}}>+ Log Purchase</button>
+        {/* Balance card */}
+        <div className="card card-p" style={{ marginBottom: 22, background: "linear-gradient(135deg,rgba(212,168,67,.12),rgba(212,168,67,.04))", borderColor: "rgba(212,168,67,.3)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", marginBottom: 6 }}>Your Balance</div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                <span style={{ fontFamily: "'Abril Fatface',display", fontSize: 64, color: "var(--gold)", lineHeight: 1 }}>{balance.toLocaleString()}</span>
+                <span style={{ fontSize: 18, color: "var(--muted)", fontWeight: 700 }}>credits</span>
+              </div>
+              <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>≈ ${balance.toFixed(2)} value toward future rentals</div>
+            </div>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              {[
+                { label: "Total Earned", val: totalEarned, icon: "📈", col: "var(--green)" },
+                { label: "Total Spent",  val: totalSpent,  icon: "📤", col: "var(--amber)" },
+                { label: "Transactions", val: ledger.length, icon: "📋", col: "var(--blue)" },
+              ].map(s => (
+                <div key={s.label} className="card card-p" style={{ textAlign: "center", padding: "12px 18px", minWidth: 100 }}>
+                  <div style={{ fontSize: 20, marginBottom: 3 }}>{s.icon}</div>
+                  <div style={{ fontFamily: "'Abril Fatface',display", fontSize: 22, color: s.col }}>{s.val.toLocaleString()}</div>
+                  <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: .5, marginTop: 2 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Compliance warning banner */}
-        {nonCompliant>0&&(
-          <div style={{background:"rgba(139,26,42,.08)",border:"1px solid rgba(139,26,42,.25)",borderRadius:10,padding:"10px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:10}}>
-            <span style={{fontSize:20}}>⚠️</span>
-            <span style={{fontSize:13,color:"var(--red)",fontWeight:600}}>{nonCompliant} purchase{nonCompliant!==1?"s":""} flagged as possibly replacing existing arts funding (supplement vs. supplant). Review before submitting your report.</span>
-          </div>
-        )}
-
-        {/* Summary stats */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))",gap:12,marginBottom:20}}>
+        {/* How to earn — always visible */}
+        <div className="card card-p" style={{ marginBottom: 22, display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 12 }}>
           {[
-            {ico:"💰",val:fmt$p(totalSpent),lbl:"Total Prop 28 Spent",col:"var(--green)"},
-            {ico:"🛍️",val:purchases.length,lbl:"Purchase Entries"},
-            {ico:"🎓",val:totalStudents.toLocaleString(),lbl:"Max Students Served"},
-            {ico:"🎭",val:Object.keys(byDiscipline).length,lbl:"Arts Disciplines"},
-          ].map(s=>(
-            <div key={s.lbl} className="card card-p" style={{textAlign:"center",padding:"14px 10px"}}>
-              <div style={{fontSize:22,marginBottom:4}}>{s.ico}</div>
-              <div style={{fontFamily:"'Abril Fatface',display",fontSize:22,color:s.col||"var(--ink)"}}>{s.val}</div>
-              <div style={{fontSize:10,color:"var(--muted)",marginTop:2,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>{s.lbl}</div>
+            { icon: "🤝", title: "Complete a Loan", earn: "+30 credits", note: "Lend items free. Item must be used 3+ days." },
+            { icon: "🔑", title: "Complete a Rental", earn: "+$1 = 1 credit", note: "Earn credits equal to the rental price." },
+            { icon: "📸", title: "10 Items w/ Photos", earn: "+50 credits", note: "One-time milestone for a quality catalog." },
+            { icon: "🎉", title: "Welcome Bonus", earn: "+25 credits", note: "Awarded when you join Pro or District." },
+            { icon: "🛒", title: "Spend on Rentals", earn: "Up to 50% off", note: "Apply credits when requesting any item." },
+            { icon: "🔒", title: "Cover a Deposit", earn: "100% deposit", note: "Use credits to cover the full deposit." },
+          ].map(s => (
+            <div key={s.title} style={{ padding: "12px 14px", background: "var(--parch)", borderRadius: 10, border: "1px solid var(--linen)" }}>
+              <div style={{ fontSize: 22, marginBottom: 5 }}>{s.icon}</div>
+              <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 3 }}>{s.title}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: s.earn.startsWith("+") ? "var(--green)" : "var(--amber)", marginBottom: 4 }}>{s.earn}</div>
+              <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>{s.note}</div>
             </div>
           ))}
         </div>
 
         {/* Tabs */}
-        <div className="tabs" style={{marginBottom:18}}>
-          {[["purchases","📋 Purchase Log"],["dashboard","📊 Annual Dashboard"],["narrative","📝 Narrative & Checklist"]].map(([t,l])=>(
-            <button key={t} className={`tab ${tab===t?"on":""}`} onClick={()=>setTab(t)}>{l}</button>
+        <div className="tabs" style={{ marginBottom: 18 }}>
+          {[["overview","📋 History"],["rules","📖 How It Works"],...( isAdmin ? [["admin","🔧 Admin"]] : [])].map(([t, l]) => (
+            <button key={t} className={`tab ${tab === t ? "on" : ""}`} onClick={() => setTab(t)}>{l}</button>
           ))}
         </div>
 
-        {/* ── TAB: PURCHASE LOG ── */}
-        {tab==="purchases"&&(
-          <>
-            {loading
-              ?<div style={{textAlign:"center",padding:40,color:"var(--muted)"}}>Loading purchases…</div>
-              :purchases.length===0
-                ?<div className="empty">
-                    <div className="empty-ico">📋</div>
-                    <h3>No Prop 28 Purchases Logged</h3>
-                    <p>Start logging arts purchases made with Prop 28 funds. Items you've already purchased through Theatre4u's marketplace can be linked automatically.</p>
-                    <button className="btn btn-g" onClick={()=>{setActive(null);setModal("add");}}>+ Log First Purchase</button>
-                  </div>
-                :<div className="card" style={{overflow:"hidden"}}>
-                    <div style={{overflowX:"auto"}}>
-                      <table style={{width:"100%",borderCollapse:"collapse"}}>
-                        <thead>
-                          <tr style={{background:"var(--parch)"}}>
-                            {["Date","Item Description","Discipline","Grades","Students","Cost","Funding","SNS",""].map(h=>(
-                              <th key={h} style={{padding:"10px 12px",textAlign:"left",fontSize:10,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",fontWeight:700,borderBottom:"1px solid var(--border)",whiteSpace:"nowrap"}}>{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {purchases.map((p,i)=>(
-                            <tr key={p.id} style={{borderBottom:"1px solid var(--linen)",background:i%2===0?"transparent":"rgba(243,230,204,.3)"}}>
-                              <td style={{padding:"9px 12px",fontSize:12,color:"var(--muted)",whiteSpace:"nowrap"}}>{p.date_purchased||"—"}</td>
-                              <td style={{padding:"9px 12px",fontWeight:600,fontSize:13,maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                                {p.item_description}
-                                {p.items?.name&&<div style={{fontSize:10,color:"var(--amber)",marginTop:1}}>🔗 {p.items.name}</div>}
-                              </td>
-                              <td style={{padding:"9px 12px"}}>
-                                <span style={{padding:"2px 8px",borderRadius:8,fontSize:11,fontWeight:700,background:(disciplineColors[p.arts_discipline]||"#546e7a")+"22",color:disciplineColors[p.arts_discipline]||"#546e7a"}}>{p.arts_discipline}</span>
-                              </td>
-                              <td style={{padding:"9px 12px",fontSize:11,color:"var(--muted)"}}>{(p.grade_levels||[]).join(", ")||"—"}</td>
-                              <td style={{padding:"9px 12px",fontWeight:700,fontSize:13}}>{(p.students_served||0).toLocaleString()}</td>
-                              <td style={{padding:"9px 12px",fontFamily:"'Abril Fatface',display",fontSize:16,color:"var(--green)"}}>{fmt$p(p.cost)}</td>
-                              <td style={{padding:"9px 12px",fontSize:11,color:p.funding_source==="100% Prop 28"?"var(--muted)":"var(--amber)"}}>{p.funding_source}</td>
-                              <td style={{padding:"9px 12px",textAlign:"center"}}>
-                                {p.supplement_not_supplant
-                                  ?<span style={{color:"var(--green)",fontSize:16}} title="Supplement (compliant)">✓</span>
-                                  :<span style={{color:"var(--red)",fontSize:16}} title="Possible supplanting issue">⚠️</span>}
-                              </td>
-                              <td style={{padding:"9px 12px"}}>
-                                <div style={{display:"flex",gap:5}}>
-                                  <button className="ico-btn" title="Edit" onClick={()=>{setActive(p);setModal("edit");}}>{Ic.edit}</button>
-                                  <button className="ico-btn" title="Delete" style={{color:"var(--red)"}} onClick={()=>deletePurchase(p.id)}>{Ic.trash}</button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                          <tr style={{background:"rgba(38,94,42,.06)"}}>
-                            <td colSpan={5} style={{padding:"10px 12px",fontFamily:"'Abril Fatface',display",fontSize:16}}>TOTAL</td>
-                            <td style={{padding:"10px 12px",fontFamily:"'Abril Fatface',display",fontSize:20,color:"var(--green)"}}>{fmt$p(totalSpent)}</td>
-                            <td colSpan={3}/>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-            }
-          </>
-        )}
-
-        {/* ── TAB: ANNUAL DASHBOARD ── */}
-        {tab==="dashboard"&&(
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-            {/* By discipline */}
-            <div className="card card-p">
-              <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:18,marginBottom:16}}>Spending by Discipline</h3>
-              {Object.entries(byDiscipline).length===0
-                ?<p style={{color:"var(--muted)",fontSize:13}}>No purchases logged yet.</p>
-                :Object.entries(byDiscipline).sort((a,b)=>b[1]-a[1]).map(([d,cost])=>{
-                  const pct=totalSpent>0?Math.round((cost/totalSpent)*100):0;
-                  const col=disciplineColors[d]||"#546e7a";
-                  return(
-                    <div key={d} style={{marginBottom:12}}>
-                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                        <span style={{fontSize:13,fontWeight:700,color:col}}>{d}</span>
-                        <span style={{fontSize:13,fontWeight:800}}>{fmt$p(cost)} <span style={{color:"var(--muted)",fontWeight:400,fontSize:12}}>({pct}%)</span></span>
-                      </div>
-                      <div style={{height:8,background:"var(--linen)",borderRadius:4,overflow:"hidden"}}>
-                        <div style={{height:"100%",width:pct+"%",background:col,borderRadius:4,transition:"width .5s"}}/>
-                      </div>
-                    </div>
-                  );
-                })
-              }
-            </div>
-            {/* Grade level coverage */}
-            <div className="card card-p">
-              <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:18,marginBottom:16}}>Grade Level Coverage</h3>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                {GRADE_OPTIONS.map(g=>{
-                  const covered=purchases.some(p=>(p.grade_levels||[]).includes(g));
-                  return(
-                    <div key={g} style={{width:52,height:52,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:2,
-                      background:covered?"rgba(38,94,42,.12)":"var(--parch)",border:"1.5px solid",borderColor:covered?"var(--green)":"var(--border)"}}>
-                      <span style={{fontSize:14,fontWeight:800,color:covered?"var(--green)":"var(--faint)"}}>{g}</span>
-                    </div>
-                  );
-                })}
+        {/* ── History ── */}
+        {tab === "overview" && (
+          <div className="card" style={{ overflow: "hidden" }}>
+            {loading ? (
+              <div style={{ textAlign: "center", padding: 40, color: "var(--muted)" }}>Loading…</div>
+            ) : ledger.length === 0 ? (
+              <div className="empty">
+                <div className="empty-ico">🪙</div>
+                <h3>No credit activity yet</h3>
+                <p>Complete a loan or rental, add photos to 10+ items, or just wait — your welcome bonus should appear shortly.</p>
               </div>
-              <div style={{marginTop:10,fontSize:12,color:"var(--muted)"}}>
-                {[...new Set(purchases.flatMap(p=>p.grade_levels||[]))].length} of 14 grade levels covered
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--parch)" }}>
+                      {["Date", "Type", "Description", "Amount", "Balance"].map(h => (
+                        <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", fontWeight: 700, borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ledger.reduce((acc, row, i) => {
+                      // Running balance (ledger is newest-first, so we go reverse)
+                      const runningBal = ledger.slice(i).reduce((s, r) => s + r.amount, 0);
+                      acc.push(
+                        <tr key={row.id} style={{ borderBottom: "1px solid var(--linen)", background: i % 2 === 0 ? "transparent" : "rgba(243,230,204,.3)" }}>
+                          <td style={{ padding: "9px 14px", fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap" }}>
+                            {new Date(row.created_at).toLocaleDateString()}
+                          </td>
+                          <td style={{ padding: "9px 14px" }}>
+                            <span style={{ fontSize: 13 }}>{typeIcon[row.type] || "•"} {typeLabel[row.type] || row.type}</span>
+                          </td>
+                          <td style={{ padding: "9px 14px", fontSize: 13, maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {row.description}
+                          </td>
+                          <td style={{ padding: "9px 14px" }}>
+                            <span style={{ fontFamily: "'Abril Fatface',display", fontSize: 16, color: row.amount > 0 ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
+                              {row.amount > 0 ? "+" : ""}{row.amount.toLocaleString()}
+                            </span>
+                          </td>
+                          <td style={{ padding: "9px 14px", fontFamily: "'Abril Fatface',display", fontSize: 15, color: "var(--gold)" }}>
+                            {runningBal.toLocaleString()}
+                          </td>
+                        </tr>
+                      );
+                      return acc;
+                    }, [])}
+                  </tbody>
+                </table>
               </div>
-            </div>
-            {/* 20% materials allocation tracker */}
-            <div className="card card-p" style={{gridColumn:"1/-1"}}>
-              <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:18,marginBottom:6}}>20% Materials Allocation Tracker</h3>
-              <p style={{color:"var(--muted)",fontSize:13,marginBottom:16,lineHeight:1.6}}>Schools with 500+ students must spend at least 20% of their Prop 28 allocation on materials, supplies, and equipment (not staff). Enter your total Prop 28 allocation below to track compliance.</p>
-              <div style={{display:"flex",gap:12,alignItems:"flex-end",flexWrap:"wrap"}}>
-                <div className="fg" style={{minWidth:200}}>
-                  <label className="fl">Total Prop 28 Allocation (school year)</label>
-                  <input className="fi" type="number" min="0" step="100"
-                    value={report?.school_enrollment||""}
-                    onChange={e=>setReport(p=>({...p,school_enrollment:parseInt(e.target.value)||null}))}
-                    placeholder="e.g. 50000" style={{maxWidth:200}}/>
-                </div>
-                {report?.school_enrollment&&(()=>{
-                  const alloc = report.school_enrollment;
-                  const req20 = alloc * 0.2;
-                  const pct = Math.min(100, Math.round((totalSpent/req20)*100));
-                  const met = totalSpent >= req20;
-                  return(
-                    <div style={{flex:1,minWidth:240}}>
-                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:13}}>
-                        <span style={{color:"var(--muted)"}}>Required (20%): <strong>{fmt$p(req20)}</strong></span>
-                        <span style={{fontWeight:800,color:met?"var(--green)":"var(--red)"}}>{pct}% {met?"✓ Met":"— Needed: "+fmt$p(req20-totalSpent)}</span>
-                      </div>
-                      <div style={{height:14,background:"var(--linen)",borderRadius:7,overflow:"hidden",position:"relative"}}>
-                        <div style={{height:"100%",width:pct+"%",background:met?"var(--green)":"var(--amber)",borderRadius:7,transition:"width .5s"}}/>
-                        <div style={{position:"absolute",top:0,bottom:0,left:"20%",width:2,background:"rgba(0,0,0,.3)"}}/>
-                      </div>
-                      <div style={{fontSize:11,color:"var(--muted)",marginTop:4}}>Vertical line = 20% threshold</div>
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
+            )}
           </div>
         )}
 
-        {/* ── TAB: NARRATIVE & CHECKLIST ── */}
-        {tab==="narrative"&&(
-          <div style={{display:"flex",flexDirection:"column",gap:16}}>
-            {/* Narrative */}
-            <div className="card card-p">
-              <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:20,marginBottom:6}}>📝 Narrative Description</h3>
-              <p style={{color:"var(--muted)",fontSize:13,marginBottom:12,lineHeight:1.6}}>Required by CDE. Explain how Prop 28 funds were used to <strong>develop or expand</strong> arts education at your school site this year.</p>
-              <div style={{background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"10px 14px",marginBottom:10,fontSize:12,color:"var(--muted)",lineHeight:1.7}}>
-                <strong style={{color:"var(--amber)"}}>💡 Template prompt:</strong> "During the {year} school year, [School Name] utilized Proposition 28 funds to [develop/expand] arts education programming in [disciplines]. These funds enabled [specific outcomes, e.g., 'the purchase of 30 instruments for our expanded beginning strings program serving grades 4–8']. This investment served [X] students across grades [X–X] and represents new and expanded programming that did not previously exist at our site."
+        {/* ── Rules ── */}
+        {tab === "rules" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {[
+              { title: "Earning Credits",
+                body: "Credits are earned automatically when a transaction is marked returned by the owner. For free loans, the item must have been out for at least 3 days to qualify. For rentals, you earn 1 credit per $1 of rental value (minimum 5, maximum 500 per transaction)." },
+              { title: "Spending Credits",
+                body: "When requesting a rental or purchase, you can apply credits to cover up to 50% of the price. The remaining 50% must be paid in cash directly to the item owner. Credits can also be used to cover 100% of a security deposit." },
+              { title: "Credit Value",
+                body: "1 credit = $1 of discount toward a rental or purchase. Credits have no cash value and cannot be refunded, transferred to another organization, or exchanged for money." },
+              { title: "Expiry & Forfeiture",
+                body: "Credits do not expire as long as your Pro subscription is active. If your subscription lapses, credits are frozen and restored when you re-subscribe. Credits are permanently forfeited if your account is closed." },
+              { title: "Fair Use",
+                body: "Theatre4u reserves the right to adjust or revoke credits in cases of abuse, fraudulent transactions, or violations of the Terms of Service. The admin_adjust transaction type will appear in your history if a correction is made." },
+            ].map(r => (
+              <div key={r.title} className="card card-p">
+                <h3 style={{ fontFamily: "'Abril Fatface',display", fontSize: 17, marginBottom: 8 }}>{r.title}</h3>
+                <p style={{ fontSize: 14, color: "var(--muted)", lineHeight: 1.7 }}>{r.body}</p>
               </div>
-              <textarea className="ft" value={report?.narrative||""} onChange={e=>setReport(p=>({...p,narrative:e.target.value}))} style={{minHeight:160}} placeholder="Type your narrative here…"/>
-              <button className="btn btn-g btn-sm" style={{marginTop:10,alignSelf:"flex-start"}} onClick={()=>saveReport({narrative:report?.narrative||""})} disabled={saving}>
-                {saving?"Saving…":"Save Narrative"}
-              </button>
-            </div>
+            ))}
+          </div>
+        )}
 
-            {/* SNS Attestation */}
-            <div className="card card-p" style={{borderColor:report?.sas_attested?"rgba(38,94,42,.3)":"var(--border)"}}>
-              <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:20,marginBottom:6}}>✅ Supplement vs. Supplant Attestation</h3>
-              <p style={{color:"var(--muted)",fontSize:13,marginBottom:14,lineHeight:1.6}}>You must formally attest that Prop 28 funds were used to supplement (not supplant) existing arts education budgets before submitting to CDE.</p>
-              {report?.sas_attested
-                ?<div style={{background:"rgba(38,94,42,.1)",border:"1px solid rgba(38,94,42,.25)",borderRadius:8,padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}>
-                    <span style={{fontSize:28}}>✅</span>
-                    <div>
-                      <div style={{fontWeight:700,color:"var(--green)",marginBottom:2}}>Attested by {report.sas_attested_by}</div>
-                      <div style={{fontSize:12,color:"var(--muted)"}}>{report.sas_attested_at?new Date(report.sas_attested_at).toLocaleString():"—"}</div>
-                    </div>
-                    <button className="btn btn-o btn-sm" style={{marginLeft:"auto",color:"var(--red)"}} onClick={()=>saveReport({sas_attested:false,sas_attested_by:null,sas_attested_at:null})}>Revoke</button>
-                  </div>
-                :<div>
-                    {nonCompliant>0&&<div style={{background:"rgba(139,26,42,.08)",border:"1px solid rgba(139,26,42,.2)",borderRadius:7,padding:"10px 14px",marginBottom:12,fontSize:12,color:"var(--red)"}}>⚠️ {nonCompliant} purchase{nonCompliant!==1?"s":""} are flagged as possibly replacing existing funds. Review before attesting.</div>}
-                    <button className="btn btn-g" onClick={attestSAS}>Sign & Attest — {org?.name||"Administrator"}</button>
-                  </div>
-              }
-            </div>
-
-            {/* Admin Checklist */}
-            <div className="card card-p">
-              <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:20,marginBottom:14}}>☑️ Administrative Checklist</h3>
-              <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                {[
-                  {key:"report_generated",label:"Annual Expenditure Report generated",note:"Use the Print Report button above"},
-                  {key:"board_approved",label:"Approved by local school board",hasDate:true,dateKey:"board_approval_date"},
-                  {key:"posted_to_website",label:"Report posted to LEA website"},
-                  {key:"submitted_to_cde",label:"Report submitted to CDE Arts and Music in Schools Portal",link:"https://www.cde.ca.gov/ci/ar/as/prop28.asp"},
-                ].map(item=>(
-                  <div key={item.key} style={{display:"flex",alignItems:"flex-start",gap:12,padding:"12px 14px",background:report?.[item.key]?"rgba(38,94,42,.07)":"var(--parch)",borderRadius:10,border:"1.5px solid",borderColor:report?.[item.key]?"rgba(38,94,42,.3)":"var(--border)"}}>
-                    <input type="checkbox" checked={!!report?.[item.key]} onChange={e=>{const u={[item.key]:e.target.checked};saveReport(u);}}
-                      style={{width:20,height:20,marginTop:1,cursor:"pointer",accentColor:"var(--green)"}}/>
-                    <div style={{flex:1}}>
-                      <div style={{fontWeight:700,fontSize:14,color:report?.[item.key]?"var(--green)":"var(--text)"}}>{item.label}</div>
-                      {item.note&&<div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{item.note}</div>}
-                      {item.link&&<a href={item.link} target="_blank" rel="noreferrer" style={{fontSize:11,color:"var(--amber)",marginTop:2,display:"block"}}>→ CDE Portal</a>}
-                      {item.hasDate&&report?.[item.key]&&(
-                        <div style={{marginTop:6,display:"flex",alignItems:"center",gap:8}}>
-                          <label style={{fontSize:11,fontWeight:700,color:"var(--muted)"}}>Approval Date:</label>
-                          <input type="date" value={report?.[item.dateKey]||""} onChange={e=>saveReport({[item.dateKey]:e.target.value})}
-                            style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:5,padding:"3px 7px",fontSize:12,fontFamily:"inherit"}}/>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+        {/* ── Admin ── */}
+        {tab === "admin" && isAdmin && (
+          <div className="card card-p" style={{ maxWidth: 480 }}>
+            <h3 style={{ fontFamily: "'Abril Fatface',display", fontSize: 18, marginBottom: 14 }}>🔧 Award Credits to Any Org</h3>
+            <div className="fg2">
+              <div className="fg fu">
+                <label className="fl">Org ID</label>
+                <input className="fi" value={adminOrg} onChange={e => setAdminOrg(e.target.value)} placeholder="Paste org UUID…" />
               </div>
-              {/* Overall status */}
-              {report&&(()=>{
-                const done=[report.report_generated,report.board_approved,report.posted_to_website,report.submitted_to_cde,report.sas_attested].filter(Boolean).length;
-                return(
-                  <div style={{marginTop:16,padding:"12px 16px",background:done===5?"rgba(38,94,42,.12)":"rgba(212,168,67,.08)",border:"1px solid",borderColor:done===5?"rgba(38,94,42,.3)":"rgba(212,168,67,.2)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                    <span style={{fontWeight:700,fontSize:14,color:done===5?"var(--green)":"var(--amber)"}}>
-                      {done===5?"🎉 Compliance complete!":"📋 "+done+"/5 steps complete"}
-                    </span>
-                    {report.status!=="finalized"&&done===5&&(
-                      <button className="btn btn-g btn-sm" onClick={()=>saveReport({status:"finalized"})}>Finalize Report</button>
-                    )}
-                    {report.status==="finalized"&&<span style={{fontSize:12,background:"rgba(38,94,42,.15)",color:"var(--green)",padding:"2px 10px",borderRadius:8,fontWeight:700}}>FINALIZED</span>}
-                  </div>
-                );
-              })()}
+              <div className="fg">
+                <label className="fl">Amount</label>
+                <input className="fi" type="number" min="1" value={adminAmt} onChange={e => setAdminAmt(e.target.value)} placeholder="50" />
+              </div>
+              <div className="fg fu">
+                <label className="fl">Description</label>
+                <input className="fi" value={adminMsg} onChange={e => setAdminMsg(e.target.value)} placeholder="Reason for adjustment…" />
+              </div>
             </div>
+            <button className="btn btn-g" onClick={adminAward} disabled={adminSaving || !adminOrg || !adminAmt}>
+              {adminSaving ? "Awarding…" : "Award Credits"}
+            </button>
           </div>
         )}
       </div>
-
-      {/* Modals */}
-      {(modal==="add"||modal==="edit")&&(
-        <Modal title={modal==="add"?"Log Prop 28 Purchase":"Edit Purchase"}
-          onClose={()=>{setModal(null);setActive(null);}}>
-          <Prop28PurchaseForm
-            initial={modal==="edit"?active:null}
-            items={items}
-            onSave={savePurchase}
-            onCancel={()=>{setModal(null);setActive(null);}}/>
-        </Modal>
-      )}
     </div>
   );
 }
@@ -5644,7 +5496,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
       <div style={{...cardStyle,textAlign:"center"}}>
         <div style={{fontSize:52,marginBottom:12}}>🎭</div>
         <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:"#d4a843",marginBottom:8}}>{inviteInfo?"Almost there!":"Check your email!"}</h2>
-        <p style={{color:"#9b93a8",fontSize:14,lineHeight:1.6,marginBottom:24}}>{inviteInfo?<>We sent a confirmation link to <strong style={{color:"#ede8df"}}>{email}</strong>. Click it to activate your account and you'll be linked to {inviteInfo.district_name||"your district"}.</>:<>We sent a confirmation link to <strong style={{color:"#ede8df"}}>{email}</strong>. Click it to activate your account.</>}</p>
+        <p style={{color:"#9b93a8",fontSize:14,lineHeight:1.6,marginBottom:24}}>{inviteInfo?<>We sent a confirmation link to <strong style={{color:"#ede8df"}}>{email}</strong>. Click it to activate and you'll be linked to {inviteInfo.district_name||"your district"}.</>:<>We sent a confirmation link to <strong style={{color:"#ede8df"}}>{email}</strong>. Click it to activate your account.</>}</p>
         <button onClick={()=>{setDone(false);setMode("login");}} style={{background:"#1d1925",border:"1px solid #282333",color:"#ede8df",padding:"10px 24px",borderRadius:6,cursor:"pointer",fontSize:14,fontFamily:"'DM Sans',sans-serif"}}>Back to Sign In</button>
       </div>
     </div>
@@ -6007,6 +5859,7 @@ export default function App() {
   const [unreadCount,   setUnreadCount]   = useState(0);
   const [openConvId,    setOpenConvId]    = useState(null);
   const [pendingReqCount, setPendingReqCount] = useState(0);
+  const [creditBalance, setCreditBalance] = useState(0);
   const [schoolItems,setSchoolItems]     = useState([]);
   const [schoolLoading,setSchoolLoading] = useState(false);
   // Invite token from URL — persisted in localStorage so it survives
@@ -6025,7 +5878,7 @@ export default function App() {
     if(!pendingInvite||user) return;
     (async()=>{
       try{const{data}=await SB.rpc("get_invite_by_token",{p_token:pendingInvite});if(data&&data.length>0)setInviteInfo(data[0]);}
-      catch(e){console.warn("Could not load invite info:",e);}
+      catch(e){console.warn("invite info:",e);}
     })();
   },[pendingInvite,user]);
 
@@ -6074,6 +5927,13 @@ export default function App() {
         .eq("owner_id", user.id)
         .eq("status", "pending");
       setPendingReqCount(reqCount || 0);
+      // Load credit balance
+      if(plan !== "free") {
+        const { data: bal } = await SB.rpc("get_my_credit_balance");
+        setCreditBalance(bal || 0);
+        // Check catalog bonus trigger
+        await SB.rpc("check_catalog_bonus", { p_org_id: user.id });
+      }
     })();
   },[user]);
 
@@ -6181,11 +6041,12 @@ export default function App() {
     { id:"marketplace", label:"Marketplace", ico:Ic.store   },
     { id:"productions", label:"Productions", ico:"🎭"       },
     { id:"reports",     label:"Reports",     ico:Ic.chart   },
-    ...(plan !== "free" || isAdmin ? [{ id:"prop28", label:"Prop 28", ico:"📋", prop28:true }] : []),
+    ...(plan !== "free" || isAdmin ? [{ id:"credits", label:"Credits",  ico:"🪙", credits:true }] : []),
+    ...(plan !== "free" || isAdmin ? [{ id:"prop28",  label:"Prop 28",  ico:"📋", prop28:true  }] : []),
     ...(plan === "district" ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
     ...(isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
   ];
-  const TITLES = { messages:"Messages", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Marketplace", productions:"Productions", reports:"Reports", settings:"Profile", admin:"Admin Dashboard", district:"District", prop28:"Prop 28 Compliance" };
+  const TITLES = { messages:"Messages", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Marketplace", productions:"Productions", reports:"Reports", settings:"Profile", admin:"Admin Dashboard", district:"District", credits:"Theatre Credits", prop28:"Prop 28 Compliance" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicItemId) return <PublicItemPage itemId={publicItemId} />;
@@ -6261,7 +6122,8 @@ export default function App() {
                     onClick={()=>nav(n.id)}
                     style={n.admin ? {marginTop:12, borderTop:"1px solid rgba(212,168,67,.15)", paddingTop:12, color: page===n.id ? undefined : "rgba(212,168,67,.65)"}
                          : n.district ? {marginTop:4, color: page===n.id ? undefined : "rgba(66,165,245,.75)"}
-                         : n.prop28 ? {color: page===n.id ? undefined : "rgba(82,199,132,.8)"}
+                         : n.prop28   ? {color: page===n.id ? undefined : "rgba(82,199,132,.8)"}
+                         : n.credits  ? {color: page===n.id ? undefined : "rgba(212,168,67,.75)"}
                          : {}}>
                     <span className="sb-ico">{n.admin ? "🔧" : n.district ? "🏢" : n.ico}</span>
                     <span>{n.label}</span>
@@ -6273,16 +6135,29 @@ export default function App() {
                     {n.id==="marketplace"&& listed>0       && <span className="sb-badge">{listed}</span>}
                     {n.id==="productions"&& <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--gold)"}}>🎭</span>}
                     {n.id==="prop28"     && <span style={{marginLeft:"auto",fontSize:9,padding:"1px 5px",background:"rgba(82,199,132,.2)",color:"#52c784",borderRadius:4,fontWeight:700,letterSpacing:.5}}>CA</span>}
+                    {n.id==="credits"    && creditBalance>0 && <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--gold)"}}>{creditBalance}</span>}
                   </div>
                 ))}
               </nav>
 
               <div className="sb-foot">
                 <div style={{display:"flex",gap:5,flexDirection:"column"}}>
+                  {(plan!=="free"||isAdmin)&&creditBalance>0&&(
+                    <div onClick={()=>nav("credits")} style={{background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.25)",borderRadius:7,padding:"7px 10px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:2}}>
+                      <span style={{fontSize:11,color:"rgba(255,255,255,.6)",fontWeight:600}}>🪙 Credits</span>
+                      <span style={{fontFamily:"'Playfair Display',serif",fontSize:17,color:"var(--gold)",fontWeight:700}}>{creditBalance.toLocaleString()}</span>
+                    </div>
+                  )}
                   {(plan==="pro"||plan==="district"||isAdmin)&&(
                     <a href="/app" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
                       style={{color:"var(--gold)",borderColor:"rgba(212,168,67,.3)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                       📱 Mobile App
+                    </a>
+                  )}
+                  {(plan==="pro"||plan==="district"||isAdmin)&&(
+                    <a href="/help" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
+                      style={{color:"rgba(255,255,255,.6)",borderColor:"rgba(255,255,255,.12)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                      ❓ Help & Tutorials
                     </a>
                   )}
                   {plan==="free"&&!isAdmin&&(
@@ -6347,9 +6222,11 @@ export default function App() {
                   {page==="productions" && <Productions userId={user?.id} allItems={items}/>}
                   {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan}/>}
                   {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan}/>}
-                  {page==="prop28"      && (plan!=="free"||isAdmin) && <Prop28Page org={org} userId={user?.id} items={items} plan={plan}/>}
-                  {page==="prop28"      && plan==="free" && !isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>📋</div><h2 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:10}}>Prop 28 Tracking is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Track California Prop 28 arts funding compliance, generate CDE-ready reports, and never miss a reporting deadline. Upgrade to Pro to unlock.</p><UpgradePlans compact={true}/></div>}
                   {page==="district"    && plan==="district" && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool}/>}
+                  {page==="credits"     && (plan!=="free"||isAdmin) && <CreditsPage userId={user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
+                  {page==="credits"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:10}}>Theatre Credits is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true}/></div>}
+                  {page==="prop28"      && (plan!=="free"||isAdmin) && <Prop28Page org={org} userId={user?.id} items={items} plan={plan}/>}
+                  {page==="prop28"      && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>📋</div><h2 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:10}}>Prop 28 Tracking is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Track California Prop 28 arts funding compliance and generate CDE-ready reports. Upgrade to unlock.</p><UpgradePlans compact={true}/></div>}
                   {page==="admin"       && isAdmin && <AdminDashboard currentUser={user}/>}
                 </div>
             }
