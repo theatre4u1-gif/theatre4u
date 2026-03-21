@@ -2,6 +2,33 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // ── Supabase ──────────────────────────────────────────────────────────────────
+
+// ── Geocoding (OpenStreetMap Nominatim — free, no key needed) ─────────────────
+async function geocodeLocation(locationText) {
+  if (!locationText || locationText.trim().length < 3) return null;
+  try {
+    const q = encodeURIComponent(locationText.trim() + ", USA");
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`, {
+      headers: { "User-Agent": "Theatre4u/1.0 (hello@theatre4u.org)" }
+    });
+    const data = await r.json();
+    if (data && data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+  } catch {}
+  return null;
+}
+
+// Get browser geolocation as a Promise
+function getBrowserLocation() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      ()  => resolve(null),
+      { timeout: 5000, maximumAge: 300000 }
+    );
+  });
+}
+
 const SB = createClient(
   "https://ldmmphwivnnboyhlxipl.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA"
@@ -1080,9 +1107,11 @@ function CommunitySpotlight({onViewAll}){
 
   useEffect(()=>{
     (async()=>{
-      const{data}=await SB.from("community_posts")
-        .select("*").eq("status","active")
-        .order("created_at",{ascending:false}).limit(20);
+      // Get viewer coords from org for proximity sorting
+      const vLat = null, vLng = null; // org coords passed separately if needed
+      const{data}=await SB.rpc("proximity_community_posts",{
+        viewer_lat: null, viewer_lng: null, radius_miles: 150, row_limit: 20
+      });
       if(!data||data.length===0)return;
       setPosts(data);
       const ids=[...new Set(data.map(p=>p.org_id))];
@@ -5080,6 +5109,11 @@ function CommunityPostCard({post, orgName, onEdit, onDelete, isOwn}) {
             {(post.tags||[]).slice(0,3).map(t=><span key={t} className="mt">#{t}</span>)}
             {post.ticket_url&&<a href={post.ticket_url} target="_blank" rel="noreferrer" className="btn btn-o btn-sm" style={{fontSize:11,padding:"3px 10px"}}>🎟️ Tickets</a>}
             {post.contact_email&&<a href={`mailto:${post.contact_email}`} className="btn btn-o btn-sm" style={{fontSize:11,padding:"3px 10px"}}>✉️ Contact</a>}
+            {post.distance_miles != null && (
+              <span style={{fontSize:11,fontWeight:700,padding:"1px 7px",background:"rgba(255,255,255,.06)",borderRadius:5,color:"var(--muted)"}}>
+                📍 {post.distance_miles < 1 ? "< 1" : Math.round(post.distance_miles)} mi
+              </span>
+            )}
             <div style={{fontSize:11,color:"var(--faint)"}}>{new Date(post.created_at).toLocaleDateString()}</div>
           </div>
         </div>
@@ -5092,6 +5126,7 @@ function CommunityPage({userId, org, plan}) {
   const [posts,    setPosts]   = useState([]);
   const [orgs,     setOrgs]    = useState({});
   const [loading,  setLoading] = useState(true);
+  const [viewerLoc,setViewerLoc] = useState(null);
   const [typeF,    setTypeF]   = useState("all");
   const [search,   setSearch]  = useState("");
   const [modal,    setModal]   = useState(null);
@@ -5101,23 +5136,49 @@ function CommunityPage({userId, org, plan}) {
 
   const load = useCallback(async()=>{
     setLoading(true);
-    const{data}=await SB.from("community_posts").select("*").eq("status","active").order("created_at",{ascending:false}).limit(100);
-    setPosts(data||[]);
-    // Load org names for posts
-    const ids=[...new Set((data||[]).map(p=>p.org_id))];
-    if(ids.length>0){
-      const{data:orgData}=await SB.from("orgs").select("id,name").in("id",ids);
-      const map={};(orgData||[]).forEach(o=>{map[o.id]=o.name;});
+    // Get viewer location — try org coords first, then browser geolocation
+    let vLat = org?.lat || null;
+    let vLng = org?.lng || null;
+    if ((!vLat || !vLng) && org?.location) {
+      const geo = await geocodeLocation(org.location);
+      if (geo) { vLat = geo.lat; vLng = geo.lng; }
+    }
+    if (!vLat || !vLng) {
+      const browser = await getBrowserLocation();
+      if (browser) { vLat = browser.lat; vLng = browser.lng; }
+    }
+    setViewerLoc(vLat && vLng ? { lat: vLat, lng: vLng } : null);
+
+    // Use proximity RPC — falls back to recency if no location
+    const { data } = await SB.rpc("proximity_community_posts", {
+      viewer_lat:   vLat   || null,
+      viewer_lng:   vLng   || null,
+      radius_miles: 150,
+      row_limit:    80,
+    });
+    setPosts(data || []);
+    // Load org names
+    const ids = [...new Set((data || []).map(p => p.org_id))];
+    if (ids.length > 0) {
+      const { data: orgData } = await SB.from("orgs").select("id,name,location").in("id", ids);
+      const map = {}; (orgData || []).forEach(o => { map[o.id] = o.name; });
       setOrgs(map);
     }
     setLoading(false);
-  },[]);
+  }, [org?.lat, org?.lng, org?.location]);
 
   useEffect(()=>{load();},[load]);
 
   const save = async(f)=>{
     setSaving(true);
-    const row={...f,org_id:userId,status:"active"};
+    // Geocode post location — use post's location field, fall back to org location
+    const locText = f.location || org?.location;
+    let geoFields = viewerLoc ? { lat: viewerLoc.lat, lng: viewerLoc.lng } : {};
+    if (locText && !viewerLoc) {
+      const geo = await geocodeLocation(locText);
+      if (geo) geoFields = { lat: geo.lat, lng: geo.lng };
+    }
+    const row = { ...f, ...geoFields, org_id: userId, status: "active" };
     if(active&&modal==="edit"){
       const{data}=await SB.from("community_posts").update(row).eq("id",active.id).select().single();
       if(data){setPosts(p=>p.map(x=>x.id===data.id?data:x));setMsg("✓ Post updated");}
@@ -5182,7 +5243,12 @@ function CommunityPage({userId, org, plan}) {
         <div style={{display:"grid",gridTemplateColumns:"1fr 320px",gap:24,alignItems:"start"}}>
           {/* Main feed */}
           <div>
-            <div style={{fontSize:12,color:"var(--muted)",marginBottom:12,fontWeight:600}}>{filtered.length} post{filtered.length!==1?"s":""}{typeF!=="all"?` · ${PT[typeF]?.label}`:""}</div>
+            <div style={{fontSize:12,color:"var(--muted)",marginBottom:12,fontWeight:600,display:"flex",alignItems:"center",gap:10}}>
+              <span>{filtered.length} post{filtered.length!==1?"s":""}{typeF!=="all"?` · ${PT[typeF]?.label}`:""}</span>
+              {viewerLoc
+                ? <span style={{color:"var(--green)",fontWeight:700}}>📍 Sorted by proximity to you</span>
+                : <span style={{color:"var(--amber)",fontSize:11}}>⚠️ Set your location in Profile for proximity sorting</span>}
+            </div>
             {loading
               ?<div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading community posts…</div>
               :filtered.length===0
@@ -5230,6 +5296,9 @@ function CommunityPage({userId, org, plan}) {
                 </div>
               ))}
               <div style={{marginTop:10,fontSize:11,color:"var(--muted)",lineHeight:1.5}}>Open to all Theatre4u members — free and Pro alike.</div>
+              <div style={{marginTop:8,fontSize:11,color:"var(--amber)",lineHeight:1.5,padding:"6px 8px",background:"rgba(212,168,67,.08)",borderRadius:6}}>
+                📍 Posts are sorted by proximity. Set your city in Profile for best results.
+              </div>
             </div>
           </div>
         </div>
@@ -5477,7 +5546,20 @@ function Settings({ org, setOrg, onSeed, user, items, setItems, plan="free", use
   const [f,setF]       = useState(org);
   const [saved,setSaved] = useState(false);
   const upd = (k,v) => setF(p=>({...p,[k]:v}));
-  const save = async() => { await setOrg(f); setSaved(true); setTimeout(()=>setSaved(false),2200); };
+  const save = async() => {
+    // Geocode location if it changed so community posts are proximity-sorted correctly
+    let geoUpdate = {};
+    if (f.location && f.location !== org?.location) {
+      const geo = await geocodeLocation(f.location);
+      if (geo) { geoUpdate = { lat: geo.lat, lng: geo.lng }; f = { ...f, ...geoUpdate }; }
+    } else if (f.zipcode && f.zipcode !== org?.zipcode) {
+      const geo = await geocodeLocation(f.zipcode + ", USA");
+      if (geo) { geoUpdate = { lat: geo.lat, lng: geo.lng }; f = { ...f, ...geoUpdate }; }
+    }
+    await setOrg(f);
+    setSaved(true);
+    setTimeout(()=>setSaved(false),2200);
+  };
 
   return(
     <div style={{position:"relative"}}>
@@ -5523,7 +5605,7 @@ function Settings({ org, setOrg, onSeed, user, items, setItems, plan="free", use
             <div className="fg">
               <label className="fl">Zip Code</label>
               <input className="fi" value={f.zipcode||""} onChange={e=>upd("zipcode",e.target.value.replace(/[^0-9]/g,"").slice(0,5))} placeholder="e.g. 92648" maxLength={5}/>
-              <div style={{fontSize:11,color:"var(--muted)",marginTop:3}}>Used to show your listings in location searches</div>
+              <div style={{fontSize:11,color:"var(--muted)",marginTop:3}}>Used to sort Community Board posts by proximity to you</div>
             </div>
             <div className="fg fu"><label className="fl">About Your Program</label><textarea className="ft" value={f.bio||""} onChange={e=>upd("bio",e.target.value)} placeholder="Tell others about your program…"/></div>
           </div>
