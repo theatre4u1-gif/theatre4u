@@ -6523,9 +6523,9 @@ export default function App() {
 
   const isAdmin = isAdminEmail(user?.email);
   const NAV = [
+    { id:"dashboard",   label:"Dashboard",   ico:Ic.home    },
     { id:"messages",    label:"Messages",    ico:"💬"       },
     { id:"requests",    label:"Requests",    ico:"📋"       },
-    { id:"dashboard",   label:"Dashboard",   ico:Ic.home    },
     { id:"inventory",   label:"Inventory",   ico:Ic.box     },
     { id:"marketplace", label:"Marketplace", ico:Ic.store   },
     { id:"community",   label:"Community",   ico:"🎪", community:true },
