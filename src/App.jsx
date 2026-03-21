@@ -1070,7 +1070,143 @@ function Pager({total,page,per,onPage}){
 
 /* ── PAGES ─────────────────────────────────────────────────────────────────── */
 
-function Dashboard({items,org,goInventory,goMarketplace}){
+// ── Community Spotlight (Dashboard widget) ────────────────────────────────────
+function CommunitySpotlight({onViewAll}){
+  const [posts,   setPosts]   = useState([]);
+  const [orgs,    setOrgs]    = useState({});
+  const [idx,     setIdx]     = useState(0);
+  const [fade,    setFade]    = useState(true);
+  const timerRef = useRef(null);
+
+  useEffect(()=>{
+    (async()=>{
+      const{data}=await SB.from("community_posts")
+        .select("*").eq("status","active")
+        .order("created_at",{ascending:false}).limit(20);
+      if(!data||data.length===0)return;
+      setPosts(data);
+      const ids=[...new Set(data.map(p=>p.org_id))];
+      const{data:od}=await SB.from("orgs").select("id,name").in("id",ids);
+      const map={};(od||[]).forEach(o=>{map[o.id]=o.name;});
+      setOrgs(map);
+    })();
+  },[]);
+
+  // Auto-rotate every 5s
+  useEffect(()=>{
+    if(posts.length<2)return;
+    timerRef.current=setInterval(()=>{
+      setFade(false);
+      setTimeout(()=>{
+        setIdx(i=>(i+1)%posts.length);
+        setFade(true);
+      },250);
+    },5000);
+    return()=>clearInterval(timerRef.current);
+  },[posts.length]);
+
+  const goTo=(i)=>{
+    clearInterval(timerRef.current);
+    setFade(false);
+    setTimeout(()=>{setIdx(i);setFade(true);},200);
+  };
+
+  const PT_COLORS={show:"#7b1fa2",audition:"#1565c0",photo:"#c2185b",wanted:"#d84315",announcement:"#2e7d32"};
+  const PT_ICONS ={show:"🎭",audition:"🎤",photo:"📸",wanted:"🔍",announcement:"📢"};
+  const PT_LABELS={show:"Upcoming Show",audition:"Audition Notice",photo:"Production Photos",wanted:"Item Wanted",announcement:"Announcement"};
+
+  // Empty state — encourage first post
+  if(posts.length===0) return(
+    <div style={{background:"var(--parch)",border:"2px dashed var(--border)",borderRadius:"var(--rl)",padding:"32px 24px",textAlign:"center",marginBottom:32}}>
+      <div style={{fontSize:40,marginBottom:10}}>🎪</div>
+      <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:20,marginBottom:6}}>Nothing posted yet</h3>
+      <p style={{color:"var(--muted)",fontSize:13,maxWidth:380,margin:"0 auto 16px",lineHeight:1.6}}>Be the first to share an upcoming show, post an audition notice, or connect with your theatre community.</p>
+      <button className="btn btn-g" onClick={onViewAll}>+ Post to Community Board</button>
+    </div>
+  );
+
+  const post  = posts[idx];
+  const color = PT_COLORS[post.type]||"#7b1fa2";
+  const icon  = PT_ICONS[post.type]||"📢";
+  const label = PT_LABELS[post.type]||"Post";
+  const orgName = orgs[post.org_id]||"A Theatre Program";
+
+  return(
+    <div style={{marginBottom:32}}>
+      {/* Main card */}
+      <div style={{
+        background:`linear-gradient(135deg,${color}18,${color}08)`,
+        border:`1.5px solid ${color}30`,
+        borderRadius:"var(--rl)",
+        overflow:"hidden",
+        transition:"all .3s",
+        cursor:"pointer",
+      }} onClick={onViewAll}>
+        {/* Top stripe */}
+        <div style={{height:4,background:`linear-gradient(90deg,${color},${color}66)`}}/>
+        <div style={{
+          padding:"22px 24px 18px",
+          opacity:fade?1:0,
+          transition:"opacity .25s",
+        }}>
+          {/* Type badge + org */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:22}}>{icon}</span>
+              <span style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:color}}>{label}</span>
+            </div>
+            <div style={{fontSize:12,color:"var(--muted)",fontWeight:600}}>by {orgName}{post.location?` · ${post.location}`:""}</div>
+          </div>
+
+          {/* Title */}
+          <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:22,lineHeight:1.2,marginBottom:8,color:"var(--ink)"}}>{post.title}</h3>
+
+          {/* Show meta */}
+          {(post.show_title||post.start_date||post.venue)&&(
+            <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:10}}>
+              {post.show_title&&<span style={{fontSize:12,fontWeight:700,padding:"2px 9px",background:color+"18",borderRadius:6,color}}>{post.show_title}</span>}
+              {post.venue&&<span style={{fontSize:12,color:"var(--muted)",padding:"2px 9px",background:"var(--bg)",borderRadius:6}}>📍 {post.venue}</span>}
+              {post.start_date&&<span style={{fontSize:12,fontWeight:700,padding:"2px 9px",background:color+"18",borderRadius:6,color}}>
+                📅 {new Date(post.start_date).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
+                {post.end_date&&post.end_date!==post.start_date?" – "+new Date(post.end_date).toLocaleDateString("en-US",{month:"short",day:"numeric"}):""}
+              </span>}
+            </div>
+          )}
+
+          {/* Body excerpt */}
+          {post.body&&<p style={{fontSize:13.5,color:"var(--muted)",lineHeight:1.65,marginBottom:12}}>{post.body.length>180?post.body.slice(0,180)+"…":post.body}</p>}
+
+          {/* Footer */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingTop:10,borderTop:`1px solid ${color}20`}}>
+            <div style={{display:"flex",gap:6}}>
+              {(post.tags||[]).slice(0,3).map(t=><span key={t} style={{fontSize:11,padding:"1px 7px",background:"var(--bg)",borderRadius:4,color:"var(--muted)"}}>#{t}</span>)}
+            </div>
+            <span style={{fontSize:12,fontWeight:700,color:color}}>View on Community Board →</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Dots + navigation */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:12}}>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          {posts.slice(0,8).map((_,i)=>(
+            <button key={i} onClick={e=>{e.stopPropagation();goTo(i);}} style={{
+              width:i===idx?20:7,height:7,borderRadius:4,border:"none",cursor:"pointer",
+              background:i===idx?color:"var(--border)",
+              transition:"all .3s",padding:0,
+            }}/>
+          ))}
+          {posts.length>8&&<span style={{fontSize:11,color:"var(--muted)"}}>+{posts.length-8} more</span>}
+        </div>
+        <button className="btn btn-o btn-sm" onClick={onViewAll} style={{fontSize:12}}>
+          See All {posts.length} Post{posts.length!==1?"s":""}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Dashboard({items,org,goInventory,goMarketplace,goCommunity}){
   const totalQty=items.reduce((s,i)=>s+(i.qty||1),0);
   const listed=items.filter(i=>i.mkt!=="Not Listed").length;
   const withImg=items.filter(i=>i.img).length;
@@ -1126,35 +1262,9 @@ function Dashboard({items,org,goInventory,goMarketplace}){
             </div>
           ))}
         </div>
-        {/* Mosaic — real photos */}
-        <div className="sh"><h2>From the Stage</h2><p>A glimpse of what arts programs are cataloging and sharing nationwide.</p></div>
-        <div className="mosaic" style={{marginBottom:32}}>
-          <div className="mc big" style={{position:"relative",overflow:"hidden"}}>
-            <img src={usp("photo-1503095396549-807759245b35",800,400)} alt="Stage" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
-            <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.65) 0%,rgba(0,0,0,.1) 60%)"}}/>
-            <div className="mc-lbl">Grand Stage Interiors</div>
-          </div>
-          <div className="mc" style={{position:"relative",overflow:"hidden"}}>
-            <img src={usp("photo-1489987707025-afc232f7ea0f",400,300)} alt="Costumes" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
-            <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.65) 0%,rgba(0,0,0,.1) 60%)"}}/>
-            <div className="mc-lbl">Costumes</div>
-          </div>
-          <div className="mc" style={{position:"relative",overflow:"hidden"}}>
-            <img src={usp("photo-1516450360452-9312f5e86fc7",400,300)} alt="Lighting" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
-            <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.65) 0%,rgba(0,0,0,.1) 60%)"}}/>
-            <div className="mc-lbl">Stage Lighting</div>
-          </div>
-          <div className="mc" style={{position:"relative",overflow:"hidden"}}>
-            <img src={usp("photo-1558618666-fcd25c85cd64",400,300)} alt="Props" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
-            <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.65) 0%,rgba(0,0,0,.1) 60%)"}}/>
-            <div className="mc-lbl">Props & Sets</div>
-          </div>
-          <div className="mc" style={{position:"relative",overflow:"hidden"}}>
-            <img src={usp("photo-1468359601543-843bfaef291a",400,300)} alt="Sound" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
-            <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,.65) 0%,rgba(0,0,0,.1) 60%)"}}/>
-            <div className="mc-lbl">Sound Equipment</div>
-          </div>
-        </div>
+        {/* ── Community Spotlight ── */}
+        <div className="sh"><h2>🎪 Community Board</h2><p>Upcoming shows, auditions, and announcements from your theatre network.</p></div>
+        <CommunitySpotlight onViewAll={goCommunity}/>
         {/* Divider 1 */}
         <div className="img-div" style={{marginBottom:32}}>
           <img src={usp("photo-1460723237483-7a6dc9d0b212",1000,240)} alt="Stage" loading="lazy"/>
@@ -6503,7 +6613,7 @@ export default function App() {
                       setPendingReqCount(count||0);
                     }}/>}
                   {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
-                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")}/>}
+                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")}/>}
                   {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
