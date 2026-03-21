@@ -1897,6 +1897,10 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
     setSending(false);
   };
 
+  const paymentNote = type === "loan"
+    ? null
+    : `By submitting this request, you agree that any agreed cash payment will be made directly to the item owner outside of Theatre4u. Theatre4u does not process or guarantee payments between organizations.`;
+
   const typeColor = { rent:"#1554a0", loan:"#00838f", buy:"#27723a" };
 
   return (
@@ -2018,10 +2022,12 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
                     <span style={{fontWeight:700}}>−${creditAmt.toFixed(2)}</span>
                   </div>
                   <div style={{display:"flex",justifyContent:"space-between",paddingTop:6,borderTop:"1px solid var(--linen)"}}>
-                    <span style={{fontWeight:800}}>Cash due</span>
+                    <span style={{fontWeight:800}}>Cash due to owner</span>
                     <span style={{fontFamily:"'Abril Fatface',display",fontSize:18,color:"var(--cog)"}}>${Math.max(0,(type==="rent"?(item.rent||0):(item.sale||0))-creditAmt).toFixed(2)}</span>
                   </div>
-                  <div style={{fontSize:11,color:"var(--muted)",marginTop:6}}>Up to 50% of the price can be covered by credits.</div>
+                  <div style={{fontSize:12,color:"var(--red)",fontWeight:600,marginTop:8,padding:"7px 10px",background:"rgba(139,26,42,.06)",border:"1px solid rgba(139,26,42,.15)",borderRadius:6,lineHeight:1.5}}>
+                    ⚠️ <strong>Payment responsibility:</strong> The cash balance above must be paid <strong>directly to the item owner</strong> outside of Theatre4u (e.g. check, Venmo, invoice). Theatre4u does not collect or transfer cash payments between organizations. By applying credits and submitting this request, you agree to pay this balance to the owner upon delivery or as otherwise arranged.
+                  </div>
                 </div>
               )}
             </div>
@@ -2041,6 +2047,12 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
           {err && <div style={{color:"var(--red)",fontSize:12,background:"rgba(194,24,91,.06)",
             border:"1px solid rgba(194,24,91,.2)",borderRadius:6,padding:"8px 11px"}}>{err}</div>}
 
+          {/* Payment disclaimer — shown for all rentals and purchases */}
+          {paymentNote&&(
+            <div style={{fontSize:11.5,color:"var(--muted)",lineHeight:1.6,padding:"8px 11px",background:"var(--parch)",border:"1px solid var(--border)",borderRadius:7}}>
+              💳 <strong style={{color:"var(--ink)"}}>Payment note:</strong> {paymentNote}
+            </div>
+          )}
           <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
             <button className="btn btn-o" onClick={onClose}>Cancel</button>
             <button className="btn btn-g" onClick={submit} disabled={sending||!msg.trim()}>
@@ -5022,7 +5034,7 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
               { title: "Earning Credits",
                 body: "Credits are earned automatically when a transaction is marked returned by the owner. For free loans, the item must have been out for at least 3 days to qualify. For rentals, you earn 1 credit per $1 of rental value (minimum 5, maximum 500 per transaction)." },
               { title: "Spending Credits",
-                body: "When requesting a rental or purchase, you can apply credits to cover up to 50% of the price. The remaining 50% must be paid in cash directly to the item owner. Credits can also be used to cover 100% of a security deposit." },
+                body: "When requesting a rental or purchase, you can apply credits to cover up to 50% of the price. The remaining cash balance must be paid directly to the item owner outside of Theatre4u — by check, Venmo, invoice, or any payment method agreed between your organizations. Theatre4u does not collect or transfer cash payments. Credits can also be used to cover 100% of a security deposit." },
               { title: "Credit Value",
                 body: "1 credit = $1 of discount toward a rental or purchase. Credits have no cash value and cannot be refunded, transferred to another organization, or exchanged for money." },
               { title: "Expiry & Forfeiture",
