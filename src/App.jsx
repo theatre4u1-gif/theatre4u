@@ -2204,6 +2204,602 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
   );
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TRANSACTION DOCUMENTS
+// ══════════════════════════════════════════════════════════════════════════════
+
+const DOC_TYPES = {
+  rental_agreement:        { label:"Rental Agreement",          icon:"📄", color:"#1554a0" },
+  loan_agreement:          { label:"Loan Agreement",            icon:"🤝", color:"#00838f" },
+  bill_of_sale:            { label:"Bill of Sale",              icon:"🧾", color:"#27723a" },
+  condition_report_pickup: { label:"Condition Report — Pickup", icon:"🔍", color:"#d35400" },
+  condition_report_return: { label:"Condition Report — Return", icon:"📦", color:"#7b1fa2" },
+};
+
+// ── Document Form ─────────────────────────────────────────────────────────────
+function TransactionDocForm({ req, docType, existing, org, onSave, onCancel }) {
+  const dt = DOC_TYPES[docType];
+  const isCondition = docType.startsWith("condition_report");
+  const isRental    = docType === "rental_agreement";
+  const isLoan      = docType === "loan_agreement";
+  const isSale      = docType === "bill_of_sale";
+
+  const [f, setF] = useState(() => existing || {
+    type:             docType,
+    request_id:       req.id,
+    lender_name:      req.ownerOrg?.name || "",
+    lender_email:     req.ownerOrg?.email || "",
+    lender_phone:     "",
+    lender_address:   "",
+    borrower_name:    req.requesterOrg?.name || req.requester_name || "",
+    borrower_email:   req.requesterOrg?.email || req.requester_email || "",
+    borrower_phone:   "",
+    borrower_address: "",
+    item_name:        req.item_name || "",
+    item_description: "",
+    item_condition:   "",
+    item_qty:         req.qty_requested || 1,
+    item_value:       "",
+    start_date:       req.start_date || "",
+    end_date:         req.end_date || "",
+    agreed_price:     req.agreed_price || "",
+    deposit_amount:   "",
+    late_fee_per_day: "",
+    payment_method:   "",
+    special_terms:    "",
+    condition_notes:  "",
+    condition_rating: "",
+    lender_signed_name:  "",
+    borrower_signed_name: "",
+    notes: "",
+  });
+
+  const upd = (k, v) => setF(p => ({ ...p, [k]: v }));
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    setSaving(true);
+    await onSave(f);
+    setSaving(false);
+  };
+
+  return (
+    <div>
+      {/* Header banner */}
+      <div style={{ background:`linear-gradient(135deg,${dt.color},${dt.color}cc)`,
+        borderRadius:10, padding:"14px 18px", marginBottom:20, display:"flex",
+        alignItems:"center", gap:12 }}>
+        <span style={{ fontSize:30 }}>{dt.icon}</span>
+        <div>
+          <div style={{ fontFamily:"'Abril Fatface',display", fontSize:18, color:"#fff" }}>{dt.label}</div>
+          <div style={{ fontSize:12, color:"rgba(255,255,255,.7)", marginTop:2 }}>
+            {req.item_name} · {req.ownerOrg?.name || "Owner"} → {req.requesterOrg?.name || req.requester_name || "Borrower"}
+          </div>
+        </div>
+      </div>
+
+      {!isCondition && <>
+        {/* Parties */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:18 }}>
+          <div>
+            <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:1,
+              color:"var(--muted)", marginBottom:8 }}>
+              {isSale ? "Seller" : "Lender / Owner"}
+            </div>
+            <div className="fg" style={{ marginBottom:8 }}>
+              <label className="fl">Organization Name</label>
+              <input className="fi" value={f.lender_name} onChange={e=>upd("lender_name",e.target.value)}/>
+            </div>
+            <div className="fg" style={{ marginBottom:8 }}>
+              <label className="fl">Email</label>
+              <input className="fi" type="email" value={f.lender_email} onChange={e=>upd("lender_email",e.target.value)}/>
+            </div>
+            <div className="fg" style={{ marginBottom:8 }}>
+              <label className="fl">Phone</label>
+              <input className="fi" value={f.lender_phone} onChange={e=>upd("lender_phone",e.target.value)}/>
+            </div>
+            <div className="fg">
+              <label className="fl">Address</label>
+              <textarea className="ft" value={f.lender_address} onChange={e=>upd("lender_address",e.target.value)}
+                placeholder="Street, City, State, Zip" style={{ minHeight:60 }}/>
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:1,
+              color:"var(--muted)", marginBottom:8 }}>
+              {isSale ? "Buyer" : "Borrower / Requester"}
+            </div>
+            <div className="fg" style={{ marginBottom:8 }}>
+              <label className="fl">Organization Name</label>
+              <input className="fi" value={f.borrower_name} onChange={e=>upd("borrower_name",e.target.value)}/>
+            </div>
+            <div className="fg" style={{ marginBottom:8 }}>
+              <label className="fl">Email</label>
+              <input className="fi" type="email" value={f.borrower_email} onChange={e=>upd("borrower_email",e.target.value)}/>
+            </div>
+            <div className="fg" style={{ marginBottom:8 }}>
+              <label className="fl">Phone</label>
+              <input className="fi" value={f.borrower_phone} onChange={e=>upd("borrower_phone",e.target.value)}/>
+            </div>
+            <div className="fg">
+              <label className="fl">Address</label>
+              <textarea className="ft" value={f.borrower_address} onChange={e=>upd("borrower_address",e.target.value)}
+                placeholder="Street, City, State, Zip" style={{ minHeight:60 }}/>
+            </div>
+          </div>
+        </div>
+
+        {/* Item Details */}
+        <div style={{ borderTop:"1px solid var(--border)", paddingTop:16, marginBottom:16 }}>
+          <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:1,
+            color:"var(--muted)", marginBottom:10 }}>Item Details</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <div className="fg" style={{ gridColumn:"1/-1" }}>
+              <label className="fl">Item Name</label>
+              <input className="fi" value={f.item_name} onChange={e=>upd("item_name",e.target.value)}/>
+            </div>
+            <div className="fg" style={{ gridColumn:"1/-1" }}>
+              <label className="fl">Description / Identifying Details</label>
+              <textarea className="ft" value={f.item_description} onChange={e=>upd("item_description",e.target.value)}
+                placeholder="Color, size, serial number, distinguishing features…" style={{ minHeight:56 }}/>
+            </div>
+            <div className="fg">
+              <label className="fl">Condition at Time of Agreement</label>
+              <select className="fs" value={f.item_condition} onChange={e=>upd("item_condition",e.target.value)}>
+                <option value="">Select…</option>
+                {["Excellent","Good","Fair","Poor"].map(c=><option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="fg">
+              <label className="fl">Quantity</label>
+              <input className="fi" type="number" min="1" value={f.item_qty} onChange={e=>upd("item_qty",e.target.value)}/>
+            </div>
+            <div className="fg">
+              <label className="fl">Declared Value (for insurance)</label>
+              <input className="fi" type="number" min="0" step="0.01" value={f.item_value}
+                onChange={e=>upd("item_value",e.target.value)} placeholder="$0.00"/>
+            </div>
+          </div>
+        </div>
+
+        {/* Terms */}
+        <div style={{ borderTop:"1px solid var(--border)", paddingTop:16, marginBottom:16 }}>
+          <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:1,
+            color:"var(--muted)", marginBottom:10 }}>Terms</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            {(isRental || isLoan) && <>
+              <div className="fg">
+                <label className="fl">{isLoan ? "Loan Start Date" : "Rental Start Date"}</label>
+                <input className="fi" type="date" value={f.start_date} onChange={e=>upd("start_date",e.target.value)}/>
+              </div>
+              <div className="fg">
+                <label className="fl">Return Date</label>
+                <input className="fi" type="date" value={f.end_date} onChange={e=>upd("end_date",e.target.value)}/>
+              </div>
+            </>}
+            {(isRental || isSale) && <>
+              <div className="fg">
+                <label className="fl">{isSale ? "Sale Price" : "Rental Fee (per week)"}</label>
+                <input className="fi" type="number" min="0" step="0.01" value={f.agreed_price}
+                  onChange={e=>upd("agreed_price",e.target.value)} placeholder="$0.00"/>
+              </div>
+              <div className="fg">
+                <label className="fl">Deposit Amount</label>
+                <input className="fi" type="number" min="0" step="0.01" value={f.deposit_amount}
+                  onChange={e=>upd("deposit_amount",e.target.value)} placeholder="$0.00"/>
+              </div>
+            </>}
+            {isRental && (
+              <div className="fg">
+                <label className="fl">Late Fee (per day after return date)</label>
+                <input className="fi" type="number" min="0" step="0.01" value={f.late_fee_per_day}
+                  onChange={e=>upd("late_fee_per_day",e.target.value)} placeholder="$0.00"/>
+              </div>
+            )}
+            <div className="fg">
+              <label className="fl">Payment Method</label>
+              <select className="fs" value={f.payment_method} onChange={e=>upd("payment_method",e.target.value)}>
+                <option value="">Select…</option>
+                {["Check","Venmo","PayPal","Zelle","Cash","School Invoice","Other"].map(m=><option key={m}>{m}</option>)}
+              </select>
+            </div>
+            <div className="fg" style={{ gridColumn:"1/-1" }}>
+              <label className="fl">Special Terms / Additional Notes</label>
+              <textarea className="ft" value={f.special_terms} onChange={e=>upd("special_terms",e.target.value)}
+                placeholder="Any additional terms, pickup/return instructions, or special conditions…"
+                style={{ minHeight:60 }}/>
+            </div>
+          </div>
+        </div>
+
+        {/* Standard Clauses preview */}
+        <div style={{ background:"rgba(255,255,255,.03)", border:"1px solid var(--border)",
+          borderRadius:8, padding:"12px 14px", marginBottom:16, fontSize:12,
+          color:"var(--muted)", lineHeight:1.7 }}>
+          <div style={{ fontWeight:800, color:"var(--ink)", marginBottom:6, fontSize:13 }}>
+            📋 Standard Clauses (included automatically)
+          </div>
+          {isRental && <>
+            <p>• The borrower agrees to return the item(s) in the same condition as received, reasonable wear excepted.</p>
+            <p>• The borrower is responsible for any damage, loss, or theft during the rental period.</p>
+            <p>• Deposit will be returned within 7 days of item return, less any damage deductions.</p>
+            <p>• Payment is due prior to or at the time of pickup unless otherwise agreed in writing.</p>
+          </>}
+          {isLoan && <>
+            <p>• The borrower agrees to return the item(s) in the same condition as received, reasonable wear excepted.</p>
+            <p>• The borrower is responsible for any damage, loss, or theft during the loan period.</p>
+            <p>• This is a free loan between theatre programs. No monetary exchange is required.</p>
+          </>}
+          {isSale && <>
+            <p>• Item is sold "as-is" in the condition described above. No warranty is expressed or implied.</p>
+            <p>• Title and ownership transfer to the buyer upon receipt of full payment.</p>
+            <p>• All sales are final unless otherwise agreed in writing between parties.</p>
+          </>}
+        </div>
+      </>}
+
+      {/* Condition Report Fields */}
+      {isCondition && (
+        <div style={{ marginBottom:18 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:14 }}>
+            <div className="fg">
+              <label className="fl">Item Name</label>
+              <input className="fi" value={f.item_name} onChange={e=>upd("item_name",e.target.value)}/>
+            </div>
+            <div className="fg">
+              <label className="fl">Condition Rating</label>
+              <select className="fs" value={f.condition_rating} onChange={e=>upd("condition_rating",e.target.value)}>
+                <option value="">Select…</option>
+                {["Excellent","Good","Fair","Poor","Damaged"].map(c=><option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="fg" style={{ gridColumn:"1/-1" }}>
+              <label className="fl">Condition Notes — describe the item&apos;s state in detail</label>
+              <textarea className="ft" value={f.condition_notes} onChange={e=>upd("condition_notes",e.target.value)}
+                placeholder="Describe existing scratches, wear, missing parts, working order of electronics, etc.…"
+                style={{ minHeight:100 }}/>
+            </div>
+          </div>
+          <div style={{ background:"rgba(255,255,255,.03)", border:"1px solid var(--border)",
+            borderRadius:8, padding:"12px 14px", fontSize:12, color:"var(--muted)" }}>
+            💡 Tip: Take photos of the item now and upload them via the item detail page. Photo evidence protects both parties in case of disputes.
+          </div>
+        </div>
+      )}
+
+      {/* Signatures */}
+      <div style={{ borderTop:"1px solid var(--border)", paddingTop:16, marginBottom:16 }}>
+        <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:1,
+          color:"var(--muted)", marginBottom:4 }}>Digital Signatures</div>
+        <div style={{ fontSize:12, color:"var(--muted)", marginBottom:12, lineHeight:1.5 }}>
+          Type your full name to sign. Signing confirms you have read and agree to the terms above. Date and time are recorded automatically.
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+          <div className="fg">
+            <label className="fl">{isSale ? "Seller Signature" : "Lender / Owner Signature"}</label>
+            <input className="fi" value={f.lender_signed_name}
+              onChange={e=>upd("lender_signed_name",e.target.value)}
+              placeholder="Type full name to sign"/>
+            {f.lender_signed_name && (
+              <div style={{ fontSize:11, color:"var(--green)", marginTop:3 }}>
+                ✓ Signed as: {f.lender_signed_name}
+              </div>
+            )}
+          </div>
+          <div className="fg">
+            <label className="fl">{isSale ? "Buyer Signature" : "Borrower Signature"}</label>
+            <input className="fi" value={f.borrower_signed_name}
+              onChange={e=>upd("borrower_signed_name",e.target.value)}
+              placeholder="Type full name to sign"/>
+            {f.borrower_signed_name && (
+              <div style={{ fontSize:11, color:"var(--green)", marginTop:3 }}>
+                ✓ Signed as: {f.borrower_signed_name}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div style={{ display:"flex", gap:8, justifyContent:"flex-end", paddingTop:12,
+        borderTop:"1px solid var(--border)" }}>
+        <button className="btn btn-o" onClick={onCancel}>Cancel</button>
+        <button className="btn btn-o btn-sm" onClick={() => onSave({ ...f, status:"draft" })} disabled={saving}>
+          💾 Save Draft
+        </button>
+        <button className="btn btn-g" onClick={submit} disabled={saving}
+          style={{ background:`linear-gradient(135deg,${dt.color},${dt.color}cc)`,
+            color:"#fff", border:"none" }}>
+          {saving ? "Saving…" : `${dt.icon} Finalize ${dt.label}`}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Document Print / PDF generator ───────────────────────────────────────────
+function printDocument(doc, req) {
+  const dt    = DOC_TYPES[doc.type] || DOC_TYPES.rental_agreement;
+  const today = new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
+  const isSale      = doc.type === "bill_of_sale";
+  const isCondition = doc.type.startsWith("condition_report");
+
+  const lenderLabel   = isSale ? "Seller" : "Lender / Owner";
+  const borrowerLabel = isSale ? "Buyer"  : "Borrower";
+
+  const row = (l,v) => v ? `<tr><td style="width:180px;color:#555;font-size:13px;padding:5px 0;vertical-align:top">${l}</td><td style="font-size:13px;padding:5px 0">${v}</td></tr>` : "";
+
+  const sigBlock = (name, title, signedName, signedAt) => `
+    <div style="border:1px solid #ddd;border-radius:8px;padding:16px;flex:1">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:6px">${title}</div>
+      ${signedName
+        ? `<div style="font-family:Georgia,serif;font-size:18px;color:#1a5c2a;margin-bottom:4px">${signedName}</div>
+           <div style="font-size:11px;color:#888">Signed: ${signedAt ? new Date(signedAt).toLocaleString() : today}</div>`
+        : `<div style="border-bottom:2px solid #333;margin-top:32px;margin-bottom:6px"></div>
+           <div style="font-size:12px;color:#888">Signature &amp; Date</div>`}
+      <div style="font-size:12px;color:#555;margin-top:6px">${name||""}</div>
+      <div style="font-size:11px;color:#aaa">${title}</div>
+    </div>`;
+
+  const html = `<!DOCTYPE html><html><head>
+    <meta charset="UTF-8"/>
+    <title>${dt.label} — ${doc.item_name}</title>
+    <style>
+      body{font-family:'Helvetica Neue',Arial,sans-serif;margin:0;padding:40px;color:#1a1a1a;max-width:780px;margin:0 auto}
+      h1{font-family:Georgia,serif;font-size:28px;margin-bottom:4px;color:#1a1a1a}
+      .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;
+        text-transform:uppercase;letter-spacing:1px;color:#fff;background:${dt.color};margin-bottom:16px}
+      .section{margin-bottom:24px}
+      .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;
+        color:#888;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #eee}
+      table{width:100%;border-collapse:collapse}
+      .clauses{background:#f9f9f9;border-left:4px solid ${dt.color};padding:14px 18px;
+        border-radius:0 8px 8px 0;margin:14px 0;font-size:13px;line-height:1.8;color:#444}
+      .sig-row{display:flex;gap:20px;margin-top:32px}
+      @media print{body{padding:20px}.no-print{display:none}}
+    </style>
+  </head><body>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
+      <div>
+        <div style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px">Theatre4u</div>
+        <h1>${dt.icon} ${dt.label}</h1>
+        <span class="badge">${doc.status === "finalized" ? "✓ Finalized" : "Draft"}</span>
+      </div>
+      <div style="text-align:right;font-size:12px;color:#888;margin-top:8px">
+        <div>Generated: ${today}</div>
+        <div>Document ID: ${doc.id ? doc.id.slice(0,8).toUpperCase() : "DRAFT"}</div>
+      </div>
+    </div>
+    <hr style="border:none;border-top:2px solid #eee;margin-bottom:24px"/>
+
+    ${!isCondition ? `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">
+      <div class="section">
+        <div class="section-title">${lenderLabel}</div>
+        <table>${row("Organization",doc.lender_name)}${row("Email",doc.lender_email)}${row("Phone",doc.lender_phone)}${row("Address",doc.lender_address)}</table>
+      </div>
+      <div class="section">
+        <div class="section-title">${borrowerLabel}</div>
+        <table>${row("Organization",doc.borrower_name)}${row("Email",doc.borrower_email)}${row("Phone",doc.borrower_phone)}${row("Address",doc.borrower_address)}</table>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Item Description</div>
+      <table>
+        ${row("Item Name",doc.item_name)}
+        ${row("Description",doc.item_description)}
+        ${row("Condition",doc.item_condition)}
+        ${row("Quantity",doc.item_qty)}
+        ${row("Declared Value",doc.item_value ? "$"+Number(doc.item_value).toFixed(2) : "")}
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Terms</div>
+      <table>
+        ${row("Start Date", doc.start_date ? new Date(doc.start_date).toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"}) : "")}
+        ${row("Return Date", doc.end_date ? new Date(doc.end_date).toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"}) : "")}
+        ${row(isSale ? "Sale Price" : "Rental Fee", doc.agreed_price > 0 ? "$"+Number(doc.agreed_price).toFixed(2)+(doc.type==="rental_agreement"?" per week":"") : "")}
+        ${row("Deposit", doc.deposit_amount > 0 ? "$"+Number(doc.deposit_amount).toFixed(2) : "")}
+        ${row("Late Fee", doc.late_fee_per_day > 0 ? "$"+Number(doc.late_fee_per_day).toFixed(2)+" per day" : "")}
+        ${row("Payment Method", doc.payment_method)}
+      </table>
+      ${doc.special_terms ? `<div style="margin-top:10px;padding:10px 14px;background:#f5f5f5;border-radius:6px;font-size:13px;line-height:1.6"><strong>Special Terms:</strong> ${doc.special_terms}</div>` : ""}
+    </div>
+
+    <div class="section">
+      <div class="section-title">Standard Terms &amp; Conditions</div>
+      <div class="clauses">
+        ${doc.type === "rental_agreement" ? `
+          <div>1. The borrower agrees to return all item(s) in the same condition as received, reasonable wear excepted.</div>
+          <div>2. The borrower is responsible for any damage, loss, or theft occurring during the rental period.</div>
+          <div>3. Deposit will be returned within 7 business days of item return, less deductions for documented damage.</div>
+          <div>4. Payment is due prior to or at the time of pickup unless otherwise agreed in writing by both parties.</div>
+          <div>5. Late fees apply for each day the item is retained beyond the agreed return date.</div>
+          <div>6. This agreement is between the two organizations named above. Theatre4u serves as the platform facilitating this agreement and is not a party to this transaction.</div>
+        ` : doc.type === "loan_agreement" ? `
+          <div>1. The borrower agrees to return all item(s) in the same condition as received, reasonable wear excepted.</div>
+          <div>2. The borrower is responsible for any damage, loss, or theft occurring during the loan period.</div>
+          <div>3. This is a free loan between theatre organizations. No monetary exchange is required or implied.</div>
+          <div>4. The borrower agrees to return all item(s) by the agreed return date.</div>
+          <div>5. This agreement is between the two organizations named above. Theatre4u serves as the platform facilitating this agreement and is not a party to this transaction.</div>
+        ` : `
+          <div>1. Item is sold in "as-is" condition as described above. No warranty is expressed or implied.</div>
+          <div>2. Title and ownership transfer to the buyer upon receipt of full payment.</div>
+          <div>3. All sales are final unless otherwise agreed in writing between both parties prior to sale.</div>
+          <div>4. This agreement is between the two organizations named above. Theatre4u serves as the platform facilitating this agreement and is not a party to this transaction.</div>
+        `}
+      </div>
+    </div>` : `
+    <div class="section">
+      <div class="section-title">Item</div>
+      <table>${row("Item Name",doc.item_name)}${row("Condition Rating",doc.condition_rating)}</table>
+    </div>
+    <div class="section">
+      <div class="section-title">Condition Notes</div>
+      <div style="background:#f9f9f9;padding:14px;border-radius:8px;font-size:13px;line-height:1.7;min-height:80px">${doc.condition_notes||"No notes recorded."}</div>
+    </div>`}
+
+    <div class="sig-row">
+      ${sigBlock(doc.lender_name, lenderLabel, doc.lender_signed_name, doc.lender_signed_at)}
+      ${sigBlock(doc.borrower_name, borrowerLabel, doc.borrower_signed_name, doc.borrower_signed_at)}
+    </div>
+
+    <div style="margin-top:32px;padding-top:14px;border-top:1px solid #eee;font-size:11px;color:#aaa;text-align:center">
+      Generated by Theatre4u · Inventory · Marketplace · Community · theatre4u.org · ${today}
+    </div>
+
+    <script>window.onload=function(){window.print();}</script>
+  </body></html>`;
+
+  const w = window.open("","_blank","width=900,height=700");
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
+// ── Document Manager (shown inside a request card) ────────────────────────────
+function DocumentManager({ req, userId, orgName }) {
+  const [docs,      setDocs]    = useState([]);
+  const [loading,   setLoading] = useState(true);
+  const [showForm,  setShowForm]= useState(null); // docType being created/edited
+  const [editDoc,   setEditDoc] = useState(null);
+  const [expanded,  setExpanded]= useState(false);
+
+  const load = useCallback(async () => {
+    const { data } = await SB.from("transaction_documents")
+      .select("*").eq("request_id", req.id).order("created_at");
+    setDocs(data || []);
+    setLoading(false);
+  }, [req.id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const saveDoc = async (f) => {
+    const now = new Date().toISOString();
+    const payload = {
+      ...f,
+      request_id: req.id,
+      org_id:     userId,
+      lender_signed_at:  f.lender_signed_name  && !editDoc?.lender_signed_at  ? now : editDoc?.lender_signed_at  || null,
+      borrower_signed_at: f.borrower_signed_name && !editDoc?.borrower_signed_at ? now : editDoc?.borrower_signed_at || null,
+    };
+
+    if (editDoc) {
+      await SB.from("transaction_documents").update(payload).eq("id", editDoc.id);
+    } else {
+      await SB.from("transaction_documents").insert(payload);
+    }
+    await load();
+    setShowForm(null);
+    setEditDoc(null);
+  };
+
+  // Which docs are available based on request type
+  const availableDocTypes = req.item_type === "buy"
+    ? ["bill_of_sale","condition_report_pickup"]
+    : req.item_type === "loan"
+    ? ["loan_agreement","condition_report_pickup","condition_report_return"]
+    : ["rental_agreement","condition_report_pickup","condition_report_return"];
+
+  const existingTypes = new Set(docs.map(d => d.type));
+
+  if (!expanded) return (
+    <div style={{ marginTop:10, paddingTop:10, borderTop:"1px solid var(--border)" }}>
+      <button className="btn btn-o btn-sm" onClick={() => setExpanded(true)}
+        style={{ fontSize:12 }}>
+        📄 Documents {docs.length > 0 ? `(${docs.length})` : ""}
+      </button>
+    </div>
+  );
+
+  return (
+    <div style={{ marginTop:10, paddingTop:10, borderTop:"1px solid var(--border)" }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+        marginBottom:12, flexWrap:"wrap", gap:8 }}>
+        <div style={{ fontSize:13, fontWeight:700, color:"var(--ink)" }}>
+          📄 Transaction Documents
+        </div>
+        <button className="ico-btn" onClick={() => setExpanded(false)} style={{ fontSize:11 }}>
+          ↑ Collapse
+        </button>
+      </div>
+
+      {/* Existing docs */}
+      {loading
+        ? <div style={{ fontSize:12, color:"var(--muted)" }}>Loading…</div>
+        : docs.length > 0 && (
+          <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:12 }}>
+            {docs.map(doc => {
+              const dt = DOC_TYPES[doc.type] || DOC_TYPES.rental_agreement;
+              const bothSigned = doc.lender_signed_name && doc.borrower_signed_name;
+              return (
+                <div key={doc.id} style={{ display:"flex", alignItems:"center", gap:10,
+                  padding:"8px 12px", background:"var(--parch)",
+                  border:"1px solid var(--border)", borderRadius:8 }}>
+                  <span style={{ fontSize:18 }}>{dt.icon}</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:13, fontWeight:700 }}>{dt.label}</div>
+                    <div style={{ fontSize:11, color:"var(--muted)" }}>
+                      {doc.status === "finalized" ? "✅ Finalized" : "📝 Draft"}
+                      {bothSigned ? " · Both signed" : doc.lender_signed_name ? " · Owner signed" : doc.borrower_signed_name ? " · Borrower signed" : " · Unsigned"}
+                      {" · "}{new Date(doc.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <button className="btn btn-o btn-sm" style={{ fontSize:11 }}
+                    onClick={() => { setEditDoc(doc); setShowForm(doc.type); }}>
+                    ✏️ Edit
+                  </button>
+                  <button className="btn btn-o btn-sm" style={{ fontSize:11,
+                    background:dt.color+"18", color:dt.color, borderColor:dt.color+"40" }}
+                    onClick={() => printDocument(doc, req)}>
+                    🖨️ Print/PDF
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+      {/* Create new document buttons */}
+      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+        {availableDocTypes.filter(t => !existingTypes.has(t)).map(docType => {
+          const dt = DOC_TYPES[docType];
+          return (
+            <button key={docType} className="btn btn-o btn-sm"
+              style={{ fontSize:12, background:dt.color+"12",
+                color:dt.color, borderColor:dt.color+"35" }}
+              onClick={() => { setEditDoc(null); setShowForm(docType); }}>
+              {dt.icon} Create {dt.label}
+            </button>
+          );
+        })}
+        {availableDocTypes.every(t => existingTypes.has(t)) && (
+          <div style={{ fontSize:12, color:"var(--green)", fontWeight:600 }}>
+            ✅ All documents created
+          </div>
+        )}
+      </div>
+
+      {/* Form modal */}
+      {showForm && (
+        <Modal title={`${DOC_TYPES[showForm]?.label || "Document"}`}
+          onClose={() => { setShowForm(null); setEditDoc(null); }}>
+          <TransactionDocForm
+            req={req}
+            docType={showForm}
+            existing={editDoc}
+            org={{ name:orgName }}
+            onSave={saveDoc}
+            onCancel={() => { setShowForm(null); setEditDoc(null); }}
+          />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+
 // ── Requests Page ──────────────────────────────────────────────────────────────
 function Requests({ userId, orgName, orgEmail }) {
   const [tab,       setTab]      = useState("incoming");
@@ -2506,6 +3102,11 @@ function Requests({ userId, orgName, orgEmail }) {
                         {new Date(req.created_at).toLocaleDateString()}
                       </div>
                     </div>
+
+                    {/* Transaction Documents — available on accepted requests */}
+                    {(req.status==="accepted"||req.status==="returned")&&(
+                      <DocumentManager req={req} userId={userId} orgName={orgName}/>
+                    )}
                   </div>
                 </div>
               );
