@@ -6835,21 +6835,21 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
           ))}
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
-          {mode==="signup"&&(
+          {mode==="signup"&&(<>
             <div><label style={labelStyle}>Organization Name</label>
               <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High Drama Dept." style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
             </div>
             <div style={{marginBottom:14}}>
               <label style={labelStyle}>Access Code <span style={{fontWeight:400,color:"rgba(255,255,255,.35)",fontSize:11}}>(optional — leave blank if you don't have one)</span></label>
               <input value={betaCode} onChange={e=>setBetaCode(e.target.value.toUpperCase())}
-                placeholder="e.g. FOUNDING2026"
+                placeholder="e.g. LEADING2026"
                 style={{...inputStyle,letterSpacing:2,fontFamily:"monospace",fontSize:14}}
                 onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
-              {betaCode.trim() && <div style={{fontSize:11,color:"rgba(212,168,67,.7)",marginTop:4}}>
+              {betaCode.trim()&&<div style={{fontSize:11,color:"rgba(212,168,67,.7)",marginTop:4}}>
                 🎭 Leading Player access — you'll be part of shaping Theatre4u from the ground up.
               </div>}
             </div>
-          )}
+          </>)}
           <div><label style={labelStyle}>Email</label>
             <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@school.edu" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"} onKeyDown={e=>e.key==="Enter"&&submit()}/>
           </div>
