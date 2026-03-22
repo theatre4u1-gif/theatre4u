@@ -3078,9 +3078,33 @@ function Requests({ userId, orgName, orgEmail }) {
 
                       {/* Incoming accepted — owner marks returned */}
                       {tab==="incoming"&&req.status==="accepted"&&(
-                        <button className="btn btn-o btn-sm" onClick={()=>markReturned(req)} disabled={isActive}>
-                          {isActive?"…":"📦 Mark as Returned"}
-                        </button>
+                        <div style={{width:"100%",marginBottom:4}}>
+                          {/* Urgent banner if past return date */}
+                          {req.end_date&&new Date(req.end_date)<new Date()&&(
+                            <div style={{background:"rgba(212,168,67,.12)",border:"1.5px solid rgba(212,168,67,.4)",
+                              borderRadius:8,padding:"8px 12px",marginBottom:8,display:"flex",alignItems:"center",gap:10}}>
+                              <span style={{fontSize:18}}>⚠️</span>
+                              <div style={{flex:1}}>
+                                <div style={{fontWeight:800,fontSize:13,color:"var(--gold)"}}>Return date has passed</div>
+                                <div style={{fontSize:12,color:"var(--muted)"}}>Mark the item returned to release the calendar and earn your Theatre Credits.</div>
+                              </div>
+                            </div>
+                          )}
+                          <button style={{
+                            width:"100%",padding:"11px 16px",borderRadius:8,
+                            background:"linear-gradient(135deg,var(--green),#2d8a45)",
+                            border:"none",color:"#fff",fontFamily:"inherit",fontSize:14,
+                            fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",
+                            justifyContent:"center",gap:8,letterSpacing:.3,
+                            boxShadow:"0 2px 12px rgba(38,94,42,.3)",
+                            opacity:isActive?.6:1,
+                          }} onClick={()=>markReturned(req)} disabled={isActive}>
+                            {isActive?"Processing…":"📦 Mark Item as Returned → Earn Credits"}
+                          </button>
+                          <div style={{textAlign:"center",fontSize:11,color:"var(--muted)",marginTop:5}}>
+                            🪙 You'll earn Theatre Credits when you confirm the return
+                          </div>
+                        </div>
                       )}
 
                       {/* Outgoing pending — requester can cancel */}
@@ -3730,13 +3754,17 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
 }
 
 function AdminDashboard({ currentUser }) {
-  const [orgs,    setOrgs]    = useState([]);
-  const [counts,  setCounts]  = useState({});
-  const [loading, setLoading] = useState(true);
-  const [search,  setSearch]  = useState("");
-  const [planF,   setPlanF]   = useState("all");
-  const [saving,  setSaving]  = useState(null);
-  const [msg,     setMsg]     = useState("");
+  const [orgs,      setOrgs]      = useState([]);
+  const [counts,    setCounts]    = useState({});
+  const [loading,   setLoading]   = useState(true);
+  const [search,    setSearch]    = useState("");
+  const [planF,     setPlanF]     = useState("all");
+  const [saving,    setSaving]    = useState(null);
+  const [msg,       setMsg]       = useState("");
+  const [adminTab,  setAdminTab]  = useState("orgs");  // orgs | feedback | codes
+  const [feedback,  setFeedback]  = useState([]);
+  const [fbLoading, setFbLoading] = useState(false);
+  const [codes,     setCodes]     = useState([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -3744,6 +3772,12 @@ function AdminDashboard({ currentUser }) {
     const { data: orgData, error } = await SB.from("orgs").select("*").order("created_at", { ascending: false });
     if (error) { setLoading(false); return; }
     setOrgs(orgData || []);
+    // Load feedback + beta codes
+    const { data: fbData } = await SB.from("beta_feedback")
+      .select("*").order("created_at", { ascending: false }).limit(200);
+    setFeedback(fbData || []);
+    const { data: codesData } = await SB.from("beta_codes").select("*").order("created_at");
+    setCodes(codesData || []);
     // Load item counts per org
     // Use aggregate count approach — only counts items each org owns
     // Admin can still see counts via the org ownership chain
@@ -3812,6 +3846,20 @@ function AdminDashboard({ currentUser }) {
 
       <div style={{ padding: "24px 36px 48px", position: "relative", zIndex: 1 }}>
 
+        {/* Tab nav */}
+        <div className="tabs" style={{ marginBottom: 20 }}>
+          {[["orgs","🏛 Organizations"],["feedback","💬 Feedback"],["codes","🎟 Beta Codes"]].map(([id,lbl])=>(
+            <button key={id} className={`tab ${adminTab===id?"on":""}`} onClick={()=>setAdminTab(id)}>{lbl}
+              {id==="feedback"&&feedback.filter(f=>f.status==="new").length>0&&(
+                <span style={{background:"var(--red)",color:"#fff",borderRadius:8,padding:"1px 6px",fontSize:10,fontWeight:800,marginLeft:5}}>
+                  {feedback.filter(f=>f.status==="new").length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {adminTab==="orgs"&&(<>
         {/* Stats row */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 12, marginBottom: 24 }}>
           {[
@@ -3916,6 +3964,107 @@ function AdminDashboard({ currentUser }) {
         <div style={{ marginTop: 10, fontSize: 12, color: "var(--faint)" }}>
           {filtered.length} of {orgs.length} organizations · Data live from Supabase
         </div>
+        </>)}
+
+        {/* ── FEEDBACK TAB ── */}
+        {adminTab==="feedback"&&(<>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <div style={{fontSize:13,color:"var(--muted)"}}>
+              {feedback.length} responses · {feedback.filter(f=>f.status==="new").length} unread
+            </div>
+          </div>
+          {feedback.length===0
+            ?<div className="empty"><div className="empty-ico">💬</div><h3>No feedback yet</h3><p>Share the app with leading players and check back here.</p></div>
+            :<div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {feedback.map(fb=>{
+                const catColor={bug:"#c2185b",feature:"#1554a0",praise:"#27723a",confusion:"#d35400",other:"#546e7a"}[fb.category]||"#546e7a";
+                return(
+                  <div key={fb.id} className="card card-p" style={{borderLeft:`3px solid ${catColor}`}}>
+                    <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-start"}}>
+                      <div style={{flex:1}}>
+                        <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:6,flexWrap:"wrap"}}>
+                          <span style={{padding:"2px 8px",borderRadius:6,fontSize:11,fontWeight:800,background:catColor+"22",color:catColor,textTransform:"uppercase"}}>
+                            {fb.category}
+                          </span>
+                          <span style={{fontSize:12,fontWeight:700,color:"var(--ink)"}}>{fb.org_name||"Unknown"}</span>
+                          <span style={{fontSize:11,color:"var(--muted)"}}>{new Date(fb.created_at).toLocaleDateString()}</span>
+                          {fb.rating&&<span style={{fontSize:13,color:"#f9a825"}}>{"★".repeat(fb.rating)}{"☆".repeat(5-fb.rating)}</span>}
+                          {fb.status==="new"&&<span style={{padding:"1px 7px",borderRadius:5,fontSize:10,fontWeight:800,background:"rgba(194,24,91,.15)",color:"var(--red)"}}>NEW</span>}
+                        </div>
+                        {fb.message&&<p style={{fontSize:13,color:"var(--text)",marginBottom:6,lineHeight:1.6}}>"{fb.message}"</p>}
+                        {fb.hardest_inventory&&<div style={{fontSize:12,color:"var(--muted)",marginBottom:3}}>🗂 Hardest inventory: <strong>{fb.hardest_inventory}</strong></div>}
+                        {fb.prop28_pain_score&&<div style={{fontSize:12,color:"var(--muted)",marginBottom:3}}>📋 Prop 28 pain: <strong>{fb.prop28_pain_score}/10</strong></div>}
+                        {fb.lending_barrier&&<div style={{fontSize:12,color:"var(--muted)",marginBottom:3}}>🤝 Lending barrier: <strong>{{fear_damage:"Fear of damage",logistics:"Logistics",no_agreement:"No agreement/paperwork",trust:"Don't know the program",admin_approval:"Needs admin approval",never_thought:"Never thought about it",other:"Other"}[fb.lending_barrier]||fb.lending_barrier}</strong></div>}
+                        {fb.wishlist_hour&&<div style={{fontSize:12,color:"var(--muted)"}}>⏱ Save an hour: <strong>{fb.wishlist_hour}</strong></div>}
+                      </div>
+                      <button onClick={async()=>{
+                        const nextStatus=fb.status==="new"?"read":"new";
+                        await SB.from("beta_feedback").update({status:nextStatus}).eq("id",fb.id);
+                        setFeedback(p=>p.map(x=>x.id===fb.id?{...x,status:nextStatus}:x));
+                      }} className="btn btn-o btn-sm" style={{flexShrink:0,fontSize:11}}>
+                        {fb.status==="new"?"Mark Read":"Mark Unread"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          }
+        </>)}
+
+        {/* ── BETA CODES TAB ── */}
+        {adminTab==="codes"&&(<>
+          <div style={{marginBottom:16}}>
+            <div className="card card-p">
+              <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:18,marginBottom:12}}>🎟 Beta Access Codes</h3>
+              <div className="tw">
+                <table>
+                  <thead><tr>
+                    <th>Code</th><th>Label</th><th>Used</th><th>Max</th><th>Status</th>
+                  </tr></thead>
+                  <tbody>
+                    {codes.map(c=>(
+                      <tr key={c.code}>
+                        <td style={{fontFamily:"monospace",fontWeight:800,letterSpacing:1,color:"var(--gold)"}}>{c.code}</td>
+                        <td style={{fontSize:12,color:"var(--muted)"}}>{c.label}</td>
+                        <td style={{fontWeight:700,color:c.used_count>0?"var(--green)":"var(--muted)"}}>{c.used_count}</td>
+                        <td>{c.max_uses}</td>
+                        <td><span style={{padding:"2px 8px",borderRadius:6,fontSize:10,fontWeight:800,
+                          background:c.active?"rgba(38,94,42,.15)":"rgba(194,24,91,.12)",
+                          color:c.active?"var(--green)":"var(--red)"}}>{c.active?"Active":"Inactive"}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{marginTop:14,fontSize:12,color:"var(--muted)"}}>
+                Share <strong style={{color:"var(--gold)"}}>FOUNDING2026</strong> with your initial outreach group. Create additional codes in Supabase for different batches.
+              </div>
+            </div>
+          </div>
+
+          {/* Leading Players list */}
+          <div className="card card-p">
+            <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:18,marginBottom:12}}>🎭 Leading Players</h3>
+            {orgs.filter(o=>o.is_leading_player).length===0
+              ?<p style={{fontSize:13,color:"var(--muted)"}}>No leading players yet — share the code and check back.</p>
+              :<div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {orgs.filter(o=>o.is_leading_player).map(o=>(
+                  <div key={o.id} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 12px",background:"var(--parch)",borderRadius:8,border:"1px solid var(--border)"}}>
+                    <span style={{fontSize:20}}>🎭</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:700,fontSize:14}}>{o.name}</div>
+                      <div style={{fontSize:11,color:"var(--muted)"}}>{o.email} · Joined {new Date(o.created_at).toLocaleDateString()}</div>
+                    </div>
+                    <span style={{padding:"2px 8px",borderRadius:6,fontSize:10,fontWeight:800,background:"rgba(212,168,67,.15)",color:"var(--gold)"}}>LEADING PLAYER</span>
+                  </div>
+                ))}
+              </div>
+            }
+          </div>
+        </>)}
+
       </div>
     </div>
   );
@@ -6498,6 +6647,48 @@ function LandingPage({onSignIn, onSignUp}){
       <div style={{marginTop:14,fontSize:12,color:"rgba(255,255,255,.3)"}}>Free plan · No contracts · Cancel anytime</div>
     </div>
 
+    {/* Our Story */}
+    <div style={{padding:"80px 32px",maxWidth:900,margin:"0 auto",textAlign:"center"}}>
+      <div style={{display:"inline-block",padding:"4px 14px",background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.2)",borderRadius:20,fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:20}}>
+        Our Story
+      </div>
+      <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(26px,4vw,40px)",marginBottom:24,lineHeight:1.2}}>
+        Built in the Wings,<br/><span style={{color:"var(--gold)"}}>for the Wings.</span>
+      </h2>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,textAlign:"left",marginBottom:40}}>
+        <div>
+          <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)",marginBottom:16}}>
+            Theatre4u was founded by a veteran theatre educator who spent 15 years in the classroom watching colleagues burn out — not from lack of passion, but from lack of tools.
+          </p>
+          <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)"}}>
+            After a major health scare in 2025, our founder returned to a platform first started in 2018 and rebuilt it from the ground up — with one purpose: <strong style={{color:"#fff"}}>no theatre teacher should feel like they're working on a deserted island.</strong>
+          </p>
+        </div>
+        <div>
+          <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)",marginBottom:16}}>
+            We handle the inventory, the compliance reporting, and the lending logistics — so you can focus on what you actually showed up for: the performance, the students, and the magic that happens in the dark.
+          </p>
+          <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)"}}>
+            Theatre4u is not a generic inventory tool. It is a community — built by a teacher, for teachers.
+          </p>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:24,justifyContent:"center",flexWrap:"wrap"}}>
+        {[
+          {ico:"🎭",val:"15+",lbl:"Years in the classroom"},
+          {ico:"🤝",lbl:"Built teacher-to-teacher"},
+          {ico:"📋",lbl:"Prop 28 compliance built-in"},
+          {ico:"🪙",lbl:"Theatre Credits economy"},
+        ].map(s=>(
+          <div key={s.lbl} style={{textAlign:"center",padding:"16px 20px",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,minWidth:130}}>
+            <div style={{fontSize:26,marginBottom:6}}>{s.ico}</div>
+            {s.val&&<div style={{fontFamily:"'Abril Fatface',display",fontSize:24,color:"var(--gold)",marginBottom:2}}>{s.val}</div>}
+            <div style={{fontSize:12,color:"rgba(255,255,255,.5)",fontWeight:600}}>{s.lbl}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+
     {/* Footer */}
     <div style={{borderTop:"1px solid rgba(255,255,255,.06)",padding:"24px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -6526,6 +6717,8 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
   const[loading,setLoading]=useState(false);
   const[done,setDone]=useState(false);
   const[legal,setLegal]=useState(null);
+  const[betaCode,setBetaCode]=useState("");
+  const[betaValid,setBetaValid]=useState(null); // null=unchecked, true=valid, false=invalid
 
   useEffect(()=>{
     window.__t4u_show_auth=(m)=>{setMode(m||"login");setErr("");setVisible(true);};
@@ -6553,10 +6746,28 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
     try{
       if(mode==="signup"){
         if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
+        // Validate beta code before signup
+        const code = betaCode.trim().toUpperCase();
+        if(code){
+          const{data:codeData,error:codeErr}=await SB.from("beta_codes")
+            .select("code,max_uses,used_count,active")
+            .eq("code",code).eq("active",true).single();
+          if(codeErr||!codeData){throw new Error("Invalid or expired access code. Please check with your contact.");}
+          if(codeData.used_count>=codeData.max_uses){throw new Error("This access code has reached its limit. Contact hello@theatre4u.org.");}
+        }
         const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName}}});
         if(error)throw error;
         if(data.user){
-          await SB.from("orgs").upsert({id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:""},{onConflict:"id",ignoreDuplicates:false});
+          const isLeadingPlayer = betaCode.trim().toUpperCase()==="FOUNDING2026";
+          await SB.from("orgs").upsert({
+            id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:"",
+            beta_code:betaCode.trim().toUpperCase()||null,
+            is_leading_player:isLeadingPlayer,
+          },{onConflict:"id",ignoreDuplicates:false});
+          // Increment code usage
+          if(betaCode.trim()){
+            await SB.from("beta_codes").update({used_count:codeData.used_count+1}).eq("code",betaCode.trim().toUpperCase());
+          }
           setDone(true);
         }
       } else {
@@ -6628,6 +6839,16 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             <div><label style={labelStyle}>Organization Name</label>
               <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High Drama Dept." style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
             </div>
+            <div style={{marginBottom:14}}>
+              <label style={labelStyle}>Access Code <span style={{fontWeight:400,color:"rgba(255,255,255,.35)",fontSize:11}}>(optional — leave blank if you don't have one)</span></label>
+              <input value={betaCode} onChange={e=>setBetaCode(e.target.value.toUpperCase())}
+                placeholder="e.g. FOUNDING2026"
+                style={{...inputStyle,letterSpacing:2,fontFamily:"monospace",fontSize:14}}
+                onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
+              {betaCode.trim() && <div style={{fontSize:11,color:"rgba(212,168,67,.7)",marginTop:4}}>
+                🎭 Leading Player access — you'll be part of shaping Theatre4u from the ground up.
+              </div>}
+            </div>
           )}
           <div><label style={labelStyle}>Email</label>
             <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@school.edu" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"} onKeyDown={e=>e.key==="Enter"&&submit()}/>
@@ -6669,6 +6890,8 @@ function AuthScreen({onAuth}){
   const[loading,setLoading]=useState(false);
   const[done,setDone]=useState(false);
   const[legal,setLegal]=useState(null);
+  const[betaCode,setBetaCode]=useState("");
+  const[betaValid,setBetaValid]=useState(null); // null=unchecked, true=valid, false=invalid
 
   const submit=async()=>{
     setErr("");
@@ -6920,6 +7143,554 @@ function PublicItemPage({ itemId }) {
   );
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PUBLIC ORG PROFILE
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Profile page (embedded in app, accessible via sidebar) ───────────────────
+function OrgProfilePage({ userId, org, setOrg, plan, items }) {
+  const [editing, setEditing]     = useState(false);
+  const [f, setF]                  = useState(null);
+  const [saving, setSaving]        = useState(false);
+  const [msg, setMsg]              = useState("");
+  const [copied, setCopied]        = useState(false);
+
+  useEffect(() => {
+    // Load fresh org data including new profile fields
+    (async () => {
+      const { data } = await SB.from("orgs").select("*").eq("id", userId).single();
+      if (data) {
+        setOrg(o => ({ ...o, ...data }));
+        setF(data);
+      }
+    })();
+  }, [userId]);
+
+  const upd = (k, v) => setF(p => ({ ...p, [k]: v }));
+
+  const save = async () => {
+    if (!f) return;
+    setSaving(true);
+    // Auto-generate slug if empty
+    let slug = f.slug;
+    if (!slug && f.name) {
+      const base = f.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-').slice(0, 50);
+      slug = base;
+    }
+    const { data, error } = await SB.from("orgs").update({
+      name: f.name, type: f.type, email: f.email, phone: f.phone,
+      location: f.location, bio: f.bio, website: f.website,
+      facebook: f.facebook, instagram: f.instagram,
+      logo_url: f.logo_url, founded_year: f.founded_year,
+      student_count: f.student_count, profile_public: f.profile_public,
+      slug,
+    }).eq("id", userId).select().single();
+    if (data) {
+      setOrg(o => ({ ...o, ...data }));
+      setF(data);
+      setMsg("✓ Profile saved");
+      setTimeout(() => setMsg(""), 2500);
+    }
+    setSaving(false);
+    setEditing(false);
+  };
+
+  const profileUrl = org?.slug
+    ? `https://theatre4u.org/org/${org.slug}`
+    : null;
+
+  const copyUrl = () => {
+    if (!profileUrl) return;
+    navigator.clipboard.writeText(profileUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const listed = items.filter(i => i.market_status && i.market_status !== "Not Listed" && i.market_status !== "Private").length;
+
+  if (!f) return <div style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>Loading…</div>;
+
+  return (
+    <div style={{ position: "relative" }}>
+      <img src={usp(BG.dashboard, 1400, 900)} alt="" className="page-bg-img" />
+
+      <div style={{ padding: "32px 36px 0" }}>
+        <div className="hero-wrap" style={{ height: 200 }}>
+          <img src={usp("photo-1503095396549-807759245b35", 1100, 260)} alt="Profile" loading="eager" />
+          <div className="hero-fade" />
+          <div className="hero-body">
+            <div className="hero-eyebrow">👤 Your Organization</div>
+            <h1 className="hero-title" style={{ fontSize: 40 }}>Public Profile</h1>
+            <p className="hero-sub">Your shareable page for other programs and the public to discover you.</p>
+          </div>
+          <div className="hero-bar" />
+        </div>
+      </div>
+
+      <div style={{ padding: "24px 36px 56px", position: "relative", zIndex: 1 }}>
+
+        {/* Public URL card */}
+        <div className="card card-p" style={{ marginBottom: 20, borderColor: profileUrl ? "rgba(82,199,132,.3)" : "var(--border)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", marginBottom: 4 }}>
+                Your Public Profile URL
+              </div>
+              {profileUrl
+                ? <div style={{ fontFamily: "monospace", fontSize: 15, color: "var(--green)", fontWeight: 700 }}>{profileUrl}</div>
+                : <div style={{ fontSize: 13, color: "var(--muted)" }}>Save your profile to generate your URL.</div>
+              }
+              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
+                Share this link so other programs, parents, and community members can discover your inventory listings.
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              {profileUrl && <>
+                <button className="btn btn-o btn-sm" onClick={copyUrl}>
+                  {copied ? "✓ Copied!" : "📋 Copy Link"}
+                </button>
+                <a href={profileUrl} target="_blank" rel="noreferrer" className="btn btn-o btn-sm">
+                  🔗 Preview
+                </a>
+              </>}
+            </div>
+          </div>
+        </div>
+
+        {/* Visibility toggle */}
+        <div className="card card-p" style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>Profile Visibility</div>
+            <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>
+              {f.profile_public ? "Your profile is public — anyone with the link can see it." : "Your profile is private — only you can see it."}
+            </div>
+          </div>
+          <button onClick={async () => {
+            const next = !f.profile_public;
+            upd("profile_public", next);
+            await SB.from("orgs").update({ profile_public: next }).eq("id", userId);
+            setMsg(next ? "✓ Profile is now public" : "✓ Profile is now private");
+            setTimeout(() => setMsg(""), 2000);
+          }} style={{
+            padding: "8px 18px", borderRadius: 8, border: "1.5px solid",
+            fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer",
+            background: f.profile_public ? "rgba(82,199,132,.15)" : "var(--parch)",
+            color: f.profile_public ? "var(--green)" : "var(--muted)",
+            borderColor: f.profile_public ? "var(--green)" : "var(--border)",
+          }}>
+            {f.profile_public ? "🌐 Public" : "🔒 Private"}
+          </button>
+        </div>
+
+        {/* Profile preview card */}
+        {!editing && (
+          <div className="card card-p" style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+              <h3 style={{ fontFamily: "'Abril Fatface',display", fontSize: 20 }}>Profile Preview</h3>
+              <button className="btn btn-o btn-sm" onClick={() => setEditing(true)}>✏️ Edit Profile</button>
+            </div>
+
+            {/* Preview of what public sees */}
+            <div style={{ background: "var(--bg)", borderRadius: 10, padding: 20, border: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+                <div style={{
+                  width: 60, height: 60, borderRadius: 12, background: "linear-gradient(135deg,var(--gold2),var(--gold))",
+                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0
+                }}>
+                  {f.logo_url ? <img src={f.logo_url} alt="" style={{ width: "100%", height: "100%", borderRadius: 12, objectFit: "cover" }} /> : "🎭"}
+                </div>
+                <div>
+                  <div style={{ fontFamily: "'Abril Fatface',display", fontSize: 22 }}>{f.name || "Your Program Name"}</div>
+                  <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>
+                    {[f.type, f.location].filter(Boolean).join(" · ") || "Location not set"}
+                  </div>
+                </div>
+              </div>
+              {f.bio && <p style={{ fontSize: 13.5, color: "var(--muted)", lineHeight: 1.7, marginBottom: 12 }}>{f.bio}</p>}
+
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                {f.founded_year && <span style={{ padding: "3px 10px", background: "rgba(212,168,67,.1)", color: "var(--gold)", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>Est. {f.founded_year}</span>}
+                {f.student_count && <span style={{ padding: "3px 10px", background: "rgba(82,199,132,.1)", color: "var(--green)", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>{f.student_count.toLocaleString()} students</span>}
+                {listed > 0 && <span style={{ padding: "3px 10px", background: "rgba(66,165,245,.1)", color: "#42a5f5", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>{listed} items listed</span>}
+                {plan !== "free" && <span style={{ padding: "3px 10px", background: "rgba(212,168,67,.15)", color: "var(--gold)", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>🪙 Accepts Theatre Credits</span>}
+              </div>
+
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {f.email && <a href={`mailto:${f.email}`} style={{ fontSize: 12, color: "var(--amber)" }}>✉️ {f.email}</a>}
+                {f.phone && <span style={{ fontSize: 12, color: "var(--muted)" }}>📞 {f.phone}</span>}
+                {f.website && <a href={f.website} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--amber)" }}>🌐 Website</a>}
+                {f.instagram && <a href={`https://instagram.com/${f.instagram.replace('@','')}`} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--amber)" }}>📸 Instagram</a>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit form */}
+        {editing && (
+          <div className="card card-p" style={{ marginBottom: 20 }}>
+            <h3 style={{ fontFamily: "'Abril Fatface',display", fontSize: 20, marginBottom: 16 }}>Edit Profile</h3>
+            <div className="fg2">
+              <div className="fg fu"><label className="fl">Organization Name</label>
+                <input className="fi" value={f.name || ""} onChange={e => upd("name", e.target.value)} placeholder="Lincoln High Drama Dept." /></div>
+
+              <div className="fg"><label className="fl">Type</label>
+                <select className="fs" value={f.type || ""} onChange={e => upd("type", e.target.value)}>
+                  <option value="">Select…</option>
+                  {["School","Community Theatre","College","District","Professional","Other"].map(t => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+
+              <div className="fg"><label className="fl">City / Location</label>
+                <input className="fi" value={f.location || ""} onChange={e => upd("location", e.target.value)} placeholder="Portland, OR" /></div>
+
+              <div className="fg"><label className="fl">Contact Email</label>
+                <input className="fi" type="email" value={f.email || ""} onChange={e => upd("email", e.target.value)} placeholder="drama@school.edu" /></div>
+
+              <div className="fg"><label className="fl">Phone</label>
+                <input className="fi" value={f.phone || ""} onChange={e => upd("phone", e.target.value)} placeholder="(555) 123-4567" /></div>
+
+              <div className="fg"><label className="fl">Year Founded</label>
+                <input className="fi" type="number" min="1800" max="2026" value={f.founded_year || ""} onChange={e => upd("founded_year", parseInt(e.target.value) || null)} placeholder="e.g. 1998" /></div>
+
+              <div className="fg"><label className="fl">Students Served (approx.)</label>
+                <input className="fi" type="number" min="0" value={f.student_count || ""} onChange={e => upd("student_count", parseInt(e.target.value) || null)} placeholder="e.g. 350" /></div>
+
+              <div className="fg fu"><label className="fl">About Your Program</label>
+                <textarea className="ft" value={f.bio || ""} onChange={e => upd("bio", e.target.value)}
+                  placeholder="Tell other programs and the community about your theatre program…" style={{ minHeight: 80 }} /></div>
+
+              <div style={{ gridColumn: "1/-1", borderTop: "1px solid var(--border)", paddingTop: 14, marginTop: 4 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", marginBottom: 12 }}>Links & Social</div>
+              </div>
+
+              <div className="fg"><label className="fl">Website URL</label>
+                <input className="fi" value={f.website || ""} onChange={e => upd("website", e.target.value)} placeholder="https://yourschool.edu/drama" /></div>
+
+              <div className="fg"><label className="fl">Instagram Handle</label>
+                <input className="fi" value={f.instagram || ""} onChange={e => upd("instagram", e.target.value)} placeholder="@lincolnhighdrama" /></div>
+
+              <div className="fg fu"><label className="fl">Logo Image URL (optional)</label>
+                <input className="fi" value={f.logo_url || ""} onChange={e => upd("logo_url", e.target.value)} placeholder="https://drive.google.com/… or direct image URL" />
+                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>Paste a public image URL for your program's logo. Shown on your public profile.</div>
+              </div>
+
+              <div className="fg fu"><label className="fl">Profile URL Slug</label>
+                <input className="fi" value={f.slug || ""} onChange={e => upd("slug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} placeholder="lincoln-high-drama" />
+                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>Your profile will be at: theatre4u.org/org/<strong>{f.slug || "your-slug-here"}</strong></div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
+              <button className="btn btn-o" onClick={() => setEditing(false)}>Cancel</button>
+              <button className="btn btn-g" onClick={save} disabled={saving}>{saving ? "Saving…" : "✓ Save Profile"}</button>
+              {msg && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13, alignSelf: "center" }}>{msg}</span>}
+            </div>
+          </div>
+        )}
+
+        {/* Listed items preview */}
+        {listed > 0 && (
+          <div className="card card-p">
+            <h3 style={{ fontFamily: "'Abril Fatface',display", fontSize: 18, marginBottom: 4 }}>Public Marketplace Listings</h3>
+            <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 14 }}>These items appear on your public profile. Anyone can browse them without logging in.</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 10 }}>
+              {items.filter(i => i.market_status && i.market_status !== "Not Listed" && i.market_status !== "Private").slice(0, 6).map(item => {
+                const catColor = { costumes: "#c2185b", props: "#7b1fa2", sets: "#1565c0", lighting: "#f9a825", sound: "#2e7d32", scripts: "#d84315", makeup: "#ad1457", furniture: "#4e342e", fabrics: "#6a1b9a", tools: "#546e7a", effects: "#00838f", other: "#757575" }[item.category] || "#757575";
+                return (
+                  <div key={item.id} style={{ background: "var(--bg)", borderRadius: 8, padding: 12, border: "1px solid var(--border)" }}>
+                    {item.img
+                      ? <img src={item.img} alt={item.name} style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 6, marginBottom: 8 }} />
+                      : <div style={{ height: 80, borderRadius: 6, background: catColor + "22", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, marginBottom: 8 }}>📦</div>}
+                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+                    <div style={{ fontSize: 11, color: "var(--muted)" }}>{item.market_status}</div>
+                    {item.rental_price > 0 && <div style={{ fontSize: 13, color: "var(--green)", fontWeight: 700, marginTop: 2 }}>${item.rental_price}/wk</div>}
+                    {item.sale_price > 0 && <div style={{ fontSize: 13, color: "var(--green)", fontWeight: 700, marginTop: 2 }}>${item.sale_price}</div>}
+                  </div>
+                );
+              })}
+            </div>
+            {listed > 6 && <div style={{ textAlign: "center", marginTop: 10, fontSize: 13, color: "var(--muted)" }}>+{listed - 6} more items on your public profile</div>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BETA FEEDBACK — floating widget + leading player survey
+// ══════════════════════════════════════════════════════════════════════════════
+
+function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
+  const [open,    setOpen]    = useState(false);
+  const [tab,     setTab]     = useState("quick");  // quick | survey
+  const [saving,  setSaving]  = useState(false);
+  const [done,    setDone]    = useState(false);
+  const [page,    setPage]    = useState("");
+
+  // Quick feedback state
+  const [category, setCategory] = useState("bug");
+  const [message,  setMessage]  = useState("");
+  const [rating,   setRating]   = useState(null);
+
+  // Leading Player survey state
+  const [q1, setQ1] = useState("");   // hardest inventory
+  const [q2, setQ2] = useState(null); // prop28 pain 1-10
+  const [q3, setQ3] = useState("");   // lending barrier
+  const [q4, setQ4] = useState("");   // wishlist hour
+
+  useEffect(() => {
+    // Track current page for context
+    const handler = () => setPage(window.location.pathname || document.title);
+    window.__t4u_feedback_page = (p) => setPage(p);
+    return () => { delete window.__t4u_feedback_page; };
+  }, []);
+
+  const submitQuick = async () => {
+    if (!message.trim() && !rating) return;
+    setSaving(true);
+    await SB.from("beta_feedback").insert({
+      org_id: userId, org_name: orgName,
+      category, message: message.trim(),
+      rating, page_context: page,
+    });
+    setSaving(false);
+    setDone(true);
+    setTimeout(() => { setDone(false); setOpen(false); setMessage(""); setRating(null); }, 2000);
+  };
+
+  const submitSurvey = async () => {
+    if (!q1 && !q2 && !q3 && !q4) return;
+    setSaving(true);
+    await SB.from("beta_feedback").insert({
+      org_id: userId, org_name: orgName,
+      category: "feature",
+      hardest_inventory: q1.trim(),
+      prop28_pain_score: q2,
+      lending_barrier: q3.trim(),
+      wishlist_hour: q4.trim(),
+      page_context: "leading-player-survey",
+    });
+    setSaving(false);
+    setDone(true);
+    setTimeout(() => { setDone(false); setOpen(false); }, 2500);
+  };
+
+  const cats = [
+    { id:"bug",      label:"🐛 Bug",      color:"#c2185b" },
+    { id:"feature",  label:"💡 Idea",     color:"#1554a0" },
+    { id:"praise",   label:"🙌 Love it",  color:"#27723a" },
+    { id:"confusion",label:"😕 Confused", color:"#d35400" },
+    { id:"other",    label:"💬 Other",    color:"#546e7a" },
+  ];
+
+  return (
+    <>
+      {/* Floating trigger button */}
+      <button onClick={() => setOpen(!open)} style={{
+        position:"fixed", bottom:24, right:24, zIndex:900,
+        width:52, height:52, borderRadius:"50%",
+        background:"linear-gradient(135deg,var(--gold2),var(--gold))",
+        border:"none", boxShadow:"0 4px 20px rgba(212,168,67,.4)",
+        cursor:"pointer", display:"flex", alignItems:"center",
+        justifyContent:"center", fontSize:22,
+        transition:"transform .2s,box-shadow .2s",
+      }}
+      onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.1)";e.currentTarget.style.boxShadow="0 6px 28px rgba(212,168,67,.55)";}}
+      onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.boxShadow="0 4px 20px rgba(212,168,67,.4)";}}
+      title="Share feedback">
+        {open ? "✕" : "💬"}
+      </button>
+
+      {/* Feedback panel */}
+      {open && (
+        <div style={{
+          position:"fixed", bottom:88, right:24, zIndex:900,
+          width:340, background:"var(--bg2)", border:"1.5px solid var(--border)",
+          borderRadius:14, boxShadow:"0 8px 40px rgba(0,0,0,.35)",
+          overflow:"hidden", animation:"feedIn .2s ease",
+        }}>
+          <style>{`@keyframes feedIn{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}`}</style>
+
+          {/* Header */}
+          <div style={{background:"linear-gradient(135deg,#1a1008,#2a1808)",padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div>
+              <div style={{fontFamily:"'Abril Fatface',display",fontSize:16,color:"var(--gold2)"}}>Share Feedback</div>
+              <div style={{fontSize:11,color:"rgba(255,255,255,.45)",marginTop:1}}>You're a Leading Player — your voice shapes this tool.</div>
+            </div>
+            {isLeadingPlayer && <span style={{fontSize:11,background:"rgba(212,168,67,.2)",color:"var(--gold2)",padding:"2px 8px",borderRadius:6,fontWeight:800}}>🎭 LEADING PLAYER</span>}
+          </div>
+
+          {/* Tabs */}
+          {isLeadingPlayer && (
+            <div style={{display:"flex",borderBottom:"1px solid var(--border)"}}>
+              {[["quick","Quick Note"],["survey","Leading Player Survey"]].map(([id,label])=>(
+                <button key={id} onClick={()=>setTab(id)} style={{
+                  flex:1,padding:"9px 12px",background:"none",border:"none",
+                  borderBottom:`2px solid ${tab===id?"var(--gold)":"transparent"}`,
+                  color:tab===id?"var(--gold)":"var(--muted)",fontFamily:"inherit",
+                  fontSize:12,fontWeight:700,cursor:"pointer",transition:"all .15s",
+                }}>{label}</button>
+              ))}
+            </div>
+          )}
+
+          <div style={{padding:"16px 18px"}}>
+            {done ? (
+              <div style={{textAlign:"center",padding:"24px 0"}}>
+                <div style={{fontSize:36,marginBottom:8}}>🙏</div>
+                <div style={{fontFamily:"'Abril Fatface',display",fontSize:17,color:"var(--green)"}}>Thank you!</div>
+                <div style={{fontSize:13,color:"var(--muted)",marginTop:4}}>Your feedback is making Theatre4u better.</div>
+              </div>
+            ) : tab === "quick" ? (
+              <>
+                {/* Category chips */}
+                <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:12}}>
+                  {cats.map(c=>(
+                    <button key={c.id} onClick={()=>setCategory(c.id)} style={{
+                      padding:"4px 10px",borderRadius:20,border:"1.5px solid",
+                      fontFamily:"inherit",fontSize:11,fontWeight:700,cursor:"pointer",
+                      background:category===c.id?c.color+"22":"transparent",
+                      color:category===c.id?c.color:"var(--muted)",
+                      borderColor:category===c.id?c.color:"var(--border)",
+                    }}>{c.label}</button>
+                  ))}
+                </div>
+
+                {/* Message */}
+                <textarea value={message} onChange={e=>setMessage(e.target.value)}
+                  placeholder={
+                    category==="bug"?"Describe what happened and what you expected…":
+                    category==="feature"?"What feature would make your life easier?":
+                    category==="praise"?"What's working well for you?":
+                    category==="confusion"?"What was confusing or hard to find?":
+                    "Tell us anything on your mind…"
+                  }
+                  style={{
+                    width:"100%",minHeight:80,background:"var(--bgi,#0d0b11)",
+                    border:"1.5px solid var(--border)",borderRadius:8,padding:"9px 11px",
+                    color:"var(--text,#ede8df)",fontFamily:"'DM Sans',sans-serif",
+                    fontSize:13,resize:"vertical",outline:"none",lineHeight:1.5,
+                    marginBottom:12,
+                  }}
+                  onFocus={e=>e.target.style.borderColor="var(--gold)"}
+                  onBlur={e=>e.target.style.borderColor="var(--border)"}
+                />
+
+                {/* Star rating */}
+                <div style={{marginBottom:14}}>
+                  <div style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:6}}>
+                    Overall experience so far
+                  </div>
+                  <div style={{display:"flex",gap:4}}>
+                    {[1,2,3,4,5].map(n=>(
+                      <button key={n} onClick={()=>setRating(n)} style={{
+                        background:"none",border:"none",fontSize:22,cursor:"pointer",
+                        color:rating>=n?"#f9a825":"var(--border)",transition:"color .1s",padding:"0 2px",
+                      }}>★</button>
+                    ))}
+                  </div>
+                </div>
+
+                <button onClick={submitQuick} disabled={saving||(!message.trim()&&!rating)} style={{
+                  width:"100%",padding:"10px 0",borderRadius:8,border:"none",
+                  background:(!message.trim()&&!rating)?"var(--border)":"linear-gradient(135deg,var(--gold2),var(--gold))",
+                  color:(!message.trim()&&!rating)?"var(--muted)":"#1a1200",
+                  fontFamily:"inherit",fontSize:14,fontWeight:700,cursor:(!message.trim()&&!rating)?"default":"pointer",
+                }}>
+                  {saving?"Sending…":"Send Feedback"}
+                </button>
+              </>
+            ) : (
+              /* Leading Player Survey */
+              <>
+                <div style={{fontSize:12,color:"var(--muted)",marginBottom:14,lineHeight:1.6}}>
+                  Your answers directly shape the next features we build. Takes about 3 minutes.
+                </div>
+
+                {/* Q1 */}
+                <div style={{marginBottom:14}}>
+                  <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:6}}>
+                    1. What inventory is hardest to track right now?
+                  </label>
+                  <input value={q1} onChange={e=>setQ1(e.target.value)}
+                    placeholder="e.g. Small props, lighting gels, period costumes…"
+                    style={{width:"100%",background:"var(--bgi,#0d0b11)",border:"1.5px solid var(--border)",
+                      borderRadius:8,padding:"8px 10px",color:"var(--text,#ede8df)",fontFamily:"inherit",fontSize:12,outline:"none"}}
+                    onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--border)"}
+                  />
+                </div>
+
+                {/* Q2 */}
+                <div style={{marginBottom:14}}>
+                  <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:6}}>
+                    2. Prop 28 reporting headache — 1 (fine) to 10 (nightmare)?
+                  </label>
+                  <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                    {[1,2,3,4,5,6,7,8,9,10].map(n=>(
+                      <button key={n} onClick={()=>setQ2(n)} style={{
+                        width:28,height:28,borderRadius:6,border:"1.5px solid",
+                        background:q2===n?"var(--gold)":"transparent",
+                        color:q2===n?"#1a1200":"var(--muted)",
+                        fontFamily:"inherit",fontSize:12,fontWeight:700,cursor:"pointer",
+                        borderColor:q2===n?"var(--gold)":"var(--border)",
+                      }}>{n}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Q3 */}
+                <div style={{marginBottom:14}}>
+                  <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:6}}>
+                    3. What stops you from lending items to other schools?
+                  </label>
+                  <select value={q3} onChange={e=>setQ3(e.target.value)} style={{
+                    width:"100%",background:"var(--bgi,#0d0b11)",border:"1.5px solid var(--border)",
+                    borderRadius:8,padding:"8px 10px",color:"var(--text,#ede8df)",fontFamily:"inherit",fontSize:12,outline:"none",
+                  }}>
+                    <option value="">Select the biggest one…</option>
+                    <option value="fear_damage">Fear of damage or loss</option>
+                    <option value="logistics">Logistics — pickup, dropoff, timing</option>
+                    <option value="no_agreement">No formal agreement / paperwork</option>
+                    <option value="trust">Don't know the other program</option>
+                    <option value="admin_approval">Need district/admin approval</option>
+                    <option value="never_thought">Never thought about it before</option>
+                    <option value="other">Something else</option>
+                  </select>
+                </div>
+
+                {/* Q4 */}
+                <div style={{marginBottom:16}}>
+                  <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:6}}>
+                    4. What one thing could save you an hour a week?
+                  </label>
+                  <textarea value={q4} onChange={e=>setQ4(e.target.value)}
+                    placeholder="e.g. Auto-fill my Prop 28 report, scan items in/out on my phone…"
+                    style={{width:"100%",minHeight:64,background:"var(--bgi,#0d0b11)",border:"1.5px solid var(--border)",
+                      borderRadius:8,padding:"8px 10px",color:"var(--text,#ede8df)",fontFamily:"inherit",fontSize:12,
+                      resize:"vertical",outline:"none",lineHeight:1.5}}
+                    onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--border)"}
+                  />
+                </div>
+
+                <button onClick={submitSurvey} disabled={saving||(!q1&&!q2&&!q3&&!q4)} style={{
+                  width:"100%",padding:"10px 0",borderRadius:8,border:"none",
+                  background:"linear-gradient(135deg,var(--gold2),var(--gold))",
+                  color:"#1a1200",fontFamily:"inherit",fontSize:14,fontWeight:700,cursor:"pointer",
+                }}>
+                  {saving?"Submitting…":"Submit Leading Player Survey 🎭"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function App() {
   const [user,setUser]     = useState(null);
   // ── Hash routing — handles #/item/:id for public QR scans ─────────────────
@@ -7132,6 +7903,7 @@ export default function App() {
     { id:"community",   label:"Community",   ico:"🎪", community:true },
     { id:"productions", label:"Productions", ico:"🎭"       },
     { id:"reports",     label:"Reports",     ico:Ic.chart   },
+    { id:"profile",     label:"My Profile",  ico:"👤"       },
     ...(plan !== "free" || isAdmin ? [{ id:"credits", label:"Credits",  ico:"🪙", credits:true }] : []),
     ...(plan !== "free" || isAdmin ? [{ id:"prop28",  label:"Prop 28",  ico:"📋", prop28:true  }] : []),
     ...(plan === "district" ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
@@ -7168,6 +7940,7 @@ export default function App() {
         }}
       />
       <AuthOverlay onAuth={u=>{setUser(u);}} pendingInvite={pendingInvite} inviteInfo={inviteInfo}/>
+      {user && <FeedbackWidget userId={user.id} orgName={org?.name||""} isLeadingPlayer={org?.is_leading_player||false}/>}
     </>
   );
 
@@ -7312,7 +8085,8 @@ export default function App() {
                   {page==="marketplace" && <Marketplace items={items} org={org} plan={plan} activeSchool={activeSchool} allSchoolsMode={plan==="district"}/>}
                   {page==="productions" && <Productions userId={user?.id} allItems={items}/>}
                   {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan}/>}
-                  {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan}/>}
+                  {page==="profile"     && <OrgProfilePage userId={user?.id} org={org} setOrg={saveOrg} plan={plan} items={items}/>}
+              {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan}/>}
                   {page==="district"    && plan==="district" && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool}/>}
                   {page==="community"   && <CommunityPage userId={user?.id} org={org} plan={plan}/>}
                   {page==="credits"     && (plan!=="free"||isAdmin) && <CreditsPage userId={user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
