@@ -626,7 +626,7 @@ function AddSheet({onClose, onAdded, userId}) {
   const save = async () => {
     if(!f.name.trim()) return;
     setSaving(true);
-    const row = {...f, org_id:userId, added:new Date().toISOString()};
+    const row = {...f, org_id:userId};
     const {data,error} = await SB.from("items").insert(row).select().single();
     if(!error && data) { onAdded(data); onClose(); }
     setSaving(false);
@@ -1344,7 +1344,6 @@ function App() {
     h("button",{onClick:signOut,style:{background:"none",border:"none",color:"var(--muted)",fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",marginTop:8}},"Sign out")
   );
 
-  const isPro = org?.plan === "pro" || org?.plan === "district" || org?.email === "theatre4u1@gmail.com";
   const navItems = [
     {id:"home",    label:"Home",       icon:Ic.home},
     {id:"scan",    label:"Scan",       icon:Ic.qr},
