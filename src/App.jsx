@@ -6757,8 +6757,13 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
           if(codeErr||!codeData){throw new Error("Invalid or expired access code. Please check with your contact.");}
           if(codeData.used_count>=codeData.max_uses){throw new Error("This access code has reached its limit. Contact hello@theatre4u.org.");}
         }
-        const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName}}});
-        if(error)throw error;
+        const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName},emailRedirectTo:"https://theatre4u.org"}});
+        if(error){
+          if(error.message?.toLowerCase().includes('already registered')||error.message?.toLowerCase().includes('already exists')){
+            throw new Error("An account with this email already exists. Use Sign In instead, or reset your password below.");
+          }
+          throw error;
+        }
         if(data.user){
           const isLeadingPlayer = betaCode.trim().toUpperCase()==="FOUNDING2026";
           await SB.from("orgs").upsert({
@@ -6795,7 +6800,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
   const labelStyle={fontSize:11,fontWeight:600,color:"#9b93a8",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4};
 
   if(done) return(
-    <div style={overlayStyle} onClick={e=>e.target===e.currentTarget&&close()}>
+    <div style={overlayStyle}>
       <div style={{...cardStyle,textAlign:"center"}}>
         <div style={{fontSize:52,marginBottom:12}}>🎭</div>
         <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:"#d4a843",marginBottom:8}}>{inviteInfo?"Almost there!":"Check your email!"}</h2>
@@ -6806,8 +6811,8 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
   );
 
   return(
-    <div style={overlayStyle} onClick={e=>e.target===e.currentTarget&&close()}>
-      <div style={cardStyle}>
+    <div style={overlayStyle} onClick={e=>{if(!loading&&e.target===e.currentTarget)close();}}>
+      <div style={cardStyle} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:24}}>
           <div>
             <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:"#ede8df"}}>{mode==="login"?"Welcome back":"Get started free"}</div>
@@ -6904,7 +6909,7 @@ function AuthScreen({onAuth}){
     try{
       if(mode==="signup"){
         if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
-        const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName}}});
+        const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName},emailRedirectTo:"https://theatre4u.org"}});
         if(error)throw error;
         if(data.user){
           await SB.from("orgs").upsert({id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:""},{onConflict:"id",ignoreDuplicates:false});
