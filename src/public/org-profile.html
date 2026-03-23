@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Theatre4u — Programme Profile</title>
+<meta name="description" content="Theatre inventory and marketplace listing"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#fdf8f1;--bg2:#f5ede0;--ink:#1a1008;--gold:#c4922a;--gold2:#e8b84b;--green:#2d6e3a;--blue:#1a4fa0;--red:#8c1a2a;--muted:#7a6a54;--faint:#b8a890;--border:#e8dcc8;--card:#ffffff;--r:12px;--sh:0 2px 16px rgba(60,30,0,.08)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.6}
+a{color:var(--gold);text-decoration:none}
+.nav{background:var(--ink);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.nav-logo{display:flex;align-items:center;gap:9px;text-decoration:none}
+.nav-mark{width:32px;height:32px;background:linear-gradient(135deg,var(--gold2),var(--gold));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px}
+.nav-name{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:700;color:var(--gold2)}
+.nav-right a{color:rgba(255,255,255,.7);font-size:13px;font-weight:600;padding:6px 14px;border-radius:6px;border:1.5px solid rgba(255,255,255,.2);transition:all .15s}
+.nav-right a:hover{background:rgba(255,255,255,.1);color:#fff}
+.hero{background:linear-gradient(135deg,#1a1008,#2a1808);padding:48px 28px 40px;text-align:center}
+.hero-logo{width:80px;height:80px;border-radius:16px;background:linear-gradient(135deg,var(--gold2),var(--gold));display:flex;align-items:center;justify-content:center;font-size:40px;margin:0 auto 16px;overflow:hidden}
+.hero-logo img{width:100%;height:100%;object-fit:cover}
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:900;color:#fff;margin-bottom:6px}
+.hero-meta{font-size:14px;color:rgba(255,255,255,.55);margin-bottom:16px}
+.hero-badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:20px}
+.badge{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:rgba(255,255,255,.1);color:rgba(255,255,255,.8)}
+.badge.gold{background:rgba(196,146,42,.2);color:var(--gold2)}
+.badge.green{background:rgba(45,110,58,.2);color:#81c784}
+.badge.blue{background:rgba(26,79,160,.2);color:#90caf9}
+.hero-bio{max-width:560px;margin:0 auto;font-size:15px;color:rgba(255,255,255,.6);line-height:1.7}
+.hero-links{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+.hero-links a{font-size:13px;color:var(--gold2);font-weight:600;padding:5px 12px;border:1px solid rgba(196,146,42,.3);border-radius:6px;transition:all .15s}
+.hero-links a:hover{background:rgba(196,146,42,.1)}
+.wrap{max-width:1100px;margin:0 auto;padding:0 24px}
+.section{padding:40px 0}
+.section-title{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;margin-bottom:6px}
+.section-sub{font-size:14px;color:var(--muted);margin-bottom:24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.item-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);transition:all .15s}
+.item-card:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(60,30,0,.12);border-color:var(--gold)}
+.item-img{height:130px;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:36px;overflow:hidden}
+.item-img img{width:100%;height:100%;object-fit:cover}
+.item-body{padding:12px 14px}
+.item-name{font-weight:700;font-size:14px;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item-cat{font-size:11px;color:var(--muted);margin-bottom:8px}
+.item-foot{display:flex;justify-content:space-between;align-items:center}
+.item-status{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:2px 7px;border-radius:5px}
+.item-price{font-size:14px;font-weight:700;color:var(--green)}
+.cta-section{background:linear-gradient(135deg,#1a1008,#2a1808);border-radius:16px;padding:40px;text-align:center;margin:40px 0}
+.cta-section h2{font-family:'Cormorant Garamond',serif;font-size:32px;color:var(--gold2);margin-bottom:8px}
+.cta-section p{color:rgba(255,255,255,.6);font-size:14px;margin-bottom:24px;max-width:420px;margin-left:auto;margin-right:auto}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:12px 26px;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;transition:all .15s;text-decoration:none}
+.btn-gold{background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--ink)}
+.btn-gold:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn-o{background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.2)}
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-ico{font-size:48px;margin-bottom:12px;opacity:.4}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:32px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;box-shadow:var(--sh)}
+.stat-val{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--ink)}
+.stat-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+footer{text-align:center;padding:32px;font-size:12px;color:var(--faint);border-top:1px solid var(--border)}
+@media(max-width:600px){.hero h1{font-size:30px}.grid{grid-template-columns:1fr 1fr}.stat-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="https://theatre4u.org" class="nav-logo">
+    <div class="nav-mark">🎭</div>
+    <span class="nav-name">Theatre4u</span>
+  </a>
+  <div class="nav-right">
+    <a href="https://theatre4u.org">Sign In / Get Started</a>
+  </div>
+</nav>
+
+<div id="root"><div style="text-align:center;padding:80px 20px;color:#7a6a54;font-family:'DM Sans',sans-serif"><div style="font-size:40px;margin-bottom:12px">🎭</div><p>Loading…</p></div></div>
+
+<script>
+const SB_URL = "https://ldmmphwivnnboyhlxipl.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA";
+
+const CAT_ICONS = {costumes:"👗",props:"🎩",sets:"🏛️",lighting:"💡",sound:"🔊",scripts:"📜",makeup:"💄",furniture:"🪑",fabrics:"🧵",tools:"🔧",effects:"✨",other:"📦"};
+const STATUS_COLORS = {"For Rent":"#1554a0","For Sale":"#27723a","Rent or Sale":"#7b1fa2","For Loan":"#00838f"};
+
+async function load() {
+  // Get slug from URL: /org/my-program-slug
+  const path = window.location.pathname;
+  const slug = path.split('/').filter(Boolean).pop();
+
+  if (!slug || slug === 'org') {
+    render404("No profile specified.");
+    return;
+  }
+
+  // Fetch org by slug
+  const orgRes = await fetch(`${SB_URL}/rest/v1/orgs?slug=eq.${encodeURIComponent(slug)}&profile_public=eq.true&select=*`, {
+    headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` }
+  });
+  const orgs = await orgRes.json();
+  if (!orgs || orgs.length === 0) { render404("This profile is private or doesn't exist."); return; }
+  const org = orgs[0];
+
+  // Fetch listed items
+  const itemsRes = await fetch(
+    `${SB_URL}/rest/v1/items?org_id=eq.${org.id}&market_status=neq.Not Listed&market_status=neq.Private&availability=eq.In Stock&select=*&order=created_at.desc&limit=48`,
+    { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
+  );
+  const items = await itemsRes.json() || [];
+
+  document.title = `${org.name} — Theatre4u`;
+  renderProfile(org, items);
+}
+
+function fmt$(n) { return '$' + Number(n||0).toFixed(2).replace(/\.00$/, ''); }
+
+function renderProfile(org, items) {
+  const rented = items.filter(i => i.market_status?.includes('Rent')).length;
+  const forSale = items.filter(i => i.market_status?.includes('Sale') && !i.market_status?.includes('Rent')).length;
+  const loans   = items.filter(i => i.market_status === 'For Loan').length;
+
+  const root = document.getElementById('root');
+  root.innerHTML = `
+    <div class="hero">
+      <div class="hero-logo">${org.logo_url ? `<img src="${org.logo_url}" alt="${org.name}"/>` : '🎭'}</div>
+      <h1>${org.name}</h1>
+      <div class="hero-meta">${[org.type, org.location].filter(Boolean).join(' · ')}</div>
+      <div class="hero-badges">
+        ${org.founded_year ? `<span class="badge">Est. ${org.founded_year}</span>` : ''}
+        ${org.student_count ? `<span class="badge green">~${org.student_count.toLocaleString()} students</span>` : ''}
+        ${items.length > 0 ? `<span class="badge blue">${items.length} items available</span>` : ''}
+        ${rented > 0 ? `<span class="badge gold">Accepts rentals</span>` : ''}
+      </div>
+      ${org.bio ? `<p class="hero-bio">${org.bio}</p>` : ''}
+      <div class="hero-links">
+        ${org.email ? `<a href="mailto:${org.email}">✉️ Contact</a>` : ''}
+        ${org.website ? `<a href="${org.website}" target="_blank">🌐 Website</a>` : ''}
+        ${org.instagram ? `<a href="https://instagram.com/${org.instagram.replace('@','')}" target="_blank">📸 Instagram</a>` : ''}
+        <a href="https://theatre4u.org">🎭 View in Marketplace</a>
+      </div>
+    </div>
+
+    <div class="wrap">
+      ${items.length > 0 ? `
+        <div class="stat-grid" style="margin-top:32px">
+          <div class="stat"><div class="stat-val">${items.length}</div><div class="stat-lbl">Items Available</div></div>
+          ${rented > 0 ? `<div class="stat"><div class="stat-val">${rented}</div><div class="stat-lbl">For Rent</div></div>` : ''}
+          ${forSale > 0 ? `<div class="stat"><div class="stat-val">${forSale}</div><div class="stat-lbl">For Sale</div></div>` : ''}
+          ${loans > 0 ? `<div class="stat"><div class="stat-val">${loans}</div><div class="stat-lbl">Free Loans</div></div>` : ''}
+        </div>
+
+        <section class="section">
+          <div class="section-title">Available Items</div>
+          <div class="section-sub">Browse ${org.name}'s marketplace listings. Log in to Theatre4u to request an item.</div>
+          <div class="grid">
+            ${items.map(item => {
+              const icon = CAT_ICONS[item.category] || '📦';
+              const color = STATUS_COLORS[item.market_status] || '#757575';
+              return `
+                <div class="item-card">
+                  <div class="item-img">
+                    ${item.img ? `<img src="${item.img}" alt="${item.name}" loading="lazy"/>` : `<span>${icon}</span>`}
+                  </div>
+                  <div class="item-body">
+                    <div class="item-name" title="${item.name}">${item.name}</div>
+                    <div class="item-cat">${item.category || 'Other'} · ${item.condition || ''}</div>
+                    <div class="item-foot">
+                      <span class="item-status" style="background:${color}22;color:${color}">${item.market_status}</span>
+                      <span class="item-price">
+                        ${item.rental_price > 0 ? fmt$(item.rental_price) + '/wk' : ''}
+                        ${item.sale_price > 0 && item.rental_price > 0 ? ' · ' : ''}
+                        ${item.sale_price > 0 ? fmt$(item.sale_price) : ''}
+                        ${item.market_status === 'For Loan' ? 'Free' : ''}
+                      </span>
+                    </div>
+                  </div>
+                </div>`;
+            }).join('')}
+          </div>
+        </section>` : `
+        <div class="empty" style="margin-top:32px">
+          <div class="empty-ico">🎭</div>
+          <h3 style="font-family:'Cormorant Garamond',serif;font-size:22px;margin-bottom:8px">${org.name}</h3>
+          <p>No items are currently listed in the marketplace.</p>
+        </div>`}
+
+      <div class="cta-section">
+        <h2>Need costumes, props, or gear?</h2>
+        <p>Theatre4u connects theatre programs across your region so you can rent, borrow, and share resources.</p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+          <a href="https://theatre4u.org" class="btn btn-gold">🎭 Browse All Listings</a>
+          <a href="https://theatre4u.org" class="btn btn-o">Get Started Free</a>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <a href="https://theatre4u.org">Theatre4u</a> · Inventory · Marketplace · Community ·
+      <a href="https://theatre4u.org/help.html">Help Center</a>
+    </footer>
+  `;
+}
+
+function render404(msg) {
+  document.getElementById('root').innerHTML = `
+    <div style="text-align:center;padding:80px 20px;font-family:'DM Sans',sans-serif">
+      <div style="font-size:48px;margin-bottom:16px">🎭</div>
+      <h2 style="font-family:'Cormorant Garamond',serif;font-size:28px;margin-bottom:8px;color:#1a1008">Profile not found</h2>
+      <p style="color:#7a6a54;margin-bottom:24px">${msg}</p>
+      <a href="https://theatre4u.org" style="display:inline-block;background:#c4922a;color:#fff;padding:10px 24px;border-radius:8px;font-weight:700;text-decoration:none">Go to Theatre4u →</a>
+    </div>`;
+}
+
+load();
+</script>
+</body>
+</html>
