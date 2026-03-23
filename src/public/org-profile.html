@@ -105,7 +105,7 @@ async function load() {
 
   // Fetch listed items
   const itemsRes = await fetch(
-    `${SB_URL}/rest/v1/items?org_id=eq.${org.id}&market_status=neq.Not Listed&market_status=neq.Private&availability=eq.In Stock&select=*&order=created_at.desc&limit=48`,
+    `${SB_URL}/rest/v1/items?org_id=eq.${org.id}&mkt=neq.Not Listed&avail=eq.In Stock&select=*&order=added.desc&limit=48`,
     { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
   );
   const items = await itemsRes.json() || [];
@@ -117,9 +117,9 @@ async function load() {
 function fmt$(n) { return '$' + Number(n||0).toFixed(2).replace(/\.00$/, ''); }
 
 function renderProfile(org, items) {
-  const rented = items.filter(i => i.market_status?.includes('Rent')).length;
-  const forSale = items.filter(i => i.market_status?.includes('Sale') && !i.market_status?.includes('Rent')).length;
-  const loans   = items.filter(i => i.market_status === 'For Loan').length;
+  const rented = items.filter(i => i.mkt?.includes('Rent')).length;
+  const forSale = items.filter(i => i.mkt?.includes('Sale') && !i.mkt?.includes('Rent')).length;
+  const loans   = items.filter(i => i.mkt === 'For Loan').length;
 
   const root = document.getElementById('root');
   root.innerHTML = `
@@ -213,7 +213,7 @@ function render404(msg) {
     </div>`;
 }
 
-load();
+(async()=>{try{await load();}catch(e){console.error(e);document.body.innerHTML+='<div style="text-align:center;padding:80px;color:#9b93a8;font-family:sans-serif"><div style="font-size:48px">🎭</div><h2 style="color:#ede8df;margin:16px 0 8px">Unable to load profile</h2><p>'+e.message+'</p><p style="margin-top:16px"><a href="https://theatre4u.org" style="color:#d4a843">← Theatre4u</a></p></div>';}})();
 </script>
 </body>
 </html>
