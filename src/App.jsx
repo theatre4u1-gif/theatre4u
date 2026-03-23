@@ -7214,7 +7214,7 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const listed = items.filter(i => i.market_status && i.market_status !== "Not Listed" && i.market_status !== "Private").length;
+  const listed = items.filter(i => i.marketStatus && i.marketStatus !== "Not Listed").length;
 
   if (!f) return <div style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>Loading…</div>;
 
@@ -7340,6 +7340,20 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
             <div className="fg2">
               <div className="fg fu"><label className="fl">Organization Name</label>
                 <input className="fi" value={f.name || ""} onChange={e => upd("name", e.target.value)} placeholder="Lincoln High Drama Dept." /></div>
+
+              <div className="fg fu">
+                <label className="fl">Profile Photo / Logo URL</label>
+                <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+                  {f.logo_url && <img src={f.logo_url} alt="Logo preview" style={{width:52,height:52,borderRadius:8,objectFit:"cover",border:"1px solid var(--border)",flexShrink:0}}/>}
+                  <div style={{flex:1}}>
+                    <input className="fi" value={f.logo_url || ""} onChange={e => upd("logo_url", e.target.value)}
+                      placeholder="Paste an image URL (Google Drive, Dropbox, etc.)" />
+                    <div style={{fontSize:11,color:"var(--muted)",marginTop:4}}>
+                      Paste any direct image URL. For Google Drive: share the image → Copy link → replace /view with nothing and add &sz=w400 to the end.
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <div className="fg"><label className="fl">Type</label>
                 <select className="fs" value={f.type || ""} onChange={e => upd("type", e.target.value)}>
