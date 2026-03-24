@@ -1205,6 +1205,25 @@ function CommunitySpotlight({onViewAll}){
           {/* Body excerpt */}
           {post.body&&<p style={{fontSize:13.5,color:"var(--muted)",lineHeight:1.65,marginBottom:12}}>{post.body.length>180?post.body.slice(0,180)+"…":post.body}</p>}
 
+          {/* Production Photos */}
+          {(post.images||[]).length>0&&(
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+              {(post.images||[]).slice(0,4).map((url,i)=>(
+                <div key={i} style={{position:"relative",borderRadius:8,overflow:"hidden",flexShrink:0,
+                  width:(post.images||[]).length===1?"100%":"calc(50% - 3px)",
+                  height:(post.images||[]).length===1?240:120,cursor:"pointer"}}
+                  onClick={e=>{e.stopPropagation();window.open(url,"_blank");}}>
+                  <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  {i===3&&(post.images||[]).length>4&&(
+                    <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:18}}>
+                      +{(post.images||[]).length-4}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Footer */}
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingTop:10,borderTop:`1px solid ${color}20`}}>
             <div style={{display:"flex",gap:6}}>
@@ -5752,10 +5771,55 @@ const POST_TYPES = [
 const PT = Object.fromEntries(POST_TYPES.map(p=>[p.id,p]));
 
 function CommunityPostForm({initial, onSave, onCancel}) {
-  const blank = {type:"show",title:"",body:"",show_title:"",venue:"",location:"",start_date:"",end_date:"",ticket_url:"",contact_email:"",tags:[]};
-  const [f,setF] = useState(initial||blank);
+  const blank = {type:"show",title:"",body:"",show_title:"",venue:"",location:"",start_date:"",end_date:"",ticket_url:"",contact_email:"",tags:[],images:[]};
+  const [f,setF] = useState(()=>initial ? {...blank,...initial,images:initial.images||[]} : blank);
   const [tagInput,setTagInput] = useState("");
+  const [uploading,setUploading] = useState(false);
+  const photoRef = useRef();
   const upd = (k,v)=>setF(p=>({...p,[k]:v}));
+
+  const handlePhotos = async(e)=>{
+    const files = Array.from(e.target.files||[]).slice(0,6-(f.images||[]).length);
+    if(!files.length) return;
+    setUploading(true);
+    const urls = [];
+    for(const file of files){
+      // Use resizeImg if available, otherwise compressImage
+      const resized = typeof resizeImg==="function"
+        ? await resizeImg(file,1200,0.85)
+        : await new Promise(res=>{
+            const reader=new FileReader();
+            reader.onload=e2=>{
+              const img=new Image();
+              img.onload=()=>{
+                const canvas=document.createElement("canvas");
+                let w=img.width,h=img.height;
+                if(w>1200){h=Math.round(1200/w*h);w=1200;}
+                canvas.width=w;canvas.height=h;
+                canvas.getContext("2d").drawImage(img,0,0,w,h);
+                res(canvas.toDataURL("image/jpeg",0.85));
+              };
+              img.src=e2.target.result;
+            };
+            reader.readAsDataURL(file);
+          });
+      // Upload to community-photos bucket
+      try{
+        const blob=await fetch(resized).then(r=>r.blob());
+        const path=`community/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+        const{data,error}=await SB.storage.from("community-photos").upload(path,blob,{contentType:"image/jpeg",upsert:false});
+        if(!error&&data){
+          const{data:urlData}=SB.storage.from("community-photos").getPublicUrl(path);
+          if(urlData?.publicUrl) urls.push(urlData.publicUrl);
+        }
+      }catch(err){console.error("Photo upload error:",err);}
+    }
+    upd("images",[...(f.images||[]),...urls]);
+    setUploading(false);
+    if(photoRef.current) photoRef.current.value="";
+  };
+
+  const removePhoto=(url)=>upd("images",(f.images||[]).filter(u=>u!==url));
   const addTag=()=>{const t=tagInput.trim().toLowerCase();if(t&&!(f.tags||[]).includes(t))upd("tags",[...(f.tags||[]),t]);setTagInput("");};
   const valid = f.title.trim() && f.type;
 
@@ -5797,6 +5861,32 @@ function CommunityPostForm({initial, onSave, onCancel}) {
       <label className="fl">Tags</label>
       <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:4}}>{(f.tags||[]).map(t=><span key={t} className="mt" style={{cursor:"pointer"}} onClick={()=>upd("tags",f.tags.filter(x=>x!==t))}>{t} ×</span>)}</div>
       <div style={{display:"flex",gap:6}}><input className="fi" value={tagInput} onChange={e=>setTagInput(e.target.value)} placeholder="musical, drama, comedy..." style={{flex:1}} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addTag();}}}/><button className="btn btn-o btn-sm" onClick={addTag}>Add</button></div>
+    </div>
+    
+    {/* ── Photo Upload ─────────────────────────────────────────── */}
+    <div className="fg fu" style={{marginBottom:4}}>
+      <label className="fl" style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+        📸 Production Photos <span style={{fontWeight:400,color:"var(--muted)",fontSize:10}}>(up to 6)</span>
+      </label>
+      {(f.images||[]).length>0&&(
+        <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:10}}>
+          {(f.images||[]).map((url,i)=>(
+            <div key={i} style={{position:"relative",width:80,height:80,borderRadius:8,overflow:"hidden",border:"1.5px solid var(--border)",flexShrink:0}}>
+              <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+              <button onClick={()=>removePhoto(url)} style={{position:"absolute",top:2,right:2,width:18,height:18,borderRadius:"50%",background:"rgba(0,0,0,.75)",border:"none",color:"#fff",fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {(f.images||[]).length<6&&(
+        <label style={{display:"inline-flex",alignItems:"center",gap:7,padding:"8px 14px",borderRadius:8,border:"1.5px dashed var(--border)",cursor:"pointer",color:"var(--muted)",fontSize:13,fontWeight:600,transition:"all .15s"}}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--gold)";e.currentTarget.style.color="var(--gold)";}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.color="var(--muted)";}}>
+          {uploading?"⏳ Uploading…":"📷 Add Photos"}
+          <input ref={photoRef} type="file" accept="image/*" multiple hidden onChange={handlePhotos} disabled={uploading}/>
+        </label>
+      )}
+      {uploading&&<div style={{fontSize:12,color:"var(--gold)",marginTop:4}}>Uploading photos…</div>}
     </div>
     <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10,paddingTop:14,borderTop:"1.5px solid var(--border)",gridColumn:"1/-1"}}>
       <button className="btn btn-o" onClick={onCancel}>Cancel</button>
