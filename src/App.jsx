@@ -1611,19 +1611,52 @@ const STATE_NAMES = {AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"Cal
 
 // Free zip code lookup — no API key needed
 async function zipToCoords(zip) {
+  // Try zippopotam.us first (fast, reliable for most zips)
   try {
     const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
-    if (!res.ok) return null;
-    const d = await res.json();
-    const place = d.places?.[0];
-    if (!place) return null;
-    return {
-      lat: parseFloat(place.latitude),
-      lng: parseFloat(place.longitude),
-      city: place["place name"],
-      state: place["state abbreviation"],
+    if (res.ok) {
+      const d = await res.json();
+      const place = d.places?.[0];
+      if (place) return {
+        lat: parseFloat(place.latitude),
+        lng: parseFloat(place.longitude),
+        city: place["place name"],
+        state: place["state abbreviation"],
+      };
+    }
+  } catch { /* fall through */ }
+
+  // Fallback 1: Nominatim postal code search
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=US&format=json&limit=1`,
+      { headers: { "User-Agent": "Theatre4u/1.0 (hello@theatre4u.org)" } }
+    );
+    const data = await r.json();
+    if (data?.[0]) return {
+      lat: parseFloat(data[0].lat),
+      lng: parseFloat(data[0].lon),
+      city: data[0].display_name?.split(",")[0] || zip,
+      state: "CA",
     };
-  } catch { return null; }
+  } catch { /* fall through */ }
+
+  // Fallback 2: US Census Bureau geocoder (no key, authoritative)
+  try {
+    const r = await fetch(
+      `https://geocoding.geo.census.gov/geocoder/locations/address?street=&city=&state=&zip=${zip}&benchmark=Public_AR_Current&format=json`
+    );
+    const d = await r.json();
+    const match = d?.result?.addressMatches?.[0];
+    if (match) return {
+      lat: match.coordinates.y,
+      lng: match.coordinates.x,
+      city: match.addressComponents?.city || zip,
+      state: match.addressComponents?.state || "",
+    };
+  } catch { /* fall through */ }
+
+  return null;
 }
 
 // Haversine distance in miles (client-side for instant filtering)
