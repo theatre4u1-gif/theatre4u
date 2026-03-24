@@ -5673,7 +5673,7 @@ function Prop28Page({org, userId, items=[], plan="pro"}) {
 
   const load = useCallback(async()=>{
     setLoading(true);
-    const{data:pData}=await SB.from("prop28_purchases").select("*, items(name)").eq("org_id",userId).eq("school_year",year).order("date_purchased",{ascending:false});
+    const{data:pData}=await SB.from("prop28_purchases").select("*").eq("org_id",userId).eq("school_year",year).order("date_purchased",{ascending:false});
     setPurchases(pData||[]);
     const{data:rData}=await SB.from("prop28_reports").select("*").eq("org_id",userId).eq("school_year",year).single();
     setReport(rData||null);
@@ -5684,8 +5684,12 @@ function Prop28Page({org, userId, items=[], plan="pro"}) {
   const savePurchase = async(f)=>{
     setSaving(true);
     const row={...f,org_id:userId,cost:parseFloat(f.cost)||0,students_served:parseInt(f.students_served)||0};
-    if(active&&modal==="edit"){const{data}=await SB.from("prop28_purchases").update(row).eq("id",active.id).select("*, items(name)").single();if(data)setPurchases(p=>p.map(x=>x.id===data.id?data:x));}
-    else{const{data}=await SB.from("prop28_purchases").insert(row).select("*, items(name)").single();if(data)setPurchases(p=>[data,...p]);}
+    if(active&&modal==="edit"){const{data,error:updErr}=await SB.from("prop28_purchases").update(row).eq("id",active.id).select("*").single();
+      if(updErr){console.error("Update error:",updErr);setMsg("❌ Error saving: "+updErr.message);setSaving(false);return;}
+      if(data)setPurchases(p=>p.map(x=>x.id===data.id?data:x));}
+    else{const{data,error:insErr}=await SB.from("prop28_purchases").insert(row).select("*").single();
+      if(insErr){console.error("Insert error:",insErr);setMsg("❌ Error saving: "+insErr.message);setSaving(false);return;}
+      if(data)setPurchases(p=>[data,...p]);}
     setModal(null);setActive(null);setSaving(false);setMsg("✓ Purchase logged");setTimeout(()=>setMsg(""),2500);
   };
   const deletePurchase = async(id)=>{if(!window.confirm("Delete this purchase?"))return;await SB.from("prop28_purchases").delete().eq("id",id);setPurchases(p=>p.filter(x=>x.id!==id));};
