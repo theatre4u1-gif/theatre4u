@@ -5174,7 +5174,7 @@ function Messages({ userId, orgName, openConvId, onClearOpenConv }) {
               <div style={{fontSize:36,marginBottom:10}}>💬</div>
               <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:6}}>No messages yet</div>
               <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>
-                Find an item in the Marketplace and click "Contact Program" to start a conversation.
+                Start a conversation by finding a program in the Marketplace, or wait for someone to reach out to you here.
               </div>
             </div>
           ) : (
