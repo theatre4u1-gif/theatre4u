@@ -4899,7 +4899,8 @@ function ChatWindow({ convId, currentUserId, orgNames, onClose, onUnreadChange }
         event: "INSERT", schema: "public", table: "messages",
         filter: `conversation_id=eq.${convId}`
       }, payload => {
-        setMessages(p => [...p, payload.new]);
+        // Deduplicate — only add if this message ID isn't already in state
+        setMessages(p => p.some(m => m.id === payload.new.id) ? p : [...p, payload.new]);
         if (payload.new.sender_id !== currentUserId) {
           SB.from("messages").update({ read: true }).eq("id", payload.new.id);
           onUnreadChange?.();
@@ -4923,7 +4924,8 @@ function ChatWindow({ convId, currentUserId, orgNames, onClose, onUnreadChange }
       sender_id:       currentUserId,
       body:            text,
     }).select().single();
-    if (msg) setMessages(p => [...p, msg]);
+    // Don't add to state here — realtime subscription handles it
+    // This prevents the duplicate message bug
     await SB.from("conversations").update({ last_message: text, last_at: new Date().toISOString() }).eq("id", convId);
 
     // Notify recipient
