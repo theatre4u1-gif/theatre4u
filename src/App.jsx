@@ -7607,24 +7607,24 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
     <>
       {/* Floating trigger button */}
       <button onClick={() => setOpen(!open)} style={{
-        position:"fixed", bottom:24, right:24, zIndex:900,
-        width:52, height:52, borderRadius:"50%",
+        position:"fixed", bottom:24, left:24, zIndex:900,
+        height:40, borderRadius:20, padding:"0 16px",
         background:"linear-gradient(135deg,var(--gold2),var(--gold))",
         border:"none", boxShadow:"0 4px 20px rgba(212,168,67,.4)",
         cursor:"pointer", display:"flex", alignItems:"center",
-        justifyContent:"center", fontSize:22,
+        gap:8, fontSize:15,
         transition:"transform .2s,box-shadow .2s",
       }}
       onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.1)";e.currentTarget.style.boxShadow="0 6px 28px rgba(212,168,67,.55)";}}
       onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.boxShadow="0 4px 20px rgba(212,168,67,.4)";}}
       title="Share feedback">
-        {open ? "✕" : "💬"}
+        {open ? <>✕ <span style={{fontSize:13,fontWeight:700}}>Close</span></> : <><span style={{fontSize:15}}>💬</span><span style={{fontSize:12,fontWeight:800,letterSpacing:.3}}>Leading Players Feedback</span></>}
       </button>
 
       {/* Feedback panel */}
       {open && (
         <div style={{
-          position:"fixed", bottom:88, right:24, zIndex:900,
+          position:"fixed", bottom:76, left:24, zIndex:900,
           width:340, background:"var(--bg2)", border:"1.5px solid var(--border)",
           borderRadius:14, boxShadow:"0 8px 40px rgba(0,0,0,.35)",
           overflow:"hidden", animation:"feedIn .2s ease",
