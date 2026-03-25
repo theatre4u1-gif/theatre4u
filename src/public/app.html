@@ -262,17 +262,6 @@ async function genQR(text, size=180) {
 
 // ── jsQR for scanning ──────────────────────────────────────────────────────────
 let _jsQR = null;
-async function loadJsQR() {
-  if (_jsQR) return _jsQR;
-  // Load via script tag since jsQR doesn't work cleanly as ESM
-  return new Promise(res => {
-    const s = document.createElement("script");
-    s.src = "https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js";
-    s.onload = () => { _jsQR = window.jsQR; res(_jsQR); };
-    s.onerror = () => res(null);
-    document.head.appendChild(s);
-  });
-}
 
 // ── Image resize ──────────────────────────────────────────────────────────────
 function resizeImg(file, maxW=800, q=0.82) {
@@ -741,247 +730,6 @@ function AddSheet({onClose, onAdded, userId}) {
 // ── ══════════════════════════════════════════
 // ── QR SCANNER
 // ── ══════════════════════════════════════════
-function QRScanner({onFound, onClose}) {
-  const videoRef  = useRef();
-  const animRef   = useRef();
-  const fileRef   = useRef();
-  const streamRef = useRef();
-  const detectorRef = useRef();
-  const [mode, setMode]     = useState("starting");
-  const [err, setErr]       = useState("");
-  const [manualId, setManualId] = useState("");
-  const [loading, setLoading]   = useState(false);
-  const [scanCount, setScanCount] = useState(0);
-
-  useEffect(()=>{
-    let active = true;
-
-    (async()=>{
-      // Step 1: Try native BarcodeDetector
-      const hasDetector = typeof BarcodeDetector !== "undefined";
-      if(hasDetector){
-        try{
-          const formats = await BarcodeDetector.getSupportedFormats().catch(()=>["qr_code"]);
-          const supportsQR = formats.includes("qr_code");
-          if(supportsQR){
-            detectorRef.current = new BarcodeDetector({formats:["qr_code"]});
-          }
-        } catch(e){ /* detector unavailable */ }
-      }
-
-      // Step 2: Try to open live camera stream
-      if(!navigator.mediaDevices?.getUserMedia){ setMode("tap"); return; }
-
-      let stream = null;
-      try{
-        stream = await navigator.mediaDevices.getUserMedia({
-          video:{facingMode:"environment",width:{ideal:1920},height:{ideal:1080}}
-        });
-      } catch(e){
-        setMode("tap");
-        if(e.name==="NotAllowedError")
-          setErr("Camera access denied. Go to Settings → Safari → Camera → Allow");
-        return;
-      }
-
-      if(!active){ stream.getTracks().forEach(t=>t.stop()); return; }
-      streamRef.current = stream;
-
-      if(videoRef.current){
-        videoRef.current.srcObject = stream;
-        try{ await videoRef.current.play(); } catch(e){}
-      }
-
-      // Step 3: If we have detector + stream → live mode
-      if(detectorRef.current){
-        setMode("live");
-        let frameCount = 0;
-        const scanFrame = async()=>{
-          if(!active) return;
-          const v = videoRef.current;
-          frameCount++;
-          // Only scan every 3rd frame for performance, but must have video data
-          if(v && v.readyState >= 2 && v.videoWidth > 0 && frameCount % 3 === 0){
-            try{
-              const codes = await detectorRef.current.detect(v);
-              if(codes.length > 0 && active){
-                active = false;
-                const raw = codes[0].rawValue;
-                // Parse URL format: https://theatre4u.org/#/item/ID
-                const urlMatch = raw.match(/#\/item\/([^/?#]+)/);
-                const colonMatch = raw.split(":");
-                const id = urlMatch ? urlMatch[1] 
-                         : colonMatch.length >= 2 ? colonMatch[1] 
-                         : raw;
-                onFound(id.trim());
-                return;
-              }
-            } catch(e){ /* frame not ready */ }
-          }
-          setScanCount(c => c+1); // trigger re-render to show scanning animation
-          animRef.current = requestAnimationFrame(scanFrame);
-        };
-        scanFrame();
-      } else {
-        // Have camera but no detector — show tap mode with camera already open
-        setMode("tap");
-      }
-    })();
-
-    return()=>{
-      active = false;
-      cancelAnimationFrame(animRef.current);
-      streamRef.current?.getTracks().forEach(t=>t.stop());
-    };
-  },[]);
-
-  // Decode a photo taken from file input
-  const handlePhoto = async(e)=>{
-    const file = e.target.files?.[0];
-    if(!file) return;
-    setLoading(true); setErr("");
-    try{
-      const imgUrl = URL.createObjectURL(file);
-      // Try BarcodeDetector on the image
-      if(detectorRef.current || typeof BarcodeDetector !== "undefined"){
-        const bd = detectorRef.current || new BarcodeDetector({formats:["qr_code"]});
-        const img = new Image();
-        await new Promise(res=>{ img.onload=res; img.onerror=res; img.src=imgUrl; });
-        const codes = await bd.detect(img).catch(()=>[]);
-        URL.revokeObjectURL(imgUrl);
-        if(codes.length > 0){
-          const raw = codes[0].rawValue;
-          const urlMatch = raw.match(/#\/item\/([^/?#]+)/);
-          const colonMatch = raw.split(":");
-          const id = urlMatch ? urlMatch[1] : colonMatch.length >= 2 ? colonMatch[1] : raw;
-          onFound(id.trim()); return;
-        }
-      }
-      URL.revokeObjectURL(imgUrl);
-      setErr("No QR code found. Make sure the QR code fills the frame and try again.");
-    } catch(e){
-      setErr("Could not read the photo. Try the manual ID field.");
-    } finally {
-      setLoading(false);
-      if(fileRef.current) fileRef.current.value="";
-    }
-  };
-
-  const submit = ()=>{ const q=manualId.trim(); if(q) onFound(q); };
-
-  return h("div",{className:"full-overlay",style:{background:"#000",display:"flex",flexDirection:"column"}},
-
-    // Top bar
-    h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",
-      padding:"calc(var(--safe-top) + 12px) 20px 12px",flexShrink:0}},
-      h("button",{onClick:()=>{streamRef.current?.getTracks().forEach(t=>t.stop());onClose();},
-        style:{background:"none",border:"none",color:"#fff",fontSize:28,cursor:"pointer",lineHeight:1,padding:4}},
-        "×"),
-      h("div",{style:{color:"rgba(255,255,255,.7)",fontSize:13,textAlign:"center"}},
-        mode==="live"?"Point camera at a QR label":
-        mode==="tap"?"Take a photo of the QR label":"Starting camera…"),
-      h("div",{style:{width:40}})
-    ),
-
-    // Main content area
-    h("div",{style:{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
-      justifyContent:"center",padding:"0 20px",gap:20}},
-
-      // LIVE MODE: video viewfinder
-      mode==="live" && h("div",{style:{width:"100%",maxWidth:340,aspectRatio:"1",
-        borderRadius:16,overflow:"hidden",position:"relative",
-        border:"2px solid var(--gold)",boxShadow:"0 0 0 4px rgba(212,168,67,.2)"}},
-        h("video",{ref:videoRef,playsInline:true,muted:true,autoPlay:true,
-          style:{width:"100%",height:"100%",objectFit:"cover"}}),
-        // Scanning animation overlay
-        h("div",{style:{position:"absolute",inset:0,pointerEvents:"none"}},
-          // Corner marks
-          ...[["0 auto auto 0","border-top-left-radius:4px"],
-              ["0 0 auto auto","border-top-right-radius:4px"],
-              ["auto auto 0 0","border-bottom-left-radius:4px"],
-              ["auto 0 0 auto","border-bottom-right-radius:4px"]
-          ].map(([inset,r],i)=>h("div",{key:i,style:{
-            position:"absolute",width:24,height:24,
-            border:"3px solid var(--gold2)",inset,
-          }})),
-          // Scan line
-          h("div",{className:"scan-line"})
-        )
-      ),
-
-      // TAP MODE: photo button + native camera tip
-      mode==="tap" && h("div",{style:{width:"100%",maxWidth:320,display:"flex",
-        flexDirection:"column",gap:12}},
-        // Primary: take photo
-        h("label",{style:{
-          display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
-          gap:14,width:"100%",aspectRatio:"4/3",
-          background:"linear-gradient(135deg,rgba(212,168,67,.12),rgba(212,168,67,.04))",
-          border:"2px dashed var(--gold)",borderRadius:16,cursor:"pointer",
-          color:"var(--gold)",textAlign:"center",padding:24}},
-          loading
-            ? h("div",{style:{fontSize:44}},"⏳")
-            : h("div",{style:{fontSize:56}},"📷"),
-          h("div",{style:{fontSize:16,fontWeight:700}},
-            loading?"Reading QR code…":"Tap to Photograph QR Label"),
-          h("div",{style:{fontSize:12,color:"rgba(255,255,255,.45)",lineHeight:1.5}},
-            "Point your camera at the label and tap the shutter button"),
-          h("input",{ref:fileRef,type:"file",accept:"image/*",capture:"environment",
-            hidden:true,onChange:handlePhoto,disabled:loading})
-        ),
-        // Divider
-        h("div",{style:{display:"flex",alignItems:"center",gap:10}},
-          h("div",{style:{flex:1,height:1,background:"rgba(255,255,255,.1)"}}),
-          h("div",{style:{fontSize:11,color:"rgba(255,255,255,.3)",fontWeight:600}},"OR"),
-          h("div",{style:{flex:1,height:1,background:"rgba(255,255,255,.1)"}})
-        ),
-        // Secondary: use native camera tip
-        h("div",{style:{
-          background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",
-          borderRadius:12,padding:"12px 14px",display:"flex",gap:10,alignItems:"flex-start"}},
-          h("span",{style:{fontSize:22,flexShrink:0}},"📱"),
-          h("div",null,
-            h("div",{style:{fontSize:13,fontWeight:700,color:"rgba(255,255,255,.8)",marginBottom:3}},
-              "Use iPhone Camera App"),
-            h("div",{style:{fontSize:12,color:"rgba(255,255,255,.45)",lineHeight:1.5}},
-              "Open the Camera app, point at the QR label, then tap the notification that appears to jump straight to the item.")
-          )
-        )
-      ),
-
-      mode==="starting" && h("div",{style:{display:"flex",flexDirection:"column",
-        alignItems:"center",gap:14}},
-        h("div",{className:"spin",style:{width:40,height:40,border:"3px solid rgba(255,255,255,.1)",
-          borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}),
-        h("div",{style:{color:"rgba(255,255,255,.5)",fontSize:14}},"Starting camera…")
-      ),
-
-      err && h("div",{style:{fontSize:13,color:"var(--red)",textAlign:"center",
-        maxWidth:300,lineHeight:1.5,padding:"8px 12px",background:"rgba(224,82,82,.1)",
-        borderRadius:8,border:"1px solid rgba(224,82,82,.2)"}},err)
-    ),
-
-    // Manual entry
-    h("div",{style:{padding:"16px 20px",paddingBottom:"calc(var(--safe-bot) + 20px)",
-      flexShrink:0,borderTop:"1px solid rgba(255,255,255,.08)"}},
-      h("div",{style:{fontSize:10,fontWeight:800,textTransform:"uppercase",
-        letterSpacing:1,color:"rgba(255,255,255,.3)",marginBottom:8}},
-        "Or enter item ID manually"),
-      h("div",{style:{display:"flex",gap:8}},
-        h("input",{value:manualId,onChange:e=>setManualId(e.target.value),
-          onKeyDown:e=>e.key==="Enter"&&submit(),
-          placeholder:"Paste item ID…",
-          style:{flex:1,background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",
-            borderRadius:10,padding:"11px 14px",color:"#fff",fontSize:15,
-            outline:"none",fontFamily:"inherit"}}),
-        h("button",{onClick:submit,className:"btn btn-gold",
-          style:{padding:"0 16px",borderRadius:10,fontWeight:700,fontSize:15,
-            minWidth:64}},"Find")
-      )
-    )
-  );
-}
-
 
 function HomeTab({items, org, onAddItem, onViewItem}) {
   const totalQty = items.reduce((s,i)=>s+(i.qty||1),0);
@@ -1038,7 +786,7 @@ function HomeTab({items, org, onAddItem, onViewItem}) {
     items.length===0 && h("div",{className:"empty"},
       h("div",{className:"ei"},"🎭"),
       h("h3",null,"Ready to catalog?"),
-      h("p",null,"Tap the button above to add your first item, or use the Scan tab to look up existing items."),
+      h("p",null,"Tap the button above to add your first item. To look up an item by QR code, use your iPhone Camera app — it reads Theatre4u labels instantly."),
     )
   );
 }
@@ -1108,66 +856,7 @@ function InventoryTab({items, onViewItem, onAddItem}) {
 // ── ══════════════════════════════════════════
 // ── SCAN TAB
 // ── ══════════════════════════════════════════
-function ScanTab({items, onViewItem}) {
-  const [scanning, setScanning] = useState(false);
-  const [result, setResult]     = useState(null);
-  const [toast, showT]          = useToast();
 
-  const handleFound = async (id) => {
-    setScanning(false);
-    // First try local items
-    const clean = id.trim().toLowerCase();
-    const local = items.find(i=>i.id.toLowerCase()===clean||i.name.toLowerCase().includes(clean));
-    if(local){ setResult(local); return; }
-    // Try DB
-    const {data} = await SB.from("items").select("*").eq("id",clean).single();
-    if(data){ setResult(data); return; }
-    showT("Item not found for: "+id,"err");
-  };
-
-  if(scanning) return h(QRScanner,{onFound:handleFound,onClose:()=>setScanning(false)});
-
-  return h("div",{className:"screen fin"},
-    h("div",{className:"ph"},h("h1",null,"Scan")),
-    h("div",{style:{padding:"0 16px"}},
-      h("div",{style:{background:"var(--card)",border:"1px solid var(--border)",borderRadius:16,overflow:"hidden",marginBottom:20}},
-        h("div",{style:{aspectRatio:"1",background:"linear-gradient(135deg,#1a1a2e,#0f0f1a)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:20,cursor:"pointer"},onClick:()=>setScanning(true)},
-          h("div",{style:{fontSize:72,opacity:.8}},"📷"),
-          h("div",{style:{textAlign:"center"}},
-            h("div",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:700,color:"var(--gold)"}},
-              "Scan QR Label"
-            ),
-            h("div",{style:{fontSize:13,color:"var(--muted)",marginTop:4}},"Point camera at any Theatre4u QR code")
-          ),
-          h("div",{style:{background:"linear-gradient(135deg,var(--gold),var(--goldd))",color:"#1a1000",padding:"12px 28px",borderRadius:10,fontWeight:700,fontSize:15}},
-            "Open Scanner"
-          )
-        )
-      ),
-      result && h("div",null,
-        h("div",{className:"sec-hd"},h("h3",null,"Scan Result")),
-        h("div",{className:"card"},
-          h("div",{className:"item-row",onClick:()=>onViewItem(result)},
-            h("div",{className:"item-thumb"},result.img?h("img",{src:result.img,alt:""}):h("span",null,(CAT[result.category]||CAT.other).icon)),
-            h("div",{className:"item-info"},
-              h("div",{className:"item-name"},result.name),
-              h("div",{className:"item-sub"},(CAT[result.category]||CAT.other).label,(result.location?" · "+result.location:""))
-            ),
-            h("span",{style:{color:"var(--gold)",fontSize:13}},">")
-          )
-        ),
-        h("button",{className:"btn btn-ghost btn-full",style:{marginTop:10},onClick:()=>{setResult(null);setScanning(true);}},
-          "Scan Another"
-        )
-      )
-    ),
-    h(Toast,{toast})
-  );
-}
-
-// ── ══════════════════════════════════════════
-// ── PROFILE TAB
-// ── ══════════════════════════════════════════
 function ProfileTab({user, org, onSignOut}) {
   const [f, setF]     = useState(org||{});
   const [saved, setSaved] = useState(false);
@@ -1519,7 +1208,6 @@ function App() {
 
   const navItems = [
     {id:"home",    label:"Home",       icon:Ic.home},
-    {id:"scan",    label:"Scan",       icon:Ic.qr},
     {id:"inventory",label:"Items",     icon:Ic.box},
     ...(isPro ? [{id:"prop28", label:"Prop 28",  icon:Ic.check}] : []),
     {id:"profile", label:"Profile",    icon:Ic.user},
@@ -1534,7 +1222,6 @@ function App() {
     !viewItem && h("div",{style:{flex:1,overflow:"hidden",display:"flex",flexDirection:"column"}},
       !isStandalone && h(InstallBanner,null),
       tab==="home"      && h(HomeTab,{items,org,onAddItem:()=>setAddOpen(true),onViewItem:handleViewItem}),
-      tab==="scan"      && h(ScanTab,{items,onViewItem:handleViewItem}),
       tab==="inventory" && h(InventoryTab,{items,onViewItem:handleViewItem,onAddItem:()=>setAddOpen(true)}),
       tab==="prop28"    && h(Prop28MobileTab,{userId:user.id,org,items}),
       tab==="profile"   && h(ProfileTab,{user,org,onSignOut:signOut})
