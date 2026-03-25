@@ -6621,7 +6621,7 @@ function LandingPage({onSignIn, onSignUp}){
     {icon:"🏪",title:"Borrow What You Need",desc:"Browse thousands of items listed by other programmes nationwide. Rent a fog machine for the weekend. Borrow a set of Victorian costumes. List your own items and earn revenue between shows."},
     {icon:"🪙",title:"Theatre Credits",desc:"Lend your items for free and earn credits. Spend those credits to reduce what you pay when you borrow. The more you share, the less you spend — a community that rewards generosity."},
     {icon:"📋",title:"Prop 28 Compliance (CA)",desc:"California schools: Theatre4u automatically tracks your arts purchases, generates your CDE-required annual report, handles the Supplement vs. Supplant attestation, and exports everything for your board meeting."},
-    {icon:"📱",title:"Mobile App for Backstage",desc:"Add items by taking a photo. Scan QR labels to look up anything in seconds. Log Prop 28 purchases from anywhere. Available on iPhone and Android — no app store required."},
+    {icon:"📱",title:"Mobile App for Backstage",desc:"Add items by taking a photo. Log Prop 28 purchases from anywhere. Use your phone's camera to scan QR labels — the iPhone Camera app reads Theatre4u labels instantly. Available on iPhone and Android — no app store required."},
     {icon:"🎪",title:"Community Board",desc:"Post audition notices, share upcoming show dates, upload production photos, and find items you need. A regional bulletin board for the performing arts community."},
   ];
 
@@ -7642,7 +7642,7 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
       {/* Leading Players get the prominent gold pill */}
       {isLeadingPlayer ? (
         <button onClick={() => setOpen(!open)} style={{
-          position:"fixed", bottom:24, left:24, zIndex:900,
+          position:"fixed", top:16, right:16, zIndex:900,
           height:40, borderRadius:20, padding:"0 16px",
           background:"linear-gradient(135deg,#ffcd3c,#f4a800)",
           border:"2px solid rgba(255,220,80,.6)",
@@ -7659,7 +7659,7 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
       ) : (
         /* Regular users get a small subtle link */
         <button onClick={() => setOpen(!open)} style={{
-          position:"fixed", bottom:16, left:16, zIndex:900,
+          position:"fixed", top:16, right:16, zIndex:900,
           background:"none", border:"none",
           color:"var(--muted,#9b93a8)", fontSize:11, fontWeight:600,
           cursor:"pointer", padding:"4px 8px", borderRadius:6,
@@ -7678,15 +7678,15 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
       {/* Feedback panel */}
       {open && (
         <div style={{
-          position:"fixed", bottom:76, left:24, zIndex:900,
-          width:420, background:"var(--bg2)", border:"1.5px solid var(--border)",
-          borderRadius:14, boxShadow:"0 8px 40px rgba(0,0,0,.35)",
+          position:"fixed", top:64, right:16, zIndex:900,
+          width:420, background:"#1e1a2e", border:"1.5px solid rgba(255,255,255,.12)",
+          borderRadius:14, boxShadow:"0 8px 40px rgba(0,0,0,.5)",
           overflow:"hidden", animation:"feedIn .2s ease",
         }}>
-          <style>{`@keyframes feedIn{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}`}</style>
+          <style>{`@keyframes feedIn{from{opacity:0;transform:translateY(-10px) scale(.97)}to{opacity:1;transform:none}}`}</style>
 
           {/* Header */}
-          <div style={{background:"linear-gradient(135deg,#1a1008,#2a1808)",padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{background:"linear-gradient(135deg,#1a0a2e,#2d1054)",padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",borderRadius:"12px 12px 0 0"}}>
             <div>
               <div style={{fontFamily:"'Abril Fatface',display",fontSize:18,color:"var(--gold2)"}}>Share Feedback</div>
               <div style={{fontSize:13,color:"rgba(255,255,255,.55)",marginTop:2}}>You're a Leading Player — your voice shapes this tool.</div>
@@ -7740,7 +7740,7 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
                     "Tell us anything on your mind…"
                   }
                   style={{
-                    width:"100%",minHeight:80,background:"var(--bgi,#0d0b11)",
+                    width:"100%",minHeight:80,background:"rgba(0,0,0,.25)",
                     border:"1.5px solid var(--border)",borderRadius:8,padding:"9px 11px",
                     color:"var(--text,#ede8df)",fontFamily:"'DM Sans',sans-serif",
                     fontSize:14,resize:"vertical",outline:"none",lineHeight:1.6,
@@ -7788,7 +7788,7 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
                   </label>
                   <input value={q1} onChange={e=>setQ1(e.target.value)}
                     placeholder="e.g. Small props, lighting gels, period costumes…"
-                    style={{width:"100%",background:"var(--bgi,#0d0b11)",border:"1.5px solid var(--border)",
+                    style={{width:"100%",background:"rgba(0,0,0,.25)",border:"1.5px solid var(--border)",
                       borderRadius:8,padding:"10px 12px",color:"var(--text,#ede8df)",fontFamily:"inherit",fontSize:14,outline:"none"}}
                     onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--border)"}
                   />
@@ -7818,7 +7818,7 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
                     3. What stops you from lending items to other schools?
                   </label>
                   <select value={q3} onChange={e=>setQ3(e.target.value)} style={{
-                    width:"100%",background:"var(--bgi,#0d0b11)",border:"1.5px solid var(--border)",
+                    width:"100%",background:"rgba(0,0,0,.25)",border:"1.5px solid var(--border)",
                     borderRadius:8,padding:"10px 12px",color:"var(--text,#ede8df)",fontFamily:"inherit",fontSize:14,outline:"none",
                   }}>
                     <option value="">Select the biggest one…</option>
@@ -7839,7 +7839,7 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
                   </label>
                   <textarea value={q4} onChange={e=>setQ4(e.target.value)}
                     placeholder="e.g. Auto-fill my Prop 28 report, scan items in/out on my phone…"
-                    style={{width:"100%",minHeight:64,background:"var(--bgi,#0d0b11)",border:"1.5px solid var(--border)",
+                    style={{width:"100%",minHeight:64,background:"rgba(0,0,0,.25)",border:"1.5px solid var(--border)",
                       borderRadius:8,padding:"8px 10px",color:"var(--text,#ede8df)",fontFamily:"inherit",fontSize:12,
                       resize:"vertical",outline:"none",lineHeight:1.5}}
                     onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--border)"}
