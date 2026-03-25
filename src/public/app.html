@@ -206,9 +206,30 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 </style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;background:#0a0a0f"><div style="font-size:52px">🎭</div><div style="width:32px;height:32px;border:2.5px solid #2a2a38;border-top-color:#d4a843;border-radius:50%;animation:spin .7s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div></div>
 
 <script type="module">
+// Catch any module-level errors and show them visibly
+window.addEventListener('error', function(e) {
+  document.getElementById('root').innerHTML = 
+    '<div style="padding:40px;color:#e05252;font-family:sans-serif;text-align:center">' +
+    '<div style="font-size:48px;margin-bottom:16px">⚠️</div>' +
+    '<div style="font-size:18px;font-weight:700;margin-bottom:8px">App failed to load</div>' +
+    '<div style="font-size:13px;color:#8a8aa0;margin-bottom:16px">' + (e.message||'Unknown error') + '</div>' +
+    '<a href="https://theatre4u.org" style="color:#d4a843">Return to theatre4u.org</a>' +
+    '</div>';
+});
+window.addEventListener('unhandledrejection', function(e) {
+  if(document.getElementById('root').innerHTML === '') {
+    document.getElementById('root').innerHTML = 
+      '<div style="padding:40px;color:#e05252;font-family:sans-serif;text-align:center">' +
+      '<div style="font-size:48px;margin-bottom:16px">⚠️</div>' +
+      '<div style="font-size:18px;font-weight:700;margin-bottom:8px">App failed to load</div>' +
+      '<div style="font-size:13px;color:#8a8aa0;margin-bottom:16px">Network error loading app components. Check your connection.</div>' +
+      '<a href="https://theatre4u.org" style="color:#d4a843">Return to theatre4u.org</a>' +
+      '</div>';
+  }
+});
 import { createElement as h, useState, useEffect, useCallback, useRef, useMemo } from "https://esm.sh/react@18";
 import { createRoot } from "https://esm.sh/react-dom@18/client";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -888,8 +909,7 @@ function QRScanner({onFound, onClose}) {
           loading ? "Reading QR code…" : "Tap to Open Camera"
         ),
         h("div",{style:{fontSize:12,color:"rgba(255,255,255,.5)",lineHeight:1.4}},
-          "Opens your iPhone camera.
-Point it at a QR label and tap the shutter."
+          "Opens your iPhone camera. Point at a QR label and tap the shutter."
         ),
         h("input",{ref:fileRef,type:"file",accept:"image/*",capture:"environment",
           hidden:true,onChange:handlePhoto,disabled:loading})
@@ -1495,7 +1515,7 @@ createRoot(document.getElementById("root")).render(h(App,null));
 <script>
 const manifest = {
   name:"Theatre4u",short_name:"Theatre4u",description:"Inventory, Marketplace & Community for Theatre Programs",
-  start_url:"/",display:"standalone",background_color:"#0a0a0f",theme_color:"#0a0a0f",
+  start_url:"/app",display:"standalone",background_color:"#0a0a0f",theme_color:"#0a0a0f",
   orientation:"portrait",
   icons:[
     {src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23d4a843'/><text y='.9em' font-size='72' x='12'>🎭</text></svg>",sizes:"any",type:"image/svg+xml"}
