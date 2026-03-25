@@ -5672,7 +5672,7 @@ function Prop28PurchaseForm({initial, onSave, onCancel, items=[]}) {
     <div className="fg fu"><label className="fl">Item Description *</label><input className="fi" value={f.item_description} onChange={e=>upd("item_description",e.target.value)} placeholder='e.g. "Sheet music — musical theater repertoire"' autoFocus/></div>
     <div className="fg"><label className="fl">Arts Discipline *</label><select className="fs" value={f.arts_discipline} onChange={e=>upd("arts_discipline",e.target.value)}>{DISCIPLINES.map(d=><option key={d}>{d}</option>)}</select></div>
     <div className="fg"><label className="fl">School Year</label><select className="fs" value={f.school_year} onChange={e=>upd("school_year",e.target.value)}>{SCHOOL_YEARS.map(y=><option key={y}>{y}</option>)}</select></div>
-    <div className="fg fu"><label className="fl">Grade Levels Served *</label><div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}}>{GRADE_OPTIONS.map(g=><button key={g} type="button" onClick={()=>toggleGrade(g)} style={{padding:"5px 10px",borderRadius:6,border:"1.5px solid",fontFamily:"inherit",fontSize:12,fontWeight:700,cursor:"pointer",background:(f.grade_levels||[]).includes(g)?"var(--green)":"var(--parch)",color:(f.grade_levels||[]).includes(g)?"#fff":"var(--muted)",borderColor:(f.grade_levels||[]).includes(g)?"var(--green)":"var(--border)"}}>{g}</button>)}<button type="button" onClick={()=>upd("grade_levels",[...GRADE_OPTIONS])} style={{padding:"5px 10px",borderRadius:6,border:"1.5px solid var(--border)",background:"transparent",color:"var(--muted)",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>All</button><button type="button" onClick={()=>upd("grade_levels",[])} style={{padding:"5px 10px",borderRadius:6,border:"1.5px solid var(--border)",background:"transparent",color:"var(--muted)",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Clear</button></div></div>
+    <div className="fg fu"><label className="fl">Grade Levels Served *</label><div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}}>{GRADE_OPTIONS.map(g=><button key={g} type="button" onClick={()=>toggleGrade(g)} style={{padding:"5px 10px",borderRadius:6,border:"1.5px solid",fontFamily:"inherit",fontSize:13,fontWeight:700,cursor:"pointer",background:(f.grade_levels||[]).includes(g)?"var(--green)":"var(--parch)",color:(f.grade_levels||[]).includes(g)?"#fff":"var(--muted)",borderColor:(f.grade_levels||[]).includes(g)?"var(--green)":"var(--border)"}}>{g}</button>)}<button type="button" onClick={()=>upd("grade_levels",[...GRADE_OPTIONS])} style={{padding:"5px 10px",borderRadius:6,border:"1.5px solid var(--border)",background:"transparent",color:"var(--muted)",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>All</button><button type="button" onClick={()=>upd("grade_levels",[])} style={{padding:"5px 10px",borderRadius:6,border:"1.5px solid var(--border)",background:"transparent",color:"var(--muted)",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Clear</button></div></div>
     <div className="fg"><label className="fl">Students Served *</label><input className="fi" type="number" min="0" value={f.students_served} onChange={e=>upd("students_served",parseInt(e.target.value)||"")} placeholder="e.g. 150"/></div>
     <div className="fg"><label className="fl">Cost ($) *</label><input className="fi" type="number" min="0" step="0.01" value={f.cost} onChange={e=>upd("cost",parseFloat(e.target.value)||"")} placeholder="0.00"/></div>
     <div className="fg"><label className="fl">Funding Source</label><select className="fs" value={f.funding_source} onChange={e=>upd("funding_source",e.target.value)}><option>100% Prop 28</option><option>Split Funding</option></select></div>
@@ -7639,26 +7639,47 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
   return (
     <>
       {/* Floating trigger button */}
-      <button onClick={() => setOpen(!open)} style={{
-        position:"fixed", bottom:24, left:24, zIndex:900,
-        height:40, borderRadius:20, padding:"0 16px",
-        background:"linear-gradient(135deg,var(--gold2),var(--gold))",
-        border:"none", boxShadow:"0 4px 20px rgba(212,168,67,.4)",
-        cursor:"pointer", display:"flex", alignItems:"center",
-        gap:8, fontSize:15,
-        transition:"transform .2s,box-shadow .2s",
-      }}
-      onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.1)";e.currentTarget.style.boxShadow="0 6px 28px rgba(212,168,67,.55)";}}
-      onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.boxShadow="0 4px 20px rgba(212,168,67,.4)";}}
-      title="Share feedback">
-        {open ? <>✕ <span style={{fontSize:13,fontWeight:700}}>Close</span></> : <><span style={{fontSize:15}}>💬</span><span style={{fontSize:12,fontWeight:800,letterSpacing:.3}}>Leading Players Feedback</span></>}
-      </button>
+      {/* Leading Players get the prominent gold pill */}
+      {isLeadingPlayer ? (
+        <button onClick={() => setOpen(!open)} style={{
+          position:"fixed", bottom:24, left:24, zIndex:900,
+          height:40, borderRadius:20, padding:"0 16px",
+          background:"linear-gradient(135deg,#ffcd3c,#f4a800)",
+          border:"2px solid rgba(255,220,80,.6)",
+          boxShadow:"0 0 18px rgba(255,200,0,.7), 0 4px 24px rgba(212,168,67,.6)",
+          cursor:"pointer", display:"flex", alignItems:"center",
+          gap:8, fontSize:15,
+          transition:"transform .2s,box-shadow .2s",
+        }}
+        onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.05)";e.currentTarget.style.boxShadow="0 0 28px rgba(255,210,0,.9), 0 6px 32px rgba(212,168,67,.7)";}}
+        onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.boxShadow="0 0 18px rgba(255,200,0,.7), 0 4px 24px rgba(212,168,67,.6)";}}
+        title="Share feedback">
+          {open ? <>✕ <span style={{fontSize:13,fontWeight:700}}>Close</span></> : <><span style={{fontSize:15}}>💬</span><span style={{fontSize:12,fontWeight:900,letterSpacing:.3,color:"#1a0f00",textShadow:"none"}}>Leading Players Feedback</span></>}
+        </button>
+      ) : (
+        /* Regular users get a small subtle link */
+        <button onClick={() => setOpen(!open)} style={{
+          position:"fixed", bottom:16, left:16, zIndex:900,
+          background:"none", border:"none",
+          color:"var(--muted,#9b93a8)", fontSize:11, fontWeight:600,
+          cursor:"pointer", padding:"4px 8px", borderRadius:6,
+          fontFamily:"'DM Sans',sans-serif",
+          opacity: open ? 1 : 0.6,
+          transition:"opacity .2s",
+          letterSpacing:.3,
+        }}
+        onMouseEnter={e=>e.currentTarget.style.opacity="1"}
+        onMouseLeave={e=>{if(!open)e.currentTarget.style.opacity="0.6";}}
+        title="Share feedback">
+          {open ? "✕ Close" : "💬 Feedback"}
+        </button>
+      )}
 
       {/* Feedback panel */}
       {open && (
         <div style={{
           position:"fixed", bottom:76, left:24, zIndex:900,
-          width:340, background:"var(--bg2)", border:"1.5px solid var(--border)",
+          width:420, background:"var(--bg2)", border:"1.5px solid var(--border)",
           borderRadius:14, boxShadow:"0 8px 40px rgba(0,0,0,.35)",
           overflow:"hidden", animation:"feedIn .2s ease",
         }}>
@@ -7667,8 +7688,8 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
           {/* Header */}
           <div style={{background:"linear-gradient(135deg,#1a1008,#2a1808)",padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             <div>
-              <div style={{fontFamily:"'Abril Fatface',display",fontSize:16,color:"var(--gold2)"}}>Share Feedback</div>
-              <div style={{fontSize:11,color:"rgba(255,255,255,.45)",marginTop:1}}>You're a Leading Player — your voice shapes this tool.</div>
+              <div style={{fontFamily:"'Abril Fatface',display",fontSize:18,color:"var(--gold2)"}}>Share Feedback</div>
+              <div style={{fontSize:13,color:"rgba(255,255,255,.55)",marginTop:2}}>You're a Leading Player — your voice shapes this tool.</div>
             </div>
             {isLeadingPlayer && <span style={{fontSize:11,background:"rgba(212,168,67,.2)",color:"var(--gold2)",padding:"2px 8px",borderRadius:6,fontWeight:800}}>🎭 LEADING PLAYER</span>}
           </div>
@@ -7681,17 +7702,17 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
                   flex:1,padding:"9px 12px",background:"none",border:"none",
                   borderBottom:`2px solid ${tab===id?"var(--gold)":"transparent"}`,
                   color:tab===id?"var(--gold)":"var(--muted)",fontFamily:"inherit",
-                  fontSize:12,fontWeight:700,cursor:"pointer",transition:"all .15s",
+                  fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .15s",
                 }}>{label}</button>
               ))}
             </div>
           )}
 
-          <div style={{padding:"16px 18px"}}>
+          <div style={{padding:"20px 22px"}}>
             {done ? (
               <div style={{textAlign:"center",padding:"24px 0"}}>
-                <div style={{fontSize:36,marginBottom:8}}>🙏</div>
-                <div style={{fontFamily:"'Abril Fatface',display",fontSize:17,color:"var(--green)"}}>Thank you!</div>
+                <div style={{fontSize:44,marginBottom:12}}>🙏</div>
+                <div style={{fontFamily:"'Abril Fatface',display",fontSize:20,color:"var(--green)"}}>Thank you!</div>
                 <div style={{fontSize:13,color:"var(--muted)",marginTop:4}}>Your feedback is making Theatre4u better.</div>
               </div>
             ) : tab === "quick" ? (
@@ -7701,7 +7722,7 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
                   {cats.map(c=>(
                     <button key={c.id} onClick={()=>setCategory(c.id)} style={{
                       padding:"4px 10px",borderRadius:20,border:"1.5px solid",
-                      fontFamily:"inherit",fontSize:11,fontWeight:700,cursor:"pointer",
+                      fontFamily:"inherit",fontSize:13,fontWeight:700,cursor:"pointer",
                       background:category===c.id?c.color+"22":"transparent",
                       color:category===c.id?c.color:"var(--muted)",
                       borderColor:category===c.id?c.color:"var(--border)",
@@ -7722,7 +7743,7 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
                     width:"100%",minHeight:80,background:"var(--bgi,#0d0b11)",
                     border:"1.5px solid var(--border)",borderRadius:8,padding:"9px 11px",
                     color:"var(--text,#ede8df)",fontFamily:"'DM Sans',sans-serif",
-                    fontSize:13,resize:"vertical",outline:"none",lineHeight:1.5,
+                    fontSize:14,resize:"vertical",outline:"none",lineHeight:1.6,
                     marginBottom:12,
                   }}
                   onFocus={e=>e.target.style.borderColor="var(--gold)"}
@@ -7731,7 +7752,7 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
 
                 {/* Star rating */}
                 <div style={{marginBottom:14}}>
-                  <div style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:6}}>
+                  <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:8}}>
                     Overall experience so far
                   </div>
                   <div style={{display:"flex",gap:4}}>
@@ -7748,7 +7769,7 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
                   width:"100%",padding:"10px 0",borderRadius:8,border:"none",
                   background:(!message.trim()&&!rating)?"var(--border)":"linear-gradient(135deg,var(--gold2),var(--gold))",
                   color:(!message.trim()&&!rating)?"var(--muted)":"#1a1200",
-                  fontFamily:"inherit",fontSize:14,fontWeight:700,cursor:(!message.trim()&&!rating)?"default":"pointer",
+                  fontFamily:"inherit",fontSize:15,fontWeight:700,cursor:(!message.trim()&&!rating)?"default":"pointer",
                 }}>
                   {saving?"Sending…":"Send Feedback"}
                 </button>
@@ -7762,29 +7783,29 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
 
                 {/* Q1 */}
                 <div style={{marginBottom:14}}>
-                  <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:6}}>
+                  <label style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:8}}>
                     1. What inventory is hardest to track right now?
                   </label>
                   <input value={q1} onChange={e=>setQ1(e.target.value)}
                     placeholder="e.g. Small props, lighting gels, period costumes…"
                     style={{width:"100%",background:"var(--bgi,#0d0b11)",border:"1.5px solid var(--border)",
-                      borderRadius:8,padding:"8px 10px",color:"var(--text,#ede8df)",fontFamily:"inherit",fontSize:12,outline:"none"}}
+                      borderRadius:8,padding:"10px 12px",color:"var(--text,#ede8df)",fontFamily:"inherit",fontSize:14,outline:"none"}}
                     onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--border)"}
                   />
                 </div>
 
                 {/* Q2 */}
                 <div style={{marginBottom:14}}>
-                  <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:6}}>
+                  <label style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:8}}>
                     2. Prop 28 reporting headache — 1 (fine) to 10 (nightmare)?
                   </label>
                   <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                     {[1,2,3,4,5,6,7,8,9,10].map(n=>(
                       <button key={n} onClick={()=>setQ2(n)} style={{
-                        width:28,height:28,borderRadius:6,border:"1.5px solid",
+                        width:34,height:34,borderRadius:6,border:"1.5px solid",
                         background:q2===n?"var(--gold)":"transparent",
                         color:q2===n?"#1a1200":"var(--muted)",
-                        fontFamily:"inherit",fontSize:12,fontWeight:700,cursor:"pointer",
+                        fontFamily:"inherit",fontSize:13,fontWeight:700,cursor:"pointer",
                         borderColor:q2===n?"var(--gold)":"var(--border)",
                       }}>{n}</button>
                     ))}
@@ -7793,12 +7814,12 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
 
                 {/* Q3 */}
                 <div style={{marginBottom:14}}>
-                  <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:6}}>
+                  <label style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:8}}>
                     3. What stops you from lending items to other schools?
                   </label>
                   <select value={q3} onChange={e=>setQ3(e.target.value)} style={{
                     width:"100%",background:"var(--bgi,#0d0b11)",border:"1.5px solid var(--border)",
-                    borderRadius:8,padding:"8px 10px",color:"var(--text,#ede8df)",fontFamily:"inherit",fontSize:12,outline:"none",
+                    borderRadius:8,padding:"10px 12px",color:"var(--text,#ede8df)",fontFamily:"inherit",fontSize:14,outline:"none",
                   }}>
                     <option value="">Select the biggest one…</option>
                     <option value="fear_damage">Fear of damage or loss</option>
@@ -7813,7 +7834,7 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
 
                 {/* Q4 */}
                 <div style={{marginBottom:16}}>
-                  <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:6}}>
+                  <label style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:8}}>
                     4. What one thing could save you an hour a week?
                   </label>
                   <textarea value={q4} onChange={e=>setQ4(e.target.value)}
