@@ -732,49 +732,97 @@ function QRScanner({onFound, onClose}) {
 
   useEffect(()=>{
     let active = true;
+    let barcodeDetector = null;
+    let animId = null;
+
     (async()=>{
-      const jsQR = await loadJsQR();
-      if(!jsQR){setErr("Scanner library failed to load. Check your internet connection and try again.");return;}
-      try{
-        if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-          setErr("Camera not available. Make sure you\'re using theatre4u.org over HTTPS in Safari.");
-          return;
-        }
-        const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:{ideal:1280},height:{ideal:720}}});
-        if(!active){stream.getTracks().forEach(t=>t.stop());return;}
-        streamRef.current = stream;
-        if(videoRef.current){videoRef.current.srcObject=stream;videoRef.current.play();}
-        const scan = ()=>{
-          if(!active||!scanning) return;
-          const v=videoRef.current; const c=canvasRef.current;
-          if(v&&v.readyState===4&&c){
-            c.width=v.videoWidth; c.height=v.videoHeight;
-            const ctx=c.getContext("2d");
-            ctx.drawImage(v,0,0);
-            const img=ctx.getImageData(0,0,c.width,c.height);
-            const code=jsQR(img.data,img.width,img.height,{inversionAttempts:"dontInvert"});
-            if(code){
-              const d=code.data;
-              const id=d.replace(/^https?:\/\/theatre4u\.org\/#\/item\//,"").replace(/^T4U:/,"").split(":")[0];
-              setScanning(false);
-              onFound(id);
-              return;
+      // Check camera availability
+      if(!navigator.mediaDevices?.getUserMedia){
+        setErr("Camera not available. Open theatre4u.org/app in Safari over HTTPS.");
+        return;
+      }
+
+      // Get camera stream first
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video:{facingMode:"environment",width:{ideal:1280},height:{ideal:720}}
+        });
+      } catch(e) {
+        const msg = e.name==="NotAllowedError"
+          ? "Camera access denied. Go to Settings → Safari → Camera → Allow, then reload."
+          : e.name==="NotFoundError"
+          ? "No camera found on this device."
+          : "Camera error: "+e.message;
+        setErr(msg); return;
+      }
+
+      if(!active){stream.getTracks().forEach(t=>t.stop());return;}
+      streamRef.current = stream;
+      if(videoRef.current){
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(()=>{});
+      }
+
+      // Try native BarcodeDetector first (iOS 16.4+, Android Chrome)
+      const hasNative = typeof BarcodeDetector !== "undefined";
+      if(hasNative){
+        try {
+          barcodeDetector = new BarcodeDetector({formats:["qr_code"]});
+          const scanNative = async () => {
+            if(!active) return;
+            const v = videoRef.current;
+            if(v && v.readyState >= 2){
+              try {
+                const codes = await barcodeDetector.detect(v);
+                if(codes.length > 0 && active){
+                  const raw = codes[0].rawValue;
+                  // Parse T4U:id:name format
+                  const parts = raw.split(":");
+                  const id = parts.length >= 2 ? parts[1] : raw;
+                  if(active){ active=false; onFound(id); return; }
+                }
+              } catch { /* frame not ready, continue */ }
             }
+            animId = requestAnimationFrame(scanNative);
+          };
+          animRef.current = animId;
+          scanNative();
+          return; // native working, don't need jsQR
+        } catch { /* native failed, fall through to jsQR */ }
+      }
+
+      // Fallback: jsQR from CDN
+      const jsQR = await loadJsQR();
+      if(!jsQR){
+        // Last resort: manual entry only
+        setErr("Auto-scan unavailable on this device. Use the manual ID field below.");
+        return;
+      }
+
+      const c = canvasRef.current;
+      const scanJsQR = () => {
+        if(!active) return;
+        const v = videoRef.current;
+        if(v && v.readyState===4 && c){
+          c.width=v.videoWidth; c.height=v.videoHeight;
+          const ctx=c.getContext("2d");
+          ctx.drawImage(v,0,0);
+          const img=ctx.getImageData(0,0,c.width,c.height);
+          const code=jsQR(img.data,img.width,img.height,{inversionAttempts:"dontInvert"});
+          if(code && active){
+            const raw=code.data;
+            const parts=raw.split(":");
+            const id=parts.length>=2?parts[1]:raw;
+            active=false; onFound(id); return;
           }
-          animRef.current=requestAnimationFrame(scan);
-        };
-        animRef.current=requestAnimationFrame(scan);
-      }catch(e){
-      const msg = e.name === "NotAllowedError"
-        ? "Camera access denied. On iPhone: Settings → Safari → Camera → Allow. Then reload."
-        : e.name === "NotFoundError"
-        ? "No camera found on this device."
-        : e.name === "NotSupportedError"
-        ? "Camera requires HTTPS. Make sure you\'re on theatre4u.org (not http://)."
-        : "Camera error: "+e.message+". Try reloading the page.";
-      setErr(msg);
-    }
+        }
+        animId=requestAnimationFrame(scanJsQR);
+        animRef.current=animId;
+      };
+      scanJsQR();
     })();
+
     return()=>{ active=false; cancelAnimationFrame(animRef.current); streamRef.current?.getTracks().forEach(t=>t.stop()); };
   },[]);
 
