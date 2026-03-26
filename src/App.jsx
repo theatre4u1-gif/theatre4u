@@ -6069,25 +6069,38 @@ function CommunityPage({userId, org, plan}) {
 
   const save = async(f)=>{
     setSaving(true);
-    // Geocode post location — use post's location field, fall back to org location
-    const locText = f.location || org?.location;
-    let geoFields = viewerLoc ? { lat: viewerLoc.lat, lng: viewerLoc.lng } : {};
-    if (locText && !viewerLoc) {
-      const geo = await geocodeLocation(locText);
-      if (geo) geoFields = { lat: geo.lat, lng: geo.lng };
+    try {
+      // Geocode post location — use post's location, fall back to org location
+      // Wrapped in try/catch so a geocoding failure never freezes the modal
+      const locText = f.location || org?.location;
+      let geoFields = viewerLoc ? { lat: viewerLoc.lat, lng: viewerLoc.lng } : {};
+      if (locText && !viewerLoc) {
+        try {
+          const geo = await geocodeLocation(locText);
+          if (geo) geoFields = { lat: geo.lat, lng: geo.lng };
+        } catch(geoErr) {
+          // Geocoding failed — continue without coordinates, post still saves
+          console.warn("Geocoding failed, posting without location:", geoErr);
+        }
+      }
+      const row = { ...f, ...geoFields, org_id: userId, status: "active" };
+      if(active&&modal==="edit"){
+        const{data,error}=await SB.from("community_posts").update(row).eq("id",active.id).select().single();
+        if(error) throw new Error(error.message);
+        if(data){setPosts(p=>p.map(x=>x.id===data.id?data:x));setMsg("✓ Post updated");}
+      } else {
+        const{data,error}=await SB.from("community_posts").insert(row).select().single();
+        if(error) throw new Error(error.message);
+        if(data){setPosts(p=>[data,...p]);setMsg("✓ Post published!");}
+      }
+      setModal(null);setActive(null);
+      setTimeout(()=>setMsg(""),3000);
+    } catch(err) {
+      console.error("Community post save error:", err);
+      setMsg("❌ " + (err.message || "Failed to post. Please try again."));
+    } finally {
+      setSaving(false);
     }
-    const row = { ...f, ...geoFields, org_id: userId, status: "active" };
-    if(active&&modal==="edit"){
-      const{data,error}=await SB.from("community_posts").update(row).eq("id",active.id).select().single();
-      if(error){console.error("Post update error:",error);setMsg("❌ Error: "+error.message);setSaving(false);return;}
-      if(data){setPosts(p=>p.map(x=>x.id===data.id?data:x));setMsg("✓ Post updated");}
-    } else {
-      const{data,error}=await SB.from("community_posts").insert(row).select().single();
-      if(error){console.error("Post insert error:",error);setMsg("❌ Error: "+error.message);setSaving(false);return;}
-      if(data){setPosts(p=>[data,...p]);setMsg("✓ Post published!");}
-    }
-    setModal(null);setActive(null);setSaving(false);
-    setTimeout(()=>setMsg(""),3000);
   };
 
   const deletePost = async(id)=>{
