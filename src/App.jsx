@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // ── Supabase ──────────────────────────────────────────────────────────────────
@@ -1288,6 +1288,25 @@ function Dashboard({items,org,goInventory,goMarketplace,goCommunity}){
           </div>
           <div className="hero-bar"/>
         </div>
+        {/* Profile Completion Nudge */}
+        {(!org?.location||!org?.phone||!org?.bio) && items.length > 0 && (
+          <div style={{background:"linear-gradient(135deg,rgba(212,168,67,.12),rgba(212,168,67,.05))",
+            border:"1.5px solid rgba(212,168,67,.3)",borderRadius:14,padding:"14px 18px",
+            display:"flex",alignItems:"center",gap:14,marginBottom:20,cursor:"pointer"}}
+            onClick={()=>window.dispatchEvent(new CustomEvent("t4u-nav",{detail:"settings"}))}>
+            <div style={{fontSize:28,flexShrink:0}}>✏️</div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:14,color:"var(--gold)",marginBottom:3}}>
+                Complete your profile
+              </div>
+              <div style={{fontSize:12,color:"var(--t2,#9b93a8)",lineHeight:1.5}}>
+                Add your location, phone, and bio so other programs can find and contact you in the Marketplace.
+              </div>
+            </div>
+            <div style={{color:"var(--gold)",fontSize:18,flexShrink:0}}>→</div>
+          </div>
+        )}
+
         {/* Stats */}
         <div className="stats">
           {[
@@ -7862,7 +7881,40 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
   );
 }
 
-export default function App() {
+class ErrorBoundary extends React.Component {
+  constructor(p){super(p);this.state={err:null,info:null};}
+  static getDerivedStateFromError(e){return{err:e};}
+  componentDidCatch(e,info){console.error("App crashed:",e,info);}
+  render(){
+    if(this.state.err)return(
+      <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+        height:"100vh",gap:20,padding:40,textAlign:"center",background:"var(--bg,#0d0b11)",color:"var(--t1,#ede8df)"}}>
+        <div style={{fontSize:52}}>🎭</div>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--gold,#d4a843)"}}>
+          Something went wrong
+        </div>
+        <div style={{fontSize:13,color:"var(--t3,#9b93a8)",maxWidth:360,lineHeight:1.7}}>
+          {this.state.err?.message||"An unexpected error occurred. This has been noted."}
+        </div>
+        <button onClick={()=>window.location.reload()} 
+          style={{background:"linear-gradient(135deg,#d4a843,#a37f2c)",border:"none",color:"#1a1200",
+            padding:"10px 24px",borderRadius:8,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
+          Reload App
+        </button>
+        <a href="mailto:hello@theatre4u.org" style={{fontSize:12,color:"var(--t3,#9b93a8)"}}>
+          Contact support
+        </a>
+      </div>
+    );
+    return this.props.children;
+  }
+}
+
+// Wrap App with ErrorBoundary for export
+const AppWithBoundary = ()=><ErrorBoundary><AppRoot/></ErrorBoundary>;
+export default AppWithBoundary;
+
+function AppRoot(){
   const [user,setUser]     = useState(null);
   // ── Hash routing — handles #/item/:id for public QR scans ─────────────────
   const [publicItemId, setPublicItemId] = useState(()=>{
