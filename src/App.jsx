@@ -6078,10 +6078,12 @@ function CommunityPage({userId, org, plan}) {
     }
     const row = { ...f, ...geoFields, org_id: userId, status: "active" };
     if(active&&modal==="edit"){
-      const{data}=await SB.from("community_posts").update(row).eq("id",active.id).select().single();
+      const{data,error}=await SB.from("community_posts").update(row).eq("id",active.id).select().single();
+      if(error){console.error("Post update error:",error);setMsg("❌ Error: "+error.message);setSaving(false);return;}
       if(data){setPosts(p=>p.map(x=>x.id===data.id?data:x));setMsg("✓ Post updated");}
     } else {
-      const{data}=await SB.from("community_posts").insert(row).select().single();
+      const{data,error}=await SB.from("community_posts").insert(row).select().single();
+      if(error){console.error("Post insert error:",error);setMsg("❌ Error: "+error.message);setSaving(false);return;}
       if(data){setPosts(p=>[data,...p]);setMsg("✓ Post published!");}
     }
     setModal(null);setActive(null);setSaving(false);
