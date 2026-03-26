@@ -6041,17 +6041,9 @@ function CommunityPage({userId, org, plan}) {
 
   const load = useCallback(async()=>{
     setLoading(true);
-    // Get viewer location — try org coords first, then browser geolocation
-    let vLat = org?.lat || null;
-    let vLng = org?.lng || null;
-    if ((!vLat || !vLng) && org?.location) {
-      const geo = await geocodeLocation(org.location);
-      if (geo) { vLat = geo.lat; vLng = geo.lng; }
-    }
-    if (!vLat || !vLng) {
-      const browser = await getBrowserLocation();
-      if (browser) { vLat = browser.lat; vLng = browser.lng; }
-    }
+    // Get viewer location — use stored org coords only, no blocking network calls
+    const vLat = org?.lat || null;
+    const vLng = org?.lng || null;
     setViewerLoc(vLat && vLng ? { lat: vLat, lng: vLng } : null);
 
     // Use proximity RPC — falls back to recency if no location
@@ -7349,13 +7341,21 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
       const base = f.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-').slice(0, 50);
       slug = base;
     }
+    // Geocode location once on profile save — stored permanently, no repeated network calls
+    let latLng = {};
+    if (f.location && f.location.trim().length > 2) {
+      try {
+        const geo = await geocodeLocation(f.location);
+        if (geo) latLng = { lat: geo.lat, lng: geo.lng };
+      } catch { /* geocoding optional */ }
+    }
     const { data, error } = await SB.from("orgs").update({
       name: f.name, type: f.type, email: f.email, phone: f.phone,
       location: f.location, bio: f.bio, website: f.website,
       facebook: f.facebook, instagram: f.instagram,
       logo_url: f.logo_url, founded_year: f.founded_year,
       student_count: f.student_count, profile_public: f.profile_public,
-      slug,
+      slug, ...latLng,
     }).eq("id", userId).select().single();
     if (data) {
       setOrg(o => ({ ...o, ...data }));
