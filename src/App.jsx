@@ -5863,7 +5863,7 @@ const POST_TYPES = [
 ];
 const PT = Object.fromEntries(POST_TYPES.map(p=>[p.id,p]));
 
-function CommunityPostForm({initial, onSave, onCancel}) {
+function CommunityPostForm({initial, onSave, onCancel, saving=false}) {
   const blank = {type:"show",title:"",body:"",show_title:"",venue:"",start_date:"",end_date:"",ticket_url:"",contact_email:"",tags:[],images:[]};
   const [f,setF] = useState(()=>initial ? {...blank,...initial,images:initial.images||[]} : blank);
   const [tagInput,setTagInput] = useState("");
@@ -5980,7 +5980,7 @@ function CommunityPostForm({initial, onSave, onCancel}) {
     </div>
     <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10,paddingTop:14,borderTop:"1.5px solid var(--border)",gridColumn:"1/-1"}}>
       <button className="btn btn-o" onClick={onCancel}>Cancel</button>
-      <button className="btn btn-g" disabled={!valid} style={!valid?{opacity:.4}:{}} onClick={()=>onSave(f)}>{initial?"Save Changes":"Post to Community"}</button>
+      <button className="btn btn-g" disabled={!valid||saving} style={(!valid||saving)?{opacity:.4}:{}} onClick={()=>onSave(f)}>{saving?"Posting…":initial?"Save Changes":"Post to Community"}</button>
     </div>
   </div>);
 }
@@ -6174,7 +6174,7 @@ function CommunityPage({userId, org, plan}) {
             ))}
           </div>
           <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
-            {msg&&<span style={{color:"var(--green)",fontWeight:700,fontSize:13}}>{msg}</span>}
+            {msg&&<span style={{color:msg.startsWith("❌")?"var(--red)":"var(--green)",fontWeight:700,fontSize:13}}>{msg}</span>}
             <button className="btn btn-g" onClick={()=>{setActive(null);setModal("add");}}>+ Share Something</button>
           </div>
         </div>
@@ -6245,7 +6245,7 @@ function CommunityPage({userId, org, plan}) {
 
       {(modal==="add"||modal==="edit")&&(
         <Modal title={modal==="add"?"Share with the Community":"Edit Post"} onClose={()=>{setModal(null);setActive(null);}}>
-          <CommunityPostForm initial={modal==="edit"?active:null} onSave={save} onCancel={()=>{setModal(null);setActive(null);}}/>
+          <CommunityPostForm initial={modal==="edit"?active:null} onSave={save} onCancel={()=>{setModal(null);setActive(null);}} saving={saving}/>
         </Modal>
       )}
     </div>
