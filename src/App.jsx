@@ -6,14 +6,21 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // ── Geocoding (OpenStreetMap Nominatim — free, no key needed) ─────────────────
 async function geocodeLocation(locationText) {
   if (!locationText || locationText.trim().length < 3) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000); // 5 second hard timeout
   try {
     const q = encodeURIComponent(locationText.trim() + ", USA");
     const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`, {
-      headers: { "User-Agent": "Theatre4u/1.0 (hello@theatre4u.org)" }
+      headers: { "User-Agent": "Theatre4u/1.0 (hello@theatre4u.org)" },
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
     const data = await r.json();
     if (data && data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-  } catch {}
+  } catch {
+    clearTimeout(timeout);
+    // Timeout or network error — return null so caller continues without coordinates
+  }
   return null;
 }
 
@@ -1632,7 +1639,9 @@ const STATE_NAMES = {AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"Cal
 async function zipToCoords(zip) {
   // Try zippopotam.us first (fast, reliable for most zips)
   try {
-    const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
+    const zc1 = new AbortController();
+    setTimeout(()=>zc1.abort(),5000);
+    const res = await fetch(`https://api.zippopotam.us/us/${zip}`,{signal:zc1.signal});
     if (res.ok) {
       const d = await res.json();
       const place = d.places?.[0];
@@ -5829,7 +5838,7 @@ const POST_TYPES = [
 const PT = Object.fromEntries(POST_TYPES.map(p=>[p.id,p]));
 
 function CommunityPostForm({initial, onSave, onCancel}) {
-  const blank = {type:"show",title:"",body:"",show_title:"",venue:"",location:"",start_date:"",end_date:"",ticket_url:"",contact_email:"",tags:[],images:[]};
+  const blank = {type:"show",title:"",body:"",show_title:"",venue:"",start_date:"",end_date:"",ticket_url:"",contact_email:"",tags:[],images:[]};
   const [f,setF] = useState(()=>initial ? {...blank,...initial,images:initial.images||[]} : blank);
   const [tagInput,setTagInput] = useState("");
   const [uploading,setUploading] = useState(false);
@@ -5911,10 +5920,7 @@ function CommunityPostForm({initial, onSave, onCancel}) {
       <div className="fg"><label className="fl">Contact Email</label><input className="fi" type="email" value={f.contact_email||""} onChange={e=>upd("contact_email",e.target.value)} placeholder="director@school.edu"/></div>
     </>}
     <div className="fg fu"><label className="fl">{f.type==="photo"?"Caption / Description":f.type==="audition"?"What You're Looking For":"Details"}</label><textarea className="ft" value={f.body||""} onChange={e=>upd("body",e.target.value)} placeholder={f.type==="show"?"Tell the community about your production...":f.type==="audition"?"Describe the roles available, experience needed, rehearsal schedule...":f.type==="wanted"?"Describe exactly what you're looking for...":"What would you like to share?"}/></div>
-    <div className="fg">
-      <label className="fl">Location / City</label>
-      <input className="fi" value={f.location||""} onChange={e=>upd("location",e.target.value)} placeholder="San Diego, CA"/>
-    </div>
+
     <div className="fg fu">
       <label className="fl">Tags</label>
       <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:4}}>{(f.tags||[]).map(t=><span key={t} className="mt" style={{cursor:"pointer"}} onClick={()=>upd("tags",f.tags.filter(x=>x!==t))}>{t} ×</span>)}</div>
@@ -6070,19 +6076,13 @@ function CommunityPage({userId, org, plan}) {
   const save = async(f)=>{
     setSaving(true);
     try {
-      // Geocode post location — use post's location, fall back to org location
-      // Wrapped in try/catch so a geocoding failure never freezes the modal
-      const locText = f.location || org?.location;
-      let geoFields = viewerLoc ? { lat: viewerLoc.lat, lng: viewerLoc.lng } : {};
-      if (locText && !viewerLoc) {
-        try {
-          const geo = await geocodeLocation(locText);
-          if (geo) geoFields = { lat: geo.lat, lng: geo.lng };
-        } catch(geoErr) {
-          // Geocoding failed — continue without coordinates, post still saves
-          console.warn("Geocoding failed, posting without location:", geoErr);
-        }
-      }
+      // Use org's stored coordinates directly — no geocoding needed
+      // The org's lat/lng is already stored from profile setup
+      const geoFields = (org?.lat && org?.lng)
+        ? { lat: org.lat, lng: org.lng }
+        : viewerLoc
+          ? { lat: viewerLoc.lat, lng: viewerLoc.lng }
+          : {};
       const row = { ...f, ...geoFields, org_id: userId, status: "active" };
       if(active&&modal==="edit"){
         const{data,error}=await SB.from("community_posts").update(row).eq("id",active.id).select().single();
