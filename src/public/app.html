@@ -1153,7 +1153,7 @@ function App() {
       setLoading(true);
       const{data:orgData}=await SB.from("orgs").select("*").eq("id",user.id).single();
       if(orgData) setOrg(orgData);
-      const{data:itemData}=await SB.from("items").select("*").eq("org_id",user.id).order("added",{ascending:false});
+      const{data:itemData}=await SB.from("items").select("*").eq("org_id",user.id).order("added",{ascending:false}).limit(300);
       if(itemData) setItems(itemData);
       setLoading(false);
     })();
