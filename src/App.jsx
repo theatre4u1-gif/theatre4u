@@ -6078,7 +6078,8 @@ function CommunityPage({userId, org, plan}) {
       radius_miles: 150,
       row_limit:    80,
     });
-    setPosts(data || []);
+    // Strip computed RPC columns (distance_miles) before storing
+    setPosts((data || []).map(({distance_miles, ...p}) => p));
     // Load org names
     const ids = [...new Set((data || []).map(p => p.org_id))];
     if (ids.length > 0) {
@@ -6102,13 +6103,23 @@ function CommunityPage({userId, org, plan}) {
           ? { lat: viewerLoc.lat, lng: viewerLoc.lng }
           : {};
       // Convert empty date strings to null — Postgres DATE columns reject ""
+      // Only include real community_posts columns — strip computed fields like distance_miles
       const row = {
-        ...f,
+        type:           f.type,
+        title:          f.title,
+        body:           f.body         || null,
+        show_title:     f.show_title   || null,
+        venue:          f.venue        || null,
+        location:       f.location     || null,
+        start_date:     f.start_date   || null,
+        end_date:       f.end_date     || null,
+        ticket_url:     f.ticket_url   || null,
+        contact_email:  f.contact_email|| null,
+        tags:           f.tags         || [],
+        images:         f.images       || [],
+        org_id:         userId,
+        status:         "active",
         ...geoFields,
-        org_id: userId,
-        status: "active",
-        start_date: f.start_date || null,
-        end_date:   f.end_date   || null,
       };
       if(active&&modal==="edit"){
         const{data,error}=await SB.from("community_posts").update(row).eq("id",active.id).select().single();
