@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="Theatre4u"/>
+<meta name="apple-mobile-web-app-title" content="Theatre4u™"/>
 <meta name="theme-color" content="#0a0a0f"/>
-<title>Theatre4u</title>
+<title>Theatre4u™</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
@@ -443,7 +443,7 @@ function AuthScreen({onAuth}) {
   return h("div",{className:"auth-screen fin"},
     h("div",{className:"auth-logo"},
       h("span",{className:"glyph"},"🎭"),
-      h("h1",null,"Theatre4u"),
+      h("h1",null,"Theatre4u™"),
       h("p",null,"Inventory · Marketplace · Community")
     ),
     h("div",{className:"auth-form"},
@@ -736,12 +736,22 @@ function HomeTab({items, org, onAddItem, onViewItem}) {
   const listed   = items.filter(i=>i.mkt!=="Not Listed").length;
   const recent   = items.slice(0,6);
 
+  const memberRole = org?._memberRole || null;
+  const roleLabel = memberRole === "stage_manager" ? "📋 Stage Manager" :
+                    memberRole === "crew"           ? "🔧 Crew"          :
+                    memberRole === "house"          ? "🎟 House"         : null;
+
   return h("div",{className:"screen fin"},
+    // Member banner
+    roleLabel && h("div",{style:{background:"rgba(212,168,67,.12)",borderBottom:"1px solid rgba(212,168,67,.2)",
+      padding:"8px 16px",fontSize:12,display:"flex",alignItems:"center",gap:6,color:"rgba(212,168,67,.9)"}},
+      roleLabel, " · ", h("span",{style:{color:"rgba(255,255,255,.5)"}}, "Viewing ", h("strong",{style:{color:"rgba(255,255,255,.75)"}}, org?.name || ""))
+    ),
     // Header
     h("div",{className:"ph"},
       h("div",{className:"logo"},
         h("div",{className:"logo-mark"},"🎭"),
-        h("span",{className:"logo-text"},"Theatre4u")
+        h("span",{className:"logo-text"},"Theatre4u™")
       ),
       h("div",{style:{fontSize:12,color:"var(--muted)",textAlign:"right",lineHeight:1.4}},
         h("div",{style:{fontWeight:700,color:"var(--text)",fontSize:14}},org?.name||"My Inventory"),
@@ -786,7 +796,7 @@ function HomeTab({items, org, onAddItem, onViewItem}) {
     items.length===0 && h("div",{className:"empty"},
       h("div",{className:"ei"},"🎭"),
       h("h3",null,"Ready to catalog?"),
-      h("p",null,"Tap the button above to add your first item. To look up an item by QR code, use your iPhone Camera app — it reads Theatre4u labels instantly."),
+      h("p",null,"Tap the button above to add your first item. To look up an item by QR code, use your iPhone Camera app — it reads Theatre4u™ labels instantly."),
     )
   );
 }
@@ -1151,9 +1161,16 @@ function App() {
     if(!user) return;
     (async()=>{
       setLoading(true);
-      const{data:orgData}=await SB.from("orgs").select("*").eq("id",user.id).single();
-      if(orgData) setOrg(orgData);
-      const{data:itemData}=await SB.from("items").select("*").eq("org_id",user.id).order("added",{ascending:false}).limit(300);
+      // Check if user is a team member of another org
+      const{data:memberData}=await SB.from("org_members")
+        .select("org_id,role")
+        .eq("user_id",user.id)
+        .single();
+      const targetOrgId = memberData ? memberData.org_id : user.id;
+      const memberRole  = memberData ? memberData.role   : null;
+      const{data:orgData}=await SB.from("orgs").select("*").eq("id",targetOrgId).single();
+      if(orgData) setOrg({...orgData, _memberRole:memberRole});
+      const{data:itemData}=await SB.from("items").select("*").eq("org_id",targetOrgId).order("added",{ascending:false}).limit(300);
       if(itemData) setItems(itemData);
       setLoading(false);
     })();
@@ -1236,7 +1253,7 @@ function App() {
     // FAB — only on home and inventory
     !viewItem && (tab==="home"||tab==="inventory") && h("button",{className:"fab",onClick:()=>setAddOpen(true)},Ic.plus(26)),
     // Add sheet
-    addOpen && h(AddSheet,{onClose:()=>setAddOpen(false),onAdded:handleItemAdded,userId:user.id})
+    addOpen && h(AddSheet,{onClose:()=>setAddOpen(false),onAdded:handleItemAdded,userId:org?.id||user.id})
   );
 }
 
@@ -1246,7 +1263,7 @@ createRoot(document.getElementById("root")).render(h(App,null));
 <!-- PWA Manifest inline -->
 <script>
 const manifest = {
-  name:"Theatre4u",short_name:"Theatre4u",description:"Inventory, Marketplace & Community for Theatre Programs",
+  name:"Theatre4u™",short_name:"Theatre4u™",description:"Inventory, Marketplace & Community for Theatre Programs",
   start_url:"/app",display:"standalone",background_color:"#0a0a0f",theme_color:"#0a0a0f",
   orientation:"portrait",
   icons:[
