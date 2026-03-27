@@ -374,7 +374,7 @@ body{font-family:'Raleway',sans-serif;-webkit-font-smoothing:antialiased}
 
 /* Modal */
 .overlay{position:fixed;inset:0;background:rgba(18,6,0,.76);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;animation:fi .15s}
-.modal{background:var(--cream);border-radius:var(--rl);width:100%;max-width:640px;max-height:91vh;display:flex;flex-direction:column;box-shadow:var(--sh3);animation:su .22s}
+.modal{background:var(--cream);border-radius:var(--rl);width:100%;max-width:720px;max-height:92vh;display:flex;flex-direction:column;box-shadow:var(--sh3);animation:su .22s}
 .modal-hd{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);background:var(--parch);border-radius:var(--rl) var(--rl) 0 0}
 .modal-hd h2{font-family:'Abril Fatface',display;font-size:23px;color:var(--ink)}
 .modal-bd{padding:24px;overflow-y:auto;flex:1}
@@ -686,7 +686,7 @@ function ItemForm({item,onSave,onCancel,submitId,userId}){
   );
 }
 
-function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null}){
+function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=true, canDelete=true}){
   const cat=CAT[item.category]||CAT.other;
   const[lb,setLb]=useState(false);
   const[qr,setQr]=useState(null);
@@ -784,8 +784,8 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null}){
         </div>
       </div>
       <div style={{display:"flex",gap:8,marginTop:16}}>
-        <button className="btn btn-p btn-sm" onClick={onEdit}><span style={{width:14,height:14,display:"flex"}}>{Ic.edit}</span>Edit</button>
-        <button className="btn btn-d btn-sm" onClick={()=>{if(window.confirm("Delete this item?"))onDelete(item.id)}}><span style={{width:14,height:14,display:"flex"}}>{Ic.trash}</span>Delete</button>
+        {canEdit&&onEdit&&<button className="btn btn-p btn-sm" onClick={onEdit}><span style={{width:14,height:14,display:"flex"}}>{Ic.edit}</span>Edit</button>}
+        {canDelete&&onDelete&&<button className="btn btn-d btn-sm" onClick={()=>{if(window.confirm("Delete this item?"))onDelete(item.id)}}><span style={{width:14,height:14,display:"flex"}}>{Ic.trash}</span>Delete</button>}
         {userId && <button className="btn btn-o btn-sm" onClick={()=>setShowAddToProd(true)}>🎭 Add to Production</button>}
       </div>
       {showAddToProd && userId && (
@@ -1483,8 +1483,13 @@ function Dashboard({items,org,goInventory,goMarketplace,goCommunity}){
   );
 }
 
-function Inventory({items,onAdd,onEdit,onDelete,userId,plan="free",headerNote=null,schoolName=null}){
+function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null}){
     const[upgradeReason,setUpgradeReason]=useState(null);
+  // Role-based permissions
+  const canEdit   = memberRole !== "house";
+  const canAdd    = memberRole !== "house";
+  const canDelete = memberRole === "director" || memberRole === "stage_manager";
+
   const[search,setSrch]=useState("");const[catF,setCatF]=useState("all");
   const[condF,setCondF]=useState("all");const[availF,setAvailF]=useState("all");
   const[mktF,setMktF]=useState("all");const[view,setView]=useState("grid");
@@ -1548,11 +1553,11 @@ function Inventory({items,onAdd,onEdit,onDelete,userId,plan="free",headerNote=nu
           <div style={{marginLeft:"auto",display:"flex",gap:7}}>
             <button className="btn btn-o" style={{fontSize:12,padding:"6px 12px"}} onClick={()=>setShowImport(true)}
               title="Import from CSV">⬆ Import CSV</button>
-            <button className="btn btn-g" onClick={()=>{
+            {canAdd&&<button className="btn btn-g" onClick={()=>{
               const max=PLANS_DEF[plan]?.maxItems??50;
               if(items.length>=max){setUpgradeReason("Your free plan is limited to "+max+" items. Upgrade to Pro for unlimited inventory.");return;}
               setActive(null);setModal("a");
-            }}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add Item</button>
+            }}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add Item</button>}
           </div>
         </div>
         {showF&&(
@@ -1607,7 +1612,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId,plan="free",headerNote=nu
                       <td><span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span></td>
                       <td><div style={{display:"flex",gap:4}}>
                         <button className="ico-btn" onClick={e=>{e.stopPropagation();openE(item)}}>{Ic.edit}</button>
-                        <button className="ico-btn" style={{color:"var(--red)"}} onClick={e=>{e.stopPropagation();if(window.confirm("Delete?"))onDelete(item.id)}}>{Ic.trash}</button>
+                        {canDelete&&<button className="ico-btn" style={{color:"var(--red)"}} onClick={e=>{e.stopPropagation();if(window.confirm("Delete?"))onDelete(item.id)}}>{Ic.trash}</button>}
                       </div></td>
                     </tr>
                   );
@@ -1627,7 +1632,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId,plan="free",headerNote=nu
           footer={<><button className="btn btn-o" onClick={()=>setModal(null)}>Cancel</button><button className="btn btn-g" id="form-save-btn">Save Changes</button></>}>
           <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} submitId="form-save-btn" userId={userId}/>
         </Modal>)}
-      {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={()=>setModal("e")} onDelete={id=>{onDelete(id);setModal(null);setActive(null)}}/></Modal>}
+      {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{onDelete(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete}/></Modal>}
       {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",user?.id).order("added",{ascending:false});if(data)setItems(data);}}/>}
     </div>
   </>
@@ -2583,8 +2588,11 @@ function TransactionDocForm({ req, docType, existing, org, onSave, onCancel }) {
       </div>
 
       {/* Action buttons */}
-      <div style={{ display:"flex", gap:8, justifyContent:"flex-end", paddingTop:12,
-        borderTop:"1px solid var(--border)" }}>
+            {/* Sticky save footer - always visible at bottom */}
+      <div style={{ position:"sticky", bottom:0, background:"var(--parch)", 
+        borderTop:"2px solid var(--linen)", padding:"14px 0 0",
+        display:"flex", gap:8, justifyContent:"flex-end", marginTop:24,
+        zIndex:10 }}>
         <button className="btn btn-o" onClick={onCancel}>Cancel</button>
         <button className="btn btn-o btn-sm" onClick={() => onSave({ ...f, status:"draft" })} disabled={saving}>
           💾 Save Draft
@@ -2643,7 +2651,7 @@ function printDocument(doc, req) {
   </head><body>
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
       <div>
-        <div style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px">Theatre4u</div>
+        <div style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px">Theatre4u™</div>
         <h1>${dt.icon} ${dt.label}</h1>
         <span class="badge">${doc.status === "finalized" ? "✓ Finalized" : "Draft"}</span>
       </div>
@@ -2729,7 +2737,7 @@ function printDocument(doc, req) {
     </div>
 
     <div style="margin-top:32px;padding-top:14px;border-top:1px solid #eee;font-size:11px;color:#aaa;text-align:center">
-      Generated by Theatre4u · Inventory · Marketplace · Community · theatre4u.org · ${today}
+      Generated by Theatre4u™ · Inventory · Marketplace · Community · theatre4u.org · ${today}
     </div>
 
     <script>window.onload=function(){window.print();}</script>
@@ -3834,6 +3842,181 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
   );
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// ADMIN INVENTORY VIEW — Browse any org's inventory for support/QA
+// All access is logged to audit_log
+// ══════════════════════════════════════════════════════════════════════════════
+function AdminInventoryView() {
+  const [orgs,        setOrgs]        = useState([]);
+  const [selOrg,      setSelOrg]      = useState(null);
+  const [items,       setItems]       = useState([]);
+  const [loading,     setLoading]     = useState(false);
+  const [loadingOrgs, setLoadingOrgs] = useState(true);
+  const [search,      setSearch]      = useState("");
+  const [catF,        setCatF]        = useState("all");
+  const [viewItem,    setViewItem]    = useState(null);
+
+  const CATS = ["costumes","props","sets","lighting","sound","scripts","makeup","furniture","fabrics","tools","effects","other"];
+  const CAT_ICONS = {costumes:"👗",props:"🎭",sets:"🏗️",lighting:"💡",sound:"🔊",scripts:"📜",makeup:"💄",furniture:"🪑",fabrics:"🧵",tools:"🔧",effects:"✨",other:"📦"};
+
+  useEffect(()=>{
+    (async()=>{
+      const{data}=await SB.from("orgs").select("id,name,email,plan,is_leading_player").order("name");
+      setOrgs(data||[]);
+      setLoadingOrgs(false);
+    })();
+  },[]);
+
+  const loadOrgInventory = async(org)=>{
+    setSelOrg(org); setItems([]); setSearch(""); setCatF("all"); setLoading(true);
+    const{data}=await SB.from("items").select("*").eq("org_id",org.id).order("added",{ascending:false});
+    setItems(data||[]);
+    SB.from("audit_log").insert({action:"admin_inventory_view",entity_type:"org",entity_id:org.id,
+      metadata:{org_name:org.name,item_count:(data||[]).length}}).catch(()=>{});
+    setLoading(false);
+  };
+
+  const filtered = items.filter(i=>{
+    const q=search.toLowerCase();
+    return(!q||i.name?.toLowerCase().includes(q)||(i.location||"").toLowerCase().includes(q)||(i.tags||[]).some(t=>t.includes(q)))
+      &&(catF==="all"||i.category===catF);
+  });
+
+  return(
+    <div>
+      <div style={{display:"flex",alignItems:"flex-start",gap:24,flexWrap:"wrap"}}>
+        <div style={{width:260,flexShrink:0}}>
+          <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:10}}>Select Organization</div>
+          {loadingOrgs?<div style={{color:"var(--muted)",fontSize:13}}>Loading…</div>:(
+            <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:520,overflowY:"auto"}}>
+              {orgs.map(o=>(
+                <button key={o.id} onClick={()=>loadOrgInventory(o)}
+                  style={{background:selOrg?.id===o.id?"linear-gradient(135deg,rgba(212,168,67,.15),rgba(212,168,67,.05))":"var(--bg3)",
+                    border:selOrg?.id===o.id?"1px solid rgba(212,168,67,.4)":"1px solid var(--border)",
+                    borderRadius:8,padding:"9px 12px",cursor:"pointer",textAlign:"left",fontFamily:"inherit"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:600,fontSize:13,color:"var(--t1)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                        {o.is_leading_player&&<span style={{color:"var(--gold)"}}>⭐ </span>}{o.name||o.email}
+                      </div>
+                      <div style={{fontSize:11,color:"var(--muted)",marginTop:1}}>{o.email}</div>
+                    </div>
+                    <span style={{fontSize:10,padding:"2px 6px",borderRadius:8,fontWeight:700,flexShrink:0,
+                      background:o.plan==="pro"?"rgba(212,168,67,.15)":o.plan==="district"?"rgba(66,165,245,.15)":"rgba(255,255,255,.06)",
+                      color:o.plan==="pro"?"var(--gold)":o.plan==="district"?"#42a5f5":"var(--muted)"}}>
+                      {o.plan||"free"}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={{flex:1,minWidth:0}}>
+          {!selOrg?(
+            <div style={{textAlign:"center",padding:"48px 24px",color:"var(--muted)"}}>
+              <div style={{fontSize:40,marginBottom:12}}>📦</div>
+              <div style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:6}}>Select an organization</div>
+              <div style={{fontSize:13}}>Choose a program on the left to browse their inventory.</div>
+              <div style={{fontSize:11,marginTop:16,color:"#c2185b",background:"rgba(194,24,91,.08)",border:"1px solid rgba(194,24,91,.2)",borderRadius:8,padding:"8px 14px",display:"inline-block"}}>
+                🔒 Admin access — all views are logged
+              </div>
+            </div>
+          ):loading?(
+            <div style={{textAlign:"center",padding:40,color:"var(--muted)"}}>Loading {selOrg.name}…</div>
+          ):(
+            <>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+                <div style={{fontFamily:"var(--serif)",fontSize:18,fontWeight:700,flex:1}}>
+                  {selOrg.name||selOrg.email}
+                  <span style={{fontFamily:"inherit",fontSize:13,fontWeight:400,color:"var(--muted)",marginLeft:8}}>{items.length} items</span>
+                </div>
+                <span style={{fontSize:10,padding:"3px 9px",borderRadius:6,fontWeight:700,background:"rgba(194,24,91,.12)",color:"#f48fb1"}}>🔒 Admin View — Logged</span>
+              </div>
+              <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search items…"
+                  style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,padding:"6px 10px",color:"var(--t1)",fontSize:13,fontFamily:"inherit",outline:"none",flex:"1 1 160px"}}/>
+                <select value={catF} onChange={e=>setCatF(e.target.value)}
+                  style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,padding:"6px 8px",color:"var(--t1)",fontSize:12,fontFamily:"inherit"}}>
+                  <option value="all">All Categories</option>
+                  {CATS.map(c=><option key={c} value={c}>{CAT_ICONS[c]} {c[0].toUpperCase()+c.slice(1)}</option>)}
+                </select>
+              </div>
+              {filtered.length===0?(
+                <div style={{textAlign:"center",padding:32,color:"var(--muted)",fontSize:13}}>
+                  {items.length===0?"No items yet.":"No items match your search."}
+                </div>
+              ):(
+                <div style={{border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse"}}>
+                    <thead>
+                      <tr style={{background:"rgba(0,0,0,.25)"}}>
+                        {["","Item","Category","Condition","Qty","Location","Market"].map(h=>(
+                          <th key={h} style={{padding:"9px 12px",textAlign:"left",fontSize:10,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",fontWeight:700,whiteSpace:"nowrap"}}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((item,i)=>(
+                        <tr key={item.id} onClick={()=>setViewItem(item)}
+                          style={{borderTop:"1px solid var(--border)",background:i%2===0?"rgba(255,255,255,.01)":"transparent",cursor:"pointer"}}>
+                          <td style={{padding:"8px 10px",width:32}}>
+                            {(item.images||[]).length>0
+                              ?<img src={item.images[0]} alt="" style={{width:28,height:28,borderRadius:4,objectFit:"cover"}}/>
+                              :<span style={{fontSize:16}}>{CAT_ICONS[item.category]||"📦"}</span>}
+                          </td>
+                          <td style={{padding:"8px 12px",fontWeight:600,fontSize:13}}>{item.name}</td>
+                          <td style={{padding:"8px 12px",fontSize:12,color:"var(--muted)"}}>{CAT_ICONS[item.category]} {item.category}</td>
+                          <td style={{padding:"8px 12px",fontSize:12}}>{item.condition}</td>
+                          <td style={{padding:"8px 12px",fontSize:13,fontWeight:600}}>{item.quantity}</td>
+                          <td style={{padding:"8px 12px",fontSize:12,color:"var(--muted)"}}>{item.location||"—"}</td>
+                          <td style={{padding:"8px 12px"}}>
+                            {item.mkt&&item.mkt!=="Not Listed"
+                              ?<span style={{fontSize:10,padding:"2px 7px",borderRadius:8,fontWeight:700,background:"rgba(76,175,80,.15)",color:"#81c784"}}>{item.mkt}</span>
+                              :<span style={{fontSize:11,color:"var(--faint)"}}>—</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {viewItem&&(
+        <Modal title={viewItem.name} onClose={()=>setViewItem(null)}>
+          <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:16}}>
+            {(viewItem.images||[]).map((img,i)=>(
+              <img key={i} src={img} alt="" style={{width:80,height:80,borderRadius:8,objectFit:"cover",border:"1px solid var(--border)"}}/>
+            ))}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 24px",fontSize:13}}>
+            {[["Category",`${CAT_ICONS[viewItem.category]||""} ${viewItem.category||"—"}`],
+              ["Condition",viewItem.condition||"—"],["Quantity",viewItem.quantity||0],
+              ["Size",viewItem.size||"—"],["Location",viewItem.location||"—"],
+              ["Status",viewItem.availability||"—"],["Market",viewItem.mkt||"Not Listed"],
+              ["Added",viewItem.added?new Date(viewItem.added).toLocaleDateString():"—"],
+            ].map(([l,v])=>(
+              <div key={l}><span style={{color:"var(--muted)",fontSize:11}}>{l}</span><div style={{marginTop:2}}>{v}</div></div>
+            ))}
+          </div>
+          {viewItem.notes&&<div style={{marginTop:14,padding:12,background:"var(--bg3)",borderRadius:8,fontSize:13,color:"var(--t2)",lineHeight:1.6}}>{viewItem.notes}</div>}
+          {(viewItem.tags||[]).length>0&&(
+            <div style={{marginTop:10,display:"flex",flexWrap:"wrap",gap:6}}>
+              {viewItem.tags.map(t=>(<span key={t} style={{background:"rgba(212,168,67,.1)",color:"var(--gold)",padding:"2px 8px",borderRadius:10,fontSize:11}}>#{t}</span>))}
+            </div>
+          )}
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+
 function AdminDashboard({ currentUser }) {
   const [orgs,      setOrgs]      = useState([]);
   const [counts,    setCounts]    = useState({});
@@ -3929,7 +4112,7 @@ function AdminDashboard({ currentUser }) {
 
         {/* Tab nav */}
         <div className="tabs" style={{ marginBottom: 20 }}>
-          {[["orgs","🏛 Organizations"],["feedback","💬 Feedback"],["codes","🎟 Beta Codes"]].map(([id,lbl])=>(
+          {[["orgs","🏛 Organizations"],["inventory","📦 Inventories"],["feedback","💬 Feedback"],["codes","🎟 Beta Codes"]].map(([id,lbl])=>(
             <button key={id} className={`tab ${adminTab===id?"on":""}`} onClick={()=>setAdminTab(id)}>{lbl}
               {id==="feedback"&&feedback.filter(f=>f.status==="new").length>0&&(
                 <span style={{background:"var(--red)",color:"#fff",borderRadius:8,padding:"1px 6px",fontSize:10,fontWeight:800,marginLeft:5}}>
@@ -4073,6 +4256,9 @@ function AdminDashboard({ currentUser }) {
         </>)}
 
         {/* ── FEEDBACK TAB ── */}
+        {/* ── ADMIN INVENTORY VIEW TAB ── */}
+        {adminTab==="inventory"&&(<AdminInventoryView/>)}
+
         {adminTab==="feedback"&&(<>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
             <div style={{fontSize:13,color:"var(--muted)"}}>
@@ -6759,7 +6945,7 @@ function TeamSettings({ userId, orgName, plan }) {
 }
 
 
-function Settings({ org, setOrg, onSeed, user, items, setItems, plan="free", userEmail="", setPlan }) {
+function Settings({ org, setOrg, onSeed, user, items, setItems, plan="free", userEmail="", setPlan, memberRole=null }) {
   const userId = user?.id;
   const [f,setF]       = useState(org);
   const [saved,setSaved] = useState(false);
@@ -6867,7 +7053,7 @@ function Settings({ org, setOrg, onSeed, user, items, setItems, plan="free", use
           </div>
         )}
 
-        <TeamSettings userId={userId} orgName={org?.name||"Your Program"} plan={plan}/>
+        {!memberRole&&<TeamSettings userId={userId} orgName={org?.name||"Your Program"} plan={plan}/>}
 
         <div className="card card-p">
           <div className="sh"><h2>Data Management</h2><p>Load sample data to explore, or reset everything to start fresh.</p></div>
@@ -6924,10 +7110,10 @@ const TERMS_CONTENT = [
   ["2. Description of Service","Theatre4u is a cloud-based inventory management, marketplace, and community platform for theatre programs, schools, community theatres, and performing arts organizations. We reserve the right to modify or discontinue the Service at any time with reasonable notice."],
   ["3. Account Registration","You must create an account with accurate information and are responsible for maintaining confidentiality of your credentials. You must be at least 18 years old, or have authorization of a parent, guardian, or school administrator if a minor acting on behalf of an organization."],
   ["4. Subscription Plans and Payments","Theatre4u offers free and paid plans billed monthly via Stripe. Subscriptions auto-renew unless cancelled. All fees are non-refundable except as required by law. We may change pricing with 30 days notice to current subscribers."],
-  ["5. User Content","You retain ownership of content you upload. By uploading, you grant us a license to store and display it solely to provide the Service. You are responsible for ensuring your content does not infringe third-party rights or violate applicable laws."],
+  ["5. User Content & License Grant","You retain all ownership of content you upload to Theatre4u™, including text, photos, images, and other materials ('User Content'). By uploading User Content, you grant Theatre4u a worldwide, non-exclusive, royalty-free, perpetual, irrevocable license to store, display, reproduce, and use that content to operate, improve, and promote the Service. This license persists even if you later remove the content or close your account. You represent that you have all necessary rights to grant this license, that your content does not infringe any third-party rights, and that you have obtained appropriate permissions for any photographs or images of identifiable individuals. Theatre4u may remove any content that violates these Terms or applicable law."],
   ["6. Marketplace Transactions","Theatre4u provides a platform for listing items for rent or sale. We are not a party to any transaction between users. All agreements are solely between listing users and interested parties. We do not handle payments between users."],
   ["7. Prohibited Conduct","You agree not to: use the Service unlawfully; upload false or fraudulent content; attempt unauthorized access; interfere with the Service; use automated scraping tools; impersonate others; or transmit spam or malware. Violations may result in immediate account termination."],
-  ["8. Intellectual Property","The Theatre4u name, logo, design, and software are owned by us and protected by applicable law. Nothing in these Terms grants you any right to use our intellectual property without prior written consent."],
+  ["8. Intellectual Property","The Theatre4u™ name, logo, design, software, and all platform content are owned by Theatre4u and protected by United States and international intellectual property laws. Theatre4u is a trademark of its founder. Nothing in these Terms grants you any right to use our trademarks, trade names, or other intellectual property without prior written consent. All rights not expressly granted are reserved."],
   ["9. Disclaimer of Warranties","THE SERVICE IS PROVIDED AS IS WITHOUT WARRANTIES OF ANY KIND. We do not warrant that the Service will be uninterrupted, error-free, or free of harmful components."],
   ["10. Limitation of Liability","TO THE FULLEST EXTENT PERMITTED BY CALIFORNIA LAW, WE SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES. Our total liability shall not exceed amounts paid by you in the three months preceding the claim."],
   ["11. Governing Law","These Terms are governed by California law. Disputes shall be resolved through binding arbitration in California under AAA rules, except either party may seek injunctive relief in court. You waive the right to class action."],
@@ -7335,9 +7521,26 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
           </div>
         </div>
         {err&&<div style={{marginTop:12,padding:"9px 12px",background:err.includes("sent")?"rgba(76,175,80,.1)":"rgba(194,24,91,.1)",border:`1px solid ${err.includes("sent")?"rgba(76,175,80,.3)":"rgba(194,24,91,.25)"}`,borderRadius:7,fontSize:13,color:err.includes("sent")?"#4caf50":"#e57373"}}>{err}</div>}
-        <button onClick={submit} disabled={loading} style={{marginTop:20,width:"100%",background:"linear-gradient(135deg,#d4a843,#a37f2c)",color:"#1a0f00",border:"none",borderRadius:6,padding:"12px",fontSize:15,fontWeight:700,cursor:loading?"not-allowed":"pointer",fontFamily:"'DM Sans',sans-serif",opacity:loading?.7:1}}>
+        {mode==="signup"&&<p style={{fontSize:11,color:"rgba(255,255,255,.4)",textAlign:"center",marginTop:16,lineHeight:1.6}}>
+          By creating an account you agree to our{" "}
+          <span style={{color:"var(--gold)",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setLegal("terms")}>Terms of Service</span>
+          {" "}and{" "}
+          <span style={{color:"var(--gold)",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setLegal("privacy")}>Privacy Policy</span>,
+          including the grant of a perpetual license to content you upload.
+        </p>}
+        <button onClick={submit} disabled={loading} style={{marginTop:12,width:"100%",background:"linear-gradient(135deg,#d4a843,#a37f2c)",color:"#1a0f00",border:"none",borderRadius:6,padding:"12px",fontSize:15,fontWeight:700,cursor:loading?"not-allowed":"pointer",fontFamily:"'DM Sans',sans-serif",opacity:loading?.7:1}}>
           {loading?"Please wait…":mode==="login"?"Sign In →":"Create Free Account →"}
         </button>
+        {mode==="signup"&&(
+          <p style={{fontSize:11,color:"#685f76",textAlign:"center",marginTop:10,lineHeight:1.6}}>
+            By creating an account you agree to our{" "}
+            <span style={{color:"#d4a843",cursor:"pointer",textDecoration:"underline"}}
+              onClick={()=>window.__t4u_open_legal?.("terms")}>Terms of Service</span>{" "}and{" "}
+            <span style={{color:"#d4a843",cursor:"pointer",textDecoration:"underline"}}
+              onClick={()=>window.__t4u_open_legal?.("privacy")}>Privacy Policy</span>,
+            including a perpetual license to content you upload.
+          </p>
+        )}
         {mode==="login"&&<button onClick={resetPass} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:"#685f76",fontSize:12.5,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textDecoration:"underline"}}>Forgot password?</button>}
         <div style={{textAlign:"center",marginTop:14,fontSize:12.5,color:"#685f76"}}>
           {mode==="login"?<>Don&apos;t have an account? <button onClick={()=>{setMode("signup");setErr("");}} style={{background:"none",border:"none",color:"#d4a843",cursor:"pointer",fontSize:12.5,fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>Sign up free</button></>:<>Already have an account? <button onClick={()=>{setMode("login");setErr("");}} style={{background:"none",border:"none",color:"#d4a843",cursor:"pointer",fontSize:12.5,fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>Sign in</button></>}
@@ -8270,6 +8473,7 @@ function AppRoot(){
   const [authChk,setAuthChk] = useState(false);
   // District: activeSchool = null means "own account", otherwise = school org object
   const [activeSchool,setActiveSchool]   = useState(null);
+  const [memberRole,  setMemberRole]    = useState(null); // null=owner/director, or stage_manager/crew/house
   const [unreadCount,   setUnreadCount]   = useState(0);
   const [openConvId,    setOpenConvId]    = useState(null);
   const [pendingReqCount, setPendingReqCount] = useState(0);
@@ -8336,6 +8540,7 @@ function AppRoot(){
       const effectivePlan = isAdminEmail(user?.email) ? "district" : (orgData?.plan || "free");
       if(orgData){
         setOrg({...orgData, _memberRole: memberRole, _isMember: !!memberData});
+        setMemberRole(memberRole);
         setPlanState(effectivePlan);
       } else { setPlanState(effectivePlan); }
       const{data:itemData}=await SB.from("items").select("*").eq("org_id",targetOrgId).order("added",{ascending:false});
@@ -8459,21 +8664,27 @@ function AppRoot(){
   }, [user, pendingInvite]);
 
   const isAdmin = isAdminEmail(user?.email);
-  const NAV = [
-    { id:"dashboard",   label:"Dashboard",   ico:Ic.home    },
-    { id:"messages",    label:"Messages",    ico:"💬"       },
-    { id:"requests",    label:"Requests",    ico:"📋"       },
-    { id:"inventory",   label:"Inventory",   ico:Ic.box     },
-    { id:"marketplace", label:"Marketplace", ico:Ic.store   },
-    { id:"community",   label:"Community",   ico:"🎪", community:true },
-    { id:"productions", label:"Productions", ico:"🎭"       },
-    { id:"reports",     label:"Reports",     ico:Ic.chart   },
-    { id:"profile",     label:"My Profile",  ico:"👤"       },
-    ...(plan !== "free" || isAdmin ? [{ id:"credits", label:"Credits",  ico:"🪙", credits:true }] : []),
-    ...(plan !== "free" || isAdmin ? [{ id:"prop28",  label:"Prop 28",  ico:"📋", prop28:true  }] : []),
-    ...(plan === "district" ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
-    ...(isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
-  ];
+  const NAV = (() => {
+    const role = memberRole; // null=director/owner, stage_manager, crew, house
+    const isCrew  = role === "crew"  || role === "house";
+    const isStage = role === "stage_manager";
+    const isMember = !!role; // any team member (not the owner)
+    return [
+      { id:"dashboard",   label:"Dashboard",   ico:Ic.home    },
+      ...(!isCrew  ? [{ id:"messages",    label:"Messages",    ico:"💬"       }] : []),
+      ...(!isCrew  ? [{ id:"requests",    label:"Requests",    ico:"📋"       }] : []),
+      { id:"inventory",   label:"Inventory",   ico:Ic.box     },
+      ...(!isCrew  ? [{ id:"marketplace", label:"Marketplace", ico:Ic.store   }] : []),
+      ...(!isCrew  ? [{ id:"community",   label:"Community",   ico:"🎪", community:true }] : []),
+      ...(!isCrew  ? [{ id:"productions", label:"Productions", ico:"🎭"       }] : []),
+      ...(!isMember? [{ id:"reports",     label:"Reports",     ico:Ic.chart   }] : []),
+      { id:"profile",     label:"My Profile",  ico:"👤"       },
+      ...(!isMember && (plan !== "free" || isAdmin) ? [{ id:"credits", label:"Credits",  ico:"🪙", credits:true }] : []),
+      ...(!isCrew   && (plan !== "free" || isAdmin) ? [{ id:"prop28",  label:"Prop 28",  ico:"📋", prop28:true  }] : []),
+      ...(!isMember && plan === "district" ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
+      ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
+    ];
+  })();
   const TITLES = { messages:"Messages", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Marketplace", productions:"Productions", reports:"Reports", settings:"Profile", admin:"Admin Dashboard", district:"District", credits:"Theatre Credits", prop28:"Prop 28 Compliance", community:"Community Board" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
@@ -8523,7 +8734,7 @@ function AppRoot(){
             <div className="sb-inner">
               <div className="sb-logo">
                 <span className="sb-glyph">🎭</span>
-                <div className="sb-name">Theatre4u</div>
+                <div className="sb-name">Theatre4u™</div>
                 <div style={{marginTop:8,display:"flex",alignItems:"center",gap:6}}>
                   <span style={{padding:"2px 8px",background:plan==="free"?"rgba(255,255,255,.08)":plan==="pro"?"rgba(212,168,67,.2)":"rgba(66,165,245,.2)",color:plan==="free"?"rgba(255,255,255,.35)":plan==="pro"?"var(--gold)":"#42a5f5",borderRadius:9,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>
                     {plan==="free"?"Free Plan":plan==="pro"?"Pro":"District"}
@@ -8531,6 +8742,28 @@ function AppRoot(){
 
                 </div>
               </div>
+
+              {/* Member banner — shown when logged in as a team member */}
+              {memberRole && org && (
+                <div style={{
+                  margin:"8px 12px 4px",
+                  background:"rgba(212,168,67,.08)",
+                  border:"1px solid rgba(212,168,67,.2)",
+                  borderRadius:8,
+                  padding:"8px 12px",
+                  fontSize:11,
+                  lineHeight:1.4,
+                }}>
+                  <div style={{color:"var(--gold)",fontWeight:700,marginBottom:2}}>
+                    {memberRole==="stage_manager"?"📋 Stage Manager":
+                     memberRole==="crew"?"🔧 Crew":
+                     memberRole==="house"?"🎟 House":"Team Member"}
+                  </div>
+                  <div style={{color:"rgba(255,255,255,.5)"}}>
+                    Viewing <strong style={{color:"rgba(255,255,255,.75)"}}>{org.name}</strong>
+                  </div>
+                </div>
+              )}
 
               <nav className="sb-nav">
                 {/* School context banner when browsing a school as district admin */}
@@ -8634,7 +8867,7 @@ function AppRoot(){
                     }}/>}
                   {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
                   {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")}/>}
-                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan}/>}
+                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
                       ? <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading {activeSchool.name}…</div>
@@ -8651,7 +8884,7 @@ function AppRoot(){
                   {page==="productions" && <Productions userId={user?.id} allItems={items}/>}
                   {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan}/>}
                   {page==="profile"     && <OrgProfilePage userId={user?.id} org={org} setOrg={saveOrg} plan={plan} items={items}/>}
-              {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan}/>}
+              {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
                   {page==="district"    && plan==="district" && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool}/>}
                   {page==="community"   && <CommunityPage userId={user?.id} org={org} plan={plan}/>}
                   {page==="credits"     && (plan!=="free"||isAdmin) && <CreditsPage userId={user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
