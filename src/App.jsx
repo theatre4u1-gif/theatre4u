@@ -6492,7 +6492,275 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
   );
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// TEAM SETTINGS — Org member management with backstage roles
+// ══════════════════════════════════════════════════════════════════════════════
+const ROLES = [
+  { id: "stage_manager", label: "Stage Manager", icon: "📋", desc: "Add, edit, delete items · Prop 28 · Marketplace · Community" },
+  { id: "crew",          label: "Crew",          icon: "🔧", desc: "Add and edit items · Upload photos" },
+  { id: "house",         label: "House",         icon: "🎟", desc: "View and look up items only" },
+];
+const ROLE_MAP = Object.fromEntries(ROLES.map(r => [r.id, r]));
+
+function TeamSettings({ userId, orgName, plan }) {
+  const [members,  setMembers]  = useState([]);
+  const [invites,  setInvites]  = useState([]);
+  const [joinCode, setJoinCode] = useState(null);
+  const [loading,  setLoading]  = useState(true);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole,  setInviteRole]  = useState("crew");
+  const [sending,  setSending]  = useState(false);
+  const [msg,      setMsg]      = useState("");
+  const [showCode, setShowCode] = useState(false);
+
+  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(""), 3500); };
+
+  // Load team
+  const load = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    const [{ data: mData }, { data: iData }] = await Promise.all([
+      SB.from("org_members").select("*").eq("org_id", userId).order("created_at"),
+      SB.from("org_invites").select("*").eq("org_id", userId)
+        .is("accepted_at", null).order("created_at", { ascending: false }),
+    ]);
+    setMembers(mData || []);
+    // Find existing join code invite
+    const code = (iData || []).find(i => i.invite_type === "code");
+    setJoinCode(code?.join_code || null);
+    setInvites((iData || []).filter(i => i.invite_type === "email"));
+    setLoading(false);
+  }, [userId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Generate or show join code
+  const getJoinCode = async () => {
+    if (joinCode) { setShowCode(true); return; }
+    // Create a new code invite
+    const { data } = await SB.from("org_invites").insert({
+      org_id: userId,
+      role: "crew",
+      invite_type: "code",
+      join_code: null, // DB trigger generates it — but we use a function
+    }).select().single();
+    if (data) { setJoinCode(data.join_code); setShowCode(true); }
+    else {
+      // Generate code client-side as fallback
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let c = "";
+      for (let i = 0; i < 6; i++) c += chars[Math.floor(Math.random() * chars.length)];
+      const code = c.slice(0,3) + "-" + c.slice(3);
+      const { data: d2 } = await SB.from("org_invites").insert({
+        org_id: userId, role: "crew", invite_type: "code", join_code: code,
+      }).select().single();
+      if (d2) { setJoinCode(d2.join_code); setShowCode(true); }
+    }
+  };
+
+  // Send email invite
+  const sendInvite = async () => {
+    if (!inviteEmail.trim()) return;
+    setSending(true);
+    const { data, error } = await SB.from("org_invites").insert({
+      org_id: userId,
+      email: inviteEmail.trim().toLowerCase(),
+      role: inviteRole,
+      invite_type: "email",
+    }).select().single();
+    if (error) { flash("❌ " + error.message); }
+    else {
+      setInvites(p => [data, ...p]);
+      setInviteEmail("");
+      flash("✓ Invite created — share this link: theatre4u.org/join?token=" + data.token);
+    }
+    setSending(false);
+  };
+
+  // Remove a member
+  const removeMember = async (memberId, name) => {
+    if (!confirm(`Remove ${name} from your team?`)) return;
+    await SB.from("org_members").delete().eq("id", memberId);
+    setMembers(p => p.filter(m => m.id !== memberId));
+    flash("✓ Removed from team");
+  };
+
+  // Cancel a pending invite
+  const cancelInvite = async (inviteId) => {
+    await SB.from("org_invites").delete().eq("id", inviteId);
+    setInvites(p => p.filter(i => i.id !== inviteId));
+    flash("✓ Invite cancelled");
+  };
+
+  // Change a member's role
+  const changeRole = async (memberId, newRole) => {
+    await SB.from("org_members").update({ role: newRole }).eq("id", memberId);
+    setMembers(p => p.map(m => m.id === memberId ? { ...m, role: newRole } : m));
+    flash("✓ Role updated");
+  };
+
+  const joinUrl = joinCode ? `theatre4u.org/join?code=${joinCode}` : null;
+
+  return (
+    <div className="card card-p" style={{ marginBottom: 20 }}>
+      <div className="sh">
+        <h2>🎭 Your Backstage Team</h2>
+        <p>Invite people to help manage your inventory. Each role has different access levels.</p>
+      </div>
+
+      {/* Role legend */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
+        {[{ id: "director", label: "Director", icon: "🎬", desc: "Full access — that's you" }, ...ROLES].map(r => (
+          <div key={r.id} style={{ background: "var(--bg3)", border: "1px solid var(--border)",
+            borderRadius: 10, padding: "8px 12px", minWidth: 160 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>{r.icon} {r.label}</div>
+            <div style={{ fontSize: 11, color: "var(--t3)", lineHeight: 1.4 }}>{r.desc}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Current members */}
+      {loading ? (
+        <div style={{ color: "var(--t3)", fontSize: 13, padding: "12px 0" }}>Loading team…</div>
+      ) : members.length > 0 ? (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1,
+            color: "var(--t3)", marginBottom: 8 }}>Current Team</div>
+          {members.map(m => {
+            const r = ROLE_MAP[m.role] || { label: m.role, icon: "👤" };
+            return (
+              <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10,
+                padding: "9px 0", borderBottom: "1px solid var(--bd)" }}>
+                <div style={{ width: 34, height: 34, borderRadius: "50%", background: "var(--bg3)",
+                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16,
+                  flexShrink: 0 }}>{r.icon}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13 }}>{m.email}</div>
+                  <div style={{ fontSize: 11, color: "var(--t3)" }}>
+                    Joined {new Date(m.joined_at).toLocaleDateString()}
+                  </div>
+                </div>
+                <select value={m.role} onChange={e => changeRole(m.id, e.target.value)}
+                  style={{ background: "var(--bg3)", border: "1px solid var(--bd)", borderRadius: 6,
+                    padding: "4px 8px", color: "var(--t1)", fontSize: 12, fontFamily: "inherit" }}>
+                  {ROLES.map(ro => <option key={ro.id} value={ro.id}>{ro.icon} {ro.label}</option>)}
+                </select>
+                <button onClick={() => removeMember(m.id, m.email)}
+                  style={{ background: "none", border: "none", color: "var(--t3)", cursor: "pointer",
+                    fontSize: 18, lineHeight: 1, padding: "0 4px" }} title="Remove">×</button>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div style={{ color: "var(--t3)", fontSize: 13, marginBottom: 20, fontStyle: "italic" }}>
+          No team members yet — invite someone below.
+        </div>
+      )}
+
+      {/* Pending invites */}
+      {invites.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1,
+            color: "var(--t3)", marginBottom: 8 }}>Pending Invites</div>
+          {invites.map(inv => (
+            <div key={inv.id} style={{ display: "flex", alignItems: "center", gap: 10,
+              padding: "8px 0", borderBottom: "1px solid var(--bd)" }}>
+              <div style={{ fontSize: 15 }}>✉️</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>{inv.email}</div>
+                <div style={{ fontSize: 11, color: "var(--t3)" }}>
+                  {ROLE_MAP[inv.role]?.label} · Expires {new Date(inv.expires_at).toLocaleDateString()}
+                </div>
+              </div>
+              <button onClick={() => {
+                navigator.clipboard?.writeText(`https://theatre4u.org/join?token=${inv.token}`);
+                flash("✓ Invite link copied!");
+              }} style={{ background: "var(--bg3)", border: "1px solid var(--bd)", borderRadius: 6,
+                color: "var(--t2)", padding: "4px 10px", cursor: "pointer", fontSize: 11,
+                fontFamily: "inherit" }}>Copy Link</button>
+              <button onClick={() => cancelInvite(inv.id)}
+                style={{ background: "none", border: "none", color: "var(--t3)", cursor: "pointer",
+                  fontSize: 18, lineHeight: 1, padding: "0 4px" }}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Invite by email */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1,
+          color: "var(--t3)", marginBottom: 8 }}>Invite by Email</div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <input className="fi" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
+            placeholder="colleague@school.edu" type="email"
+            onKeyDown={e => e.key === "Enter" && sendInvite()}
+            style={{ flex: "1 1 200px", minWidth: 0 }}/>
+          <select value={inviteRole} onChange={e => setInviteRole(e.target.value)}
+            className="fs" style={{ flex: "0 0 auto", minWidth: 130 }}>
+            {ROLES.map(r => <option key={r.id} value={r.id}>{r.icon} {r.label}</option>)}
+          </select>
+          <button className="btn bp" onClick={sendInvite} disabled={sending || !inviteEmail.trim()}
+            style={{ whiteSpace: "nowrap" }}>
+            {sending ? "Sending…" : "Send Invite"}
+          </button>
+        </div>
+        {inviteEmail && (
+          <div style={{ fontSize: 11, color: "var(--t3)", marginTop: 6 }}>
+            They'll get a link to join your team at <strong>{orgName}</strong> as <strong>{ROLE_MAP[inviteRole]?.label}</strong>.
+          </div>
+        )}
+      </div>
+
+      {/* Join code */}
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1,
+          color: "var(--t3)", marginBottom: 8 }}>Join Code — For Groups & Students</div>
+        {!showCode ? (
+          <button className="btn bs" onClick={getJoinCode}>
+            🔑 Generate Join Code
+          </button>
+        ) : (
+          <div style={{ background: "var(--bg3)", border: "1px solid var(--bd)", borderRadius: 12,
+            padding: "16px 20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+              <div>
+                <div style={{ fontSize: 11, color: "var(--t3)", marginBottom: 4 }}>Share this code</div>
+                <div style={{ fontFamily: "monospace", fontSize: 28, fontWeight: 900,
+                  letterSpacing: 4, color: "var(--gold)" }}>{joinCode}</div>
+              </div>
+              <div style={{ flex: 1, minWidth: 160 }}>
+                <div style={{ fontSize: 11, color: "var(--t3)", marginBottom: 4 }}>Or share this link</div>
+                <div style={{ fontSize: 12, color: "var(--t2)", wordBreak: "break-all" }}>
+                  theatre4u.org/join?code={joinCode}
+                </div>
+              </div>
+              <button className="btn bs bsm" onClick={() => {
+                navigator.clipboard?.writeText(`https://theatre4u.org/join?code=${joinCode}`);
+                flash("✓ Link copied!");
+              }}>Copy Link</button>
+            </div>
+            <div style={{ fontSize: 11, color: "var(--t3)", marginTop: 12, lineHeight: 1.5 }}>
+              Anyone with this code joins as <strong>Crew</strong> — they can add and edit items.
+              Post it in your costume room or send it to your team. Expires in 30 days.
+            </div>
+          </div>
+        )}
+      </div>
+
+      {msg && (
+        <div style={{ marginTop: 14, fontSize: 13, fontWeight: 700,
+          color: msg.startsWith("❌") ? "var(--red)" : "var(--grn)" }}>
+          {msg}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 function Settings({ org, setOrg, onSeed, user, items, setItems, plan="free", userEmail="", setPlan }) {
+  const userId = user?.id;
   const [f,setF]       = useState(org);
   const [saved,setSaved] = useState(false);
   const upd = (k,v) => setF(p=>({...p,[k]:v}));
@@ -6598,6 +6866,8 @@ function Settings({ org, setOrg, onSeed, user, items, setItems, plan="free", use
             </div>
           </div>
         )}
+
+        <TeamSettings userId={userId} orgName={org?.name||"Your Program"} plan={plan}/>
 
         <div className="card card-p">
           <div className="sh"><h2>Data Management</h2><p>Load sample data to explore, or reset everything to start fresh.</p></div>
@@ -8051,12 +8321,24 @@ function AppRoot(){
   useEffect(()=>{
     if(!user||loaded) return;
     (async()=>{
-      const{data:orgData}=await SB.from("orgs").select("*").eq("id",user.id).single();
+      // Check if user is a team member of another org first
+      const { data: memberData } = await SB.from("org_members")
+        .select("org_id, role, orgs(*)")
+        .eq("user_id", user.id)
+        .single();
+
+      // Use member's org if they're a team member, otherwise use own org
+      const targetOrgId = memberData ? memberData.org_id : user.id;
+      const memberRole  = memberData ? memberData.role : null;
+
+      const{data:orgData}=await SB.from("orgs").select("*").eq("id",targetOrgId).single();
       // Admin emails always get District plan regardless of what is stored
       const effectivePlan = isAdminEmail(user?.email) ? "district" : (orgData?.plan || "free");
-      if(orgData){ setOrg(orgData); setPlanState(effectivePlan); }
-      else { setPlanState(effectivePlan); }
-      const{data:itemData}=await SB.from("items").select("*").eq("org_id",user.id).order("added",{ascending:false});
+      if(orgData){
+        setOrg({...orgData, _memberRole: memberRole, _isMember: !!memberData});
+        setPlanState(effectivePlan);
+      } else { setPlanState(effectivePlan); }
+      const{data:itemData}=await SB.from("items").select("*").eq("org_id",targetOrgId).order("added",{ascending:false});
       if(itemData) setItems(itemData);
       setLoaded(true);
       // Load unread message count
