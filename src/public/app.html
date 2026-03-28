@@ -1251,7 +1251,7 @@ function App() {
       ))
     ),
     // FAB — only on home and inventory
-    !viewItem && (tab==="home"||tab==="inventory") && h("button",{className:"fab",onClick:()=>setAddOpen(true)},Ic.plus(26)),
+    !viewItem && (tab==="home"||tab==="inventory") && org?._memberRole !== "house" && h("button",{className:"fab",onClick:()=>setAddOpen(true)},Ic.plus(26)),
     // Add sheet
     addOpen && h(AddSheet,{onClose:()=>setAddOpen(false),onAdded:handleItemAdded,userId:org?.id||user.id})
   );
