@@ -705,7 +705,7 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=t
     const w=window.open("","_blank","width=420,height=520");if(!w)return;
     const loc=item.location?"Location: "+item.location:"";
     const itemUrl="theatre4u.org/#/item/"+item.id;
-    w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2><p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qrSrc}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${itemUrl}</p><p style="font-size:11px;color:#bbb">Theatre4u Inventory</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
+    w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2><p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qrSrc}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${itemUrl}</p><p style="font-size:11px;color:#bbb">Theatre4u™ Inventory</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
     w.document.close();
   };
 
@@ -1459,7 +1459,7 @@ function Dashboard({items,org,goInventory,goMarketplace,goCommunity}){
           <div className="img-div-fade"/>
           <div className="img-div-text">
             <h3>Every Seat Filled. Every Prop Accounted For.</h3>
-            <p>Theatre4u keeps your whole program organized from rehearsal to curtain call.</p>
+            <p>Theatre4u™ keeps your whole program organized from rehearsal to curtain call.</p>
           </div>
         </div>
         {/* Bar chart */}
@@ -3259,7 +3259,7 @@ function Reports({ items, plan="free" }) {
 
   const printAllQR = async () => {
     const w=window.open("","_blank");if(!w)return;
-    w.document.write(`<html><head><title>Theatre4u QR Labels</title></head><body style="font-family:sans-serif;padding:16px"><h2 style="font-size:14px;margin-bottom:16px;color:#333">Theatre4u — QR Labels (${items.length} items)</h2><div id="lbl">Generating…</div></body></html>`);w.document.close();
+    w.document.write(`<html><head><title>Theatre4u™ QR Labels</title></head><body style="font-family:sans-serif;padding:16px"><h2 style="font-size:14px;margin-bottom:16px;color:#333">Theatre4u™ — QR Labels (${items.length} items)</h2><div id="lbl">Generating…</div></body></html>`);w.document.close();
     const srcs=await Promise.all(items.map(i=>QR.toDataURL("https://theatre4u.org/#/item/"+i.id,140)));
     const labels=items.map((i,n)=>`<div style="display:inline-block;text-align:center;padding:10px;border:1px dashed #ccc;margin:5px;width:160px;vertical-align:top"><img src="${srcs[n]||""}" width="100" height="100"/><div style="font-size:10px;font-weight:700;margin-top:5px;word-break:break-word">${i.name}</div><div style="font-size:8px;color:#888;margin-top:2px">${i.category} · ${i.id.slice(0,8)}</div></div>`).join("");
     const el=w.document.getElementById("lbl");if(el){el.outerHTML=labels;setTimeout(()=>w.print(),400);}
@@ -3437,9 +3437,9 @@ const STRIPE_LINKS = {
 };
 // ── Plan definitions ─────────────────────────────────────────────────────────
 const PLANS_DEF = {
-  free:     { label:"Free",     maxItems:50,  marketplace:false, reports:false },
-  pro:      { label:"Pro",      maxItems:Infinity, marketplace:true,  reports:true  },
-  district: { label:"District", maxItems:Infinity, marketplace:true,  reports:true  },
+  free:     { label:"Free",     maxItems:50,  marketplace:false, reports:false, monthlyPrice:0,  annualPrice:0   },
+  pro:      { label:"Pro",      maxItems:Infinity, marketplace:true,  reports:true,  monthlyPrice:12, annualPrice:120 },
+  district: { label:"District", maxItems:Infinity, marketplace:true,  reports:true,  monthlyPrice:49, annualPrice:500 },
 };
 // ── Admin accounts — add emails here for free District access + admin dashboard
 const ADMIN_EMAILS = [
@@ -6350,7 +6350,7 @@ function CommunityPage({userId, org, plan}) {
           <div className="hero-body">
             <div className="hero-eyebrow">🎪 Theatre Community</div>
             <h1 className="hero-title" style={{fontSize:44}}>Community Board</h1>
-            <p className="hero-sub">Upcoming shows, audition notices, production photos, and wanted items — from programmes across the network.</p>
+            <p className="hero-sub">Upcoming shows, audition notices, production photos, and wanted items — from programs across the network.</p>
           </div>
           <div className="hero-bar"/>
         </div>
@@ -7145,7 +7145,7 @@ function LandingPage({onSignIn, onSignUp}){
 
   const features=[
     {icon:"📦",title:"Inventory That Actually Works",desc:"Catalog every costume, prop, light, and sound item your program owns. Add photos from your phone, tag by production, print QR labels for storage bins. No more mystery boxes."},
-    {icon:"🏪",title:"Borrow What You Need",desc:"Browse thousands of items listed by other programmes nationwide. Rent a fog machine for the weekend. Borrow a set of Victorian costumes. List your own items and earn revenue between shows."},
+    {icon:"🏪",title:"Borrow What You Need",desc:"Browse thousands of items listed by other programs nationwide. Rent a fog machine for the weekend. Borrow a set of Victorian costumes. List your own items and earn revenue between shows."},
     {icon:"🪙",title:"Theatre Credits",desc:"Lend your items for free and earn credits. Spend those credits to reduce what you pay when you borrow. The more you share, the less you spend — a community that rewards generosity."},
     {icon:"📋",title:"Prop 28 Compliance (CA)",desc:"California schools: Theatre4u automatically tracks your arts purchases, generates your CDE-required annual report, handles the Supplement vs. Supplant attestation, and exports everything for your board meeting."},
     {icon:"📱",title:"Mobile App for Backstage",desc:"Add items by taking a photo. Log Prop 28 purchases from anywhere. Use your phone's camera to scan QR labels — the iPhone Camera app reads Theatre4u labels instantly. Available on iPhone and Android — no app store required."},
@@ -7161,8 +7161,8 @@ function LandingPage({onSignIn, onSignUp}){
   const steps=[
     {n:"1",title:"Create your free account",desc:"Sign up in 60 seconds. No credit card needed. Your first 50 items are always free."},
     {n:"2",title:"Add your first items",desc:"Take photos on your phone or upload from your computer. Fill in the basic details — name, category, condition, location."},
-    {n:"3",title:"List items in the marketplace",desc:"Mark items For Rent, For Sale, or For Loan. Other programmes can see them immediately."},
-    {n:"4",title:"Start borrowing and earning",desc:"Find what you need from other programmes. Accept requests for your items and earn Theatre Credits."},
+    {n:"3",title:"List items in the marketplace",desc:"Mark items For Rent, For Sale, or For Loan. Other programs can see them immediately."},
+    {n:"4",title:"Start borrowing and earning",desc:"Find what you need from other programs. Accept requests for your items and earn Theatre Credits."},
   ];
 
   return(<div style={{background:"var(--ink)",minHeight:"100vh",color:"var(--linen)",fontFamily:"'DM Sans',sans-serif"}}>
@@ -7261,7 +7261,7 @@ function LandingPage({onSignIn, onSignUp}){
     <div style={{padding:"80px 32px",maxWidth:1000,margin:"0 auto"}}>
       <div style={{textAlign:"center",marginBottom:48}}>
         <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>Simple, honest pricing</div>
-        <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(28px,4vw,42px)",color:"#fff"}}>Plans for every programme</h2>
+        <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(28px,4vw,42px)",color:"#fff"}}>Plans for every program</h2>
         <p style={{fontSize:14,color:"rgba(255,255,255,.45)",marginTop:10}}>Annual plans available — save up to 2 months free</p>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:20}}>
@@ -7298,7 +7298,7 @@ function LandingPage({onSignIn, onSignUp}){
       <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(28px,5vw,52px)",color:"#fff",marginBottom:16,lineHeight:1.15}}>
         Ready to get your<br/><span style={{color:"var(--gold)"}}>theatre organized?</span>
       </h2>
-      <p style={{fontSize:16,color:"rgba(255,255,255,.5)",marginBottom:32,maxWidth:440,margin:"0 auto 32px"}}>Join theatre programmes already using Theatre4u to manage inventory, share resources, and connect with their community.</p>
+      <p style={{fontSize:16,color:"rgba(255,255,255,.5)",marginBottom:32,maxWidth:440,margin:"0 auto 32px"}}>Join theatre programs already using Theatre4u to manage inventory, share resources, and connect with their community.</p>
       <button onClick={onSignUp} style={{background:"linear-gradient(135deg,var(--gold),var(--goldd))",border:"none",color:"#1a0f00",padding:"16px 40px",borderRadius:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:18,fontWeight:800,boxShadow:"0 4px 32px rgba(212,168,67,.45)"}}>
         Start Free — No credit card required →
       </button>
@@ -7531,16 +7531,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
         <button onClick={submit} disabled={loading} style={{marginTop:12,width:"100%",background:"linear-gradient(135deg,#d4a843,#a37f2c)",color:"#1a0f00",border:"none",borderRadius:6,padding:"12px",fontSize:15,fontWeight:700,cursor:loading?"not-allowed":"pointer",fontFamily:"'DM Sans',sans-serif",opacity:loading?.7:1}}>
           {loading?"Please wait…":mode==="login"?"Sign In →":"Create Free Account →"}
         </button>
-        {mode==="signup"&&(
-          <p style={{fontSize:11,color:"#685f76",textAlign:"center",marginTop:10,lineHeight:1.6}}>
-            By creating an account you agree to our{" "}
-            <span style={{color:"#d4a843",cursor:"pointer",textDecoration:"underline"}}
-              onClick={()=>window.__t4u_open_legal?.("terms")}>Terms of Service</span>{" "}and{" "}
-            <span style={{color:"#d4a843",cursor:"pointer",textDecoration:"underline"}}
-              onClick={()=>window.__t4u_open_legal?.("privacy")}>Privacy Policy</span>,
-            including a perpetual license to content you upload.
-          </p>
-        )}
+
         {mode==="login"&&<button onClick={resetPass} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:"#685f76",fontSize:12.5,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textDecoration:"underline"}}>Forgot password?</button>}
         <div style={{textAlign:"center",marginTop:14,fontSize:12.5,color:"#685f76"}}>
           {mode==="login"?<>Don&apos;t have an account? <button onClick={()=>{setMode("signup");setErr("");}} style={{background:"none",border:"none",color:"#d4a843",cursor:"pointer",fontSize:12.5,fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>Sign up free</button></>:<>Already have an account? <button onClick={()=>{setMode("login");setErr("");}} style={{background:"none",border:"none",color:"#d4a843",cursor:"pointer",fontSize:12.5,fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>Sign in</button></>}
@@ -7669,7 +7660,7 @@ function AuthScreen({onAuth}){
             {loading?"Please wait…":mode==="login"?"Sign In →":"Create Free Account →"}
           </button>
           {mode==="login"&&<button onClick={resetPass} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:"var(--faint)",fontSize:12.5,cursor:"pointer",fontFamily:"'Raleway',sans-serif",textDecoration:"underline"}}>Forgot password?</button>}
-          {mode==="signup"&&<p style={{fontSize:12,color:"var(--faint)",textAlign:"center",marginTop:14,lineHeight:1.6}}>Free to start — no credit card needed.<br/>By creating an account you agree to our <span onClick={()=>setLegal("terms")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Terms of Service</span> and <span onClick={()=>setLegal("privacy")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Privacy Policy</span>.</p>}
+          {mode==="signup"&&<p style={{fontSize:12,color:"var(--faint)",textAlign:"center",marginTop:14,lineHeight:1.6}}>Free to start — no credit card needed.<br/>By creating an account you agree to our{" "}<span onClick={()=>setLegal("terms")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Terms of Service</span>{" "}and{" "}<span onClick={()=>setLegal("privacy")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Privacy Policy</span>, including a perpetual license to content you upload.</p>}
         </div>
         <p style={{textAlign:"center",color:"rgba(255,255,255,.25)",fontSize:12,marginTop:20}}>theatre4u.org — Built for the arts community 🎭</p>
       </div>
