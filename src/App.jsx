@@ -625,6 +625,7 @@ function ItemForm({item,onSave,onCancel,userId}){
   const[f,setF]=useState(item||blank);
   const[ti,setTi]=useState("");
   const[upl,setUpl]=useState(false);
+  const[svng,setSvng]=useState(false);
   const fr=useRef();
   const upd=(k,v)=>setF(p=>({...p,[k]:v}));
   // Keep a ref always pointing at latest form state so the footer button works
@@ -677,10 +678,10 @@ function ItemForm({item,onSave,onCancel,userId}){
       marginTop:20,paddingTop:16,borderTop:"1px solid var(--border)"}}>
       <button type="button" className="btn btn-o" onClick={onCancel}>Cancel</button>
       <button type="button" className="btn btn-g"
-        disabled={!f.name.trim()||upl}
-        style={{opacity:!f.name.trim()||upl?0.45:1}}
-        onClick={()=>{if(f.name.trim())onSave(f);}}>
-        {upl?"Uploading…":item?"Save Changes":"Add Item"}
+        disabled={!f.name.trim()||upl||svng}
+        style={{opacity:!f.name.trim()||upl||svng?0.45:1}}
+        onClick={async()=>{if(!f.name.trim()||svng)return;setSvng(true);try{await onSave(f);}finally{setSvng(false);}}}>
+        {upl?"Uploading…":svng?"Saving…":item?"Save Changes":"Add Item"}
       </button>
     </div>
 
@@ -1513,9 +1514,12 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
   useEffect(()=>setPg(1),[search,catF,condF,availF,mktF]);
   const openD=item=>{setActive(item);setModal("d")};
   const openE=item=>{setActive(item);setModal("e")};
-  const handleSave=form=>{
-    if(active&&modal==="e")onEdit({...active,...form});
-    else onAdd({...form,id:uid(),added:new Date().toISOString()});
+  const handleSave=async form=>{
+    if(active&&modal==="e"){
+      await onEdit({...active,...form,id:active.id});
+    } else {
+      await onAdd({...form,id:uid(),added:new Date().toISOString()});
+    }
     setModal(null);setActive(null);
   };
   const maxItems = PLANS_DEF[plan]?.maxItems ?? 50;
