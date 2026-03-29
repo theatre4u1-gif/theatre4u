@@ -3854,11 +3854,18 @@ function AdminInventoryView() {
   const [loadingOrgs, setLoadingOrgs] = useState(true);
   const [search,      setSearch]      = useState("");
   const [catF,        setCatF]        = useState("all");
-  const [viewItem,    setViewItem]    = useState(null);
+  const [modal,       setModal]       = useState(null); // "add"|"edit"|"csv"
+  const [actItem,     setActItem]     = useState(null);
+  const [saving,      setSaving]      = useState(false);
+  const [msg,         setMsg]         = useState("");
+  const [csvText,     setCsvText]     = useState("");
+  const [csvResult,   setCsvResult]   = useState(null);
 
   const CATS = ["costumes","props","sets","lighting","sound","scripts","makeup","furniture","fabrics","tools","effects","other"];
   const CAT_ICONS = {costumes:"👗",props:"🎭",sets:"🏗️",lighting:"💡",sound:"🔊",scripts:"📜",makeup:"💄",furniture:"🪑",fabrics:"🧵",tools:"🔧",effects:"✨",other:"📦"};
+  const flash = m => { setMsg(m); setTimeout(()=>setMsg(""),3000); };
 
+  // Load all orgs
   useEffect(()=>{
     (async()=>{
       const{data}=await SB.from("orgs").select("id,name,email,plan,is_leading_player").order("name");
@@ -3871,8 +3878,9 @@ function AdminInventoryView() {
     setSelOrg(org); setItems([]); setSearch(""); setCatF("all"); setLoading(true);
     const{data}=await SB.from("items").select("*").eq("org_id",org.id).order("added",{ascending:false});
     setItems(data||[]);
-    SB.from("audit_log").insert({action:"admin_inventory_view",entity_type:"org",entity_id:org.id,
-      metadata:{org_name:org.name,item_count:(data||[]).length}}).catch(()=>{});
+    // Audit log this access
+    SB.from("audit_log").insert({action:"admin_inventory_view",org_id:org.id,
+      detail:{entity_type:"org",entity_id:org.id,org_name:org.name,item_count:(data||[]).length}}).then(()=>{});
     setLoading(false);
   };
 
@@ -3882,9 +3890,110 @@ function AdminInventoryView() {
       &&(catF==="all"||i.category===catF);
   });
 
+  // Add item to selected org
+  const handleAdd = async(f)=>{
+    setSaving(true);
+    const row={...f, org_id:selOrg.id, added:new Date().toISOString(),
+      start_date:f.start_date||null, end_date:f.end_date||null};
+    const{data,error}=await SB.from("items").insert(row).select().single();
+    if(error){flash("❌ "+error.message);}
+    else{
+      setItems(p=>[data,...p]);
+      SB.from("audit_log").insert({action:"admin_item_add",org_id:selOrg.id,
+        detail:{item_id:data.id,org_name:selOrg.name,item_name:data.name}}).then(()=>{});
+      flash("✓ Item added to "+selOrg.name);
+      setModal(null);setActItem(null);
+    }
+    setSaving(false);
+  };
+
+  // Edit item
+  const handleEdit = async(f)=>{
+    setSaving(true);
+    const{data,error}=await SB.from("items").update({...f,
+      start_date:f.start_date||null,end_date:f.end_date||null})
+      .eq("id",actItem.id).select().single();
+    if(error){flash("❌ "+error.message);}
+    else{
+      setItems(p=>p.map(x=>x.id===data.id?data:x));
+      SB.from("audit_log").insert({action:"admin_item_edit",org_id:selOrg.id,
+        detail:{item_id:data.id,org_name:selOrg.name,item_name:data.name}}).then(()=>{});
+      flash("✓ Item updated");
+      setModal(null);setActItem(null);
+    }
+    setSaving(false);
+  };
+
+  // Delete item
+  const handleDelete = async(id,name)=>{
+    if(!confirm("Delete "+name+" from "+selOrg.name+"?"))return;
+    await SB.from("items").delete().eq("id",id);
+    setItems(p=>p.filter(x=>x.id!==id));
+    SB.from("audit_log").insert({action:"admin_item_delete",org_id:selOrg.id,
+      detail:{item_id:id,org_name:selOrg.name,item_name:name}}).then(()=>{});
+    flash("✓ Item deleted");
+  };
+
+  // CSV Import
+  const parseAndImportCsv = async()=>{
+    if(!csvText.trim()||!selOrg){return;}
+    setSaving(true);
+    const lines = csvText.trim().split("
+");
+    const headers = lines[0].split(",").map(h=>h.trim().toLowerCase().replace(/"/g,""));
+    const rows = lines.slice(1);
+    let imported=0, failed=0, errors=[];
+    const now = new Date().toISOString();
+
+    for(const line of rows){
+      if(!line.trim())continue;
+      // Parse CSV respecting quoted fields
+      const vals=[]; let cur="",inQ=false;
+      for(let c of line){if(c==="""&&!inQ){inQ=true;}else if(c==="""&&inQ){inQ=false;}else if(c===","&&!inQ){vals.push(cur.trim());cur="";}else{cur+=c;}}
+      vals.push(cur.trim());
+
+      const row={};
+      headers.forEach((h,i)=>{row[h]=vals[i]?.replace(/^"|"$/g,"")||"";});
+
+      const item={
+        org_id:    selOrg.id,
+        name:      row.name||row.item_name||row["item name"]||"",
+        category:  row.category||"other",
+        condition: row.condition||"Good",
+        size:      row.size||"N/A",
+        qty:       parseInt(row.quantity||row.qty||"1")||1,
+        location:  row.location||row.storage_location||"",
+        notes:     row.notes||row.description||"",
+        mkt:       row.market_status||row.mkt||"Not Listed",
+        availability: row.availability||"In Stock",
+        tags:      row.tags?row.tags.split(";").map(t=>t.trim()).filter(Boolean):[],
+        images:    [],
+        added:     now,
+      };
+      if(!item.name){failed++;errors.push("Row "+(imported+failed)+": missing name");continue;}
+      const{error}=await SB.from("items").insert(item);
+      if(error){failed++;errors.push(item.name+": "+error.message);}
+      else{imported++;}
+    }
+
+    SB.from("audit_log").insert({action:"admin_csv_import",org_id:selOrg.id,
+      detail:{org_name:selOrg.name,imported,failed}}).then(()=>{});
+    setCsvResult({imported,failed,errors});
+    if(imported>0) await loadOrgInventory(selOrg);
+    setSaving(false);
+  };
+
+  const btnStyle = (col="#d4a843")=>({
+    background:`linear-gradient(135deg,${col},${col}cc)`,border:"none",
+    color:col==="#d4a843"?"#1a1200":"#fff",padding:"6px 14px",borderRadius:6,
+    fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",
+    display:"flex",alignItems:"center",gap:5,
+  });
+
   return(
     <div>
       <div style={{display:"flex",alignItems:"flex-start",gap:24,flexWrap:"wrap"}}>
+        {/* Left: Org list */}
         <div style={{width:260,flexShrink:0}}>
           <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:10}}>Select Organization</div>
           {loadingOrgs?<div style={{color:"var(--muted)",fontSize:13}}>Loading…</div>:(
@@ -3901,11 +4010,7 @@ function AdminInventoryView() {
                       </div>
                       <div style={{fontSize:11,color:"var(--muted)",marginTop:1}}>{o.email}</div>
                     </div>
-                    <span style={{fontSize:10,padding:"2px 6px",borderRadius:8,fontWeight:700,flexShrink:0,
-                      background:o.plan==="pro"?"rgba(212,168,67,.15)":o.plan==="district"?"rgba(66,165,245,.15)":"rgba(255,255,255,.06)",
-                      color:o.plan==="pro"?"var(--gold)":o.plan==="district"?"#42a5f5":"var(--muted)"}}>
-                      {o.plan||"free"}
-                    </span>
+                    <span style={{fontSize:10,padding:"2px 6px",borderRadius:6,background:o.plan==="pro"?"rgba(212,168,67,.15)":o.plan==="district"?"rgba(66,165,245,.15)":"rgba(255,255,255,.06)",color:o.plan==="pro"?"var(--gold)":o.plan==="district"?"#42a5f5":"var(--muted)",fontWeight:700}}>{o.plan}</span>
                   </div>
                 </button>
               ))}
@@ -3913,27 +4018,44 @@ function AdminInventoryView() {
           )}
         </div>
 
+        {/* Right: Inventory panel */}
         <div style={{flex:1,minWidth:0}}>
           {!selOrg?(
             <div style={{textAlign:"center",padding:"48px 24px",color:"var(--muted)"}}>
               <div style={{fontSize:40,marginBottom:12}}>📦</div>
               <div style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:6}}>Select an organization</div>
-              <div style={{fontSize:13}}>Choose a program on the left to browse their inventory.</div>
+              <div style={{fontSize:13}}>Choose a program on the left to view and manage their inventory.</div>
               <div style={{fontSize:11,marginTop:16,color:"#c2185b",background:"rgba(194,24,91,.08)",border:"1px solid rgba(194,24,91,.2)",borderRadius:8,padding:"8px 14px",display:"inline-block"}}>
-                🔒 Admin access — all views are logged
+                🔒 Admin access — all actions are logged
               </div>
             </div>
           ):loading?(
             <div style={{textAlign:"center",padding:40,color:"var(--muted)"}}>Loading {selOrg.name}…</div>
           ):(
             <>
+              {/* Header */}
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap"}}>
                 <div style={{fontFamily:"var(--serif)",fontSize:18,fontWeight:700,flex:1}}>
                   {selOrg.name||selOrg.email}
                   <span style={{fontFamily:"inherit",fontSize:13,fontWeight:400,color:"var(--muted)",marginLeft:8}}>{items.length} items</span>
                 </div>
-                <span style={{fontSize:10,padding:"3px 9px",borderRadius:6,fontWeight:700,background:"rgba(194,24,91,.12)",color:"#f48fb1"}}>🔒 Admin View — Logged</span>
+                <span style={{fontSize:10,padding:"3px 9px",borderRadius:6,fontWeight:700,background:"rgba(194,24,91,.12)",color:"#f48fb1"}}>🔒 Logged</span>
               </div>
+
+              {/* Action buttons */}
+              <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+                <button style={btnStyle()} onClick={()=>{setActItem(null);setModal("add");}}>
+                  ＋ Add Item
+                </button>
+                <button style={btnStyle("#42a5f5")} onClick={()=>{setCsvText("");setCsvResult(null);setModal("csv");}}>
+                  📥 CSV Import
+                </button>
+                <button style={{...btnStyle("#555"),marginLeft:"auto"}} onClick={()=>loadOrgInventory(selOrg)}>
+                  ↻ Refresh
+                </button>
+              </div>
+
+              {/* Search + filter */}
               <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
                 <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search items…"
                   style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,padding:"6px 10px",color:"var(--t1)",fontSize:13,fontFamily:"inherit",outline:"none",flex:"1 1 160px"}}/>
@@ -3943,38 +4065,48 @@ function AdminInventoryView() {
                   {CATS.map(c=><option key={c} value={c}>{CAT_ICONS[c]} {c[0].toUpperCase()+c.slice(1)}</option>)}
                 </select>
               </div>
+
+              {msg&&<div style={{marginBottom:10,fontSize:13,fontWeight:700,color:msg.startsWith("❌")?"var(--red)":"var(--grn)"}}>{msg}</div>}
+
+              {/* Items table */}
               {filtered.length===0?(
                 <div style={{textAlign:"center",padding:32,color:"var(--muted)",fontSize:13}}>
-                  {items.length===0?"No items yet.":"No items match your search."}
+                  {items.length===0?"No items yet — add one above or import a CSV.":"No items match your search."}
                 </div>
               ):(
-                <div style={{border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
+                <div style={{overflowX:"auto",border:"1px solid var(--border)",borderRadius:10}}>
                   <table style={{width:"100%",borderCollapse:"collapse"}}>
                     <thead>
-                      <tr style={{background:"rgba(0,0,0,.25)"}}>
-                        {["","Item","Category","Condition","Qty","Location","Market"].map(h=>(
-                          <th key={h} style={{padding:"9px 12px",textAlign:"left",fontSize:10,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",fontWeight:700,whiteSpace:"nowrap"}}>{h}</th>
+                      <tr style={{background:"rgba(0,0,0,.2)"}}>
+                        {["Item","Category","Condition","Qty","Location","Market",""].map(h=>(
+                          <th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:10,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",fontWeight:700,whiteSpace:"nowrap"}}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {filtered.map((item,i)=>(
-                        <tr key={item.id} onClick={()=>setViewItem(item)}
-                          style={{borderTop:"1px solid var(--border)",background:i%2===0?"rgba(255,255,255,.01)":"transparent",cursor:"pointer"}}>
-                          <td style={{padding:"8px 10px",width:32}}>
-                            {(item.images||[]).length>0
-                              ?<img src={item.images[0]} alt="" style={{width:28,height:28,borderRadius:4,objectFit:"cover"}}/>
-                              :<span style={{fontSize:16}}>{CAT_ICONS[item.category]||"📦"}</span>}
+                      {filtered.map(item=>(
+                        <tr key={item.id} style={{borderTop:"1px solid var(--border)"}}>
+                          <td style={{padding:"8px 12px",fontWeight:600,fontSize:13}}>
+                            {item.name}
+                            {item.tags?.length>0&&<div style={{fontSize:10,color:"var(--muted)",marginTop:2}}>{item.tags.map(t=>"#"+t).join(" ")}</div>}
                           </td>
-                          <td style={{padding:"8px 12px",fontWeight:600,fontSize:13}}>{item.name}</td>
                           <td style={{padding:"8px 12px",fontSize:12,color:"var(--muted)"}}>{CAT_ICONS[item.category]} {item.category}</td>
                           <td style={{padding:"8px 12px",fontSize:12}}>{item.condition}</td>
-                          <td style={{padding:"8px 12px",fontSize:13,fontWeight:600}}>{item.quantity}</td>
+                          <td style={{padding:"8px 12px",fontSize:13,fontWeight:600}}>{item.quantity||item.qty||1}</td>
                           <td style={{padding:"8px 12px",fontSize:12,color:"var(--muted)"}}>{item.location||"—"}</td>
-                          <td style={{padding:"8px 12px"}}>
-                            {item.mkt&&item.mkt!=="Not Listed"
-                              ?<span style={{fontSize:10,padding:"2px 7px",borderRadius:8,fontWeight:700,background:"rgba(76,175,80,.15)",color:"#81c784"}}>{item.mkt}</span>
-                              :<span style={{fontSize:11,color:"var(--faint)"}}>—</span>}
+                          <td style={{padding:"8px 12px",fontSize:11}}>
+                            <span style={{padding:"2px 7px",borderRadius:10,background:item.mkt==="Not Listed"?"rgba(255,255,255,.06)":"rgba(212,168,67,.15)",
+                              color:item.mkt==="Not Listed"?"var(--muted)":"var(--gold)",fontWeight:600}}>
+                              {item.mkt||"Not Listed"}
+                            </span>
+                          </td>
+                          <td style={{padding:"8px 8px"}}>
+                            <div style={{display:"flex",gap:4}}>
+                              <button onClick={()=>{setActItem(item);setModal("edit");}}
+                                style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:5,padding:"3px 8px",cursor:"pointer",fontSize:11,color:"var(--t2)",fontFamily:"inherit"}}>Edit</button>
+                              <button onClick={()=>handleDelete(item.id,item.name)}
+                                style={{background:"rgba(194,24,91,.1)",border:"1px solid rgba(194,24,91,.2)",borderRadius:5,padding:"3px 8px",cursor:"pointer",fontSize:11,color:"#f48fb1",fontFamily:"inherit"}}>Del</button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -3987,29 +4119,53 @@ function AdminInventoryView() {
         </div>
       </div>
 
-      {viewItem&&(
-        <Modal title={viewItem.name} onClose={()=>setViewItem(null)}>
-          <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:16}}>
-            {(viewItem.images||[]).map((img,i)=>(
-              <img key={i} src={img} alt="" style={{width:80,height:80,borderRadius:8,objectFit:"cover",border:"1px solid var(--border)"}}/>
-            ))}
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 24px",fontSize:13}}>
-            {[["Category",`${CAT_ICONS[viewItem.category]||""} ${viewItem.category||"—"}`],
-              ["Condition",viewItem.condition||"—"],["Quantity",viewItem.quantity||0],
-              ["Size",viewItem.size||"—"],["Location",viewItem.location||"—"],
-              ["Status",viewItem.availability||"—"],["Market",viewItem.mkt||"Not Listed"],
-              ["Added",viewItem.added?new Date(viewItem.added).toLocaleDateString():"—"],
-            ].map(([l,v])=>(
-              <div key={l}><span style={{color:"var(--muted)",fontSize:11}}>{l}</span><div style={{marginTop:2}}>{v}</div></div>
-            ))}
-          </div>
-          {viewItem.notes&&<div style={{marginTop:14,padding:12,background:"var(--bg3)",borderRadius:8,fontSize:13,color:"var(--t2)",lineHeight:1.6}}>{viewItem.notes}</div>}
-          {(viewItem.tags||[]).length>0&&(
-            <div style={{marginTop:10,display:"flex",flexWrap:"wrap",gap:6}}>
-              {viewItem.tags.map(t=>(<span key={t} style={{background:"rgba(212,168,67,.1)",color:"var(--gold)",padding:"2px 8px",borderRadius:10,fontSize:11}}>#{t}</span>))}
+      {/* Add/Edit Item Modal */}
+      {(modal==="add"||modal==="edit")&&(
+        <Modal title={(modal==="add"?"Add Item to ":"Edit Item — ")+selOrg?.name} onClose={()=>{setModal(null);setActItem(null);}}>
+          <ItemForm item={modal==="edit"?actItem:null} onSave={modal==="add"?handleAdd:handleEdit} onCancel={()=>{setModal(null);setActItem(null);}} saving={saving}/>
+        </Modal>
+      )}
+
+      {/* CSV Import Modal */}
+      {modal==="csv"&&(
+        <Modal title={"CSV Import → "+selOrg?.name} onClose={()=>setModal(null)}>
+          <div>
+            <p style={{fontSize:13,color:"var(--muted)",marginBottom:12,lineHeight:1.6}}>
+              Paste CSV data below or type items manually. Required column: <strong>name</strong>.<br/>
+              Optional columns: <code>category, condition, quantity, location, notes, size, availability, tags (semicolon-separated)</code>
+            </p>
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:11,fontWeight:700,color:"var(--muted)",marginBottom:4,textTransform:"uppercase",letterSpacing:1}}>Example CSV</div>
+              <pre style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,padding:10,fontSize:11,color:"var(--t2)",overflowX:"auto",whiteSpace:"pre"}}>
+{`name,category,condition,quantity,location,notes
+Victorian Gown,costumes,Good,1,Costume Closet A,Blue with lace trim
+Fog Machine,effects,Excellent,2,Effects Cage,Includes remote
+Wireless Mic,sound,Good,4,Sound Booth,SM58 compatible`}
+              </pre>
             </div>
-          )}
+            <textarea value={csvText} onChange={e=>setCsvText(e.target.value)}
+              placeholder="Paste CSV here or type column headers on first line then data rows below…"
+              style={{width:"100%",minHeight:180,background:"var(--bg3)",border:"1px solid var(--border)",
+                borderRadius:8,padding:10,color:"var(--t1)",fontSize:12,fontFamily:"monospace",
+                outline:"none",resize:"vertical"}}/>
+            {csvResult&&(
+              <div style={{marginTop:10,padding:12,borderRadius:8,
+                background:csvResult.failed>0?"rgba(194,24,91,.08)":"rgba(76,175,80,.08)",
+                border:`1px solid ${csvResult.failed>0?"rgba(194,24,91,.25)":"rgba(76,175,80,.25)"}`}}>
+                <div style={{fontWeight:700,fontSize:13,marginBottom:4}}>
+                  ✓ {csvResult.imported} imported{csvResult.failed>0?` · ❌ ${csvResult.failed} failed`:""}
+                </div>
+                {csvResult.errors.slice(0,5).map((e,i)=><div key={i} style={{fontSize:11,color:"var(--red)"}}>{e}</div>)}
+              </div>
+            )}
+            <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:14}}>
+              <button className="btn btn-o" onClick={()=>setModal(null)}>Cancel</button>
+              <button className="btn btn-g" onClick={parseAndImportCsv} disabled={saving||!csvText.trim()}
+                style={{opacity:saving||!csvText.trim()?.0:1}}>
+                {saving?"Importing…":"📥 Import Items"}
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>
