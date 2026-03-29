@@ -3858,37 +3858,12 @@ function AdminInventoryView() {
   const [actItem,     setActItem]     = useState(null);
   const [saving,      setSaving]      = useState(false);
   const [msg,         setMsg]         = useState("");
-  const [csvText,     setCsvText]     = useState("");
-  const [csvResult,   setCsvResult]   = useState(null);
-  const [csvFile,     setCsvFile]     = useState(null);
-  const [csvDragging, setCsvDragging] = useState(false);
-  const csvInputRef = useRef(null);
 
   const CATS = ["costumes","props","sets","lighting","sound","scripts","makeup","furniture","fabrics","tools","effects","other"];
   const CAT_ICONS = {costumes:"👗",props:"🎭",sets:"🏗️",lighting:"💡",sound:"🔊",scripts:"📜",makeup:"💄",furniture:"🪑",fabrics:"🧵",tools:"🔧",effects:"✨",other:"📦"};
   const flash = m => { setMsg(m); setTimeout(()=>setMsg(""),3000); };
 
-  const downloadTemplate = () => {
-    const csv = [
-      "name,category,condition,quantity,location,notes,size,availability,tags",
-      "Victorian Gown,costumes,Good,1,Costume Closet A,Blue with lace trim,M,In Stock,period;formal",
-      "Fog Machine,effects,Excellent,2,Effects Cage,Includes remote,N/A,In Stock,atmosphere",
-      "Wireless Mic,sound,Good,4,Sound Booth,SM58 compatible,N/A,In Stock,audio",
-    ].join("\n");
-    const blob = new Blob([csv], {type:"text/csv"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "theatre4u-import-template.csv";
-    a.click();
-  };
 
-  const handleCsvFile = (file) => {
-    if (!file || !file.name.endsWith(".csv")) return;
-    setCsvFile(file);
-    const reader = new FileReader();
-    reader.onload = (e) => setCsvText(e.target.result);
-    reader.readAsText(file);
-  };
 
   // Load all orgs
   useEffect(()=>{
@@ -3960,51 +3935,6 @@ function AdminInventoryView() {
   };
 
   // CSV Import
-  const parseAndImportCsv = async()=>{
-    if(!csvText.trim()||!selOrg){return;}
-    setSaving(true);
-    const lines = csvText.trim().split("\n");
-    const headers = lines[0].split(",").map(h=>h.trim().toLowerCase().replace(/"/g,""));
-    const rows = lines.slice(1);
-    let imported=0, failed=0, errors=[];
-    const now = new Date().toISOString();
-
-    for(const line of rows){
-      if(!line.trim())continue;
-      // Parse CSV respecting quoted fields
-      const vals = line.split(",").map(v=>v.trim().replace(/^"|"$/g,""));
-
-
-      const row={};
-      headers.forEach((h,i)=>{row[h]=vals[i]?.replace(/^"|"$/g,"")||"";});
-
-      const item={
-        org_id:    selOrg.id,
-        name:      row.name||row.item_name||row["item name"]||"",
-        category:  row.category||"other",
-        condition: row.condition||"Good",
-        size:      row.size||"N/A",
-        qty:       parseInt(row.quantity||row.qty||"1")||1,
-        location:  row.location||row.storage_location||"",
-        notes:     row.notes||row.description||"",
-        mkt:       row.market_status||row.mkt||"Not Listed",
-        availability: row.availability||"In Stock",
-        tags:      row.tags?row.tags.split(";").map(t=>t.trim()).filter(Boolean):[],
-        images:    [],
-        added:     now,
-      };
-      if(!item.name){failed++;errors.push("Row "+(imported+failed)+": missing name");continue;}
-      const{error}=await SB.from("items").insert(item);
-      if(error){failed++;errors.push(item.name+": "+error.message);}
-      else{imported++;}
-    }
-
-    SB.from("audit_log").insert({action:"admin_csv_import",org_id:selOrg.id,
-      detail:{org_name:selOrg.name,imported,failed}}).then(()=>{});
-    setCsvResult({imported,failed,errors});
-    if(imported>0) await loadOrgInventory(selOrg);
-    setSaving(false);
-  };
 
   const btnStyle = (col="#d4a843")=>({
     background:`linear-gradient(135deg,${col},${col}cc)`,border:"none",
@@ -4070,7 +4000,6 @@ function AdminInventoryView() {
                 <button style={btnStyle()} onClick={()=>{setActItem(null);setModal("add");}}>
                   ＋ Add Item
                 </button>
-                <button style={btnStyle("#42a5f5")} onClick={()=>{setCsvText("");setCsvResult(null);setModal("csv");}}>
                   📥 CSV Import
                 </button>
                 <button style={{...btnStyle("#555"),marginLeft:"auto"}} onClick={()=>loadOrgInventory(selOrg)}>
@@ -4150,160 +4079,16 @@ function AdminInventoryView() {
       )}
 
       {/* CSV Import Modal */}
-      {modal==="csv"&&(
-        <Modal title={"CSV Import → "+selOrg?.name} onClose={()=>{setModal(null);setCsvFile(null);setCsvText("");setCsvResult(null);}}>
-          <div>
-            {/* Step indicator */}
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:18}}>
-              {["Upload","Preview","Import"].map((s,i)=>(
-                <div key={s} style={{display:"flex",alignItems:"center",gap:8}}>
-                  <div style={{width:22,height:22,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
-                    fontSize:11,fontWeight:800,
-                    background: i===0&&!csvFile ? "var(--gold)" : i===1&&csvFile&&!csvResult ? "var(--gold)" : i===2&&csvResult ? "var(--gold)" : "var(--bg3)",
-                    color: (i===0&&!csvFile)||(i===1&&csvFile&&!csvResult)||(i===2&&csvResult) ? "#1a1200" : "var(--muted)",
-                    border:`1px solid ${(i===0&&!csvFile)||(i===1&&csvFile&&!csvResult)||(i===2&&csvResult) ? "var(--gold)" : "var(--border)"}`
-                  }}>{i+1}</div>
-                  <span style={{fontSize:12,color:"var(--t2)",fontWeight:600}}>{s}</span>
-                  {i<2&&<span style={{color:"var(--border)"}}>›</span>}
-                </div>
-              ))}
-            </div>
-
-            {/* Download template */}
-            <div style={{background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.2)",borderRadius:10,padding:"12px 16px",marginBottom:16}}>
-              <div style={{fontSize:13,fontWeight:700,color:"var(--gold)",marginBottom:4}}>💡 Two ways to import</div>
-              <div style={{fontSize:12,color:"var(--t2)",lineHeight:1.6,marginBottom:10}}>
-                <strong>Option A</strong> — Download our template, fill it in, upload it back.<br/>
-                <strong>Option B</strong> — Upload any spreadsheet you already have. Required column: <strong>name</strong>.
-              </div>
-              <button onClick={downloadTemplate}
-                style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,padding:"6px 14px",
-                  cursor:"pointer",fontSize:12,fontWeight:700,color:"var(--t1)",fontFamily:"inherit",
-                  display:"flex",alignItems:"center",gap:6}}>
-                ↓ Download Template CSV
-              </button>
-            </div>
-
-            {/* Drop zone */}
-            <div
-              onDragOver={e=>{e.preventDefault();setCsvDragging(true);}}
-              onDragLeave={()=>setCsvDragging(false)}
-              onDrop={e=>{e.preventDefault();setCsvDragging(false);handleCsvFile(e.dataTransfer.files[0]);}}
-              onClick={()=>csvInputRef.current?.click()}
-              style={{
-                border:`2px dashed ${csvDragging?"var(--gold)":csvFile?"rgba(76,175,80,.6)":"var(--border)"}`,
-                borderRadius:12,
-                padding:"32px 24px",
-                textAlign:"center",
-                cursor:"pointer",
-                background:csvDragging?"rgba(212,168,67,.04)":csvFile?"rgba(76,175,80,.04)":"var(--bg3)",
-                transition:"all .2s",
-                marginBottom:16,
-              }}>
-              <input ref={csvInputRef} type="file" accept=".csv" hidden onChange={e=>handleCsvFile(e.target.files[0])}/>
-              {csvFile ? (
-                <>
-                  <div style={{fontSize:36,marginBottom:8}}>✅</div>
-                  <div style={{fontWeight:700,fontSize:14,color:"var(--grn)",marginBottom:4}}>{csvFile.name}</div>
-                  <div style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>
-                    {(csvText.match(/\n/g)||[]).length} rows detected
-
-                  </div>
-                  <button onClick={e=>{e.stopPropagation();setCsvFile(null);setCsvText("");setCsvResult(null);}}
-                    style={{background:"none",border:"1px solid var(--border)",borderRadius:6,padding:"4px 12px",
-                      cursor:"pointer",fontSize:11,color:"var(--muted)",fontFamily:"inherit"}}>
-                    ✕ Remove file
-                  </button>
-                </>
-              ):(
-                <>
-                  <div style={{fontSize:40,marginBottom:10}}>📂</div>
-                  <div style={{fontWeight:600,fontSize:14,color:"var(--t1)",marginBottom:4}}>
-                    Drop your CSV here
-                  </div>
-                  <div style={{fontSize:12,color:"var(--muted)"}}>or click to browse — .csv files only</div>
-                </>
-              )}
-            </div>
-
-            {/* Preview rows */}
-            {csvFile && csvText && !csvResult && (()=>{
-              const previewLines = csvText.trim().split("\n").filter(l=>l.trim()).slice(0,6);
-              const headers = previewLines[0]?.split(",").map(h=>h.trim().replace(/^"|"$/g,"")) || [];
-              const rows = previewLines.slice(1);
-              return rows.length > 0 ? (
-                <div style={{marginBottom:16}}>
-                  <div style={{fontSize:11,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>
-                    Preview — first {rows.length} row{rows.length!==1?"s":""}
-                  </div>
-                  <div style={{overflowX:"auto",border:"1px solid var(--border)",borderRadius:8}}>
-                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                      <thead>
-                        <tr style={{background:"rgba(0,0,0,.2)"}}>
-                          {headers.slice(0,6).map(h=>(
-                            <th key={h} style={{padding:"6px 10px",textAlign:"left",color:"var(--muted)",fontWeight:700,whiteSpace:"nowrap"}}>
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rows.map((row,ri)=>{
-                          const vals = row.split(",").map(v=>v.trim().replace(/^"|"$/g,""));
-                          return(
-                            <tr key={ri} style={{borderTop:"1px solid var(--border)"}}>
-                              {vals.slice(0,6).map((v,ci)=>(
-                                <td key={ci} style={{padding:"5px 10px",color:"var(--t2)",maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v||"—"}</td>
-                              ))}
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  {csvText.trim().split("\n").filter(l=>l.trim()).length > 6 && (
-                    <div style={{fontSize:11,color:"var(--muted)",marginTop:5,textAlign:"center"}}>
-                      + {csvText.trim().split("\n").filter(l=>l.trim()).length - 6} more rows
-                    </div>
-                  )}
-                </div>
-              ) : null;
-            })()}
-
-            {/* Result */}
-            {csvResult&&(
-              <div style={{marginBottom:16,padding:14,borderRadius:10,
-                background:csvResult.failed>0?"rgba(194,24,91,.08)":"rgba(76,175,80,.08)",
-                border:`1px solid ${csvResult.failed>0?"rgba(194,24,91,.25)":"rgba(76,175,80,.25)"}`}}>
-                <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>
-                  {csvResult.failed===0?"🎉":"⚠️"} {csvResult.imported} item{csvResult.imported!==1?"s":""} imported
-                  {csvResult.failed>0?` · ${csvResult.failed} failed`:""}
-                </div>
-                {csvResult.errors.slice(0,5).map((e,i)=><div key={i} style={{fontSize:11,color:"var(--red)",marginTop:3}}>{e}</div>)}
-                {csvResult.imported>0&&<div style={{fontSize:12,color:"var(--grn)",marginTop:6}}>✓ Inventory updated — reload the page to see all changes.</div>}
-              </div>
-            )}
-
-            {/* Supported formats */}
-            {!csvFile&&(
-              <div style={{fontSize:11,color:"var(--muted)",textAlign:"center",marginBottom:12}}>
-                Supports exports from Google Sheets, Excel, Airtable, and most inventory apps.
-              </div>
-            )}
-
-            <div style={{display:"flex",gap:8,justifyContent:"flex-end",paddingTop:14,borderTop:"1px solid var(--border)"}}>
-              <button className="btn btn-o" onClick={()=>{setModal(null);setCsvFile(null);setCsvText("");setCsvResult(null);}}>
-                {csvResult?"Close":"Cancel"}
-              </button>
-              {csvFile&&!csvResult&&(
-                <button className="btn btn-g" onClick={parseAndImportCsv} disabled={saving}
-                  style={{opacity:saving?0.5:1}}>
-                  {saving?"Importing…":"📥 Import "+( csvText.trim().split("\n").filter(l=>l.trim()).length-1)+" Items"}
-                </button>
-              )}
-            </div>
-          </div>
-        </Modal>
+      {modal==="csv"&&selOrg&&(
+        <CSVImport
+          userId={selOrg.id}
+          onClose={()=>{setModal(null);}}
+          onImport={async()=>{
+            setModal(null);
+            await loadOrgInventory(selOrg);
+            flash("✓ Import complete — inventory refreshed for "+selOrg.name);
+          }}
+        />
       )}
     </div>
   );
