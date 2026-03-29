@@ -628,17 +628,7 @@ function ItemForm({item,onSave,onCancel,userId}){
   const fr=useRef();
   const upd=(k,v)=>setF(p=>({...p,[k]:v}));
   // Keep a ref always pointing at latest form state so the footer button works
-  const fRef=useRef(f);
-  useEffect(()=>{fRef.current=f;},[f]);
-  useEffect(()=>{
-    if(!submitId) return;
-    const btn=document.getElementById(submitId);
-    if(!btn) return;
-    const handler=()=>{ const cur=fRef.current; if(cur.name.trim()) onSave(cur); };
-    btn.onclick=handler;
-    btn.disabled=!f.name.trim();
-    btn.style.opacity=f.name.trim()?'1':'.42';
-  },[f.name,submitId,onSave]);
+
   const showRent=f.mkt==="For Rent"||f.mkt==="Rent or Sale";
   const showSale=f.mkt==="For Sale"||f.mkt==="Rent or Sale";
   const showLoan=f.mkt==="For Loan";
