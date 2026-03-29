@@ -3947,9 +3947,8 @@ function AdminInventoryView() {
     for(const line of rows){
       if(!line.trim())continue;
       // Parse CSV respecting quoted fields
-      const vals=[]; let cur="",inQ=false;
-      for(let c of line){if(c==="""&&!inQ){inQ=true;}else if(c==="""&&inQ){inQ=false;}else if(c===","&&!inQ){vals.push(cur.trim());cur="";}else{cur+=c;}}
-      vals.push(cur.trim());
+      const vals = line.split(",").map(v=>v.trim().replace(/^"|"$/g,""));
+
 
       const row={};
       headers.forEach((h,i)=>{row[h]=vals[i]?.replace(/^"|"$/g,"")||"";});
