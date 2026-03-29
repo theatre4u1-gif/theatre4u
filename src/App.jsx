@@ -4305,16 +4305,6 @@ function AdminInventoryView() {
           </div>
         </Modal>
       )}
-            <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:14}}>
-              <button className="btn btn-o" onClick={()=>setModal(null)}>Cancel</button>
-              <button className="btn btn-g" onClick={parseAndImportCsv} disabled={saving||!csvText.trim()}
-                style={{opacity:saving||!csvText.trim()?.0:1}}>
-                {saving?"Importing…":"📥 Import Items"}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }
