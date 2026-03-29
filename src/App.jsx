@@ -3938,8 +3938,7 @@ function AdminInventoryView() {
   const parseAndImportCsv = async()=>{
     if(!csvText.trim()||!selOrg){return;}
     setSaving(true);
-    const lines = csvText.trim().split("
-");
+    const lines = csvText.trim().split("\n");
     const headers = lines[0].split(",").map(h=>h.trim().toLowerCase().replace(/"/g,""));
     const rows = lines.slice(1);
     let imported=0, failed=0, errors=[];
