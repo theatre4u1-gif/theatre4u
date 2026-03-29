@@ -4206,8 +4206,8 @@ function AdminInventoryView() {
                   <div style={{fontSize:36,marginBottom:8}}>✅</div>
                   <div style={{fontWeight:700,fontSize:14,color:"var(--grn)",marginBottom:4}}>{csvFile.name}</div>
                   <div style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>
-                    {csvText.split("
-").filter(l=>l.trim()).length - 1} rows detected
+                    {(csvText.match(/\n/g)||[]).length} rows detected
+
                   </div>
                   <button onClick={e=>{e.stopPropagation();setCsvFile(null);setCsvText("");setCsvResult(null);}}
                     style={{background:"none",border:"1px solid var(--border)",borderRadius:6,padding:"4px 12px",
