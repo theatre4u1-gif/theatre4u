@@ -620,7 +620,7 @@ function Modal({title,onClose,children,footer}){
   );
 }
 
-function ItemForm({item,onSave,onCancel,submitId,userId}){
+function ItemForm({item,onSave,onCancel,userId}){
   const blank={name:"",category:"costumes",condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,loan_period:2,deposit:0,avail:"In Stock",img:null,tags:[]};
   const[f,setF]=useState(item||blank);
   const[ti,setTi]=useState("");
@@ -681,6 +681,18 @@ function ItemForm({item,onSave,onCancel,submitId,userId}){
       {showSale&&<div className="fg"><label className="fl">Sale Price ($)</label><input className="fi" type="number" min="0" step="any" placeholder="e.g. 50" value={f.sale||""} onChange={e=>upd("sale",parseFloat(e.target.value)||0)}/></div>}
       {showLoan&&<div className="fg"><label className="fl">Loan Period (weeks)</label><input className="fi" type="number" min="1" step="1" placeholder="e.g. 2" value={f.loan_period||""} onChange={e=>upd("loan_period",parseInt(e.target.value)||2)}/></div>}
       {showLoan&&<div className="fg"><label className="fl">Refundable Deposit ($)</label><input className="fi" type="number" min="0" step="any" placeholder="0 = free loan" value={f.deposit||""} onChange={e=>upd("deposit",parseFloat(e.target.value)||0)}/></div>}
+
+    {/* Save / Cancel — always visible at bottom of form */}
+    <div style={{display:"flex",gap:8,justifyContent:"flex-end",
+      marginTop:20,paddingTop:16,borderTop:"1px solid var(--border)"}}>
+      <button type="button" className="btn btn-o" onClick={onCancel}>Cancel</button>
+      <button type="button" className="btn btn-g"
+        disabled={!f.name.trim()||upl}
+        style={{opacity:!f.name.trim()||upl?0.45:1}}
+        onClick={()=>{if(f.name.trim())onSave(f);}}>
+        {upl?"Uploading…":item?"Save Changes":"Add Item"}
+      </button>
+    </div>
 
     </div>
   );
@@ -1625,12 +1637,12 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
         <Pager total={filtered.length} page={pg} per={PP} onPage={setPg}/>
       </div>
       {modal==="a"&&(<Modal title="Add New Item" onClose={()=>setModal(null)}
-          footer={<><button className="btn btn-o" onClick={()=>setModal(null)}>Cancel</button><button className="btn btn-g" id="form-save-btn">Add Item</button></>}>
-          <ItemForm onSave={handleSave} onCancel={()=>setModal(null)} submitId="form-save-btn" userId={userId}/>
+         >
+          <ItemForm onSave={handleSave} onCancel={()=>setModal(null)} userId={userId}/>
         </Modal>)}
       {modal==="e"&&active&&(<Modal title="Edit Item" onClose={()=>setModal(null)}
-          footer={<><button className="btn btn-o" onClick={()=>setModal(null)}>Cancel</button><button className="btn btn-g" id="form-save-btn">Save Changes</button></>}>
-          <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} submitId="form-save-btn" userId={userId}/>
+         >
+          <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} userId={userId}/>
         </Modal>)}
       {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{onDelete(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete}/></Modal>}
       {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",user?.id).order("added",{ascending:false});if(data)setItems(data);}}/>}
