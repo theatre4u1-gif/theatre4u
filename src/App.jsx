@@ -4000,6 +4000,7 @@ function AdminInventoryView() {
                 <button style={btnStyle()} onClick={()=>{setActItem(null);setModal("add");}}>
                   ＋ Add Item
                 </button>
+                <button style={btnStyle("#42a5f5")} onClick={()=>setModal("csv")}>
                   📥 CSV Import
                 </button>
                 <button style={{...btnStyle("#555"),marginLeft:"auto"}} onClick={()=>loadOrgInventory(selOrg)}>
