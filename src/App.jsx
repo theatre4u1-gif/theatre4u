@@ -7030,7 +7030,7 @@ function TeamSettings({ userId, orgName, plan }) {
 }
 
 
-function Settings({ org, setOrg, onSeed, user, items, setItems, plan="free", userEmail="", setPlan, memberRole=null }) {
+function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="free", userEmail="", setPlan, memberRole=null }) {
   const userId = user?.id;
   const [f,setF]       = useState(org);
   const [saved,setSaved] = useState(false);
@@ -7139,6 +7139,49 @@ function Settings({ org, setOrg, onSeed, user, items, setItems, plan="free", use
         )}
 
         {!memberRole&&<TeamSettings userId={userId} orgName={org?.name||"Your Program"} plan={plan}/>}
+
+        {/* ── Participation Toggles ─────────────────────────────────────── */}
+        {!memberRole&&(
+        <div className="card card-p">
+          <div className="sh">
+            <h2>Participation Settings</h2>
+            <p>Choose which Theatre4u features your program participates in. These settings are private and only visible to your account.</p>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:14,marginTop:16}}>
+            {[
+              {key:"community_enabled",  icon:"🎪", label:"Community Board",  desc:"Appear in the community directory and post to the shared board. Other programs can see your posts."},
+              {key:"marketplace_enabled",icon:"🏪", label:"Marketplace",       desc:"Allow your listed items to appear publicly in the regional marketplace browse view."},
+              {key:"funding_enabled",    icon:"💰", label:"Funding Tracker",   desc:"Track funding sources and expenditures. This is private to your account — never shared externally."},
+            ].map(({key,icon,label,desc})=>(
+              <div key={key} style={{display:"flex",alignItems:"flex-start",gap:14,padding:"12px 0",borderBottom:"1px solid var(--border)"}}>
+                <div style={{fontSize:22,marginTop:2}}>{icon}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>{label}</div>
+                  <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>{desc}</div>
+                </div>
+                <label style={{display:"flex",alignItems:"center",cursor:"pointer",flexShrink:0}}>
+                  <input type="checkbox"
+                    checked={!!(org&&org[key])}
+                    onChange={async e=>{
+                      const val = e.target.checked;
+                      const updated = {...org,[key]:val};
+                      setOrg(updated);
+                      await SB.from("orgs").update({[key]:val}).eq("id",userId);
+                    }}
+                    style={{width:18,height:18,cursor:"pointer",accentColor:"var(--gold)"}}
+                  />
+                  <span style={{marginLeft:8,fontSize:13,color:"var(--t2)",fontWeight:600}}>
+                    {org&&org[key]?"On":"Off"}
+                  </span>
+                </label>
+              </div>
+            ))}
+          </div>
+          <p style={{fontSize:11,color:"var(--muted)",marginTop:14,fontStyle:"italic"}}>
+            Changes take effect immediately. Turning off Community or Marketplace removes your content from shared views but does not delete it.
+          </p>
+        </div>
+        )}
 
         <div className="card card-p">
           <div className="sh"><h2>Data Management</h2><p>Load sample data to explore, or reset everything to start fresh.</p></div>
@@ -8754,6 +8797,7 @@ function AppRoot(){
       ...(!isCrew  ? [{ id:"community",   label:"Community",   ico:"🎪", community:true }] : []),
       ...(!isCrew  ? [{ id:"productions", label:"Productions", ico:"🎭"       }] : []),
       ...(!isMember? [{ id:"reports",     label:"Reports",     ico:Ic.chart   }] : []),
+      ...(!isMember? [{ id:"funding",     label:"Funding",     ico:"💰"       }] : []),
       { id:"profile",     label:"My Profile",  ico:"👤"       },
       ...(!isMember && (plan !== "free" || isAdmin) ? [{ id:"credits", label:"Credits",  ico:"🪙", credits:true }] : []),
       ...(!isCrew   && (plan !== "free" || isAdmin) ? [{ id:"prop28",  label:"Prop 28",  ico:"📋", prop28:true  }] : []),
@@ -8959,8 +9003,9 @@ function AppRoot(){
                   {page==="marketplace" && <Marketplace items={items} org={org} plan={plan} activeSchool={activeSchool} allSchoolsMode={plan==="district"}/>}
                   {page==="productions" && <Productions userId={user?.id} allItems={items}/>}
                   {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan}/>}
+                  {page==="funding"     && <FundingPage userId={user?.id} org={org} plan={plan}/>}
                   {page==="profile"     && <OrgProfilePage userId={user?.id} org={org} setOrg={saveOrg} plan={plan} items={items}/>}
-              {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
+              {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} userId={user?.id} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
                   {page==="district"    && plan==="district" && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool}/>}
                   {page==="community"   && <CommunityPage userId={user?.id} org={org} plan={plan}/>}
                   {page==="credits"     && (plan!=="free"||isAdmin) && <CreditsPage userId={user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
@@ -8979,5 +9024,473 @@ function AppRoot(){
       {legalPage==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegalPage(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
       {user && <FeedbackWidget userId={user.id} orgName={org?.name||""} isLeadingPlayer={org?.is_leading_player||false}/>}
     </>
+  );
+}
+// ═══ FUNDING PAGE ════════════════════════════════════════════════════════════
+const FUND_TYPES = [
+  {id:"grant",      label:"Grant",           icon:"🏛️"},
+  {id:"allocation", label:"District Allocation", icon:"🏫"},
+  {id:"earned",     label:"Earned Income",   icon:"🎟️"},
+  {id:"donation",   label:"Donation",        icon:"🤝"},
+  {id:"booster",    label:"Booster/PTA",     icon:"⭐"},
+  {id:"other",      label:"Other",           icon:"📋"},
+];
+const FUND_CATS = ["Equipment","Instruments","Supplies","Instruction","Personnel","Travel","Production","Technology","Other"];
+
+function FundingPage({userId, org, plan}){
+  const[sources,   setSources]   = useState([]);
+  const[exps,      setExps]      = useState([]);
+  const[tab,       setTab]       = useState("sources");   // sources | spending | reports
+  const[modal,     setModal]     = useState(null);        // "add-source"|"edit-source"|"add-exp"|"edit-exp"
+  const[active,    setActive]    = useState(null);
+  const[loading,   setLoading]   = useState(true);
+  const[saving,    setSaving]    = useState(false);
+  const[msg,       setMsg]       = useState("");
+  const flash = m => { setMsg(m); setTimeout(()=>setMsg(""),3500); };
+
+  // ── load ─────────────────────────────────────────────────────────────────
+  useEffect(()=>{
+    if(!userId) return;
+    (async()=>{
+      setLoading(true);
+      const [sr, er] = await Promise.all([
+        SB.from("funding_sources").select("*").eq("org_id",userId).order("created_at",{ascending:false}),
+        SB.from("funding_expenditures").select("*").eq("org_id",userId).order("purchase_date",{ascending:false}),
+      ]);
+      if(sr.data) setSources(sr.data);
+      if(er.data) setExps(er.data);
+      setLoading(false);
+    })();
+  },[userId]);
+
+  // ── source CRUD ───────────────────────────────────────────────────────────
+  const saveSource = async(f) => {
+    setSaving(true);
+    if(active){
+      const{data,error}=await SB.from("funding_sources").update({...f,updated_at:new Date().toISOString()}).eq("id",active.id).select().single();
+      if(error){ flash("❌ "+error.message); }
+      else{ setSources(p=>p.map(x=>x.id===data.id?data:x)); flash("✓ Source updated"); setModal(null); setActive(null); }
+    } else {
+      const{data,error}=await SB.from("funding_sources").insert({...f,org_id:userId}).select().single();
+      if(error){ flash("❌ "+error.message); }
+      else{ setSources(p=>[data,...p]); flash("✓ Source added"); setModal(null); }
+    }
+    setSaving(false);
+  };
+
+  const deleteSource = async(id) => {
+    if(!confirm("Delete this funding source? All associated expenditures will also be removed.")) return;
+    await SB.from("funding_sources").delete().eq("id",id);
+    setSources(p=>p.filter(x=>x.id!==id));
+    setExps(p=>p.filter(x=>x.funding_source_id!==id));
+    flash("Source removed");
+  };
+
+  // ── expenditure CRUD ──────────────────────────────────────────────────────
+  const saveExp = async(f) => {
+    setSaving(true);
+    if(active){
+      const{data,error}=await SB.from("funding_expenditures").update({...f,updated_at:new Date().toISOString()}).eq("id",active.id).select().single();
+      if(error){ flash("❌ "+error.message); }
+      else{ setExps(p=>p.map(x=>x.id===data.id?data:x)); flash("✓ Expenditure updated"); setModal(null); setActive(null); }
+    } else {
+      const{data,error}=await SB.from("funding_expenditures").insert({...f,org_id:userId}).select().single();
+      if(error){ flash("❌ "+error.message); }
+      else{ setExps(p=>[data,...p]); flash("✓ Expenditure added"); setModal(null); }
+    }
+    setSaving(false);
+  };
+
+  const deleteExp = async(id) => {
+    if(!confirm("Remove this expenditure?")) return;
+    await SB.from("funding_expenditures").delete().eq("id",id);
+    setExps(p=>p.filter(x=>x.id!==id));
+    flash("Expenditure removed");
+  };
+
+  // ── derived stats ─────────────────────────────────────────────────────────
+  const totalAllocated = sources.filter(s=>s.is_active).reduce((a,s)=>a+(parseFloat(s.total_amount)||0),0);
+  const totalSpent     = exps.reduce((a,e)=>a+(parseFloat(e.amount)||0),0);
+  const remaining      = totalAllocated - totalSpent;
+
+  // ── export CSV ────────────────────────────────────────────────────────────
+  const exportCSV = () => {
+    const rows = [
+      ["Source","Type","Funder","Fiscal Year","Date","Category","Description","Vendor","Amount"],
+      ...exps.map(e => {
+        const src = sources.find(s=>s.id===e.funding_source_id);
+        return [
+          src?.name||"",
+          src?.source_type||"",
+          src?.funder||"",
+          src?.fiscal_year||"",
+          e.purchase_date||"",
+          e.category||"",
+          e.description||"",
+          e.vendor||"",
+          e.amount||0,
+        ];
+      }),
+    ].map(r=>r.map(v=>typeof v==="string"&&v.includes(",")?`"${v}"`:v).join(",")).join("\n");
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([rows],{type:"text/csv"}));
+    a.download=`funding-report-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+  };
+
+  // ── styles ────────────────────────────────────────────────────────────────
+  const card  = {background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:16,marginBottom:12};
+  const label = {fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4};
+  const inp   = {background:"var(--bg)",border:"1px solid var(--border)",borderRadius:6,padding:"7px 10px",color:"var(--t1)",fontSize:13,fontFamily:"inherit",outline:"none",width:"100%"};
+  const row2  = {display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:10};
+
+  if(loading) return <div style={{textAlign:"center",padding:60,color:"var(--muted)"}}>Loading funding data…</div>;
+
+  return(
+    <div style={{maxWidth:900,margin:"0 auto"}}>
+      {/* Flash message */}
+      {msg&&<div style={{position:"fixed",top:16,right:16,zIndex:9999,background:"var(--bg2)",
+        border:"1px solid var(--border)",borderRadius:8,padding:"10px 16px",
+        fontSize:13,fontWeight:600,color:msg.startsWith("❌")?"var(--red)":"var(--grn)",
+        boxShadow:"0 4px 20px rgba(0,0,0,.4)"}}>{msg}</div>}
+
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20,flexWrap:"wrap",gap:10}}>
+        <div>
+          <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:4}}>Funding Tracker</h2>
+          <p style={{color:"var(--muted)",fontSize:13}}>Track and report funding sources and expenditures. For your records only.</p>
+        </div>
+        <button onClick={exportCSV} className="btn btn-o" style={{fontSize:12}}>
+          ↓ Export CSV
+        </button>
+      </div>
+
+      {/* Summary cards */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:24}}>
+        {[
+          {label:"Total Allocated",  val:"$"+totalAllocated.toLocaleString("en-US",{minimumFractionDigits:2}), color:"var(--gold)"},
+          {label:"Total Spent",      val:"$"+totalSpent.toLocaleString("en-US",{minimumFractionDigits:2}),     color:"var(--blu)"},
+          {label:"Remaining",        val:"$"+remaining.toLocaleString("en-US",{minimumFractionDigits:2}),      color:remaining>=0?"var(--grn)":"var(--red)"},
+          {label:"Active Sources",   val:sources.filter(s=>s.is_active).length,                                color:"var(--t1)"},
+          {label:"Expenditures",     val:exps.length,                                                          color:"var(--t1)"},
+        ].map(s=>(
+          <div key={s.label} style={{...card,textAlign:"center",marginBottom:0}}>
+            <div style={{fontSize:22,fontWeight:800,fontFamily:"'Playfair Display',serif",color:s.color}}>{s.val}</div>
+            <div style={{fontSize:11,color:"var(--muted)",marginTop:4,textTransform:"uppercase",letterSpacing:1}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabs */}
+      <div style={{display:"flex",gap:2,borderBottom:"1px solid var(--border)",marginBottom:20}}>
+        {[["sources","Funding Sources"],["spending","Expenditures"],["reports","By Source"]].map(([id,lbl])=>(
+          <button key={id} onClick={()=>setTab(id)}
+            style={{background:"none",border:"none",padding:"8px 16px",fontSize:13,fontWeight:600,
+              color:tab===id?"var(--gold)":"var(--muted)",
+              borderBottom:tab===id?"2px solid var(--gold)":"2px solid transparent",
+              cursor:"pointer",fontFamily:"inherit",transition:"all .2s"}}>
+            {lbl}
+          </button>
+        ))}
+      </div>
+
+      {/* ── SOURCES TAB ───────────────────────────────────────────────────── */}
+      {tab==="sources"&&(
+        <div>
+          <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
+            <button className="btn btn-g" onClick={()=>{setActive(null);setModal("add-source");}}>
+              + Add Funding Source
+            </button>
+          </div>
+          {sources.length===0&&(
+            <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>
+              <div style={{fontSize:40,marginBottom:12}}>💰</div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,marginBottom:8}}>No funding sources yet</div>
+              <div style={{fontSize:13,marginBottom:16}}>Add a source to start tracking — grants, allocations, booster funds, and more.</div>
+              <button className="btn btn-g" onClick={()=>setModal("add-source")}>+ Add First Source</button>
+            </div>
+          )}
+          {sources.map(s=>{
+            const spent = exps.filter(e=>e.funding_source_id===s.id).reduce((a,e)=>a+(parseFloat(e.amount)||0),0);
+            const alloc = parseFloat(s.total_amount)||0;
+            const pct   = alloc>0 ? Math.min(100, (spent/alloc)*100) : 0;
+            const ft    = FUND_TYPES.find(f=>f.id===s.source_type)||FUND_TYPES[FUND_TYPES.length-1];
+            return(
+              <div key={s.id} style={{...card,opacity:s.is_active?1:0.55}}>
+                <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+                  <div style={{flex:1}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                      <span style={{fontSize:18}}>{ft.icon}</span>
+                      <span style={{fontWeight:700,fontSize:15}}>{s.name}</span>
+                      {!s.is_active&&<span style={{fontSize:10,background:"var(--bg)",padding:"1px 6px",borderRadius:10,color:"var(--muted)"}}>Inactive</span>}
+                    </div>
+                    <div style={{fontSize:12,color:"var(--muted)",marginBottom:8}}>
+                      {ft.label}{s.funder?" · "+s.funder:""}{s.fiscal_year?" · FY "+s.fiscal_year:""}
+                    </div>
+                    {alloc>0&&(
+                      <div>
+                        <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"var(--muted)",marginBottom:4}}>
+                          <span>${spent.toLocaleString("en-US",{minimumFractionDigits:2})} spent</span>
+                          <span>${alloc.toLocaleString("en-US",{minimumFractionDigits:2})} allocated</span>
+                        </div>
+                        <div style={{height:6,background:"var(--bg)",borderRadius:3,overflow:"hidden"}}>
+                          <div style={{height:"100%",width:pct+"%",background:pct>90?"var(--red)":pct>70?"var(--gold)":"var(--grn)",borderRadius:3,transition:"width .4s"}}/>
+                        </div>
+                        <div style={{fontSize:11,color:pct>90?"var(--red)":"var(--muted)",marginTop:3}}>
+                          ${Math.max(0,alloc-spent).toLocaleString("en-US",{minimumFractionDigits:2})} remaining
+                        </div>
+                      </div>
+                    )}
+                    {s.notes&&<div style={{fontSize:12,color:"var(--muted)",marginTop:6,fontStyle:"italic"}}>{s.notes}</div>}
+                  </div>
+                  <div style={{display:"flex",gap:6}}>
+                    <button className="btn btn-o bsm" onClick={()=>{setActive(s);setModal("edit-source");}}>Edit</button>
+                    <button className="btn btn-d bsm" onClick={()=>deleteSource(s.id)}>Delete</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── SPENDING TAB ──────────────────────────────────────────────────── */}
+      {tab==="spending"&&(
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+            <span style={{fontSize:13,color:"var(--muted)"}}>{exps.length} expenditure{exps.length!==1?"s":""}</span>
+            <button className="btn btn-g" disabled={sources.length===0}
+              style={{opacity:sources.length===0?0.45:1}}
+              title={sources.length===0?"Add a funding source first":""}
+              onClick={()=>{setActive(null);setModal("add-exp");}}>
+              + Add Expenditure
+            </button>
+          </div>
+          {exps.length===0&&(
+            <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>
+              <div style={{fontSize:40,marginBottom:12}}>🧾</div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,marginBottom:8}}>No expenditures recorded</div>
+              <div style={{fontSize:13}}>Track purchases, services, and other spending against your funding sources.</div>
+            </div>
+          )}
+          {exps.map(e=>{
+            const src = sources.find(s=>s.id===e.funding_source_id);
+            const ft  = FUND_TYPES.find(f=>f.id===src?.source_type)||FUND_TYPES[FUND_TYPES.length-1];
+            return(
+              <div key={e.id} style={{...card,display:"flex",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
+                <div style={{flex:1,minWidth:200}}>
+                  <div style={{fontWeight:700,fontSize:13,marginBottom:3}}>{e.description}</div>
+                  <div style={{fontSize:12,color:"var(--muted)",marginBottom:4}}>
+                    {src&&<span style={{background:"var(--bg)",padding:"1px 7px",borderRadius:10,marginRight:6}}>{ft.icon} {src.name}</span>}
+                    {e.category&&<span>{e.category}</span>}
+                    {e.vendor&&<span style={{marginLeft:6}}>· {e.vendor}</span>}
+                    {e.purchase_date&&<span style={{marginLeft:6}}>· {new Date(e.purchase_date+"T00:00:00").toLocaleDateString()}</span>}
+                  </div>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{fontWeight:800,fontSize:16,color:"var(--gold)",fontFamily:"'Playfair Display',serif"}}>
+                    ${parseFloat(e.amount).toLocaleString("en-US",{minimumFractionDigits:2})}
+                  </div>
+                  <button className="btn btn-o bsm" onClick={()=>{setActive(e);setModal("edit-exp");}}>Edit</button>
+                  <button className="btn btn-d bsm" onClick={()=>deleteExp(e.id)}>Delete</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── BY SOURCE REPORT TAB ──────────────────────────────────────────── */}
+      {tab==="reports"&&(
+        <div>
+          <div style={{marginBottom:12,fontSize:12,color:"var(--muted)",fontStyle:"italic"}}>
+            Summary of spending per funding source. Export to CSV for your records.
+          </div>
+          {sources.length===0&&(
+            <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>
+              <div style={{fontSize:40,marginBottom:12}}>📊</div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:18}}>No sources to report on yet</div>
+            </div>
+          )}
+          {sources.map(s=>{
+            const sExps = exps.filter(e=>e.funding_source_id===s.id);
+            const spent = sExps.reduce((a,e)=>a+(parseFloat(e.amount)||0),0);
+            const alloc = parseFloat(s.total_amount)||0;
+            const byCat = {};
+            sExps.forEach(e=>{ const c=e.category||"Uncategorized"; byCat[c]=(byCat[c]||0)+(parseFloat(e.amount)||0); });
+            const ft = FUND_TYPES.find(f=>f.id===s.source_type)||FUND_TYPES[FUND_TYPES.length-1];
+            return(
+              <div key={s.id} style={{...card}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
+                  <div>
+                    <span style={{fontSize:16}}>{ft.icon}</span>
+                    <span style={{fontWeight:700,fontSize:15,marginLeft:6}}>{s.name}</span>
+                    {s.fiscal_year&&<span style={{fontSize:12,color:"var(--muted)",marginLeft:8}}>FY {s.fiscal_year}</span>}
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontSize:18,fontWeight:800,color:"var(--gold)",fontFamily:"'Playfair Display',serif"}}>
+                      ${spent.toLocaleString("en-US",{minimumFractionDigits:2})}
+                      {alloc>0&&<span style={{fontSize:12,fontWeight:400,color:"var(--muted)"}}> of ${alloc.toLocaleString("en-US",{minimumFractionDigits:2})}</span>}
+                    </div>
+                    <div style={{fontSize:11,color:"var(--muted)"}}>{sExps.length} expenditure{sExps.length!==1?"s":""}</div>
+                  </div>
+                </div>
+                {Object.keys(byCat).length>0&&(
+                  <div style={{borderTop:"1px solid var(--border)",paddingTop:10}}>
+                    {Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>(
+                      <div key={cat} style={{display:"flex",justifyContent:"space-between",
+                        fontSize:12,color:"var(--t2)",padding:"3px 0",borderBottom:"1px solid rgba(255,255,255,.04)"}}>
+                        <span>{cat}</span>
+                        <span style={{fontWeight:600}}>${amt.toLocaleString("en-US",{minimumFractionDigits:2})}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {sExps.length===0&&<div style={{fontSize:12,color:"var(--muted)",paddingTop:4}}>No expenditures recorded against this source.</div>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── SOURCE MODAL ─────────────────────────────────────────────────── */}
+      {(modal==="add-source"||modal==="edit-source")&&(
+        <SourceModal
+          initial={modal==="edit-source"?active:null}
+          saving={saving}
+          onSave={saveSource}
+          onCancel={()=>{setModal(null);setActive(null);}}
+        />
+      )}
+
+      {/* ── EXPENDITURE MODAL ────────────────────────────────────────────── */}
+      {(modal==="add-exp"||modal==="edit-exp")&&(
+        <ExpModal
+          initial={modal==="edit-exp"?active:null}
+          sources={sources}
+          saving={saving}
+          onSave={saveExp}
+          onCancel={()=>{setModal(null);setActive(null);}}
+        />
+      )}
+    </div>
+  );
+}
+
+function SourceModal({initial, saving, onSave, onCancel}){
+  const blank = {name:"",source_type:"grant",funder:"",total_amount:"",fiscal_year:"",start_date:"",end_date:"",notes:"",is_active:true};
+  const[f,setF] = useState(initial||blank);
+  const upd = (k,v) => setF(p=>({...p,[k]:v}));
+  const inp = {background:"var(--bg)",border:"1px solid var(--border)",borderRadius:6,padding:"7px 10px",color:"var(--t1)",fontSize:13,fontFamily:"inherit",outline:"none",width:"100%"};
+  return(
+    <Modal title={(initial?"Edit":"Add")+" Funding Source"} onClose={onCancel}>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div style={{gridColumn:"1/-1"}}>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Source Name *</label>
+              <input style={inp} value={f.name} onChange={e=>upd("name",e.target.value)} placeholder="e.g. Prop 28, Title IV-A, Booster Club" autoFocus/>
+            </div>
+            <div>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Type</label>
+              <select style={inp} value={f.source_type} onChange={e=>upd("source_type",e.target.value)}>
+                {FUND_TYPES.map(t=><option key={t.id} value={t.id}>{t.icon} {t.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Funder / Organization</label>
+              <input style={inp} value={f.funder} onChange={e=>upd("funder",e.target.value)} placeholder="e.g. CA Dept of Education"/>
+            </div>
+            <div>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Total Amount ($)</label>
+              <input style={inp} type="number" min="0" step="0.01" value={f.total_amount} onChange={e=>upd("total_amount",e.target.value)} placeholder="0.00"/>
+            </div>
+            <div>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Fiscal Year</label>
+              <input style={inp} value={f.fiscal_year} onChange={e=>upd("fiscal_year",e.target.value)} placeholder="e.g. 2024-25"/>
+            </div>
+            <div>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Start Date</label>
+              <input style={inp} type="date" value={f.start_date||""} onChange={e=>upd("start_date",e.target.value||null)}/>
+            </div>
+            <div>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>End Date</label>
+              <input style={inp} type="date" value={f.end_date||""} onChange={e=>upd("end_date",e.target.value||null)}/>
+            </div>
+            <div style={{gridColumn:"1/-1"}}>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Notes</label>
+              <textarea style={{...inp,minHeight:60,resize:"vertical"}} value={f.notes} onChange={e=>upd("notes",e.target.value)} placeholder="Any relevant details about this funding source…"/>
+            </div>
+            <div style={{gridColumn:"1/-1",display:"flex",alignItems:"center",gap:8}}>
+              <input type="checkbox" id="is_active" checked={f.is_active} onChange={e=>upd("is_active",e.target.checked)}/>
+              <label htmlFor="is_active" style={{fontSize:13,color:"var(--t2)",cursor:"pointer"}}>Active source (shows in spending tracker)</label>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:8,justifyContent:"flex-end",paddingTop:12,borderTop:"1px solid var(--border)"}}>
+            <button className="btn btn-o" onClick={onCancel}>Cancel</button>
+            <button className="btn btn-g" disabled={!f.name.trim()||saving} style={{opacity:!f.name.trim()||saving?0.45:1}}
+              onClick={()=>{ if(f.name.trim()) onSave({...f, total_amount:parseFloat(f.total_amount)||null, start_date:f.start_date||null, end_date:f.end_date||null}); }}>
+              {saving?"Saving…":initial?"Save Changes":"Add Source"}
+            </button>
+          </div>
+      </div>
+    </Modal>
+  );
+}
+
+function ExpModal({initial, sources, saving, onSave, onCancel}){
+  const activeSources = sources.filter(s=>s.is_active);
+  const blank = {funding_source_id:activeSources[0]?.id||"",amount:"",category:"",description:"",vendor:"",purchase_date:new Date().toISOString().slice(0,10)};
+  const[f,setF] = useState(initial||blank);
+  const upd = (k,v) => setF(p=>({...p,[k]:v}));
+  const inp = {background:"var(--bg)",border:"1px solid var(--border)",borderRadius:6,padding:"7px 10px",color:"var(--t1)",fontSize:13,fontFamily:"inherit",outline:"none",width:"100%"};
+  return(
+    <Modal title={(initial?"Edit":"Add")+" Expenditure"} onClose={onCancel}>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div style={{gridColumn:"1/-1"}}>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Funding Source *</label>
+              <select style={inp} value={f.funding_source_id} onChange={e=>upd("funding_source_id",e.target.value)}>
+                <option value="">Select a source…</option>
+                {activeSources.map(s=>{
+                  const ft=FUND_TYPES.find(t=>t.id===s.source_type)||FUND_TYPES[FUND_TYPES.length-1];
+                  return <option key={s.id} value={s.id}>{ft.icon} {s.name}{s.fiscal_year?" (FY "+s.fiscal_year+")":""}</option>;
+                })}
+              </select>
+            </div>
+            <div style={{gridColumn:"1/-1"}}>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Description *</label>
+              <input style={inp} value={f.description} onChange={e=>upd("description",e.target.value)} placeholder="What was purchased or paid for?"/>
+            </div>
+            <div>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Amount ($) *</label>
+              <input style={inp} type="number" min="0" step="0.01" value={f.amount} onChange={e=>upd("amount",e.target.value)} placeholder="0.00"/>
+            </div>
+            <div>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Date</label>
+              <input style={inp} type="date" value={f.purchase_date||""} onChange={e=>upd("purchase_date",e.target.value||null)}/>
+            </div>
+            <div>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Category</label>
+              <select style={inp} value={f.category||""} onChange={e=>upd("category",e.target.value)}>
+                <option value="">Select…</option>
+                {FUND_CATS.map(c=><option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Vendor / Payee</label>
+              <input style={inp} value={f.vendor||""} onChange={e=>upd("vendor",e.target.value)} placeholder="Store, company, or person"/>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:8,justifyContent:"flex-end",paddingTop:12,borderTop:"1px solid var(--border)"}}>
+            <button className="btn btn-o" onClick={onCancel}>Cancel</button>
+            <button className="btn btn-g"
+              disabled={!f.funding_source_id||!f.description.trim()||!f.amount||saving}
+              style={{opacity:!f.funding_source_id||!f.description.trim()||!f.amount||saving?0.45:1}}
+              onClick={()=>{ if(f.funding_source_id&&f.description.trim()&&f.amount) onSave({...f, amount:parseFloat(f.amount), purchase_date:f.purchase_date||null}); }}>
+              {saving?"Saving…":initial?"Save Changes":"Add Expenditure"}
+            </button>
+          </div>
+      </div>
+    </Modal>
   );
 }
