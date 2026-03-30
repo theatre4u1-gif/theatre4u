@@ -7042,7 +7042,6 @@ function TeamSettings({ userId, orgName, plan }) {
 
 
 function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="free", userEmail="", setPlan, memberRole=null }) {
-  const userId = user?.id;
   const [f,setF]       = useState(org);
   const [saved,setSaved] = useState(false);
   const upd = (k,v) => setF(p=>({...p,[k]:v}));
