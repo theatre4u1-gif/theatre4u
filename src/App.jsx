@@ -3902,7 +3902,7 @@ function AdminInventoryView() {
     const row={...f, org_id:selOrg.id, added:new Date().toISOString(),
       start_date:f.start_date||null, end_date:f.end_date||null};
     const{data,error}=await SB.from("items").insert(row).select().single();
-    if(error){flash("❌ "+error.message);}
+    if(error){console.error("handleAdd error:",error);alert("Could not add item: "+error.message);}
     else{
       setItems(p=>[data,...p]);
       SB.from("audit_log").insert({action:"admin_item_add",org_id:selOrg.id,
@@ -3916,11 +3916,22 @@ function AdminInventoryView() {
   // Edit item
   const handleEdit = async(f)=>{
     setSaving(true);
-    const{data,error}=await SB.from("items").update({...f,
-      start_date:f.start_date||null,end_date:f.end_date||null})
-      .eq("id",actItem.id).select().single();
-    if(error){flash("❌ "+error.message);}
-    else{
+    // Strip immutable fields before update
+    const payload = {...f};
+    delete payload.id;
+    delete payload.org_id;
+    delete payload.added;
+    payload.start_date = f.start_date||null;
+    payload.end_date   = f.end_date||null;
+    const{data,error}=await SB.from("items")
+      .update(payload)
+      .eq("id", actItem.id)
+      .eq("org_id", selOrg.id)
+      .select().single();
+    if(error){
+      console.error("Edit error:", error);
+      alert("Save failed: "+error.message);
+    } else {
       setItems(p=>p.map(x=>x.id===data.id?data:x));
       SB.from("audit_log").insert({action:"admin_item_edit",org_id:selOrg.id,
         detail:{item_id:data.id,org_name:selOrg.name,item_name:data.name}}).then(()=>{});
