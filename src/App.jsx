@@ -6544,6 +6544,146 @@ function CommunityPage({userId, org, plan}) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// COMMUNITY GATE — opt-in wrapper for CommunityPage
+// ══════════════════════════════════════════════════════════════════════════════
+function CommunityGate({userId, org, setOrg, plan}) {
+  const [joining, setJoining] = useState(false);
+
+  const join = async () => {
+    setJoining(true);
+    const updated = {...org, community_enabled: true};
+    setOrg(updated);
+    await SB.from("orgs").update({community_enabled: true}).eq("id", userId);
+    // no need to setJoining(false) — component will re-render as CommunityPage
+  };
+
+  if (org?.community_enabled) {
+    return <CommunityPage userId={userId} org={org} plan={plan}/>;
+  }
+
+  return (
+    <div style={{position:"relative",minHeight:"70vh"}}>
+      <img src={usp("photo-1503095396549-807759245b35",1400,900)} alt="" className="page-bg-img"/>
+      <div style={{padding:"32px 36px 0"}}>
+        <div className="hero-wrap" style={{height:230}}>
+          <img src={usp("photo-1503095396549-807759245b35",1100,290)} alt="Community" loading="eager"/>
+          <div className="hero-fade"/>
+          <div className="hero-body">
+            <div className="hero-eyebrow">🎪 Theatre Community</div>
+            <h1 className="hero-title" style={{fontSize:44}}>Community Board</h1>
+            <p className="hero-sub">Connect with theatre programs across the network.</p>
+          </div>
+          <div className="hero-bar"/>
+        </div>
+      </div>
+
+      <div style={{padding:"40px 36px 64px",position:"relative",zIndex:1,maxWidth:700}}>
+        <div className="card card-p" style={{borderColor:"rgba(212,168,67,.3)",background:"linear-gradient(135deg,rgba(212,168,67,.06),rgba(212,168,67,.02))"}}>
+          <div style={{fontSize:44,marginBottom:16,textAlign:"center"}}>🎪</div>
+          <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:26,marginBottom:12,textAlign:"center"}}>Join the Community Board</h2>
+          <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.7,marginBottom:20,textAlign:"center",maxWidth:500,margin:"0 auto 20px"}}>
+            The Community Board is a shared space for theatre programs to connect — post upcoming shows, audition notices, production photos, and wanted items. Other opted-in programs can see your posts.
+          </p>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:24}}>
+            {[
+              ["🎭","Post Show Announcements","Let the network know about your upcoming productions."],
+              ["🎤","Share Audition Notices","Find talent and help others find their next role."],
+              ["📸","Share Production Photos","Celebrate your work with the broader community."],
+              ["🔍","Post Wanted Items","Let others know what you're looking for."],
+            ].map(([icon,title,desc])=>(
+              <div key={title} style={{padding:"14px",background:"var(--parch)",borderRadius:10,border:"1px solid var(--linen)"}}>
+                <div style={{fontSize:24,marginBottom:6}}>{icon}</div>
+                <div style={{fontWeight:700,fontSize:13,marginBottom:4}}>{title}</div>
+                <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.4}}>{desc}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"10px 14px",marginBottom:20,fontSize:12,color:"var(--muted)",lineHeight:1.5}}>
+            📍 <strong>Proximity sorted</strong> — posts from nearby programs appear first. Set your city or zip in <strong>Profile</strong> for best results. You can leave the Community Board at any time from <strong>Settings</strong>.
+          </div>
+          <div style={{textAlign:"center"}}>
+            <button className="btn btn-g" style={{fontSize:15,padding:"11px 32px"}}
+              disabled={joining} onClick={join}>
+              {joining ? "Joining…" : "Join the Community Board →"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MARKETPLACE GATE — opt-in wrapper for Marketplace
+// ══════════════════════════════════════════════════════════════════════════════
+function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool, allSchoolsMode}) {
+  const [joining, setJoining] = useState(false);
+
+  const join = async () => {
+    setJoining(true);
+    const updated = {...org, marketplace_enabled: true};
+    setOrg(updated);
+    await SB.from("orgs").update({marketplace_enabled: true}).eq("id", userId);
+  };
+
+  // Free plan users see the upgrade prompt (Marketplace handles that internally)
+  // Pro/District users who haven't opted in see the gate
+  if (org?.marketplace_enabled || plan === "free") {
+    return <Marketplace items={items} org={org} plan={plan} activeSchool={activeSchool} allSchoolsMode={allSchoolsMode}/>;
+  }
+
+  return (
+    <div style={{position:"relative",minHeight:"70vh"}}>
+      <img src={usp(BG.marketplace,1400,900)} alt="" className="page-bg-img"/>
+      <div style={{padding:"32px 36px 0"}}>
+        <div className="hero-wrap" style={{height:280}}>
+          <img src={usp(BG.marketplace,1100,340)} alt="Marketplace" loading="eager"/>
+          <div className="hero-fade"/>
+          <div className="hero-body">
+            <div className="hero-eyebrow">🏪 Community Exchange</div>
+            <h1 className="hero-title" style={{fontSize:46}}>The Marketplace</h1>
+            <p className="hero-sub">Rent, buy, or loan theatre assets from programs near you.</p>
+          </div>
+          <div className="hero-bar"/>
+        </div>
+      </div>
+
+      <div style={{padding:"40px 36px 64px",position:"relative",zIndex:1,maxWidth:720}}>
+        <div className="card card-p" style={{borderColor:"rgba(212,168,67,.3)",background:"linear-gradient(135deg,rgba(212,168,67,.06),rgba(212,168,67,.02))"}}>
+          <div style={{fontSize:44,marginBottom:16,textAlign:"center"}}>🏪</div>
+          <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:26,marginBottom:12,textAlign:"center"}}>Join the Marketplace</h2>
+          <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.7,marginBottom:24,textAlign:"center",maxWidth:520,margin:"0 auto 24px"}}>
+            The Marketplace lets theatre programs rent, sell, and loan items to each other. Joining makes your listed items visible to other programs — and lets you browse and contact others.
+          </p>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:24}}>
+            {[
+              ["🔍","Browse Nearby","Find costumes, props, lighting and sound from programs in your area."],
+              ["💰","Earn Revenue","List items for rent or sale and earn income for your program."],
+              ["🤝","Share Resources","Loan items to other programs and earn Theatre Credits in return."],
+            ].map(([icon,title,desc])=>(
+              <div key={title} style={{padding:"14px",background:"var(--parch)",borderRadius:10,border:"1px solid var(--linen)",textAlign:"center"}}>
+                <div style={{fontSize:28,marginBottom:8}}>{icon}</div>
+                <div style={{fontWeight:700,fontSize:13,marginBottom:5}}>{title}</div>
+                <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.4}}>{desc}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"10px 14px",marginBottom:20,fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
+            🏷️ <strong>What becomes visible:</strong> your organization name, city, and any items you've marked "For Rent", "For Sale", or "For Loan" in Inventory. Your full item list and private notes are never shared. You can leave the Marketplace at any time from <strong>Settings</strong>.
+          </div>
+          <div style={{textAlign:"center"}}>
+            <button className="btn btn-g" style={{fontSize:15,padding:"11px 32px"}}
+              disabled={joining} onClick={join}>
+              {joining ? "Joining…" : "Join the Marketplace →"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // THEATRE CREDITS PAGE
 // ══════════════════════════════════════════════════════════════════════════════
 function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
@@ -9013,14 +9153,14 @@ function AppRoot(){
                           headerNote={<div style={{padding:"8px 12px",background:"rgba(66,165,245,.1)",border:"1px solid rgba(66,165,245,.2)",borderRadius:7,marginBottom:12,fontSize:12,color:"#42a5f5"}}>🏫 Editing inventory for <strong>{activeSchool.name}</strong></div>}
                         />
                   )}
-                  {page==="marketplace" && <Marketplace items={items} org={org} plan={plan} activeSchool={activeSchool} allSchoolsMode={plan==="district"}/>}
+                  {page==="marketplace" && <MarketplaceGate items={items} org={org} setOrg={setOrg} plan={plan} userId={user?.id} activeSchool={activeSchool} allSchoolsMode={plan==="district"}/>}
                   {page==="productions" && <Productions userId={user?.id} allItems={items}/>}
                   {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan}/>}
                   {page==="funding"     && <FundingPage userId={user?.id} org={org} plan={plan}/>}
                   {page==="profile"     && <OrgProfilePage userId={user?.id} org={org} setOrg={saveOrg} plan={plan} items={items}/>}
               {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} userId={user?.id} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
                   {page==="district"    && plan==="district" && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool}/>}
-                  {page==="community"   && <CommunityPage userId={user?.id} org={org} plan={plan}/>}
+                  {page==="community"   && <CommunityGate userId={user?.id} org={org} setOrg={setOrg} plan={plan}/>}
                   {page==="credits"     && (plan!=="free"||isAdmin) && <CreditsPage userId={user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
                   {page==="credits"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:10}}>Theatre Credits is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true}/></div>}
                   {page==="prop28"      && (plan!=="free"||isAdmin) && <Prop28Page org={org} userId={user?.id} items={items} plan={plan}/>}
