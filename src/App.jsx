@@ -7156,7 +7156,7 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
           <div style={{display:"flex",flexDirection:"column",gap:14,marginTop:16}}>
             {[
               {key:"community_enabled",  icon:"🎪", label:"Community Board",  desc:"Appear in the community directory and post to the shared board. Other programs can see your posts."},
-              {key:"marketplace_enabled",icon:"🏪", label:"Marketplace",       desc:"Allow your listed items to appear publicly in the regional marketplace browse view."},
+              {key:"marketplace_enabled",icon:"🏪", label:"Backstage Exchange",  desc:"Share selected items with other theatre programs in the region. You control exactly which items are posted. Browse what others have available."},
             ].map(({key,icon,label,desc})=>(
               <div key={key} style={{display:"flex",alignItems:"flex-start",gap:14,padding:"12px 0",borderBottom:"1px solid var(--border)"}}>
                 <div style={{fontSize:22,marginTop:2}}>{icon}</div>
@@ -8807,7 +8807,7 @@ function AppRoot(){
       ...(!isCrew  ? [{ id:"messages",    label:"Messages",    ico:"💬"       }] : []),
       ...(!isCrew  ? [{ id:"requests",    label:"Requests",    ico:"📋"       }] : []),
       { id:"inventory",   label:"Inventory",   ico:Ic.box     },
-      ...(!isCrew && org?.marketplace_enabled ? [{ id:"marketplace", label:"Marketplace", ico:Ic.store   }] : []),
+      ...(!isCrew && org?.marketplace_enabled ? [{ id:"marketplace", label:"Backstage Exchange", ico:Ic.store   }] : []),
       ...(!isCrew && org?.community_enabled   ? [{ id:"community",   label:"Community",   ico:"🎪", community:true }] : []),
       ...(!isCrew  ? [{ id:"productions", label:"Productions", ico:"🎭"       }] : []),
       ...(!isMember? [{ id:"reports",     label:"Reports",     ico:Ic.chart   }] : []),
