@@ -665,7 +665,7 @@ function ItemForm({item,onSave,onCancel,userId}){
         <div style={{display:"flex",gap:7}}><input className="fi" style={{flex:1}} value={ti} onChange={e=>setTi(e.target.value)} placeholder="Add tag…" onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addTag()}}}/><button className="btn btn-o btn-sm" onClick={addTag}>Add</button></div>
       </div>
       <div className="fg fu"><label className="fl">Notes</label><textarea className="ft" value={f.notes} onChange={e=>upd("notes",e.target.value)} placeholder="Production history, care instructions…"/></div>
-      <div className="fg fu sdiv"><div className="slbl">🏪 The Exchange</div></div>
+      <div className="fg fu sdiv"><div className="slbl">🏪 Backstage Exchange</div></div>
       <div className="fg"><label className="fl">Listing Status</label><select className="fs" value={f.mkt} onChange={e=>upd("mkt",e.target.value)}>{MKT.map(s=><option key={s}>{s}</option>)}</select></div>
       <div className="fg"/>
       {showRent&&<div className="fg"><label className="fl">Rental / week ($)</label><input className="fi" type="number" min="0" step="any" placeholder="e.g. 25" value={f.rent||""} onChange={e=>upd("rent",parseFloat(e.target.value)||0)}/></div>}
@@ -736,7 +736,7 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=t
           <div className="dt-row" key={l}><span className="dt-lbl">{l}</span><span>{v}</span></div>
         ))}
       </div>
-      <div className="dt-sec"><h3>The Exchange</h3>
+      <div className="dt-sec"><h3>Backstage Exchange</h3>
         <div className="dt-row"><span className="dt-lbl">Status</span><span className={`mkt-badge ${mktCls}`}>{item.mkt}</span></div>
         {(item.mkt==="For Rent"||item.mkt==="Rent or Sale")&&<div className="dt-row"><span className="dt-lbl">Rental/week</span><span className="price">{fmt$(item.rent)}</span></div>}
         {(item.mkt==="For Sale"||item.mkt==="Rent or Sale")&&<div className="dt-row"><span className="dt-lbl">Sale Price</span><span className="price">{fmt$(item.sale)}</span></div>}
@@ -1311,7 +1311,7 @@ function Dashboard({items,org,goInventory,goMarketplace,goCommunity}){
                 Complete your profile
               </div>
               <div style={{fontSize:12,color:"var(--t2,#9b93a8)",lineHeight:1.5}}>
-                Add your location, phone, and bio so other programs can find and contact you in The Exchange.
+                Add your location, phone, and bio so other programs can find and contact you in Backstage Exchange.
               </div>
             </div>
             <div style={{color:"var(--gold)",fontSize:18,flexShrink:0}}>→</div>
@@ -1323,7 +1323,7 @@ function Dashboard({items,org,goInventory,goMarketplace,goCommunity}){
           {[
             {ico:"📦",val:totalQty,   lbl:"Total Items",     col:"#c4761a", bg:"photo-1558618666-fcd25c85cd64"}, // organized prop storage
             {ico:"📂",val:items.length,lbl:"Entries",         col:"#1554a0", bg:"photo-1489987707025-afc232f7ea0f"}, // costume racks
-            {ico:"🏪",val:listed,     lbl:"On The Exchange",  col:"#27723a", bg:"photo-1460723237483-7a6dc9d0b212"}, // stage lit up
+            {ico:"🏪",val:listed,     lbl:"On Backstage Exchange",  col:"#27723a", bg:"photo-1460723237483-7a6dc9d0b212"}, // stage lit up
             {ico:"📷",val:withImg,    lbl:"With Photos",     col:"#a0144e", bg:"photo-1516450360452-9312f5e86fc7"}, // stage lighting rigs
             {ico:"💰",val:totalVal>0?fmt$(totalVal):"—",lbl:"Est. Value",col:"#8b3a0f",bg:"photo-1503095396549-807759245b35"}, // grand theatre
           ].map(s=>(
@@ -1348,18 +1348,18 @@ function Dashboard({items,org,goInventory,goMarketplace,goCommunity}){
           <img src={usp("photo-1460723237483-7a6dc9d0b212",1000,240)} alt="Stage" loading="lazy"/>
           <div className="img-div-fade"/>
           <div className="img-div-text">
-            <h3>The Exchange</h3>
+            <h3>Backstage Exchange</h3>
             <p>Browse items posted by other programs — rent, borrow, or purchase. Share your own when you're ready.</p>
           </div>
         </div>
         {/* Marketplace Highlights — auto-scrolling carousel */}
-        <div className="sh"><h2>The Exchange — Highlights</h2><p>Items posted for rent, sale, or loan by programs in your community.</p></div>
+        <div className="sh"><h2>Backstage Exchange — Highlights</h2><p>Items posted for rent, sale, or loan by theatre programs in your community.</p></div>
         {highlights.length===0?(
           <div style={{background:"var(--parch)",border:"2px dashed var(--border)",borderRadius:"var(--rl)",padding:"40px 32px",textAlign:"center",marginBottom:36}}>
             <div style={{fontSize:44,marginBottom:12}}>🏪</div>
             <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:8}}>No Listings Yet</h3>
-            <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 18px"}}>When you or other programs post items to The Exchange, they'll be showcased here for the whole community to discover.</p>
-            <button className="btn btn-g" onClick={()=>goMarketplace&&goMarketplace()}>Browse The Exchange</button>
+            <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 18px"}}>When you or other programs post items to Backstage Exchange, they'll be showcased here for the whole community to discover.</p>
+            <button className="btn btn-g" onClick={()=>goMarketplace&&goMarketplace()}>Browse Backstage Exchange</button>
           </div>
         ):(
           <div style={{marginBottom:36}}>
@@ -1534,7 +1534,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
         <span style={{fontSize:13,color:atLimit?"var(--red)":"var(--gold)",fontWeight:600}}>
           {atLimit?"⚠️ Item limit reached — upgrade to add more items.":"⚡ "+items.length+"/50 items used on free plan."}
         </span>
-        <button className="btn btn-g" style={{padding:"5px 14px",fontSize:12}} onClick={()=>setUpgradeReason("Upgrade to Pro for unlimited inventory, The Exchange access, Theatre Credits, and more.")}>Upgrade →</button>
+        <button className="btn btn-g" style={{padding:"5px 14px",fontSize:12}} onClick={()=>setUpgradeReason("Upgrade to Pro for unlimited inventory, Backstage Exchange access, Theatre Credits, and more.")}>Upgrade →</button>
       </div>
     )}
     <div style={{position:"relative"}}>
@@ -1825,8 +1825,8 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
   if(plan==="free") return(
     <div style={{padding:"40px 20px",textAlign:"center"}}>
       <div style={{fontSize:44,marginBottom:14}}>🏪</div>
-      <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:22,marginBottom:10}}>The Exchange is a Pro Feature</h2>
-      <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Share selected items with other programmes — rent, sell, or loan. Upgrade to Pro to join The Exchange.</p>
+      <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:22,marginBottom:10}}>Backstage Exchange is a Pro Feature</h2>
+      <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Share selected items with other programmes — rent, sell, or loan. Upgrade to Pro to join Backstage Exchange.</p>
       <UpgradePlans compact={true}/>
     </div>
   );
@@ -1836,11 +1836,11 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
       <img src={usp(BG.marketplace,1400,900)} alt="" className="page-bg-img"/>
       <div style={{padding:"32px 36px 0"}}>
         <div className="hero-wrap" style={{height:280}}>
-          <img src={usp(BG.marketplace,1100,340)} alt="The Exchange" loading="eager"/>
+          <img src={usp(BG.marketplace,1100,340)} alt="Backstage Exchange" loading="eager"/>
           <div className="hero-fade"/>
           <div className="hero-body">
-            <div className="hero-eyebrow">🏪 The Exchange</div>
-            <h1 className="hero-title" style={{fontSize:46}}>The Exchange</h1>
+            <div className="hero-eyebrow">🏪 Backstage Exchange</div>
+            <h1 className="hero-title" style={{fontSize:46}}>Backstage Exchange</h1>
             <p className="hero-sub">Rent or buy costumes, props, lighting, sound and more from programs near you. Give assets a second life.</p>
           </div>
           <div className="hero-bar"/>
@@ -2743,7 +2743,7 @@ function printDocument(doc, req) {
     </div>
 
     <div style="margin-top:32px;padding-top:14px;border-top:1px solid #eee;font-size:11px;color:#aaa;text-align:center">
-      Generated by Theatre4u™ · Inventory · The Exchange · Community · theatre4u.org · ${today}
+      Generated by Theatre4u™ · Inventory · Backstage Exchange · Community · theatre4u.org · ${today}
     </div>
 
     <script>window.onload=function(){window.print();}</script>
@@ -3079,7 +3079,7 @@ function Requests({ userId, orgName, orgEmail }) {
             <h3>{tab==="incoming"?"No Incoming Requests":"No Outgoing Requests"}</h3>
             <p>{tab==="incoming"
               ?"When other programs request your listed items, they'll appear here."
-              :"When you request items from The Exchange, they'll appear here."}</p>
+              :"When you request items from Backstage Exchange, they'll appear here."}</p>
           </div>
         ) : (
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -3306,7 +3306,7 @@ function Reports({ items, plan="free" }) {
 
       <div style={{padding:"24px 36px 48px",position:"relative",zIndex:1}}>
         <div className="tabs">
-          {[["overview","Overview"],["condition","Condition"],["availability","Availability"],["market","The Exchange"],["location","Locations"]].map(([t,l])=>(
+          {[["overview","Overview"],["condition","Condition"],["availability","Availability"],["market","Backstage Exchange"],["location","Locations"]].map(([t,l])=>(
             <button key={t} className={`tab ${tab===t?"on":""}`} onClick={()=>setTab(t)}>{l}</button>
           ))}
         </div>
@@ -3460,7 +3460,7 @@ const UPGRADE_PLANS = [
   { id:"free",     name:"Free",     monthlyPrice:"$0",  annualPrice:"Free",   per:"/forever", annualNote:null,       desc:"Perfect for getting started.",     hot:false,
     feats:["Up to 50 items","QR code labels","Photo uploads","CSV export"] },
   { id:"pro",      name:"Pro",      monthlyPrice:"$12", annualPrice:"$10",  annualTotal:"$120/yr", per:"/month", annualNote:"save $24", desc:"For active programs & companies.", hot:true,
-    feats:["Unlimited inventory","Full Exchange access","Photo storage 5GB","Analytics dashboard","Email support"] },
+    feats:["Unlimited inventory","Full Backstage Exchange access","Photo storage 5GB","Analytics dashboard","Email support"] },
   { id:"district", name:"District", monthlyPrice:"$49", annualPrice:"$42",  annualTotal:"$500/yr", per:"/month", annualNote:"save $88", desc:"Multiple schools, one platform.",  hot:false,
     feats:["Multiple organizations","District dashboard","Bulk import","Dedicated support","Everything in Pro"] },
 ];
@@ -5543,7 +5543,7 @@ function Messages({ userId, orgName, openConvId, onClearOpenConv }) {
               <div style={{fontSize:36,marginBottom:10}}>💬</div>
               <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:6}}>No messages yet</div>
               <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>
-                Start a conversation by finding a program in The Exchange, or wait for someone to reach out to you here.
+                Start a conversation by finding a program in Backstage Exchange, or wait for someone to reach out to you here.
               </div>
             </div>
           ) : (
@@ -5608,7 +5608,7 @@ function Messages({ userId, orgName, openConvId, onClearOpenConv }) {
             <div style={{fontSize:56}}>💬</div>
             <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--ink)"}}>Your Messages</div>
             <div style={{fontSize:14,color:"var(--muted)",maxWidth:340,textAlign:"center",lineHeight:1.6}}>
-              Select a conversation on the left, or click "+ New" to message any organization. You can also contact programs directly from The Exchange.
+              Select a conversation on the left, or click "+ New" to message any organization. You can also contact programs directly from Backstage Exchange.
             </div>
           </div>
         )}
@@ -6494,11 +6494,11 @@ function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool, allSch
       <img src={usp(BG.marketplace,1400,900)} alt="" className="page-bg-img"/>
       <div style={{padding:"32px 36px 0"}}>
         <div className="hero-wrap" style={{height:280}}>
-          <img src={usp(BG.marketplace,1100,340)} alt="The Exchange" loading="eager"/>
+          <img src={usp(BG.marketplace,1100,340)} alt="Backstage Exchange" loading="eager"/>
           <div className="hero-fade"/>
           <div className="hero-body">
-            <div className="hero-eyebrow">🏪 The Exchange</div>
-            <h1 className="hero-title" style={{fontSize:46}}>The Exchange</h1>
+            <div className="hero-eyebrow">🏪 Backstage Exchange</div>
+            <h1 className="hero-title" style={{fontSize:46}}>Backstage Exchange</h1>
             <p className="hero-sub">Rent, buy, or loan theatre assets from programs near you.</p>
           </div>
           <div className="hero-bar"/>
@@ -6508,9 +6508,9 @@ function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool, allSch
       <div style={{padding:"40px 36px 64px",position:"relative",zIndex:1,maxWidth:720}}>
         <div className="card card-p" style={{borderColor:"rgba(212,168,67,.3)",background:"linear-gradient(135deg,rgba(212,168,67,.06),rgba(212,168,67,.02))"}}>
           <div style={{fontSize:44,marginBottom:16,textAlign:"center"}}>🏪</div>
-          <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:26,marginBottom:12,textAlign:"center"}}>Join The Exchange</h2>
+          <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:26,marginBottom:12,textAlign:"center"}}>Join Backstage Exchange</h2>
           <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.7,marginBottom:24,textAlign:"center",maxWidth:520,margin:"0 auto 24px"}}>
-            The Exchange is Theatre4u™'s optional resource-sharing network. You choose exactly which items to share — your full inventory stays completely private. Browse what other programs near you have available.
+            Backstage Exchange is Theatre4u™'s optional resource-sharing network. You choose exactly which items to share — your full inventory stays completely private. Browse what other programs near you have available.
           </p>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:24}}>
             {[
@@ -6526,12 +6526,12 @@ function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool, allSch
             ))}
           </div>
           <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"10px 14px",marginBottom:20,fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
-            🏷️ <strong>What becomes visible:</strong> your organization name, city, and any items you've marked "For Rent", "For Sale", or "For Loan" in Inventory. Your full item list and private notes are never shared. You can leave The Exchange at any time from <strong>Settings</strong>.
+            🏷️ <strong>What becomes visible:</strong> your organization name, city, and any items you've marked "For Rent", "For Sale", or "For Loan" in Inventory. Your full item list and private notes are never shared. You can leave Backstage Exchange at any time from <strong>Settings</strong>.
           </div>
           <div style={{textAlign:"center"}}>
             <button className="btn btn-g" style={{fontSize:15,padding:"11px 32px"}}
               disabled={joining} onClick={join}>
-              {joining ? "Joining…" : "Join The Exchange →"}
+              {joining ? "Joining…" : "Join Backstage Exchange →"}
             </button>
           </div>
         </div>
@@ -6773,7 +6773,7 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
 // TEAM SETTINGS — Org member management with backstage roles
 // ══════════════════════════════════════════════════════════════════════════════
 const ROLES = [
-  { id: "stage_manager", label: "Stage Manager", icon: "📋", desc: "Add, edit, delete items · Funding Tracker · The Exchange · Community" },
+  { id: "stage_manager", label: "Stage Manager", icon: "📋", desc: "Add, edit, delete items · Funding Tracker · Backstage Exchange · Community" },
   { id: "crew",          label: "Crew",          icon: "🔧", desc: "Add and edit items · Upload photos" },
   { id: "house",         label: "House",         icon: "🎟", desc: "View and look up items only" },
 ];
@@ -7139,7 +7139,7 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
               ))}
             </div>
             <div style={{marginTop:10,fontSize:11.5,color:"var(--faint)",lineHeight:1.6}}>
-              <strong>Free:</strong> 50 item cap, no Exchange access · <strong>Pro:</strong> unlimited items, The Exchange · <strong>District:</strong> all Pro features + multi-org (future)
+              <strong>Free:</strong> 50 item cap, no Backstage Exchange access · <strong>Pro:</strong> unlimited items, Backstage Exchange · <strong>District:</strong> all Pro features + multi-org (future)
             </div>
           </div>
         )}
@@ -7183,7 +7183,7 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
             ))}
           </div>
           <p style={{fontSize:11,color:"var(--muted)",marginTop:14,fontStyle:"italic"}}>
-            Changes take effect immediately. Turning off Community or The Exchange removes your content from shared views but does not delete it. The Funding Tracker is always private to your account.
+            Changes take effect immediately. Turning off Community or Backstage Exchange removes your content from shared views but does not delete it. The Funding Tracker is always private to your account.
           </p>
         </div>
         )}
@@ -7244,7 +7244,7 @@ const TERMS_CONTENT = [
   ["3. Account Registration","You must create an account with accurate information and are responsible for maintaining confidentiality of your credentials. You must be at least 18 years old, or have authorization of a parent, guardian, or school administrator if a minor acting on behalf of an organization."],
   ["4. Subscription Plans and Payments","Theatre4u offers free and paid plans billed monthly via Stripe. Subscriptions auto-renew unless cancelled. All fees are non-refundable except as required by law. We may change pricing with 30 days notice to current subscribers."],
   ["5. User Content & License Grant","You retain all ownership of content you upload to Theatre4u™, including text, photos, images, and other materials ('User Content'). By uploading User Content, you grant Theatre4u a worldwide, non-exclusive, royalty-free, perpetual, irrevocable license to store, display, reproduce, and use that content to operate, improve, and promote the Service. This license persists even if you later remove the content or close your account. You represent that you have all necessary rights to grant this license, that your content does not infringe any third-party rights, and that you have obtained appropriate permissions for any photographs or images of identifiable individuals. Theatre4u may remove any content that violates these Terms or applicable law."],
-  ["6. Exchange Transactions","Theatre4u™ provides The Exchange platform for listing items for rent, sale, or loan. We are not a party to any transaction between users. All agreements are solely between listing users and interested parties. We do not handle payments between users."],
+  ["6. Exchange Transactions","Theatre4u™ provides the Backstage Exchange platform for listing items for rent, sale, or loan. We are not a party to any transaction between users. All agreements are solely between listing users and interested parties. We do not handle payments between users."],
   ["7. Prohibited Conduct","You agree not to: use the Service unlawfully; upload false or fraudulent content; attempt unauthorized access; interfere with the Service; use automated scraping tools; impersonate others; or transmit spam or malware. Violations may result in immediate account termination."],
   ["8. Intellectual Property","The Theatre4u™ name, logo, design, software, and all platform content are owned by Theatre4u and protected by United States and international intellectual property laws. Theatre4u is a trademark of its founder. Nothing in these Terms grants you any right to use our trademarks, trade names, or other intellectual property without prior written consent. All rights not expressly granted are reserved."],
   ["9. Disclaimer of Warranties","THE SERVICE IS PROVIDED AS IS WITHOUT WARRANTIES OF ANY KIND. We do not warrant that the Service will be uninterrupted, error-free, or free of harmful components."],
@@ -7257,8 +7257,8 @@ const PRIVACY_CONTENT = [
   ["1. Introduction", "Theatre4u (theatre4u.org) is operated by a sole proprietor based in California. We are committed to protecting the privacy and security of all users, with special attention to the requirements applicable to educational institutions and school districts. This Privacy Policy complies with the California Consumer Privacy Act (CCPA), CalOPPA, the Family Educational Rights and Privacy Act (FERPA), and the Children's Online Privacy Protection Act (COPPA)."],
   ["2. Who Uses Theatre4u", "Theatre4u is designed for use by theatre educators, school drama departments, community theatre organizations, and district administrators. Users must be 18 years or older to create an account. Theatre4u is not intended for direct use by students under 18. School administrators and teachers are responsible for ensuring appropriate use within their programs."],
   ["3. Information We Collect", "Account Information: organization name, email address, password (encrypted via Supabase Auth — we never see plaintext passwords), and optional profile details including phone, city, and bio. Inventory Data: item names, descriptions, photos, locations, and condition notes you add to your account. Communication Data: messages sent between organizations on the platform. Usage Data: pages visited and features used, to improve the platform. We do NOT collect student personally identifiable information (PII). All data belongs to your organization."],
-  ["4. How We Use Your Information", "To provide and operate the Theatre4u platform. To facilitate Exchange listings and rental/loan requests between theatre programs. To send transactional emails (request notifications, account confirmation) via Resend from hello@theatre4u.org. To improve the platform based on anonymized usage patterns. We do NOT sell your data. We do NOT use your data for advertising. We do NOT share your data with third parties except as described in section 5."],
-  ["5. Data Sharing & Third Parties", "Supabase (supabase.com): Our database and authentication provider, hosted in AWS us-east-1. All data is encrypted at rest and in transit. Supabase is SOC 2 Type II certified. Resend (resend.com): Transactional email delivery only. Vercel (vercel.com): Web hosting and CDN. No user data is stored by Vercel. Stripe (stripe.com): Payment processing for subscriptions only. Stripe does not receive inventory or student data. Other Theatre Programs: When you post items to The Exchange, your organization name, location, and listed items are visible to other logged-in Theatre4u members. No other sharing occurs."],
+  ["4. How We Use Your Information", "To provide and operate the Theatre4u platform. To facilitate Backstage Exchange listings and rental/loan requests between theatre programs. To send transactional emails (request notifications, account confirmation) via Resend from hello@theatre4u.org. To improve the platform based on anonymized usage patterns. We do NOT sell your data. We do NOT use your data for advertising. We do NOT share your data with third parties except as described in section 5."],
+  ["5. Data Sharing & Third Parties", "Supabase (supabase.com): Our database and authentication provider, hosted in AWS us-east-1. All data is encrypted at rest and in transit. Supabase is SOC 2 Type II certified. Resend (resend.com): Transactional email delivery only. Vercel (vercel.com): Web hosting and CDN. No user data is stored by Vercel. Stripe (stripe.com): Payment processing for subscriptions only. Stripe does not receive inventory or student data. Other Theatre Programs: When you post items to Backstage Exchange, your organization name, location, and listed items are visible to other logged-in Theatre4u members. No other sharing occurs."],
   ["6. FERPA Compliance", "Theatre4u acknowledges its role as a service provider to educational institutions subject to FERPA. Theatre4u does not collect, store, or process student education records as defined by FERPA. All inventory, compliance, and operational data belongs to the subscribing organization (the school or district), not to individual students. School administrators retain full control over their organizational data and may request complete data deletion at any time. Theatre4u will not disclose organizational data to third parties without the written consent of the institution's authorized representative, except as required by law."],
   ["7. Student Privacy (COPPA)", "Theatre4u accounts are for adults only (18+). If you believe a minor has created an account without authorization, contact hello@theatre4u.org immediately and we will delete the account and all associated data within 48 hours. Theatre4u does not knowingly collect personal information from children under 13."],
   ["8. Data Security", "All data is encrypted in transit via TLS 1.2+. Database data is encrypted at rest via AES-256 (Supabase/AWS). Passwords are hashed using bcrypt — we cannot access your password. Authentication tokens expire automatically. Row-Level Security (RLS) is enforced on all database tables — each organization can only access its own data. Security headers (HSTS, CSP, X-Frame-Options) are enforced on all pages. The anon key exposed in the client is restricted by RLS policies and cannot access other organizations' private data."],
@@ -7281,21 +7281,21 @@ function LandingPage({onSignIn, onSignUp}){
     {icon:"🎭",title:"Productions Tracker",desc:"Create a folder for each show. Assign items from your inventory, track what's checked out, and see at a glance what every production needs from wishlist to opening night."},
     {icon:"📱",title:"Mobile-Ready Backstage",desc:"Add items by taking a photo. Scan QR labels with your phone's camera — the iPhone Camera app reads Theatre4u labels instantly. Available on iPhone and Android — no app store required."},
     {icon:"💰",title:"Funding Tracker",desc:"Track grants, district allocations, booster funds, earned income, and donations. Log expenditures against each source, generate reports, and export to CSV — for your records."},
-    {icon:"🏪",title:"Optional Resource Sharing",desc:"When you're ready, opt in to share selected items with other programs. You choose exactly which items to post — your full inventory stays completely private. Browse what others near you have available, rent, purchase, or arrange a loan."},
+    {icon:"🏪",title:"Backstage Exchange",desc:"When you're ready, opt in to share selected items with other programs. You choose exactly which items to post — your full inventory stays completely private. Browse what others near you have available, rent, purchase, or arrange a loan."},
     {icon:"🎪",title:"Community Board",desc:"Post audition notices, share upcoming show dates, upload production photos, and find items you need. A regional bulletin board for the performing arts community."},
   ];
 
   const plans=[
-    {name:"Free",price:"$0",period:"forever",color:"rgba(255,255,255,.15)",textColor:"rgba(255,255,255,.7)",features:["Up to 50 inventory items","QR labels & photos","Productions tracking","Browse The Exchange","Community Board"],cta:"Get Started",primary:false},
-    {name:"Pro",price:"$12",period:"/month",annual:"$120/year",color:"linear-gradient(135deg,var(--gold),var(--goldd))",textColor:"#1a0f00",features:["Unlimited inventory","Full Exchange access","Theatre Credits","Reports & CSV export","Funding Tracker","Mobile app","Messages & requests"],cta:"Start Pro",primary:true},
-    {name:"District",price:"$49",period:"/month",annual:"$500/year",color:"linear-gradient(135deg,#1565c0,#0d47a1)",textColor:"#fff",features:["Everything in Pro","Up to 6 school sites","District dashboard","Shared Exchange access","District funding rollup","Priority support"],cta:"Start District",primary:false},
+    {name:"Free",price:"$0",period:"forever",color:"rgba(255,255,255,.15)",textColor:"rgba(255,255,255,.7)",features:["Up to 50 inventory items","QR labels & photos","Productions tracking","Browse Backstage Exchange","Community Board"],cta:"Get Started",primary:false},
+    {name:"Pro",price:"$12",period:"/month",annual:"$120/year",color:"linear-gradient(135deg,var(--gold),var(--goldd))",textColor:"#1a0f00",features:["Unlimited inventory","Full Backstage Exchange access","Theatre Credits","Reports & CSV export","Funding Tracker","Mobile app","Messages & requests"],cta:"Start Pro",primary:true},
+    {name:"District",price:"$49",period:"/month",annual:"$500/year",color:"linear-gradient(135deg,#1565c0,#0d47a1)",textColor:"#fff",features:["Everything in Pro","Up to 6 school sites","District dashboard","Shared Backstage Exchange","District funding rollup","Priority support"],cta:"Start District",primary:false},
   ];
 
   const steps=[
     {n:"1",title:"Create your free account",desc:"Sign up in 60 seconds. No credit card needed. Your first 50 items are always free."},
     {n:"2",title:"Build your inventory",desc:"Take photos on your phone or upload from your computer. Add name, category, condition, and location. Print QR labels for bins and racks."},
     {n:"3",title:"Track your productions",desc:"Create a show folder and pull items straight from your inventory. See what's assigned, what's checked out, and what you still need."},
-    {n:"4",title:"Optionally join The Exchange",desc:"When you're ready, opt in to The Exchange. Post selected items for rent, loan, or sale. Browse what other programs near you have available."},
+    {n:"4",title:"Optionally join Backstage Exchange",desc:"When you're ready, opt in to Backstage Exchange. Post selected items for rent, loan, or sale. Browse what other programs near you have available."},
   ];
 
   return(<div style={{background:"var(--ink)",minHeight:"100vh",color:"var(--linen)",fontFamily:"'DM Sans',sans-serif"}}>
@@ -7344,7 +7344,7 @@ function LandingPage({onSignIn, onSignUp}){
 
     {/* ── Social proof strip ── */}
     <div style={{background:"rgba(212,168,67,.08)",borderTop:"1px solid rgba(212,168,67,.15)",borderBottom:"1px solid rgba(212,168,67,.15)",padding:"16px 32px",display:"flex",flexWrap:"wrap",gap:24,justifyContent:"center",alignItems:"center"}}>
-      {[["📦","Inventory management"],["🎭","Productions tracker"],["📱","Mobile-ready"],["💰","Funding Tracker"],["🏪","The Exchange"],["🎪","Community board"]].map(([ico,lbl])=>(
+      {[["📦","Inventory management"],["🎭","Productions tracker"],["📱","Mobile-ready"],["💰","Funding Tracker"],["🏪","Backstage Exchange"],["🎪","Community board"]].map(([ico,lbl])=>(
         <div key={lbl} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,fontWeight:600,color:"rgba(255,255,255,.7)"}}>
           <span style={{fontSize:16}}>{ico}</span>{lbl}
         </div>
@@ -7449,18 +7449,18 @@ function LandingPage({onSignIn, onSignUp}){
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,textAlign:"left",marginBottom:40}}>
         <div>
           <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)",marginBottom:16}}>
-            Theatre4u™ was built by someone who found theatre in high school and never left. Over thirty years — studying the craft, performing in New Hampshire, San Francisco, New York City, and finally Southern California — the stage became home.
+            Theatre4u™ was built by someone who found theatre in high school and never looked back. Over thirty years — studying the craft, performing in New Hampshire, San Francisco, New York City, and finally Southern California — the stage has always been home.
           </p>
           <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)"}}>
-            That journey eventually led to the classroom, where the same passion that drove the performances met a new challenge: keeping a theatre program running on limited time, limited budget, and zero administrative support.
+            That journey led to the classroom and to a simple realization: theatre programs everywhere are filled with talented, dedicated people doing extraordinary work — and they deserve tools that help them do even more of it.
           </p>
         </div>
         <div>
           <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)",marginBottom:16}}>
-            Theatre4u™ was built to solve the problems that actually exist backstage — knowing what you have, where it is, and what it costs. Simple tools for busy directors who just want to focus on the work.
+            Theatre4u™ keeps track of everything your program owns — and opens the door to a community of programs ready to share resources, collaborate, and support each other across the region.
           </p>
           <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)"}}>
-            <strong style={{color:"#fff"}}>No theatre teacher should feel like they're working on a deserted island.</strong> This is a platform built by someone who has stood exactly where you're standing.
+            <strong style={{color:"#fff"}}>Theatre is always better together.</strong> This platform was built to help make that connection easier — from the wings to the whole community.
           </p>
         </div>
       </div>
@@ -7754,7 +7754,7 @@ function AuthScreen({onAuth}){
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{fontSize:52,marginBottom:6}}>🎭</div>
           <div style={{fontFamily:"'Abril Fatface',display",fontSize:36,color:"var(--gold)",letterSpacing:1}}>Theatre4u™</div>
-          <div style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:15,color:"rgba(255,255,255,.5)",marginTop:2}}>Inventory · The Exchange · Community</div>
+          <div style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:15,color:"rgba(255,255,255,.5)",marginTop:2}}>Inventory · Backstage Exchange · Community</div>
         </div>
         {/* Card */}
         <div style={{background:"var(--cream)",borderRadius:16,padding:"36px 36px 32px",boxShadow:"0 16px 56px rgba(0,0,0,.5)"}}>
@@ -7845,7 +7845,7 @@ function PublicItemPage({ itemId }) {
         <span style={{fontSize:26}}>🎭</span>
         <div>
           <div style={{fontFamily:"'Abril Fatface',display",fontSize:18,color:"var(--gold)",lineHeight:1}}>Theatre4u™</div>
-          <div style={{fontSize:10,color:"rgba(255,255,255,.4)",letterSpacing:2,textTransform:"uppercase"}}>Inventory · The Exchange · Community</div>
+          <div style={{fontSize:10,color:"rgba(255,255,255,.4)",letterSpacing:2,textTransform:"uppercase"}}>Inventory · Backstage Exchange · Community</div>
         </div>
         <a href="https://theatre4u.org" style={{marginLeft:"auto",fontSize:12,color:"var(--gold)",textDecoration:"none",border:"1px solid rgba(212,168,67,.3)",borderRadius:6,padding:"5px 12px"}}>Visit Site →</a>
       </div>
@@ -7911,10 +7911,10 @@ function PublicItemPage({ itemId }) {
             ))}
           </div>
 
-          {/* The Exchange */}
+          {/* Backstage Exchange */}
           {mkt !== "Not Listed" && (
             <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:10,padding:16,marginBottom:14}}>
-              <div style={{fontWeight:700,fontSize:12,textTransform:"uppercase",letterSpacing:1,color:"rgba(255,255,255,.4)",marginBottom:10}}>The Exchange</div>
+              <div style={{fontWeight:700,fontSize:12,textTransform:"uppercase",letterSpacing:1,color:"rgba(255,255,255,.4)",marginBottom:10}}>Backstage Exchange</div>
               <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
                 <span className={"badge "+mB}>{mkt}</span>
                 {rentalPrice>0 && <span style={{color:"var(--gold)",fontWeight:700}}>{fmt$(rentalPrice)}/week</span>}
@@ -8218,7 +8218,7 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
         {/* Listed items preview */}
         {listed > 0 && (
           <div className="card card-p">
-            <h3 style={{ fontFamily: "'Abril Fatface',display", fontSize: 18, marginBottom: 4 }}>The Exchange — Your Listings</h3>
+            <h3 style={{ fontFamily: "'Abril Fatface',display", fontSize: 18, marginBottom: 4 }}>Backstage Exchange — Your Listings</h3>
             <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 14 }}>These items appear on your public profile. Anyone can browse them without logging in.</p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 10 }}>
               {items.filter(i => i.market_status && i.market_status !== "Not Listed" && i.market_status !== "Private").slice(0, 6).map(item => {
@@ -8819,7 +8819,7 @@ function AppRoot(){
       ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
     ];
   })();
-  const TITLES = { messages:"Messages", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"The Exchange", productions:"Productions", reports:"Reports", settings:"Profile", admin:"Admin Dashboard", district:"District", credits:"Theatre Credits", community:"Community Board" };
+  const TITLES = { messages:"Messages", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Backstage Exchange", productions:"Productions", reports:"Reports", settings:"Profile", admin:"Admin Dashboard", district:"District", credits:"Theatre Credits", community:"Community Board" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicItemId) return <PublicItemPage itemId={publicItemId} />;
