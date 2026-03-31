@@ -1293,9 +1293,9 @@ function Dashboard({items,org,goInventory,goMarketplace,goCommunity}){
           <img src={usp(BG.dashboard,1200,480)} alt="Grand Theatre" loading="eager"/>
           <div className="hero-fade"/>
           <div className="hero-body">
-            <div className="hero-eyebrow">🎭 Inventory · Marketplace · Community</div>
+            <div className="hero-eyebrow">📦 Inventory · Productions · Community</div>
             <h1 className="hero-title">{org.name?`Welcome,\n${org.name}`:"Welcome to\nTheatre4u"}</h1>
-            <p className="hero-sub">Everything your program owns — cataloged, photographed, and ready to share with the wider arts community.</p>
+            <p className="hero-sub">Everything your program owns — cataloged, photographed, and organized. Your theatre's complete inventory, always at your fingertips.</p>
           </div>
           <div className="hero-bar"/>
         </div>
@@ -1462,7 +1462,7 @@ function Dashboard({items,org,goInventory,goMarketplace,goCommunity}){
           <div className="img-div-fade"/>
           <div className="img-div-text">
             <h3>Every Seat Filled. Every Prop Accounted For.</h3>
-            <p>Theatre4u™ keeps your whole program organized from rehearsal to curtain call.</p>
+            <p>Theatre4u™ keeps your complete inventory organized — from the costume closet to the lighting rig.</p>
           </div>
         </div>
         {/* Bar chart */}
@@ -7277,25 +7277,25 @@ function LandingPage({onSignIn, onSignUp}){
   },[]);
 
   const features=[
-    {icon:"📦",title:"Inventory That Actually Works",desc:"Catalog every costume, prop, light, and sound item your program owns. Add photos from your phone, tag by production, print QR labels for storage bins. No more mystery boxes."},
-    {icon:"🏪",title:"Borrow What You Need",desc:"Browse thousands of items listed by other programs nationwide. Rent a fog machine for the weekend. Borrow a set of Victorian costumes. List your own items and earn revenue between shows."},
-    {icon:"🪙",title:"Theatre Credits",desc:"Lend your items for free and earn credits. Spend those credits to reduce what you pay when you borrow. The more you share, the less you spend — a community that rewards generosity."},
+    {icon:"📦",title:"Inventory That Actually Works",desc:"Catalog every costume, prop, light, and sound item your program owns. Add photos, tag by production, print QR labels for storage bins. Always know exactly what you have and where it lives."},
+    {icon:"🎭",title:"Productions Tracker",desc:"Create a folder for each show. Assign items from your inventory, track what's checked out, and see at a glance what every production needs from wishlist to opening night."},
+    {icon:"📱",title:"Mobile-Ready Backstage",desc:"Add items by taking a photo. Scan QR labels with your phone's camera — the iPhone Camera app reads Theatre4u labels instantly. Available on iPhone and Android — no app store required."},
     {icon:"💰",title:"Funding Tracker",desc:"Track grants, district allocations, booster funds, earned income, and donations. Log expenditures against each source, generate reports, and export to CSV — for your records."},
-    {icon:"📱",title:"Mobile App for Backstage",desc:"Add items by taking a photo. Scan QR labels with your phone's camera — the iPhone Camera app reads Theatre4u labels instantly. Available on iPhone and Android — no app store required."},
+    {icon:"🏪",title:"Optional Marketplace",desc:"When you're ready, opt in to the regional marketplace. List items for rent, sale, or loan. Browse what other programs near you have available. Entirely optional — your inventory stays private until you choose to share."},
     {icon:"🎪",title:"Community Board",desc:"Post audition notices, share upcoming show dates, upload production photos, and find items you need. A regional bulletin board for the performing arts community."},
   ];
 
   const plans=[
-    {name:"Free",price:"$0",period:"forever",color:"rgba(255,255,255,.15)",textColor:"rgba(255,255,255,.7)",features:["Up to 50 inventory items","QR labels","Browse marketplace","Productions tracking","Community Board"],cta:"Get Started",primary:false},
+    {name:"Free",price:"$0",period:"forever",color:"rgba(255,255,255,.15)",textColor:"rgba(255,255,255,.7)",features:["Up to 50 inventory items","QR labels & photos","Productions tracking","Optional marketplace browse","Community Board"],cta:"Get Started",primary:false},
     {name:"Pro",price:"$12",period:"/month",annual:"$120/year",color:"linear-gradient(135deg,var(--gold),var(--goldd))",textColor:"#1a0f00",features:["Unlimited inventory","Full marketplace access","Theatre Credits","Reports & CSV export","Funding Tracker","Mobile app","Messages & requests"],cta:"Start Pro",primary:true},
     {name:"District",price:"$49",period:"/month",annual:"$500/year",color:"linear-gradient(135deg,#1565c0,#0d47a1)",textColor:"#fff",features:["Everything in Pro","Up to 6 school sites","District dashboard","Shared marketplace","District funding rollup","Priority support"],cta:"Start District",primary:false},
   ];
 
   const steps=[
     {n:"1",title:"Create your free account",desc:"Sign up in 60 seconds. No credit card needed. Your first 50 items are always free."},
-    {n:"2",title:"Add your first items",desc:"Take photos on your phone or upload from your computer. Fill in the basic details — name, category, condition, location."},
-    {n:"3",title:"List items in the marketplace",desc:"Mark items For Rent, For Sale, or For Loan. Other programs can see them immediately."},
-    {n:"4",title:"Start borrowing and earning",desc:"Find what you need from other programs. Accept requests for your items and earn Theatre Credits."},
+    {n:"2",title:"Build your inventory",desc:"Take photos on your phone or upload from your computer. Add name, category, condition, and location. Print QR labels for bins and racks."},
+    {n:"3",title:"Track your productions",desc:"Create a show folder and pull items straight from your inventory. See what's assigned, what's checked out, and what you still need."},
+    {n:"4",title:"Optionally join the marketplace",desc:"When you're ready, opt in to list items for rent or loan. Browse what other programs near you have available."},
   ];
 
   return(<div style={{background:"var(--ink)",minHeight:"100vh",color:"var(--linen)",fontFamily:"'DM Sans',sans-serif"}}>
@@ -7326,7 +7326,7 @@ function LandingPage({onSignIn, onSignUp}){
           <span style={{color:"var(--gold)"}}>in one place</span>
         </h1>
         <p style={{fontSize:"clamp(16px,2.5vw,20px)",color:"rgba(255,255,255,.7)",lineHeight:1.7,marginBottom:36,maxWidth:600,margin:"0 auto 36px"}}>
-          Inventory management, a peer marketplace, Theatre Credits, a funding tracker, and a community board — built for theatre programs of every size.
+          Know what you have. Find what you need. Built specifically for theatre programs of every size.
         </p>
         <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
           <button onClick={onSignUp} style={{background:"linear-gradient(135deg,var(--gold),var(--goldd))",border:"none",color:"#1a0f00",padding:"14px 32px",borderRadius:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:16,fontWeight:800,boxShadow:"0 4px 24px rgba(212,168,67,.4)"}}>
@@ -7344,7 +7344,7 @@ function LandingPage({onSignIn, onSignUp}){
 
     {/* ── Social proof strip ── */}
     <div style={{background:"rgba(212,168,67,.08)",borderTop:"1px solid rgba(212,168,67,.15)",borderBottom:"1px solid rgba(212,168,67,.15)",padding:"16px 32px",display:"flex",flexWrap:"wrap",gap:24,justifyContent:"center",alignItems:"center"}}>
-      {[["📦","Inventory management"],["🏪","Peer marketplace"],["🪙","Theatre Credits"],["💰","Funding Tracker"],["📱","Mobile app"],["🎪","Community board"]].map(([ico,lbl])=>(
+      {[["📦","Inventory management"],["🎭","Productions tracker"],["📱","Mobile-ready"],["💰","Funding Tracker"],["🏪","Optional marketplace"],["🎪","Community board"]].map(([ico,lbl])=>(
         <div key={lbl} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,fontWeight:600,color:"rgba(255,255,255,.7)"}}>
           <span style={{fontSize:16}}>{ico}</span>{lbl}
         </div>
@@ -7356,7 +7356,7 @@ function LandingPage({onSignIn, onSignUp}){
       <div style={{textAlign:"center",marginBottom:52}}>
         <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>What Theatre4u does</div>
         <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(32px,5vw,48px)",color:"#fff",lineHeight:1.15}}>Built for busy drama directors</h2>
-        <p style={{fontSize:16,color:"rgba(255,255,255,.55)",marginTop:12,maxWidth:520,margin:"12px auto 0"}}>Not a generic inventory tool. Not a generic marketplace. Built specifically for theatre programs, schools, and the broader performing arts community.</p>
+        <p style={{fontSize:16,color:"rgba(255,255,255,.55)",marginTop:12,maxWidth:520,margin:"12px auto 0"}}>Not a generic inventory app. Built specifically for theatre programs, schools, and the broader performing arts community — by someone who has lived it.</p>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:20}}>
         {features.map(f=>(
@@ -7431,7 +7431,7 @@ function LandingPage({onSignIn, onSignUp}){
       <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(28px,5vw,52px)",color:"#fff",marginBottom:16,lineHeight:1.15}}>
         Ready to get your<br/><span style={{color:"var(--gold)"}}>theatre organized?</span>
       </h2>
-      <p style={{fontSize:16,color:"rgba(255,255,255,.5)",marginBottom:32,maxWidth:440,margin:"0 auto 32px"}}>Join theatre programs already using Theatre4u to manage inventory, share resources, and connect with their community.</p>
+      <p style={{fontSize:16,color:"rgba(255,255,255,.5)",marginBottom:32,maxWidth:440,margin:"0 auto 32px"}}>Join theatre programs already using Theatre4u to get their inventory under control, track their shows, and connect with their community.</p>
       <button onClick={onSignUp} style={{background:"linear-gradient(135deg,var(--gold),var(--goldd))",border:"none",color:"#1a0f00",padding:"16px 40px",borderRadius:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:18,fontWeight:800,boxShadow:"0 4px 32px rgba(212,168,67,.45)"}}>
         Start Free — No credit card required →
       </button>
@@ -7444,32 +7444,32 @@ function LandingPage({onSignIn, onSignUp}){
         Our Story
       </div>
       <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(26px,4vw,40px)",marginBottom:24,lineHeight:1.2}}>
-        Built in the Wings,<br/><span style={{color:"var(--gold)"}}>for the Wings.</span>
+        Thirty Years in the Theatre,<br/><span style={{color:"var(--gold)"}}>Building Something Better.</span>
       </h2>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,textAlign:"left",marginBottom:40}}>
         <div>
           <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)",marginBottom:16}}>
-            Theatre4u was founded by a veteran theatre educator who spent 15 years in the classroom watching colleagues burn out — not from lack of passion, but from lack of tools.
+            Theatre4u was built by someone who found theatre in high school and never left. Over thirty years — studying the craft, performing in New Hampshire, San Francisco, New York City, and finally Southern California — the stage became home.
           </p>
           <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)"}}>
-            After a major health scare in 2025, our founder returned to a platform first started in 2018 and rebuilt it from the ground up — with one purpose: <strong style={{color:"#fff"}}>no theatre teacher should feel like they're working on a deserted island.</strong>
+            That journey eventually led to the classroom, where the same passion that drove the performances met a new challenge: keeping a theatre program running on limited time, limited budget, and zero administrative support.
           </p>
         </div>
         <div>
           <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)",marginBottom:16}}>
-            We handle the inventory, the compliance reporting, and the lending logistics — so you can focus on what you actually showed up for: the performance, the students, and the magic that happens in the dark.
+            Theatre4u was built to solve the problems that actually exist backstage — knowing what you have, where it is, and what it costs. Simple tools for busy directors who just want to focus on the work.
           </p>
           <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)"}}>
-            Theatre4u is not a generic inventory tool. It is a community — built by a teacher, for teachers.
+            <strong style={{color:"#fff"}}>No theatre teacher should feel like they're working on a deserted island.</strong> This is a platform built by someone who has stood exactly where you're standing.
           </p>
         </div>
       </div>
       <div style={{display:"flex",gap:24,justifyContent:"center",flexWrap:"wrap"}}>
         {[
-          {ico:"🎭",val:"15+",lbl:"Years in the classroom"},
-          {ico:"🤝",lbl:"Built teacher-to-teacher"},
-          {ico:"💰",lbl:"Funding Tracker built-in"},
-          {ico:"🪙",lbl:"Theatre Credits economy"},
+          {ico:"🎭",val:"30+",lbl:"Years in theatre"},
+          {ico:"🗺️",lbl:"NH · SF · NYC · SoCal"},
+          {ico:"🏫",lbl:"Built for the classroom"},
+          {ico:"🤝",lbl:"Teacher to teacher"},
         ].map(s=>(
           <div key={s.lbl} style={{textAlign:"center",padding:"16px 20px",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,minWidth:130}}>
             <div style={{fontSize:26,marginBottom:6}}>{s.ico}</div>
