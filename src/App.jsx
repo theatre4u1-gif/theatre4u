@@ -1205,7 +1205,7 @@ function CommunitySpotlight({onViewAll}){
           {(post.show_title||post.start_date||post.venue)&&(
             <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:10}}>
               {post.show_title&&<span style={{fontSize:12,fontWeight:700,padding:"2px 9px",background:color+"18",borderRadius:6,color}}>{post.show_title}</span>}
-              {post.venue&&<span style={{fontSize:12,color:"var(--muted)",padding:"2px 9px",background:"var(--bg)",borderRadius:6}}>📍 {post.venue}</span>}
+              {post.venue&&<span style={{fontSize:12,color:"var(--muted)",padding:"2px 9px",background:"var(--white)",borderRadius:6}}>📍 {post.venue}</span>}
               {post.start_date&&<span style={{fontSize:12,fontWeight:700,padding:"2px 9px",background:color+"18",borderRadius:6,color}}>
                 📅 {new Date(post.start_date).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
                 {post.end_date&&post.end_date!==post.start_date?" – "+new Date(post.end_date).toLocaleDateString("en-US",{month:"short",day:"numeric"}):""}
@@ -1238,7 +1238,7 @@ function CommunitySpotlight({onViewAll}){
           {/* Footer */}
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingTop:10,borderTop:`1px solid ${color}20`}}>
             <div style={{display:"flex",gap:6}}>
-              {(post.tags||[]).slice(0,3).map(t=><span key={t} style={{fontSize:11,padding:"1px 7px",background:"var(--bg)",borderRadius:4,color:"var(--muted)"}}>#{t}</span>)}
+              {(post.tags||[]).slice(0,3).map(t=><span key={t} style={{fontSize:11,padding:"1px 7px",background:"var(--white)",borderRadius:4,color:"var(--muted)"}}>#{t}</span>)}
             </div>
             <span style={{fontSize:12,fontWeight:700,color:color}}>View on Community Board →</span>
           </div>
@@ -3968,12 +3968,12 @@ function AdminInventoryView() {
             <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:520,overflowY:"auto"}}>
               {orgs.map(o=>(
                 <button key={o.id} onClick={()=>loadOrgInventory(o)}
-                  style={{background:selOrg?.id===o.id?"linear-gradient(135deg,rgba(212,168,67,.15),rgba(212,168,67,.05))":"var(--bg3)",
+                  style={{background:selOrg?.id===o.id?"linear-gradient(135deg,rgba(212,168,67,.15),rgba(212,168,67,.05))":"var(--parch)",
                     border:selOrg?.id===o.id?"1px solid rgba(212,168,67,.4)":"1px solid var(--border)",
                     borderRadius:8,padding:"9px 12px",cursor:"pointer",textAlign:"left",fontFamily:"inherit"}}>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontWeight:600,fontSize:13,color:"var(--t1)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                      <div style={{fontWeight:600,fontSize:13,color:"var(--text)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
                         {o.is_leading_player&&<span style={{color:"var(--gold)"}}>⭐ </span>}{o.name||o.email}
                       </div>
                       <div style={{fontSize:11,color:"var(--muted)",marginTop:1}}>{o.email}</div>
@@ -4026,15 +4026,15 @@ function AdminInventoryView() {
               {/* Search + filter */}
               <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
                 <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search items…"
-                  style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,padding:"6px 10px",color:"var(--t1)",fontSize:13,fontFamily:"inherit",outline:"none",flex:"1 1 160px"}}/>
+                  style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:6,padding:"6px 10px",color:"var(--text)",fontSize:13,fontFamily:"inherit",outline:"none",flex:"1 1 160px"}}/>
                 <select value={catF} onChange={e=>setCatF(e.target.value)}
-                  style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,padding:"6px 8px",color:"var(--t1)",fontSize:12,fontFamily:"inherit"}}>
+                  style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:6,padding:"6px 8px",color:"var(--text)",fontSize:12,fontFamily:"inherit"}}>
                   <option value="all">All Categories</option>
                   {CATS.map(c=><option key={c} value={c}>{CAT_ICONS[c]} {c[0].toUpperCase()+c.slice(1)}</option>)}
                 </select>
               </div>
 
-              {msg&&<div style={{marginBottom:10,fontSize:13,fontWeight:700,color:msg.startsWith("❌")?"var(--red)":"var(--grn)"}}>{msg}</div>}
+              {msg&&<div style={{marginBottom:10,fontSize:13,fontWeight:700,color:msg.startsWith("❌")?"var(--red)":"var(--green)"}}>{msg}</div>}
 
               {/* Items table */}
               {filtered.length===0?(
@@ -4071,7 +4071,7 @@ function AdminInventoryView() {
                           <td style={{padding:"8px 8px"}}>
                             <div style={{display:"flex",gap:4}}>
                               <button onClick={()=>{setActItem(item);setModal("edit");}}
-                                style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:5,padding:"3px 8px",cursor:"pointer",fontSize:11,color:"var(--t2)",fontFamily:"inherit"}}>Edit</button>
+                                style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:5,padding:"3px 8px",cursor:"pointer",fontSize:11,color:"var(--muted)",fontFamily:"inherit"}}>Edit</button>
                               <button onClick={()=>handleDelete(item.id,item.name)}
                                 style={{background:"rgba(194,24,91,.1)",border:"1px solid rgba(194,24,91,.2)",borderRadius:5,padding:"3px 8px",cursor:"pointer",fontSize:11,color:"#f48fb1",fontFamily:"inherit"}}>Del</button>
                             </div>
@@ -6888,49 +6888,49 @@ function TeamSettings({ userId, orgName, plan }) {
       {/* Role legend */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
         {[{ id: "director", label: "Director", icon: "🎬", desc: "Full access — that's you" }, ...ROLES].map(r => (
-          <div key={r.id} style={{ background: "var(--bg3)", border: "1px solid var(--border)",
+          <div key={r.id} style={{ background: "var(--parch)", border: "1px solid var(--border)",
             borderRadius: 10, padding: "8px 12px", minWidth: 160 }}>
             <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>{r.icon} {r.label}</div>
-            <div style={{ fontSize: 11, color: "var(--t3)", lineHeight: 1.4 }}>{r.desc}</div>
+            <div style={{ fontSize: 11, color: "var(--faint)", lineHeight: 1.4 }}>{r.desc}</div>
           </div>
         ))}
       </div>
 
       {/* Current members */}
       {loading ? (
-        <div style={{ color: "var(--t3)", fontSize: 13, padding: "12px 0" }}>Loading team…</div>
+        <div style={{ color: "var(--faint)", fontSize: 13, padding: "12px 0" }}>Loading team…</div>
       ) : members.length > 0 ? (
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1,
-            color: "var(--t3)", marginBottom: 8 }}>Current Team</div>
+            color: "var(--faint)", marginBottom: 8 }}>Current Team</div>
           {members.map(m => {
             const r = ROLE_MAP[m.role] || { label: m.role, icon: "👤" };
             return (
               <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10,
                 padding: "9px 0", borderBottom: "1px solid var(--bd)" }}>
-                <div style={{ width: 34, height: 34, borderRadius: "50%", background: "var(--bg3)",
+                <div style={{ width: 34, height: 34, borderRadius: "50%", background: "var(--parch)",
                   display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16,
                   flexShrink: 0 }}>{r.icon}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 13 }}>{m.email}</div>
-                  <div style={{ fontSize: 11, color: "var(--t3)" }}>
+                  <div style={{ fontSize: 11, color: "var(--faint)" }}>
                     Joined {new Date(m.joined_at).toLocaleDateString()}
                   </div>
                 </div>
                 <select value={m.role} onChange={e => changeRole(m.id, e.target.value)}
-                  style={{ background: "var(--bg3)", border: "1px solid var(--bd)", borderRadius: 6,
-                    padding: "4px 8px", color: "var(--t1)", fontSize: 12, fontFamily: "inherit" }}>
+                  style={{ background: "var(--parch)", border: "1px solid var(--bd)", borderRadius: 6,
+                    padding: "4px 8px", color: "var(--text)", fontSize: 12, fontFamily: "inherit" }}>
                   {ROLES.map(ro => <option key={ro.id} value={ro.id}>{ro.icon} {ro.label}</option>)}
                 </select>
                 <button onClick={() => removeMember(m.id, m.email)}
-                  style={{ background: "none", border: "none", color: "var(--t3)", cursor: "pointer",
+                  style={{ background: "none", border: "none", color: "var(--faint)", cursor: "pointer",
                     fontSize: 18, lineHeight: 1, padding: "0 4px" }} title="Remove">×</button>
               </div>
             );
           })}
         </div>
       ) : (
-        <div style={{ color: "var(--t3)", fontSize: 13, marginBottom: 20, fontStyle: "italic" }}>
+        <div style={{ color: "var(--faint)", fontSize: 13, marginBottom: 20, fontStyle: "italic" }}>
           No team members yet — invite someone below.
         </div>
       )}
@@ -6939,25 +6939,25 @@ function TeamSettings({ userId, orgName, plan }) {
       {invites.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1,
-            color: "var(--t3)", marginBottom: 8 }}>Pending Invites</div>
+            color: "var(--faint)", marginBottom: 8 }}>Pending Invites</div>
           {invites.map(inv => (
             <div key={inv.id} style={{ display: "flex", alignItems: "center", gap: 10,
               padding: "8px 0", borderBottom: "1px solid var(--bd)" }}>
               <div style={{ fontSize: 15 }}>✉️</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: 13 }}>{inv.email}</div>
-                <div style={{ fontSize: 11, color: "var(--t3)" }}>
+                <div style={{ fontSize: 11, color: "var(--faint)" }}>
                   {ROLE_MAP[inv.role]?.label} · Expires {new Date(inv.expires_at).toLocaleDateString()}
                 </div>
               </div>
               <button onClick={() => {
                 navigator.clipboard?.writeText(`https://theatre4u.org/join?token=${inv.token}`);
                 flash("✓ Invite link copied!");
-              }} style={{ background: "var(--bg3)", border: "1px solid var(--bd)", borderRadius: 6,
-                color: "var(--t2)", padding: "4px 10px", cursor: "pointer", fontSize: 11,
+              }} style={{ background: "var(--parch)", border: "1px solid var(--bd)", borderRadius: 6,
+                color: "var(--muted)", padding: "4px 10px", cursor: "pointer", fontSize: 11,
                 fontFamily: "inherit" }}>Copy Link</button>
               <button onClick={() => cancelInvite(inv.id)}
-                style={{ background: "none", border: "none", color: "var(--t3)", cursor: "pointer",
+                style={{ background: "none", border: "none", color: "var(--faint)", cursor: "pointer",
                   fontSize: 18, lineHeight: 1, padding: "0 4px" }}>×</button>
             </div>
           ))}
@@ -6967,7 +6967,7 @@ function TeamSettings({ userId, orgName, plan }) {
       {/* Invite by email */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1,
-          color: "var(--t3)", marginBottom: 8 }}>Invite by Email</div>
+          color: "var(--faint)", marginBottom: 8 }}>Invite by Email</div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <input className="fi" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
             placeholder="colleague@school.edu" type="email"
@@ -6983,7 +6983,7 @@ function TeamSettings({ userId, orgName, plan }) {
           </button>
         </div>
         {inviteEmail && (
-          <div style={{ fontSize: 11, color: "var(--t3)", marginTop: 6 }}>
+          <div style={{ fontSize: 11, color: "var(--faint)", marginTop: 6 }}>
             They'll get a link to join your team at <strong>{orgName}</strong> as <strong>{ROLE_MAP[inviteRole]?.label}</strong>.
           </div>
         )}
@@ -6992,23 +6992,23 @@ function TeamSettings({ userId, orgName, plan }) {
       {/* Join code */}
       <div>
         <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1,
-          color: "var(--t3)", marginBottom: 8 }}>Join Code — For Groups & Students</div>
+          color: "var(--faint)", marginBottom: 8 }}>Join Code — For Groups & Students</div>
         {!showCode ? (
           <button className="btn bs" onClick={getJoinCode}>
             🔑 Generate Join Code
           </button>
         ) : (
-          <div style={{ background: "var(--bg3)", border: "1px solid var(--bd)", borderRadius: 12,
+          <div style={{ background: "var(--parch)", border: "1px solid var(--bd)", borderRadius: 12,
             padding: "16px 20px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
               <div>
-                <div style={{ fontSize: 11, color: "var(--t3)", marginBottom: 4 }}>Share this code</div>
+                <div style={{ fontSize: 11, color: "var(--faint)", marginBottom: 4 }}>Share this code</div>
                 <div style={{ fontFamily: "monospace", fontSize: 28, fontWeight: 900,
                   letterSpacing: 4, color: "var(--gold)" }}>{joinCode}</div>
               </div>
               <div style={{ flex: 1, minWidth: 160 }}>
-                <div style={{ fontSize: 11, color: "var(--t3)", marginBottom: 4 }}>Or share this link</div>
-                <div style={{ fontSize: 12, color: "var(--t2)", wordBreak: "break-all" }}>
+                <div style={{ fontSize: 11, color: "var(--faint)", marginBottom: 4 }}>Or share this link</div>
+                <div style={{ fontSize: 12, color: "var(--muted)", wordBreak: "break-all" }}>
                   theatre4u.org/join?code={joinCode}
                 </div>
               </div>
@@ -7017,7 +7017,7 @@ function TeamSettings({ userId, orgName, plan }) {
                 flash("✓ Link copied!");
               }}>Copy Link</button>
             </div>
-            <div style={{ fontSize: 11, color: "var(--t3)", marginTop: 12, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 11, color: "var(--faint)", marginTop: 12, lineHeight: 1.5 }}>
               Anyone with this code joins as <strong>Crew</strong> — they can add and edit items.
               Post it in your costume room or send it to your team. Expires in 30 days.
             </div>
@@ -7027,7 +7027,7 @@ function TeamSettings({ userId, orgName, plan }) {
 
       {msg && (
         <div style={{ marginTop: 14, fontSize: 13, fontWeight: 700,
-          color: msg.startsWith("❌") ? "var(--red)" : "var(--grn)" }}>
+          color: msg.startsWith("❌") ? "var(--red)" : "var(--green)" }}>
           {msg}
         </div>
       )}
@@ -7175,7 +7175,7 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
                     }}
                     style={{width:18,height:18,cursor:"pointer",accentColor:"var(--gold)"}}
                   />
-                  <span style={{marginLeft:8,fontSize:13,color:"var(--t2)",fontWeight:600}}>
+                  <span style={{marginLeft:8,fontSize:13,color:"var(--muted)",fontWeight:600}}>
                     {org&&org[key]?"On":"Off"}
                   </span>
                 </label>
@@ -8104,7 +8104,7 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
             </div>
 
             {/* Preview of what public sees */}
-            <div style={{ background: "var(--bg)", borderRadius: 10, padding: 20, border: "1px solid var(--border)" }}>
+            <div style={{ background: "var(--white)", borderRadius: 10, padding: 20, border: "1px solid var(--border)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
                 <div style={{
                   width: 60, height: 60, borderRadius: 12, background: "linear-gradient(135deg,var(--gold2),var(--gold))",
@@ -8224,7 +8224,7 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
               {items.filter(i => i.market_status && i.market_status !== "Not Listed" && i.market_status !== "Private").slice(0, 6).map(item => {
                 const catColor = { costumes: "#c2185b", props: "#7b1fa2", sets: "#1565c0", lighting: "#f9a825", sound: "#2e7d32", scripts: "#d84315", makeup: "#ad1457", furniture: "#4e342e", fabrics: "#6a1b9a", tools: "#546e7a", effects: "#00838f", other: "#757575" }[item.category] || "#757575";
                 return (
-                  <div key={item.id} style={{ background: "var(--bg)", borderRadius: 8, padding: 12, border: "1px solid var(--border)" }}>
+                  <div key={item.id} style={{ background: "var(--white)", borderRadius: 8, padding: 12, border: "1px solid var(--border)" }}>
                     {item.img
                       ? <img src={item.img} alt={item.name} style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 6, marginBottom: 8 }} />
                       : <div style={{ height: 80, borderRadius: 6, background: catColor + "22", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, marginBottom: 8 }}>📦</div>}
@@ -9153,26 +9153,26 @@ function FundingPage({userId, org, plan}){
   };
 
   // ── styles ────────────────────────────────────────────────────────────────
-  const card  = {background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:16,marginBottom:12};
-  const label = {fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4};
-  const inp   = {background:"var(--bg)",border:"1px solid var(--border)",borderRadius:6,padding:"7px 10px",color:"var(--t1)",fontSize:13,fontFamily:"inherit",outline:"none",width:"100%"};
+  const card  = {background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:16,marginBottom:12};
+  const label = {fontSize:10,fontWeight:700,color:"var(--faint)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4};
+  const inp   = {background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,padding:"7px 10px",color:"var(--text)",fontSize:13,fontFamily:"inherit",outline:"none",width:"100%"};
   const row2  = {display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:10};
 
-  if(loading) return <div style={{textAlign:"center",padding:60,color:"var(--muted)"}}>Loading funding data…</div>;
+  if(loading) return <div style={{textAlign:"center",padding:60,color:"var(--faint)"}}>Loading funding data…</div>;
 
   return(
     <div style={{maxWidth:900,margin:"0 auto"}}>
       {/* Flash message */}
-      {msg&&<div style={{position:"fixed",top:16,right:16,zIndex:9999,background:"var(--bg2)",
+      {msg&&<div style={{position:"fixed",top:16,right:16,zIndex:9999,background:"var(--cream)",
         border:"1px solid var(--border)",borderRadius:8,padding:"10px 16px",
-        fontSize:13,fontWeight:600,color:msg.startsWith("❌")?"var(--red)":"var(--grn)",
+        fontSize:13,fontWeight:600,color:msg.startsWith("❌")?"var(--red)":"var(--green)",
         boxShadow:"0 4px 20px rgba(0,0,0,.4)"}}>{msg}</div>}
 
       {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20,flexWrap:"wrap",gap:10}}>
         <div>
           <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:4}}>Funding Tracker</h2>
-          <p style={{color:"var(--muted)",fontSize:13}}>Track and report funding sources and expenditures. For your records only.</p>
+          <p style={{color:"var(--faint)",fontSize:13}}>Track and report funding sources and expenditures. For your records only.</p>
         </div>
         <button onClick={exportCSV} className="btn btn-o" style={{fontSize:12}}>
           ↓ Export CSV
@@ -9183,14 +9183,14 @@ function FundingPage({userId, org, plan}){
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:24}}>
         {[
           {label:"Total Allocated",  val:"$"+totalAllocated.toLocaleString("en-US",{minimumFractionDigits:2}), color:"var(--gold)"},
-          {label:"Total Spent",      val:"$"+totalSpent.toLocaleString("en-US",{minimumFractionDigits:2}),     color:"var(--blu)"},
-          {label:"Remaining",        val:"$"+remaining.toLocaleString("en-US",{minimumFractionDigits:2}),      color:remaining>=0?"var(--grn)":"var(--red)"},
-          {label:"Active Sources",   val:sources.filter(s=>s.is_active).length,                                color:"var(--t1)"},
-          {label:"Expenditures",     val:exps.length,                                                          color:"var(--t1)"},
+          {label:"Total Spent",      val:"$"+totalSpent.toLocaleString("en-US",{minimumFractionDigits:2}),     color:"var(--blue)"},
+          {label:"Remaining",        val:"$"+remaining.toLocaleString("en-US",{minimumFractionDigits:2}),      color:remaining>=0?"var(--green)":"var(--red)"},
+          {label:"Active Sources",   val:sources.filter(s=>s.is_active).length,                                color:"var(--text)"},
+          {label:"Expenditures",     val:exps.length,                                                          color:"var(--text)"},
         ].map(s=>(
           <div key={s.label} style={{...card,textAlign:"center",marginBottom:0}}>
             <div style={{fontSize:22,fontWeight:800,fontFamily:"'Playfair Display',serif",color:s.color}}>{s.val}</div>
-            <div style={{fontSize:11,color:"var(--muted)",marginTop:4,textTransform:"uppercase",letterSpacing:1}}>{s.label}</div>
+            <div style={{fontSize:11,color:"var(--faint)",marginTop:4,textTransform:"uppercase",letterSpacing:1}}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -9200,7 +9200,7 @@ function FundingPage({userId, org, plan}){
         {[["sources","Funding Sources"],["spending","Expenditures"],["reports","By Source"]].map(([id,lbl])=>(
           <button key={id} onClick={()=>setTab(id)}
             style={{background:"none",border:"none",padding:"8px 16px",fontSize:13,fontWeight:600,
-              color:tab===id?"var(--gold)":"var(--muted)",
+              color:tab===id?"var(--gold)":"var(--faint)",
               borderBottom:tab===id?"2px solid var(--gold)":"2px solid transparent",
               cursor:"pointer",fontFamily:"inherit",transition:"all .2s"}}>
             {lbl}
@@ -9217,7 +9217,7 @@ function FundingPage({userId, org, plan}){
             </button>
           </div>
           {sources.length===0&&(
-            <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>
+            <div style={{textAlign:"center",padding:48,color:"var(--faint)"}}>
               <div style={{fontSize:40,marginBottom:12}}>💰</div>
               <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,marginBottom:8}}>No funding sources yet</div>
               <div style={{fontSize:13,marginBottom:16}}>Add a source to start tracking — grants, allocations, booster funds, and more.</div>
@@ -9236,26 +9236,26 @@ function FundingPage({userId, org, plan}){
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
                       <span style={{fontSize:18}}>{ft.icon}</span>
                       <span style={{fontWeight:700,fontSize:15}}>{s.name}</span>
-                      {!s.is_active&&<span style={{fontSize:10,background:"var(--bg)",padding:"1px 6px",borderRadius:10,color:"var(--muted)"}}>Inactive</span>}
+                      {!s.is_active&&<span style={{fontSize:10,background:"var(--white)",padding:"1px 6px",borderRadius:10,color:"var(--faint)"}}>Inactive</span>}
                     </div>
-                    <div style={{fontSize:12,color:"var(--muted)",marginBottom:8}}>
+                    <div style={{fontSize:12,color:"var(--faint)",marginBottom:8}}>
                       {ft.label}{s.funder?" · "+s.funder:""}{s.fiscal_year?" · FY "+s.fiscal_year:""}
                     </div>
                     {alloc>0&&(
                       <div>
-                        <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"var(--muted)",marginBottom:4}}>
+                        <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"var(--faint)",marginBottom:4}}>
                           <span>${spent.toLocaleString("en-US",{minimumFractionDigits:2})} spent</span>
                           <span>${alloc.toLocaleString("en-US",{minimumFractionDigits:2})} allocated</span>
                         </div>
-                        <div style={{height:6,background:"var(--bg)",borderRadius:3,overflow:"hidden"}}>
-                          <div style={{height:"100%",width:pct+"%",background:pct>90?"var(--red)":pct>70?"var(--gold)":"var(--grn)",borderRadius:3,transition:"width .4s"}}/>
+                        <div style={{height:6,background:"var(--white)",borderRadius:3,overflow:"hidden"}}>
+                          <div style={{height:"100%",width:pct+"%",background:pct>90?"var(--red)":pct>70?"var(--gold)":"var(--green)",borderRadius:3,transition:"width .4s"}}/>
                         </div>
-                        <div style={{fontSize:11,color:pct>90?"var(--red)":"var(--muted)",marginTop:3}}>
+                        <div style={{fontSize:11,color:pct>90?"var(--red)":"var(--faint)",marginTop:3}}>
                           ${Math.max(0,alloc-spent).toLocaleString("en-US",{minimumFractionDigits:2})} remaining
                         </div>
                       </div>
                     )}
-                    {s.notes&&<div style={{fontSize:12,color:"var(--muted)",marginTop:6,fontStyle:"italic"}}>{s.notes}</div>}
+                    {s.notes&&<div style={{fontSize:12,color:"var(--faint)",marginTop:6,fontStyle:"italic"}}>{s.notes}</div>}
                   </div>
                   <div style={{display:"flex",gap:6}}>
                     <button className="btn btn-o bsm" onClick={()=>{setActive(s);setModal("edit-source");}}>Edit</button>
@@ -9272,7 +9272,7 @@ function FundingPage({userId, org, plan}){
       {tab==="spending"&&(
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
-            <span style={{fontSize:13,color:"var(--muted)"}}>{exps.length} expenditure{exps.length!==1?"s":""}</span>
+            <span style={{fontSize:13,color:"var(--faint)"}}>{exps.length} expenditure{exps.length!==1?"s":""}</span>
             <button className="btn btn-g" disabled={sources.length===0}
               style={{opacity:sources.length===0?0.45:1}}
               title={sources.length===0?"Add a funding source first":""}
@@ -9281,7 +9281,7 @@ function FundingPage({userId, org, plan}){
             </button>
           </div>
           {exps.length===0&&(
-            <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>
+            <div style={{textAlign:"center",padding:48,color:"var(--faint)"}}>
               <div style={{fontSize:40,marginBottom:12}}>🧾</div>
               <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,marginBottom:8}}>No expenditures recorded</div>
               <div style={{fontSize:13}}>Track purchases, services, and other spending against your funding sources.</div>
@@ -9294,8 +9294,8 @@ function FundingPage({userId, org, plan}){
               <div key={e.id} style={{...card,display:"flex",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
                 <div style={{flex:1,minWidth:200}}>
                   <div style={{fontWeight:700,fontSize:13,marginBottom:3}}>{e.description}</div>
-                  <div style={{fontSize:12,color:"var(--muted)",marginBottom:4}}>
-                    {src&&<span style={{background:"var(--bg)",padding:"1px 7px",borderRadius:10,marginRight:6}}>{ft.icon} {src.name}</span>}
+                  <div style={{fontSize:12,color:"var(--faint)",marginBottom:4}}>
+                    {src&&<span style={{background:"var(--white)",padding:"1px 7px",borderRadius:10,marginRight:6}}>{ft.icon} {src.name}</span>}
                     {e.category&&<span>{e.category}</span>}
                     {e.vendor&&<span style={{marginLeft:6}}>· {e.vendor}</span>}
                     {e.purchase_date&&<span style={{marginLeft:6}}>· {new Date(e.purchase_date+"T00:00:00").toLocaleDateString()}</span>}
@@ -9317,11 +9317,11 @@ function FundingPage({userId, org, plan}){
       {/* ── BY SOURCE REPORT TAB ──────────────────────────────────────────── */}
       {tab==="reports"&&(
         <div>
-          <div style={{marginBottom:12,fontSize:12,color:"var(--muted)",fontStyle:"italic"}}>
+          <div style={{marginBottom:12,fontSize:12,color:"var(--faint)",fontStyle:"italic"}}>
             Summary of spending per funding source. Export to CSV for your records.
           </div>
           {sources.length===0&&(
-            <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>
+            <div style={{textAlign:"center",padding:48,color:"var(--faint)"}}>
               <div style={{fontSize:40,marginBottom:12}}>📊</div>
               <div style={{fontFamily:"'Playfair Display',serif",fontSize:18}}>No sources to report on yet</div>
             </div>
@@ -9339,28 +9339,28 @@ function FundingPage({userId, org, plan}){
                   <div>
                     <span style={{fontSize:16}}>{ft.icon}</span>
                     <span style={{fontWeight:700,fontSize:15,marginLeft:6}}>{s.name}</span>
-                    {s.fiscal_year&&<span style={{fontSize:12,color:"var(--muted)",marginLeft:8}}>FY {s.fiscal_year}</span>}
+                    {s.fiscal_year&&<span style={{fontSize:12,color:"var(--faint)",marginLeft:8}}>FY {s.fiscal_year}</span>}
                   </div>
                   <div style={{textAlign:"right"}}>
                     <div style={{fontSize:18,fontWeight:800,color:"var(--gold)",fontFamily:"'Playfair Display',serif"}}>
                       ${spent.toLocaleString("en-US",{minimumFractionDigits:2})}
-                      {alloc>0&&<span style={{fontSize:12,fontWeight:400,color:"var(--muted)"}}> of ${alloc.toLocaleString("en-US",{minimumFractionDigits:2})}</span>}
+                      {alloc>0&&<span style={{fontSize:12,fontWeight:400,color:"var(--faint)"}}> of ${alloc.toLocaleString("en-US",{minimumFractionDigits:2})}</span>}
                     </div>
-                    <div style={{fontSize:11,color:"var(--muted)"}}>{sExps.length} expenditure{sExps.length!==1?"s":""}</div>
+                    <div style={{fontSize:11,color:"var(--faint)"}}>{sExps.length} expenditure{sExps.length!==1?"s":""}</div>
                   </div>
                 </div>
                 {Object.keys(byCat).length>0&&(
                   <div style={{borderTop:"1px solid var(--border)",paddingTop:10}}>
                     {Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>(
                       <div key={cat} style={{display:"flex",justifyContent:"space-between",
-                        fontSize:12,color:"var(--t2)",padding:"3px 0",borderBottom:"1px solid rgba(255,255,255,.04)"}}>
+                        fontSize:12,color:"var(--faint)",padding:"3px 0",borderBottom:"1px solid rgba(255,255,255,.04)"}}>
                         <span>{cat}</span>
                         <span style={{fontWeight:600}}>${amt.toLocaleString("en-US",{minimumFractionDigits:2})}</span>
                       </div>
                     ))}
                   </div>
                 )}
-                {sExps.length===0&&<div style={{fontSize:12,color:"var(--muted)",paddingTop:4}}>No expenditures recorded against this source.</div>}
+                {sExps.length===0&&<div style={{fontSize:12,color:"var(--faint)",paddingTop:4}}>No expenditures recorded against this source.</div>}
               </div>
             );
           })}
@@ -9395,48 +9395,48 @@ function SourceModal({initial, saving, onSave, onCancel}){
   const blank = {name:"",source_type:"grant",funder:"",total_amount:"",fiscal_year:"",start_date:"",end_date:"",notes:"",is_active:true};
   const[f,setF] = useState(initial||blank);
   const upd = (k,v) => setF(p=>({...p,[k]:v}));
-  const inp = {background:"var(--bg)",border:"1px solid var(--border)",borderRadius:6,padding:"7px 10px",color:"var(--t1)",fontSize:13,fontFamily:"inherit",outline:"none",width:"100%"};
+  const inp = {background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,padding:"7px 10px",color:"var(--text)",fontSize:13,fontFamily:"inherit",outline:"none",width:"100%"};
   return(
     <Modal title={(initial?"Edit":"Add")+" Funding Source"} onClose={onCancel}>
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div style={{gridColumn:"1/-1"}}>
-              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Source Name *</label>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--faint)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Source Name *</label>
               <input style={inp} value={f.name} onChange={e=>upd("name",e.target.value)} placeholder="e.g. Prop 28, Title IV-A, Booster Club" autoFocus/>
             </div>
             <div>
-              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Type</label>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--faint)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Type</label>
               <select style={inp} value={f.source_type} onChange={e=>upd("source_type",e.target.value)}>
                 {FUND_TYPES.map(t=><option key={t.id} value={t.id}>{t.icon} {t.label}</option>)}
               </select>
             </div>
             <div>
-              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Funder / Organization</label>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--faint)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Funder / Organization</label>
               <input style={inp} value={f.funder} onChange={e=>upd("funder",e.target.value)} placeholder="e.g. CA Dept of Education"/>
             </div>
             <div>
-              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Total Amount ($)</label>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--faint)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Total Amount ($)</label>
               <input style={inp} type="number" min="0" step="0.01" value={f.total_amount} onChange={e=>upd("total_amount",e.target.value)} placeholder="0.00"/>
             </div>
             <div>
-              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Fiscal Year</label>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--faint)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Fiscal Year</label>
               <input style={inp} value={f.fiscal_year} onChange={e=>upd("fiscal_year",e.target.value)} placeholder="e.g. 2024-25"/>
             </div>
             <div>
-              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Start Date</label>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--faint)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Start Date</label>
               <input style={inp} type="date" value={f.start_date||""} onChange={e=>upd("start_date",e.target.value||null)}/>
             </div>
             <div>
-              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>End Date</label>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--faint)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>End Date</label>
               <input style={inp} type="date" value={f.end_date||""} onChange={e=>upd("end_date",e.target.value||null)}/>
             </div>
             <div style={{gridColumn:"1/-1"}}>
-              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Notes</label>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--faint)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Notes</label>
               <textarea style={{...inp,minHeight:60,resize:"vertical"}} value={f.notes} onChange={e=>upd("notes",e.target.value)} placeholder="Any relevant details about this funding source…"/>
             </div>
             <div style={{gridColumn:"1/-1",display:"flex",alignItems:"center",gap:8}}>
               <input type="checkbox" id="is_active" checked={f.is_active} onChange={e=>upd("is_active",e.target.checked)}/>
-              <label htmlFor="is_active" style={{fontSize:13,color:"var(--t2)",cursor:"pointer"}}>Active source (shows in spending tracker)</label>
+              <label htmlFor="is_active" style={{fontSize:13,color:"var(--faint)",cursor:"pointer"}}>Active source (shows in spending tracker)</label>
             </div>
           </div>
           <div style={{display:"flex",gap:8,justifyContent:"flex-end",paddingTop:12,borderTop:"1px solid var(--border)"}}>
@@ -9456,13 +9456,13 @@ function ExpModal({initial, sources, saving, onSave, onCancel}){
   const blank = {funding_source_id:activeSources[0]?.id||"",amount:"",category:"",description:"",vendor:"",purchase_date:new Date().toISOString().slice(0,10)};
   const[f,setF] = useState(initial||blank);
   const upd = (k,v) => setF(p=>({...p,[k]:v}));
-  const inp = {background:"var(--bg)",border:"1px solid var(--border)",borderRadius:6,padding:"7px 10px",color:"var(--t1)",fontSize:13,fontFamily:"inherit",outline:"none",width:"100%"};
+  const inp = {background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,padding:"7px 10px",color:"var(--text)",fontSize:13,fontFamily:"inherit",outline:"none",width:"100%"};
   return(
     <Modal title={(initial?"Edit":"Add")+" Expenditure"} onClose={onCancel}>
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div style={{gridColumn:"1/-1"}}>
-              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Funding Source *</label>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--faint)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Funding Source *</label>
               <select style={inp} value={f.funding_source_id} onChange={e=>upd("funding_source_id",e.target.value)}>
                 <option value="">Select a source…</option>
                 {activeSources.map(s=>{
@@ -9472,26 +9472,26 @@ function ExpModal({initial, sources, saving, onSave, onCancel}){
               </select>
             </div>
             <div style={{gridColumn:"1/-1"}}>
-              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Description *</label>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--faint)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Description *</label>
               <input style={inp} value={f.description} onChange={e=>upd("description",e.target.value)} placeholder="What was purchased or paid for?"/>
             </div>
             <div>
-              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Amount ($) *</label>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--faint)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Amount ($) *</label>
               <input style={inp} type="number" min="0" step="0.01" value={f.amount} onChange={e=>upd("amount",e.target.value)} placeholder="0.00"/>
             </div>
             <div>
-              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Date</label>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--faint)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Date</label>
               <input style={inp} type="date" value={f.purchase_date||""} onChange={e=>upd("purchase_date",e.target.value||null)}/>
             </div>
             <div>
-              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Category</label>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--faint)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Category</label>
               <select style={inp} value={f.category||""} onChange={e=>upd("category",e.target.value)}>
                 <option value="">Select…</option>
                 {FUND_CATS.map(c=><option key={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label style={{fontSize:10,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Vendor / Payee</label>
+              <label style={{fontSize:10,fontWeight:700,color:"var(--faint)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Vendor / Payee</label>
               <input style={inp} value={f.vendor||""} onChange={e=>upd("vendor",e.target.value)} placeholder="Store, company, or person"/>
             </div>
           </div>
