@@ -5988,149 +5988,6 @@ function CSVImport({ onImport, onClose, userId }) {
 }
 
 
-
-// ══════════════════════════════════════════════════════════════════════════════
-// PROP 28 COMPLIANCE TRACKING
-// ══════════════════════════════════════════════════════════════════════════════
-const DISCIPLINES = ["Music","Visual Arts","Dance","Theater","Media Arts","Multiple"];
-const GRADE_OPTIONS = ["TK","K","1","2","3","4","5","6","7","8","9","10","11","12"];
-const SCHOOL_YEARS = ["2024-2025","2025-2026","2023-2024","2022-2023"];
-
-function Prop28PurchaseForm({initial, onSave, onCancel, items=[]}) {
-  const blank = {item_description:"",arts_discipline:"Theater",grade_levels:[],students_served:"",cost:"",funding_source:"100% Prop 28",other_funding:"",supplement_not_supplant:true,date_purchased:"",vendor:"",item_id:"",notes:"",school_year:SCHOOL_YEARS[0]};
-  const [f,setF] = useState(initial||blank);
-  const upd = (k,v)=>setF(p=>({...p,[k]:v}));
-  const toggleGrade = g=>{const cur=f.grade_levels||[];upd("grade_levels",cur.includes(g)?cur.filter(x=>x!==g):[...cur,g]);};
-  const valid = f.item_description.trim()&&f.students_served&&f.cost&&(f.grade_levels||[]).length>0;
-  return(<div className="fg2">
-    <div className="fg fu"><label className="fl">Item Description *</label><input className="fi" value={f.item_description} onChange={e=>upd("item_description",e.target.value)} placeholder='e.g. "Sheet music — musical theater repertoire"' autoFocus/></div>
-    <div className="fg"><label className="fl">Arts Discipline *</label><select className="fs" value={f.arts_discipline} onChange={e=>upd("arts_discipline",e.target.value)}>{DISCIPLINES.map(d=><option key={d}>{d}</option>)}</select></div>
-    <div className="fg"><label className="fl">School Year</label><select className="fs" value={f.school_year} onChange={e=>upd("school_year",e.target.value)}>{SCHOOL_YEARS.map(y=><option key={y}>{y}</option>)}</select></div>
-    <div className="fg fu"><label className="fl">Grade Levels Served *</label><div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}}>{GRADE_OPTIONS.map(g=><button key={g} type="button" onClick={()=>toggleGrade(g)} style={{padding:"5px 10px",borderRadius:6,border:"1.5px solid",fontFamily:"inherit",fontSize:13,fontWeight:700,cursor:"pointer",background:(f.grade_levels||[]).includes(g)?"var(--green)":"var(--parch)",color:(f.grade_levels||[]).includes(g)?"#fff":"var(--muted)",borderColor:(f.grade_levels||[]).includes(g)?"var(--green)":"var(--border)"}}>{g}</button>)}<button type="button" onClick={()=>upd("grade_levels",[...GRADE_OPTIONS])} style={{padding:"5px 10px",borderRadius:6,border:"1.5px solid var(--border)",background:"transparent",color:"var(--muted)",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>All</button><button type="button" onClick={()=>upd("grade_levels",[])} style={{padding:"5px 10px",borderRadius:6,border:"1.5px solid var(--border)",background:"transparent",color:"var(--muted)",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Clear</button></div></div>
-    <div className="fg"><label className="fl">Students Served *</label><input className="fi" type="number" min="0" value={f.students_served} onChange={e=>upd("students_served",parseInt(e.target.value)||"")} placeholder="e.g. 150"/></div>
-    <div className="fg"><label className="fl">Cost ($) *</label><input className="fi" type="number" min="0" step="0.01" value={f.cost} onChange={e=>upd("cost",parseFloat(e.target.value)||"")} placeholder="0.00"/></div>
-    <div className="fg"><label className="fl">Funding Source</label><select className="fs" value={f.funding_source} onChange={e=>upd("funding_source",e.target.value)}><option>100% Prop 28</option><option>Split Funding</option></select></div>
-    {f.funding_source==="Split Funding"&&<div className="fg"><label className="fl">Other Funding</label><input className="fi" value={f.other_funding||""} onChange={e=>upd("other_funding",e.target.value)} placeholder="e.g. Title I, Site Budget"/></div>}
-    <div className="fg"><label className="fl">Date Purchased</label><input className="fi" type="date" value={f.date_purchased||""} onChange={e=>upd("date_purchased",e.target.value)}/></div>
-    <div className="fg"><label className="fl">Vendor</label><input className="fi" value={f.vendor||""} onChange={e=>upd("vendor",e.target.value)} placeholder="e.g. Amazon, J.W. Pepper"/></div>
-    {items.length>0&&<div className="fg fu"><label className="fl">Link to Inventory Item (optional)</label><select className="fs" value={f.item_id||""} onChange={e=>upd("item_id",e.target.value||null)}><option value="">— Not linked —</option>{items.map(i=><option key={i.id} value={i.id}>{i.name}</option>)}</select></div>}
-    <div className="fg fu" style={{borderTop:"1px solid var(--border)",paddingTop:12}}>
-      <label className="fl" style={{marginBottom:6}}>Supplement vs. Supplant *</label>
-      <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.5,marginBottom:10}}>Does this purchase support <strong>new or expanded</strong> programming — not replacing existing arts funding?</p>
-      <div style={{display:"flex",gap:10}}>{[true,false].map(v=><button key={String(v)} type="button" onClick={()=>upd("supplement_not_supplant",v)} style={{padding:"8px 20px",borderRadius:8,border:"1.5px solid",fontFamily:"inherit",fontSize:13,fontWeight:700,cursor:"pointer",background:f.supplement_not_supplant===v?(v?"rgba(38,94,42,.15)":"rgba(139,26,42,.1)"):"var(--parch)",color:f.supplement_not_supplant===v?(v?"var(--green)":"var(--red)"):"var(--muted)",borderColor:f.supplement_not_supplant===v?(v?"var(--green)":"var(--red)"):"var(--border)"}}>{v?"✓ Yes — New/Expanded":"✗ No — Replacing"}</button>)}</div>
-    </div>
-    <div className="fg fu"><label className="fl">Notes</label><textarea className="ft" value={f.notes||""} onChange={e=>upd("notes",e.target.value)}/></div>
-    <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10,paddingTop:14,borderTop:"1.5px solid var(--border)",gridColumn:"1/-1"}}>
-      <button className="btn btn-o" onClick={onCancel}>Cancel</button>
-      <button className="btn btn-g" disabled={!valid} style={!valid?{opacity:.4}:{}} onClick={()=>onSave(f)}>{ initial?"Save Changes":"Log Purchase"}</button>
-    </div>
-  </div>);
-}
-
-function Prop28Page({org, userId, items=[], plan="pro"}) {
-  const [tab,setTab]           = useState("purchases");
-  const [purchases,setPurchases] = useState([]);
-  const [report,setReport]     = useState(null);
-  const [loading,setLoading]   = useState(true);
-  const [year,setYear]         = useState(SCHOOL_YEARS[0]);
-  const [modal,setModal]       = useState(null);
-  const [active,setActive]     = useState(null);
-  const [saving,setSaving]     = useState(false);
-  const [msg,setMsg]           = useState("");
-
-  const load = useCallback(async()=>{
-    setLoading(true);
-    const{data:pData}=await SB.from("prop28_purchases").select("*").eq("org_id",userId).eq("school_year",year).order("date_purchased",{ascending:false});
-    setPurchases(pData||[]);
-    const{data:rData}=await SB.from("prop28_reports").select("*").eq("org_id",userId).eq("school_year",year).single();
-    setReport(rData||null);
-    setLoading(false);
-  },[userId,year]);
-  useEffect(()=>{load();},[load]);
-
-  const savePurchase = async(f)=>{
-    setSaving(true);
-    const row={...f,org_id:userId,cost:parseFloat(f.cost)||0,students_served:parseInt(f.students_served)||0};
-    if(active&&modal==="edit"){const{data,error:updErr}=await SB.from("prop28_purchases").update(row).eq("id",active.id).select("*").single();
-      if(updErr){console.error("Update error:",updErr);setMsg("❌ Error saving: "+updErr.message);setSaving(false);return;}
-      if(data)setPurchases(p=>p.map(x=>x.id===data.id?data:x));}
-    else{const{data,error:insErr}=await SB.from("prop28_purchases").insert(row).select("*").single();
-      if(insErr){console.error("Insert error:",insErr);setMsg("❌ Error saving: "+insErr.message);setSaving(false);return;}
-      if(data)setPurchases(p=>[data,...p]);}
-    setModal(null);setActive(null);setSaving(false);setMsg("✓ Purchase logged");setTimeout(()=>setMsg(""),2500);
-  };
-  const deletePurchase = async(id)=>{if(!window.confirm("Delete this purchase?"))return;await SB.from("prop28_purchases").delete().eq("id",id);setPurchases(p=>p.filter(x=>x.id!==id));};
-  const saveReport = async(updates)=>{
-    setSaving(true);
-    if(report?.id){const{data}=await SB.from("prop28_reports").update({...updates,org_id:userId,school_year:year}).eq("id",report.id).select().single();if(data)setReport(data);}
-    else{const{data}=await SB.from("prop28_reports").insert({...updates,org_id:userId,school_year:year}).select().single();if(data)setReport(data);}
-    setSaving(false);setMsg("✓ Saved");setTimeout(()=>setMsg(""),2000);
-  };
-  const attestSAS = async()=>{
-    if(!window.confirm("Formally attest that all "+year+" purchases supplement (not supplant) existing arts budgets?"))return;
-    saveReport({sas_attested:true,sas_attested_by:org?.name||"Administrator",sas_attested_at:new Date().toISOString()});
-  };
-
-  const totalSpent = purchases.reduce((s,p)=>s+parseFloat(p.cost||0),0);
-  const totalStudents = purchases.length>0?Math.max(...purchases.map(p=>p.students_served||0)):0;
-  const byDiscipline = purchases.reduce((acc,p)=>{acc[p.arts_discipline]=(acc[p.arts_discipline]||0)+parseFloat(p.cost||0);return acc;},{});
-  const nonCompliant = purchases.filter(p=>p.supplement_not_supplant===false).length;
-  const fmt$p = n=>"$"+Number(n||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
-  const discColors = {Music:"#1565c0",Theater:"#7b1fa2","Visual Arts":"#c2185b",Dance:"#d84315","Media Arts":"#00838f",Multiple:"#546e7a"};
-
-  const exportCSV = ()=>{
-    const h=["School Year","Date","Item Description","Arts Discipline","Grade Levels","Students","Cost","Funding","SNS","Vendor","Linked Item","Notes"];
-    const rows=purchases.map(p=>[p.school_year,p.date_purchased||"",`"${(p.item_description||"").replace(/"/g,'""')}"`,p.arts_discipline,`"${(p.grade_levels||[]).join(", ")}"`,p.students_served,p.cost,p.funding_source,p.supplement_not_supplant?"Yes":"No",p.vendor||"",p.items?.name||"",`"${(p.notes||"").replace(/"/g,'""')}"`]);
-    const csv=[h,...rows].map(r=>r.join(",")).join("\n");
-    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=`prop28_${year}.csv`;a.click();
-  };
-
-  const printReport = ()=>{
-    const w=window.open("","_blank");if(!w)return;
-    const discRows=Object.entries(byDiscipline).map(([d,cost])=>{const dp=purchases.filter(p=>p.arts_discipline===d);const grades=[...new Set(dp.flatMap(p=>p.grade_levels||[]))].join(", ");const stu=Math.max(...dp.map(p=>p.students_served||0));return`<tr><td>${d}</td><td>${dp.length}</td><td>${grades||"—"}</td><td>${stu}</td><td>$${cost.toFixed(2)}</td></tr>`;}).join("");
-    const itemRows=purchases.map(p=>`<tr><td>${p.date_purchased||"—"}</td><td>${p.item_description}</td><td>${p.arts_discipline}</td><td>${(p.grade_levels||[]).join(", ")}</td><td>${p.students_served}</td><td>$${parseFloat(p.cost||0).toFixed(2)}</td><td>${p.funding_source}</td></tr>`).join("");
-    w.document.write(`<html><head><title>Prop 28 — ${year}</title><style>body{font-family:Georgia,serif;max-width:900px;margin:40px auto;padding:0 20px}h1{color:#1a5c1a;border-bottom:3px solid #1a5c1a;padding-bottom:10px}table{width:100%;border-collapse:collapse;margin:12px 0}th{background:#1a5c1a;color:#fff;padding:8px 10px;text-align:left;font-size:12px}td{padding:7px 10px;border-bottom:1px solid #ddd;font-size:12px}.total{font-weight:bold;background:#e8f5e9!important}</style></head><body><h1>🎭 Prop 28 Annual Report — ${org?.name||""} — ${year}</h1><h2>By Discipline</h2><table><thead><tr><th>Discipline</th><th>#</th><th>Grades</th><th>Students</th><th>Cost</th></tr></thead><tbody>${discRows}<tr class="total"><td>TOTAL</td><td>${purchases.length}</td><td>—</td><td>${totalStudents}</td><td>${fmt$p(totalSpent)}</td></tr></tbody></table><h2>Itemized Purchases</h2><table><thead><tr><th>Date</th><th>Item</th><th>Discipline</th><th>Grades</th><th>Students</th><th>Cost</th><th>Funding</th></tr></thead><tbody>${itemRows}</tbody></table>${report?.narrative?`<h2>Narrative</h2><p style="line-height:1.7">${report.narrative}</p>`:""}${report?.sas_attested?`<h2>Attestation</h2><p>✅ Attested by ${report.sas_attested_by} on ${report.sas_attested_at?new Date(report.sas_attested_at).toLocaleDateString():""}</p>`:""}${report?.board_approved?`<p>✅ Board approved${report.board_approval_date?" — "+new Date(report.board_approval_date).toLocaleDateString():""}</p>`:""}<p style="font-size:11px;color:#888;margin-top:30px">Generated by Theatre4u · theatre4u.org</p><script>window.print();<\/script></body></html>`);
-    w.document.close();
-  };
-
-  return(<div style={{position:"relative"}}>
-    <img src={usp(BG.reports,1400,900)} alt="" className="page-bg-img"/>
-    <div style={{padding:"32px 36px 0"}}>
-      <div className="hero-wrap" style={{height:230}}>
-        <img src={usp(BG.reports,1100,290)} alt="Prop 28" loading="eager"/>
-        <div className="hero-fade"/><div className="hero-body">
-          <div className="hero-eyebrow">🏫 California Arts Funding</div>
-          <h1 className="hero-title" style={{fontSize:44}}>Prop 28 Compliance</h1>
-          <p className="hero-sub">Log purchases, track spending by discipline, generate your CDE annual report — all in one place.</p>
-        </div><div className="hero-bar"/>
-      </div>
-    </div>
-    <div style={{padding:"24px 36px 56px",position:"relative",zIndex:1}}>
-      <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:20,alignItems:"center"}}>
-        <div style={{display:"flex",alignItems:"center",gap:8}}><label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)"}}>School Year</label><select value={year} onChange={e=>setYear(e.target.value)} style={{background:"var(--parch)",border:"1.5px solid var(--border)",borderRadius:7,padding:"6px 10px",fontSize:14,fontWeight:700,color:"var(--text)",fontFamily:"'Raleway',sans-serif",outline:"none"}}>{SCHOOL_YEARS.map(y=><option key={y}>{y}</option>)}</select></div>
-        <div style={{marginLeft:"auto",display:"flex",gap:8}}>{msg&&<span style={{color:"var(--green)",fontWeight:700,fontSize:13,alignSelf:"center"}}>{msg}</span>}<button className="btn btn-o btn-sm" onClick={exportCSV}>📊 Export CSV</button><button className="btn btn-o btn-sm" onClick={printReport}>🖨️ Print</button><button className="btn btn-g" onClick={()=>{setActive(null);setModal("add");}}>+ Log Purchase</button></div>
-      </div>
-      {nonCompliant>0&&<div style={{background:"rgba(139,26,42,.08)",border:"1px solid rgba(139,26,42,.25)",borderRadius:10,padding:"10px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:10}}><span>⚠️</span><span style={{fontSize:13,color:"var(--red)",fontWeight:600}}>{nonCompliant} purchase{nonCompliant!==1?"s":""} flagged as possibly supplanting existing arts funding.</span></div>}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:20}}>
-        {[{ico:"💰",val:fmt$p(totalSpent),lbl:"Total Spent",col:"var(--green)"},{ico:"🛍️",val:purchases.length,lbl:"Purchases"},{ico:"🎓",val:totalStudents.toLocaleString(),lbl:"Students"},{ico:"🎭",val:Object.keys(byDiscipline).length,lbl:"Disciplines"}].map(s=><div key={s.lbl} className="card card-p" style={{textAlign:"center",padding:"14px 10px"}}><div style={{fontSize:22,marginBottom:4}}>{s.ico}</div><div style={{fontFamily:"'Abril Fatface',display",fontSize:22,color:s.col||"var(--ink)"}}>{s.val}</div><div style={{fontSize:10,color:"var(--muted)",marginTop:2,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}}>{s.lbl}</div></div>)}
-      </div>
-      <div className="tabs" style={{marginBottom:18}}>{[["purchases","📋 Purchase Log"],["dashboard","📊 Dashboard"],["narrative","📝 Narrative & Checklist"]].map(([t,l])=><button key={t} className={`tab ${tab===t?"on":""}`} onClick={()=>setTab(t)}>{l}</button>)}</div>
-      {tab==="purchases"&&<>{loading?<div style={{textAlign:"center",padding:40,color:"var(--muted)"}}>Loading…</div>:purchases.length===0?<div className="empty"><div className="empty-ico">📋</div><h3>No Prop 28 Purchases Logged</h3><p>Start logging arts purchases made with Prop 28 funds.</p><button className="btn btn-g" onClick={()=>{setActive(null);setModal("add");}}>+ Log First Purchase</button></div>:<div className="card" style={{overflow:"hidden"}}><div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr style={{background:"var(--parch)"}}>{["Date","Item","Discipline","Grades","Students","Cost","Funding","SNS",""].map(h=><th key={h} style={{padding:"10px 12px",textAlign:"left",fontSize:10,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",fontWeight:700,borderBottom:"1px solid var(--border)",whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead><tbody>{purchases.map((p,i)=><tr key={p.id} style={{borderBottom:"1px solid var(--linen)",background:i%2===0?"transparent":"rgba(243,230,204,.3)"}}><td style={{padding:"9px 12px",fontSize:12,color:"var(--muted)",whiteSpace:"nowrap"}}>{p.date_purchased||"—"}</td><td style={{padding:"9px 12px",fontWeight:600,fontSize:13,maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.item_description}{p.items?.name&&<div style={{fontSize:10,color:"var(--amber)",marginTop:1}}>🔗 {p.items.name}</div>}</td><td style={{padding:"9px 12px"}}><span style={{padding:"2px 8px",borderRadius:8,fontSize:11,fontWeight:700,background:(discColors[p.arts_discipline]||"#546e7a")+"22",color:discColors[p.arts_discipline]||"#546e7a"}}>{p.arts_discipline}</span></td><td style={{padding:"9px 12px",fontSize:11,color:"var(--muted)"}}>{(p.grade_levels||[]).join(", ")||"—"}</td><td style={{padding:"9px 12px",fontWeight:700}}>{(p.students_served||0).toLocaleString()}</td><td style={{padding:"9px 12px",fontFamily:"'Abril Fatface',display",fontSize:16,color:"var(--green)"}}>{fmt$p(p.cost)}</td><td style={{padding:"9px 12px",fontSize:11,color:p.funding_source==="100% Prop 28"?"var(--muted)":"var(--amber)"}}>{p.funding_source}</td><td style={{padding:"9px 12px",textAlign:"center"}}>{p.supplement_not_supplant?<span style={{color:"var(--green)",fontSize:16}} title="Compliant">✓</span>:<span style={{color:"var(--red)",fontSize:16}} title="Review needed">⚠️</span>}</td><td style={{padding:"9px 12px"}}><div style={{display:"flex",gap:5}}><button className="ico-btn" onClick={()=>{setActive(p);setModal("edit");}}>{Ic.edit}</button><button className="ico-btn" style={{color:"var(--red)"}} onClick={()=>deletePurchase(p.id)}>{Ic.trash}</button></div></td></tr>)}<tr style={{background:"rgba(38,94,42,.06)"}}><td colSpan={5} style={{padding:"10px 12px",fontFamily:"'Abril Fatface',display",fontSize:16}}>TOTAL</td><td style={{padding:"10px 12px",fontFamily:"'Abril Fatface',display",fontSize:20,color:"var(--green)"}}>{fmt$p(totalSpent)}</td><td colSpan={3}/></tr></tbody></table></div></div>}</>}
-      {tab==="dashboard"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-        <div className="card card-p"><h3 style={{fontFamily:"'Abril Fatface',display",fontSize:18,marginBottom:16}}>By Discipline</h3>{Object.entries(byDiscipline).length===0?<p style={{color:"var(--muted)",fontSize:13}}>No purchases yet.</p>:Object.entries(byDiscipline).sort((a,b)=>b[1]-a[1]).map(([d,cost])=>{const pct=totalSpent>0?Math.round((cost/totalSpent)*100):0;const col=discColors[d]||"#546e7a";return<div key={d} style={{marginBottom:12}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:13,fontWeight:700,color:col}}>{d}</span><span style={{fontSize:13,fontWeight:800}}>{fmt$p(cost)} <span style={{color:"var(--muted)",fontWeight:400,fontSize:12}}>({pct}%)</span></span></div><div style={{height:8,background:"var(--linen)",borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:pct+"%",background:col,borderRadius:4}}/></div></div>;})}</div>
-        <div className="card card-p"><h3 style={{fontFamily:"'Abril Fatface',display",fontSize:18,marginBottom:16}}>Grade Coverage</h3><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{GRADE_OPTIONS.map(g=>{const cov=purchases.some(p=>(p.grade_levels||[]).includes(g));return<div key={g} style={{width:44,height:44,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",background:cov?"rgba(38,94,42,.12)":"var(--parch)",border:"1.5px solid",borderColor:cov?"var(--green)":"var(--border)"}}><span style={{fontSize:12,fontWeight:800,color:cov?"var(--green)":"var(--faint)"}}>{g}</span></div>})}</div><div style={{marginTop:10,fontSize:12,color:"var(--muted)"}}>{[...new Set(purchases.flatMap(p=>p.grade_levels||[]))].length} of 14 grades covered</div></div>
-      </div>}
-      {tab==="narrative"&&<div style={{display:"flex",flexDirection:"column",gap:16}}>
-        <div className="card card-p"><h3 style={{fontFamily:"'Abril Fatface',display",fontSize:20,marginBottom:6}}>📝 Narrative</h3><p style={{color:"var(--muted)",fontSize:13,marginBottom:12,lineHeight:1.6}}>Required by CDE. Explain how funds were used to develop or expand arts education this year.</p><textarea className="ft" value={report?.narrative||""} onChange={e=>setReport(p=>({...p,narrative:e.target.value}))} style={{minHeight:160}} placeholder="Type your narrative here…"/><button className="btn btn-g btn-sm" style={{marginTop:10}} onClick={()=>saveReport({narrative:report?.narrative||""})} disabled={saving}>{saving?"Saving…":"Save Narrative"}</button></div>
-        <div className="card card-p" style={{borderColor:report?.sas_attested?"rgba(38,94,42,.3)":"var(--border)"}}><h3 style={{fontFamily:"'Abril Fatface',display",fontSize:20,marginBottom:6}}>✅ Supplement vs. Supplant</h3><p style={{color:"var(--muted)",fontSize:13,marginBottom:14,lineHeight:1.6}}>Formally attest that Prop 28 funds supplemented — not supplanted — existing arts budgets.</p>{report?.sas_attested?<div style={{background:"rgba(38,94,42,.1)",border:"1px solid rgba(38,94,42,.25)",borderRadius:8,padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}><span style={{fontSize:28}}>✅</span><div><div style={{fontWeight:700,color:"var(--green)",marginBottom:2}}>Attested by {report.sas_attested_by}</div><div style={{fontSize:12,color:"var(--muted)"}}>{report.sas_attested_at?new Date(report.sas_attested_at).toLocaleString():"—"}</div></div><button className="btn btn-o btn-sm" style={{marginLeft:"auto",color:"var(--red)"}} onClick={()=>saveReport({sas_attested:false,sas_attested_by:null,sas_attested_at:null})}>Revoke</button></div>:<button className="btn btn-g" onClick={attestSAS}>Sign & Attest — {org?.name||"Administrator"}</button>}</div>
-        <div className="card card-p"><h3 style={{fontFamily:"'Abril Fatface',display",fontSize:20,marginBottom:14}}>☑️ Checklist</h3><div style={{display:"flex",flexDirection:"column",gap:12}}>{[{key:"report_generated",label:"Annual report generated",note:"Use the Print button above"},{key:"board_approved",label:"Approved by school board",hasDate:true,dateKey:"board_approval_date"},{key:"posted_to_website",label:"Posted to LEA website"},{key:"submitted_to_cde",label:"Submitted to CDE portal",link:"https://www.cde.ca.gov/ci/ar/as/prop28.asp"}].map(item=><div key={item.key} style={{display:"flex",alignItems:"flex-start",gap:12,padding:"12px 14px",background:report?.[item.key]?"rgba(38,94,42,.07)":"var(--parch)",borderRadius:10,border:"1.5px solid",borderColor:report?.[item.key]?"rgba(38,94,42,.3)":"var(--border)"}}><input type="checkbox" checked={!!report?.[item.key]} onChange={e=>saveReport({[item.key]:e.target.checked})} style={{width:20,height:20,marginTop:1,cursor:"pointer",accentColor:"var(--green)"}}/><div style={{flex:1}}><div style={{fontWeight:700,fontSize:14,color:report?.[item.key]?"var(--green)":"var(--text)"}}>{item.label}</div>{item.note&&<div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{item.note}</div>}{item.link&&<a href={item.link} target="_blank" rel="noreferrer" style={{fontSize:11,color:"var(--amber)",marginTop:2,display:"block"}}>→ CDE Portal</a>}{item.hasDate&&report?.[item.key]&&<div style={{marginTop:6,display:"flex",alignItems:"center",gap:8}}><label style={{fontSize:11,fontWeight:700,color:"var(--muted)"}}>Date:</label><input type="date" value={report?.[item.dateKey]||""} onChange={e=>saveReport({[item.dateKey]:e.target.value})} style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:5,padding:"3px 7px",fontSize:12,fontFamily:"inherit"}}/></div>}</div></div>)}</div>{report&&(()=>{const done=[report.report_generated,report.board_approved,report.posted_to_website,report.submitted_to_cde,report.sas_attested].filter(Boolean).length;return<div style={{marginTop:16,padding:"12px 16px",background:done===5?"rgba(38,94,42,.12)":"rgba(212,168,67,.08)",border:"1px solid",borderColor:done===5?"rgba(38,94,42,.3)":"rgba(212,168,67,.2)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"space-between"}}><span style={{fontWeight:700,fontSize:14,color:done===5?"var(--green)":"var(--amber)"}}>{done===5?"🎉 Compliance complete!":"📋 "+done+"/5 complete"}</span>{report.status!=="finalized"&&done===5&&<button className="btn btn-g btn-sm" onClick={()=>saveReport({status:"finalized"})}>Finalize</button>}{report.status==="finalized"&&<span style={{fontSize:12,background:"rgba(38,94,42,.15)",color:"var(--green)",padding:"2px 10px",borderRadius:8,fontWeight:700}}>FINALIZED</span>}</div>})()}</div>}
-      </div>}
-    </div>
-    {(modal==="add"||modal==="edit")&&<Modal title={modal==="add"?"Log Prop 28 Purchase":"Edit Purchase"} onClose={()=>{setModal(null);setActive(null);}}><Prop28PurchaseForm initial={modal==="edit"?active:null} items={items} onSave={savePurchase} onCancel={()=>{setModal(null);setActive(null);}}/></Modal>}
-  </div>);
-}
-
-
 // ══════════════════════════════════════════════════════════════════════════════
 // COMMUNITY BOARD
 // ══════════════════════════════════════════════════════════════════════════════
@@ -6916,7 +6773,7 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
 // TEAM SETTINGS — Org member management with backstage roles
 // ══════════════════════════════════════════════════════════════════════════════
 const ROLES = [
-  { id: "stage_manager", label: "Stage Manager", icon: "📋", desc: "Add, edit, delete items · Prop 28 · Marketplace · Community" },
+  { id: "stage_manager", label: "Stage Manager", icon: "📋", desc: "Add, edit, delete items · Funding Tracker · Marketplace · Community" },
   { id: "crew",          label: "Crew",          icon: "🔧", desc: "Add and edit items · Upload photos" },
   { id: "house",         label: "House",         icon: "🎟", desc: "View and look up items only" },
 ];
@@ -7300,7 +7157,6 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
             {[
               {key:"community_enabled",  icon:"🎪", label:"Community Board",  desc:"Appear in the community directory and post to the shared board. Other programs can see your posts."},
               {key:"marketplace_enabled",icon:"🏪", label:"Marketplace",       desc:"Allow your listed items to appear publicly in the regional marketplace browse view."},
-              {key:"funding_enabled",    icon:"💰", label:"Funding Tracker",   desc:"Track funding sources and expenditures. This is private to your account — never shared externally."},
             ].map(({key,icon,label,desc})=>(
               <div key={key} style={{display:"flex",alignItems:"flex-start",gap:14,padding:"12px 0",borderBottom:"1px solid var(--border)"}}>
                 <div style={{fontSize:22,marginTop:2}}>{icon}</div>
@@ -7327,7 +7183,7 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
             ))}
           </div>
           <p style={{fontSize:11,color:"var(--muted)",marginTop:14,fontStyle:"italic"}}>
-            Changes take effect immediately. Turning off Community or Marketplace removes your content from shared views but does not delete it.
+            Changes take effect immediately. Turning off Community or Marketplace removes your content from shared views but does not delete it. The Funding Tracker is always private to your account.
           </p>
         </div>
         )}
@@ -7400,8 +7256,8 @@ const TERMS_CONTENT = [
 const PRIVACY_CONTENT = [
   ["1. Introduction", "Theatre4u (theatre4u.org) is operated by a sole proprietor based in California. We are committed to protecting the privacy and security of all users, with special attention to the requirements applicable to educational institutions and school districts. This Privacy Policy complies with the California Consumer Privacy Act (CCPA), CalOPPA, the Family Educational Rights and Privacy Act (FERPA), and the Children's Online Privacy Protection Act (COPPA)."],
   ["2. Who Uses Theatre4u", "Theatre4u is designed for use by theatre educators, school drama departments, community theatre organizations, and district administrators. Users must be 18 years or older to create an account. Theatre4u is not intended for direct use by students under 18. School administrators and teachers are responsible for ensuring appropriate use within their programs."],
-  ["3. Information We Collect", "Account Information: organization name, email address, password (encrypted via Supabase Auth — we never see plaintext passwords), and optional profile details including phone, city, and bio. Inventory Data: item names, descriptions, photos, locations, and condition notes you add to your account. Prop 28 Compliance Data: purchase records, student counts, arts discipline data, and grade levels — collected solely to generate your CDE compliance reports. Communication Data: messages sent between organizations on the platform. Usage Data: pages visited and features used, to improve the platform. We do NOT collect student personally identifiable information (PII). All data belongs to your organization."],
-  ["4. How We Use Your Information", "To provide and operate the Theatre4u platform. To generate Prop 28 compliance reports at your direction. To facilitate marketplace listings and rental/loan requests between theatre programs. To send transactional emails (request notifications, account confirmation) via Resend from hello@theatre4u.org. To improve the platform based on anonymized usage patterns. We do NOT sell your data. We do NOT use your data for advertising. We do NOT share your data with third parties except as described in section 5."],
+  ["3. Information We Collect", "Account Information: organization name, email address, password (encrypted via Supabase Auth — we never see plaintext passwords), and optional profile details including phone, city, and bio. Inventory Data: item names, descriptions, photos, locations, and condition notes you add to your account. Communication Data: messages sent between organizations on the platform. Usage Data: pages visited and features used, to improve the platform. We do NOT collect student personally identifiable information (PII). All data belongs to your organization."],
+  ["4. How We Use Your Information", "To provide and operate the Theatre4u platform. To facilitate marketplace listings and rental/loan requests between theatre programs. To send transactional emails (request notifications, account confirmation) via Resend from hello@theatre4u.org. To improve the platform based on anonymized usage patterns. We do NOT sell your data. We do NOT use your data for advertising. We do NOT share your data with third parties except as described in section 5."],
   ["5. Data Sharing & Third Parties", "Supabase (supabase.com): Our database and authentication provider, hosted in AWS us-east-1. All data is encrypted at rest and in transit. Supabase is SOC 2 Type II certified. Resend (resend.com): Transactional email delivery only. Vercel (vercel.com): Web hosting and CDN. No user data is stored by Vercel. Stripe (stripe.com): Payment processing for subscriptions only. Stripe does not receive inventory or student data. Other Theatre Programs: When you list items in the marketplace, your organization name, location, and listed items are visible to other logged-in Theatre4u members. No other sharing occurs."],
   ["6. FERPA Compliance", "Theatre4u acknowledges its role as a service provider to educational institutions subject to FERPA. Theatre4u does not collect, store, or process student education records as defined by FERPA. All inventory, compliance, and operational data belongs to the subscribing organization (the school or district), not to individual students. School administrators retain full control over their organizational data and may request complete data deletion at any time. Theatre4u will not disclose organizational data to third parties without the written consent of the institution's authorized representative, except as required by law."],
   ["7. Student Privacy (COPPA)", "Theatre4u accounts are for adults only (18+). If you believe a minor has created an account without authorization, contact hello@theatre4u.org immediately and we will delete the account and all associated data within 48 hours. Theatre4u does not knowingly collect personal information from children under 13."],
@@ -7424,15 +7280,15 @@ function LandingPage({onSignIn, onSignUp}){
     {icon:"📦",title:"Inventory That Actually Works",desc:"Catalog every costume, prop, light, and sound item your program owns. Add photos from your phone, tag by production, print QR labels for storage bins. No more mystery boxes."},
     {icon:"🏪",title:"Borrow What You Need",desc:"Browse thousands of items listed by other programs nationwide. Rent a fog machine for the weekend. Borrow a set of Victorian costumes. List your own items and earn revenue between shows."},
     {icon:"🪙",title:"Theatre Credits",desc:"Lend your items for free and earn credits. Spend those credits to reduce what you pay when you borrow. The more you share, the less you spend — a community that rewards generosity."},
-    {icon:"📋",title:"Prop 28 Compliance (CA)",desc:"California schools: Theatre4u automatically tracks your arts purchases, generates your CDE-required annual report, handles the Supplement vs. Supplant attestation, and exports everything for your board meeting."},
-    {icon:"📱",title:"Mobile App for Backstage",desc:"Add items by taking a photo. Log Prop 28 purchases from anywhere. Use your phone's camera to scan QR labels — the iPhone Camera app reads Theatre4u labels instantly. Available on iPhone and Android — no app store required."},
+    {icon:"💰",title:"Funding Tracker",desc:"Track grants, district allocations, booster funds, earned income, and donations. Log expenditures against each source, generate reports, and export to CSV — for your records."},
+    {icon:"📱",title:"Mobile App for Backstage",desc:"Add items by taking a photo. Scan QR labels with your phone's camera — the iPhone Camera app reads Theatre4u labels instantly. Available on iPhone and Android — no app store required."},
     {icon:"🎪",title:"Community Board",desc:"Post audition notices, share upcoming show dates, upload production photos, and find items you need. A regional bulletin board for the performing arts community."},
   ];
 
   const plans=[
     {name:"Free",price:"$0",period:"forever",color:"rgba(255,255,255,.15)",textColor:"rgba(255,255,255,.7)",features:["Up to 50 inventory items","QR labels","Browse marketplace","Productions tracking","Community Board"],cta:"Get Started",primary:false},
-    {name:"Pro",price:"$12",period:"/month",annual:"$120/year",color:"linear-gradient(135deg,var(--gold),var(--goldd))",textColor:"#1a0f00",features:["Unlimited inventory","Full marketplace access","Theatre Credits","Reports & CSV export","Prop 28 compliance","Mobile app","Messages & requests"],cta:"Start Pro",primary:true},
-    {name:"District",price:"$49",period:"/month",annual:"$500/year",color:"linear-gradient(135deg,#1565c0,#0d47a1)",textColor:"#fff",features:["Everything in Pro","Up to 6 school sites","District dashboard","Shared marketplace","District Prop 28 rollup","Priority support"],cta:"Start District",primary:false},
+    {name:"Pro",price:"$12",period:"/month",annual:"$120/year",color:"linear-gradient(135deg,var(--gold),var(--goldd))",textColor:"#1a0f00",features:["Unlimited inventory","Full marketplace access","Theatre Credits","Reports & CSV export","Funding Tracker","Mobile app","Messages & requests"],cta:"Start Pro",primary:true},
+    {name:"District",price:"$49",period:"/month",annual:"$500/year",color:"linear-gradient(135deg,#1565c0,#0d47a1)",textColor:"#fff",features:["Everything in Pro","Up to 6 school sites","District dashboard","Shared marketplace","District funding rollup","Priority support"],cta:"Start District",primary:false},
   ];
 
   const steps=[
@@ -7470,7 +7326,7 @@ function LandingPage({onSignIn, onSignUp}){
           <span style={{color:"var(--gold)"}}>in one place</span>
         </h1>
         <p style={{fontSize:"clamp(16px,2.5vw,20px)",color:"rgba(255,255,255,.7)",lineHeight:1.7,marginBottom:36,maxWidth:600,margin:"0 auto 36px"}}>
-          Inventory management, a peer marketplace, Theatre Credits, Prop 28 compliance tracking, and a community board — built for theatre programs of every size.
+          Inventory management, a peer marketplace, Theatre Credits, a funding tracker, and a community board — built for theatre programs of every size.
         </p>
         <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
           <button onClick={onSignUp} style={{background:"linear-gradient(135deg,var(--gold),var(--goldd))",border:"none",color:"#1a0f00",padding:"14px 32px",borderRadius:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:16,fontWeight:800,boxShadow:"0 4px 24px rgba(212,168,67,.4)"}}>
@@ -7488,7 +7344,7 @@ function LandingPage({onSignIn, onSignUp}){
 
     {/* ── Social proof strip ── */}
     <div style={{background:"rgba(212,168,67,.08)",borderTop:"1px solid rgba(212,168,67,.15)",borderBottom:"1px solid rgba(212,168,67,.15)",padding:"16px 32px",display:"flex",flexWrap:"wrap",gap:24,justifyContent:"center",alignItems:"center"}}>
-      {[["📦","Inventory management"],["🏪","Peer marketplace"],["🪙","Theatre Credits"],["📋","Prop 28 compliance"],["📱","Mobile app"],["🎪","Community board"]].map(([ico,lbl])=>(
+      {[["📦","Inventory management"],["🏪","Peer marketplace"],["🪙","Theatre Credits"],["💰","Funding Tracker"],["📱","Mobile app"],["🎪","Community board"]].map(([ico,lbl])=>(
         <div key={lbl} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,fontWeight:600,color:"rgba(255,255,255,.7)"}}>
           <span style={{fontSize:16}}>{ico}</span>{lbl}
         </div>
@@ -7612,7 +7468,7 @@ function LandingPage({onSignIn, onSignUp}){
         {[
           {ico:"🎭",val:"15+",lbl:"Years in the classroom"},
           {ico:"🤝",lbl:"Built teacher-to-teacher"},
-          {ico:"📋",lbl:"Prop 28 compliance built-in"},
+          {ico:"💰",lbl:"Funding Tracker built-in"},
           {ico:"🪙",lbl:"Theatre Credits economy"},
         ].map(s=>(
           <div key={s.lbl} style={{textAlign:"center",padding:"16px 20px",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,minWidth:130}}>
@@ -8617,7 +8473,7 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
                 {/* Q2 */}
                 <div style={{marginBottom:14}}>
                   <label style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:8}}>
-                    2. Prop 28 reporting headache — 1 (fine) to 10 (nightmare)?
+                    2. How useful is the Funding Tracker — 1 (not useful) to 10 (essential)?
                   </label>
                   <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                     {[1,2,3,4,5,6,7,8,9,10].map(n=>(
@@ -8658,7 +8514,7 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
                     4. What one thing could save you an hour a week?
                   </label>
                   <textarea value={q4} onChange={e=>setQ4(e.target.value)}
-                    placeholder="e.g. Auto-fill my Prop 28 report, scan items in/out on my phone…"
+                    placeholder="e.g. Better funding reports, scan items in/out on my phone…"
                     style={{width:"100%",minHeight:64,background:"rgba(0,0,0,.25)",border:"1.5px solid var(--border)",
                       borderRadius:8,padding:"8px 10px",color:"var(--text,#ede8df)",fontFamily:"inherit",fontSize:12,
                       resize:"vertical",outline:"none",lineHeight:1.5}}
@@ -8955,15 +8811,15 @@ function AppRoot(){
       ...(!isCrew && org?.community_enabled   ? [{ id:"community",   label:"Community",   ico:"🎪", community:true }] : []),
       ...(!isCrew  ? [{ id:"productions", label:"Productions", ico:"🎭"       }] : []),
       ...(!isMember? [{ id:"reports",     label:"Reports",     ico:Ic.chart   }] : []),
-      ...(!isMember? [{ id:"funding",     label:"Funding",     ico:"💰"       }] : []),
+      ...(!isMember? [{ id:"funding",     label:"Funding Tracker", ico:"💰"  }] : []),
       { id:"profile",     label:"My Profile",  ico:"👤"       },
       ...(!isMember && (plan !== "free" || isAdmin) ? [{ id:"credits", label:"Credits",  ico:"🪙", credits:true }] : []),
-      ...(!isCrew   && (plan !== "free" || isAdmin) ? [{ id:"prop28",  label:"Prop 28",  ico:"📋", prop28:true  }] : []),
+      
       ...(!isMember && plan === "district" ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
       ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
     ];
   })();
-  const TITLES = { messages:"Messages", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Marketplace", productions:"Productions", reports:"Reports", settings:"Profile", admin:"Admin Dashboard", district:"District", credits:"Theatre Credits", prop28:"Prop 28 Compliance", community:"Community Board" };
+  const TITLES = { messages:"Messages", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Marketplace", productions:"Productions", reports:"Reports", settings:"Profile", admin:"Admin Dashboard", district:"District", credits:"Theatre Credits", community:"Community Board" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicItemId) return <PublicItemPage itemId={publicItemId} />;
@@ -9061,7 +8917,7 @@ function AppRoot(){
                     onClick={()=>nav(n.id)}
                     style={n.admin ? {marginTop:12, borderTop:"1px solid rgba(212,168,67,.15)", paddingTop:12, color: page===n.id ? undefined : "rgba(212,168,67,.65)"}
                          : n.district ? {marginTop:4, color: page===n.id ? undefined : "rgba(66,165,245,.75)"}
-                         : n.prop28   ? {color: page===n.id ? undefined : "rgba(82,199,132,.8)"}
+                         
                          : n.credits  ? {color: page===n.id ? undefined : "rgba(212,168,67,.75)"}
                          : n.community ? {color: page===n.id ? undefined : "rgba(82,153,224,.85)"}
                          : {}}>
@@ -9074,7 +8930,7 @@ function AppRoot(){
                     {n.id==="inventory"  && items.length>0 && <span className="sb-badge">{activeSchool ? schoolItems.length : items.length}</span>}
                     {n.id==="marketplace"&& listed>0       && <span className="sb-badge">{listed}</span>}
                     {n.id==="productions"&& <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--gold)"}}>🎭</span>}
-                    {n.id==="prop28"     && <span style={{marginLeft:"auto",fontSize:9,padding:"1px 5px",background:"rgba(82,199,132,.2)",color:"#52c784",borderRadius:4,fontWeight:700,letterSpacing:.5}}>CA</span>}
+                    
                     {n.id==="credits"    && creditBalance>0 && <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--gold)"}}>{creditBalance}</span>}
                   </div>
                 ))}
@@ -9168,8 +9024,8 @@ function AppRoot(){
                   {page==="community"   && <CommunityGate userId={user?.id} org={org} setOrg={setOrg} plan={plan}/>}
                   {page==="credits"     && (plan!=="free"||isAdmin) && <CreditsPage userId={user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
                   {page==="credits"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:10}}>Theatre Credits is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true}/></div>}
-                  {page==="prop28"      && (plan!=="free"||isAdmin) && <Prop28Page org={org} userId={user?.id} items={items} plan={plan}/>}
-                  {page==="prop28"      && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>📋</div><h2 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:10}}>Prop 28 Tracking is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Track California Prop 28 arts funding compliance and generate CDE-ready reports. Upgrade to unlock.</p><UpgradePlans compact={true}/></div>}
+
+
                   {page==="admin"       && isAdmin && <AdminDashboard currentUser={user}/>}
                 </div>
             }
