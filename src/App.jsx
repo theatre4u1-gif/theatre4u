@@ -9006,7 +9006,7 @@ function AppRoot(){
                       ? <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading {activeSchool.name}…</div>
                       : <Inventory items={schoolItems}
                           onAdd={async(item)=>{ const row={...item,org_id:activeSchool.id}; const{data}=await SB.from("items").insert(row).select().single(); if(data) setSchoolItems(p=>[data,...p]); }}
-                          onEdit={async(item)=>{ const{data}=await SB.from("items").update(item).eq("id",item.id).select().single(); if(data) setSchoolItems(p=>p.map(x=>x.id===item.id?data:x)); }}
+                          onEdit={async(item)=>{ const pl={...item}; delete pl.id; delete pl.org_id; delete pl.added; const{data}=await SB.from("items").update(pl).eq("id",item.id).select().single(); if(data) setSchoolItems(p=>p.map(x=>x.id===item.id?data:x)); }}
                           onDelete={async(id)=>{ await SB.from("items").delete().eq("id",id); setSchoolItems(p=>p.filter(x=>x.id!==id)); }}
                           userId={activeSchool.id} plan={plan}
                           schoolName={activeSchool.name}
