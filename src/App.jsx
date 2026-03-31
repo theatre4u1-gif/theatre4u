@@ -6382,7 +6382,7 @@ function CommunityPage({userId, org, plan}) {
                   </div>
                 </div>
               ))}
-              <div style={{marginTop:10,fontSize:11,color:"var(--muted)",lineHeight:1.5}}>Open to all Theatre4u members — free and Pro alike.</div>
+              <div style={{marginTop:10,fontSize:11,color:"var(--muted)",lineHeight:1.5}}>Open to all Theatre4u™ members — free and Pro alike.</div>
               <div style={{marginTop:8,fontSize:11,color:"var(--amber)",lineHeight:1.5,padding:"6px 8px",background:"rgba(212,168,67,.08)",borderRadius:6}}>
                 📍 Posts are sorted by proximity. Set your city in Profile for best results.
               </div>
@@ -6510,7 +6510,7 @@ function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool, allSch
           <div style={{fontSize:44,marginBottom:16,textAlign:"center"}}>🏪</div>
           <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:26,marginBottom:12,textAlign:"center"}}>Join the Marketplace</h2>
           <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.7,marginBottom:24,textAlign:"center",maxWidth:520,margin:"0 auto 24px"}}>
-            The Marketplace lets theatre programs rent, sell, and loan items to each other. Joining makes your listed items visible to other programs — and lets you browse and contact others.
+            The Marketplace lets theatre programs rent, sell, and loan items to each other. You choose exactly which items to share — your full inventory stays completely private. Browse what other programs near you have available.
           </p>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:24}}>
             {[
@@ -7281,7 +7281,7 @@ function LandingPage({onSignIn, onSignUp}){
     {icon:"🎭",title:"Productions Tracker",desc:"Create a folder for each show. Assign items from your inventory, track what's checked out, and see at a glance what every production needs from wishlist to opening night."},
     {icon:"📱",title:"Mobile-Ready Backstage",desc:"Add items by taking a photo. Scan QR labels with your phone's camera — the iPhone Camera app reads Theatre4u labels instantly. Available on iPhone and Android — no app store required."},
     {icon:"💰",title:"Funding Tracker",desc:"Track grants, district allocations, booster funds, earned income, and donations. Log expenditures against each source, generate reports, and export to CSV — for your records."},
-    {icon:"🏪",title:"Optional Marketplace",desc:"When you're ready, opt in to the regional marketplace. List items for rent, sale, or loan. Browse what other programs near you have available. Entirely optional — your inventory stays private until you choose to share."},
+    {icon:"🏪",title:"Optional Resource Sharing",desc:"When you're ready, opt in to share selected items with other programs. You choose exactly which items to post — your full inventory stays completely private. Browse what others near you have available, rent, purchase, or arrange a loan."},
     {icon:"🎪",title:"Community Board",desc:"Post audition notices, share upcoming show dates, upload production photos, and find items you need. A regional bulletin board for the performing arts community."},
   ];
 
@@ -7304,7 +7304,7 @@ function LandingPage({onSignIn, onSignUp}){
     <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:1000,padding:"0 32px",height:64,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?"rgba(13,10,8,.97)":"transparent",borderBottom:scrolled?"1px solid rgba(255,255,255,.08)":"none",backdropFilter:scrolled?"blur(12px)":"none",transition:"all .3s"}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <div style={{width:34,height:34,background:"linear-gradient(135deg,var(--gold),var(--goldd))",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🎭</div>
-        <span style={{fontFamily:"'Abril Fatface',display",fontSize:20,color:"var(--gold)"}}>Theatre4u</span>
+        <span style={{fontFamily:"'Abril Fatface',display",fontSize:20,color:"var(--gold)"}}>Theatre4u™</span>
       </div>
       <div style={{display:"flex",gap:10,alignItems:"center"}}>
         <button onClick={onSignIn} style={{background:"none",border:"1px solid rgba(255,255,255,.25)",color:"rgba(255,255,255,.8)",padding:"7px 16px",borderRadius:7,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:600}}>Sign In</button>
@@ -7354,7 +7354,7 @@ function LandingPage({onSignIn, onSignUp}){
     {/* ── Features ── */}
     <div style={{padding:"80px 32px",maxWidth:1100,margin:"0 auto"}}>
       <div style={{textAlign:"center",marginBottom:52}}>
-        <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>What Theatre4u does</div>
+        <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>What Theatre4u™ does</div>
         <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(32px,5vw,48px)",color:"#fff",lineHeight:1.15}}>Built for busy drama directors</h2>
         <p style={{fontSize:16,color:"rgba(255,255,255,.55)",marginTop:12,maxWidth:520,margin:"12px auto 0"}}>Not a generic inventory app. Built specifically for theatre programs, schools, and the broader performing arts community — by someone who has lived it.</p>
       </div>
@@ -7431,7 +7431,7 @@ function LandingPage({onSignIn, onSignUp}){
       <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(28px,5vw,52px)",color:"#fff",marginBottom:16,lineHeight:1.15}}>
         Ready to get your<br/><span style={{color:"var(--gold)"}}>theatre organized?</span>
       </h2>
-      <p style={{fontSize:16,color:"rgba(255,255,255,.5)",marginBottom:32,maxWidth:440,margin:"0 auto 32px"}}>Join theatre programs already using Theatre4u to get their inventory under control, track their shows, and connect with their community.</p>
+      <p style={{fontSize:16,color:"rgba(255,255,255,.5)",marginBottom:32,maxWidth:440,margin:"0 auto 32px"}}>Join theatre programs already using Theatre4u™ to get their inventory under control, track their shows, and connect with their community.</p>
       <button onClick={onSignUp} style={{background:"linear-gradient(135deg,var(--gold),var(--goldd))",border:"none",color:"#1a0f00",padding:"16px 40px",borderRadius:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:18,fontWeight:800,boxShadow:"0 4px 32px rgba(212,168,67,.45)"}}>
         Start Free — No credit card required →
       </button>
@@ -7449,7 +7449,7 @@ function LandingPage({onSignIn, onSignUp}){
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,textAlign:"left",marginBottom:40}}>
         <div>
           <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)",marginBottom:16}}>
-            Theatre4u was built by someone who found theatre in high school and never left. Over thirty years — studying the craft, performing in New Hampshire, San Francisco, New York City, and finally Southern California — the stage became home.
+            Theatre4u™ was built by someone who found theatre in high school and never left. Over thirty years — studying the craft, performing in New Hampshire, San Francisco, New York City, and finally Southern California — the stage became home.
           </p>
           <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)"}}>
             That journey eventually led to the classroom, where the same passion that drove the performances met a new challenge: keeping a theatre program running on limited time, limited budget, and zero administrative support.
@@ -7457,7 +7457,7 @@ function LandingPage({onSignIn, onSignUp}){
         </div>
         <div>
           <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)",marginBottom:16}}>
-            Theatre4u was built to solve the problems that actually exist backstage — knowing what you have, where it is, and what it costs. Simple tools for busy directors who just want to focus on the work.
+            Theatre4u™ was built to solve the problems that actually exist backstage — knowing what you have, where it is, and what it costs. Simple tools for busy directors who just want to focus on the work.
           </p>
           <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)"}}>
             <strong style={{color:"#fff"}}>No theatre teacher should feel like they're working on a deserted island.</strong> This is a platform built by someone who has stood exactly where you're standing.
@@ -7467,7 +7467,7 @@ function LandingPage({onSignIn, onSignUp}){
       <div style={{display:"flex",gap:24,justifyContent:"center",flexWrap:"wrap"}}>
         {[
           {ico:"🎭",val:"30+",lbl:"Years in theatre"},
-          {ico:"🗺️",lbl:"NH · SF · NYC · SoCal"},
+          {ico:"🎓",lbl:"Studied & performed theatre"},
           {ico:"🏫",lbl:"Built for the classroom"},
           {ico:"🤝",lbl:"Teacher to teacher"},
         ].map(s=>(
@@ -7484,7 +7484,7 @@ function LandingPage({onSignIn, onSignUp}){
     <div style={{borderTop:"1px solid rgba(255,255,255,.06)",padding:"24px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
         <div style={{width:26,height:26,background:"linear-gradient(135deg,var(--gold),var(--goldd))",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🎭</div>
-        <span style={{fontFamily:"'Abril Fatface',display",fontSize:15,color:"var(--gold)"}}>Theatre4u</span>
+        <span style={{fontFamily:"'Abril Fatface',display",fontSize:15,color:"var(--gold)"}}>Theatre4u™</span>
         <span style={{fontSize:12,color:"rgba(255,255,255,.3)"}}>© 2026</span>
       </div>
       <div style={{display:"flex",gap:18,fontSize:12,color:"rgba(255,255,255,.35)"}}>
@@ -7605,7 +7605,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:24}}>
           <div>
             <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:"#ede8df"}}>{mode==="login"?"Welcome back":"Get started free"}</div>
-            <div style={{fontSize:12,color:"#685f76",marginTop:3}}>{mode==="login"?"Sign in to your Theatre4u account":"Create your free Theatre4u account"}</div>
+            <div style={{fontSize:12,color:"#685f76",marginTop:3}}>{mode==="login"?"Sign in to your Theatre4u™ account":"Create your free Theatre4u™ account"}</div>
           </div>
           <button onClick={close} style={{background:"none",border:"1px solid #282333",borderRadius:6,color:"#9b93a8",cursor:"pointer",padding:"4px 9px",fontSize:14,lineHeight:1}}>×</button>
         </div>
@@ -7615,7 +7615,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             <div>
               <div style={{fontWeight:700,fontSize:13,color:"#d4a843",marginBottom:2}}>You've been invited!</div>
               <div style={{fontSize:12.5,color:"#c8c0d4",lineHeight:1.5}}>
-                {inviteInfo.district_name?<>Join <strong style={{color:"#ede8df"}}>{inviteInfo.district_name}</strong> on Theatre4u.</>:"You've been invited to join a district on Theatre4u."}
+                {inviteInfo.district_name?<>Join <strong style={{color:"#ede8df"}}>{inviteInfo.district_name}</strong> on Theatre4u.</>:"You've been invited to join a district on Theatre4u™."}
                 {inviteInfo.school_name&&<> Your school: <strong style={{color:"#ede8df"}}>{inviteInfo.school_name}</strong>.</>}
               </div>
               <div style={{fontSize:11,color:"#685f76",marginTop:3}}>Create your free account below to accept.</div>
@@ -7642,7 +7642,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
                 style={{...inputStyle,letterSpacing:2,fontFamily:"monospace",fontSize:14}}
                 onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
               {betaCode.trim()&&<div style={{fontSize:11,color:"rgba(212,168,67,.7)",marginTop:4}}>
-                🎭 Leading Player access — you'll be part of shaping Theatre4u from the ground up.
+                🎭 Leading Player access — you'll be part of shaping Theatre4u™ from the ground up.
               </div>}
             </div>
           </>)}
@@ -7753,7 +7753,7 @@ function AuthScreen({onAuth}){
         {/* Logo */}
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{fontSize:52,marginBottom:6}}>🎭</div>
-          <div style={{fontFamily:"'Abril Fatface',display",fontSize:36,color:"var(--gold)",letterSpacing:1}}>Theatre4u</div>
+          <div style={{fontFamily:"'Abril Fatface',display",fontSize:36,color:"var(--gold)",letterSpacing:1}}>Theatre4u™</div>
           <div style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:15,color:"rgba(255,255,255,.5)",marginTop:2}}>Inventory · Marketplace · Community</div>
         </div>
         {/* Card */}
@@ -7844,7 +7844,7 @@ function PublicItemPage({ itemId }) {
       <div style={{background:"linear-gradient(135deg,#1a0d2e,#0d1829)",borderBottom:"1px solid rgba(255,255,255,.08)",padding:"14px 20px",display:"flex",alignItems:"center",gap:10}}>
         <span style={{fontSize:26}}>🎭</span>
         <div>
-          <div style={{fontFamily:"'Abril Fatface',display",fontSize:18,color:"var(--gold)",lineHeight:1}}>Theatre4u</div>
+          <div style={{fontFamily:"'Abril Fatface',display",fontSize:18,color:"var(--gold)",lineHeight:1}}>Theatre4u™</div>
           <div style={{fontSize:10,color:"rgba(255,255,255,.4)",letterSpacing:2,textTransform:"uppercase"}}>Inventory · Marketplace · Community</div>
         </div>
         <a href="https://theatre4u.org" style={{marginLeft:"auto",fontSize:12,color:"var(--gold)",textDecoration:"none",border:"1px solid rgba(212,168,67,.3)",borderRadius:6,padding:"5px 12px"}}>Visit Site →</a>
@@ -8829,7 +8829,7 @@ function AppRoot(){
     <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexDirection:"column"}}>
       <style>{CSS}</style>
       <div style={{fontSize:52}}>🎭</div>
-      <div style={{fontFamily:"'Abril Fatface',display",fontSize:22,color:"var(--gold)"}}>Loading Theatre4u…</div>
+      <div style={{fontFamily:"'Abril Fatface',display",fontSize:22,color:"var(--gold)"}}>Loading Theatre4u™…</div>
       <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
     </div>
   );
