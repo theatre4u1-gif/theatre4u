@@ -3921,8 +3921,6 @@ function AdminInventoryView() {
     delete payload.id;
     delete payload.org_id;
     delete payload.added;
-    payload.start_date = f.start_date||null;
-    payload.end_date   = f.end_date||null;
     const{data,error}=await SB.from("items")
       .update(payload)
       .eq("id", actItem.id)
@@ -7048,14 +7046,15 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
   const save = async() => {
     // Geocode location if it changed so community posts are proximity-sorted correctly
     let geoUpdate = {};
+    let fData = {...f};
     if (f.location && f.location !== org?.location) {
       const geo = await geocodeLocation(f.location);
-      if (geo) { geoUpdate = { lat: geo.lat, lng: geo.lng }; f = { ...f, ...geoUpdate }; }
+      if (geo) { geoUpdate = { lat: geo.lat, lng: geo.lng }; fData = { ...fData, ...geoUpdate }; }
     } else if (f.zipcode && f.zipcode !== org?.zipcode) {
       const geo = await geocodeLocation(f.zipcode + ", USA");
-      if (geo) { geoUpdate = { lat: geo.lat, lng: geo.lng }; f = { ...f, ...geoUpdate }; }
+      if (geo) { geoUpdate = { lat: geo.lat, lng: geo.lng }; fData = { ...fData, ...geoUpdate }; }
     }
-    await setOrg(f);
+    await setOrg(fData);
     setSaved(true);
     setTimeout(()=>setSaved(false),2200);
   };
@@ -8706,7 +8705,11 @@ function AppRoot(){
   },[user]);
 
   const edit = useCallback(async(item)=>{
-    const{data,error}=await SB.from("items").update(item).eq("id",item.id).select().single();
+    const payload={...item};
+    delete payload.id;
+    delete payload.org_id;
+    delete payload.added;
+    const{data,error}=await SB.from("items").update(payload).eq("id",item.id).select().single();
     if(error){ alert("Could not update item: "+error.message); console.error(error); return; }
     if(data) setItems(p=>p.map(x=>x.id===item.id?data:x));
   },[]);
