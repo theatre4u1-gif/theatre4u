@@ -8890,6 +8890,11 @@ function AppRoot(){
   const signOut = async()=>{ await SB.auth.signOut(); };
 
   const nav = p => { setPage(p); setMob(false); setActiveSchool(null); };
+  // Redirect to dashboard if current page's flag gets turned off
+  useEffect(()=>{
+    if(page==="community"  && !org?.community_enabled)   setPage("dashboard");
+    if(page==="marketplace"&& !org?.marketplace_enabled) setPage("dashboard");
+  },[org?.community_enabled, org?.marketplace_enabled, page]);
   // Expose for cross-component navigation
   useEffect(()=>{
     window.__t4u_nav_messages = (convId) => { setOpenConvId(convId); setPage("messages"); setMob(false); };
@@ -8946,8 +8951,8 @@ function AppRoot(){
       ...(!isCrew  ? [{ id:"messages",    label:"Messages",    ico:"💬"       }] : []),
       ...(!isCrew  ? [{ id:"requests",    label:"Requests",    ico:"📋"       }] : []),
       { id:"inventory",   label:"Inventory",   ico:Ic.box     },
-      ...(!isCrew  ? [{ id:"marketplace", label:"Marketplace", ico:Ic.store   }] : []),
-      ...(!isCrew  ? [{ id:"community",   label:"Community",   ico:"🎪", community:true }] : []),
+      ...(!isCrew && org?.marketplace_enabled ? [{ id:"marketplace", label:"Marketplace", ico:Ic.store   }] : []),
+      ...(!isCrew && org?.community_enabled   ? [{ id:"community",   label:"Community",   ico:"🎪", community:true }] : []),
       ...(!isCrew  ? [{ id:"productions", label:"Productions", ico:"🎭"       }] : []),
       ...(!isMember? [{ id:"reports",     label:"Reports",     ico:Ic.chart   }] : []),
       ...(!isMember? [{ id:"funding",     label:"Funding",     ico:"💰"       }] : []),
