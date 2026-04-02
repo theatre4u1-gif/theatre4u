@@ -8790,7 +8790,12 @@ function AppRoot(){
         .eq("token", pendingInvite)
         .eq("status", "pending")
         .single();
-      if (!invite) { localStorage.removeItem("t4u_pending_invite"); setPendingInvite(null); return; }
+      if (!invite) {
+        localStorage.removeItem("t4u_pending_invite");
+        setPendingInvite(null);
+        alert("This invite link has expired or has already been used. Ask your district administrator to send a fresh invite link.");
+        return;
+      }
 
       // Check if this org is already in a different district
       const { data: currentOrg } = await SB.from("orgs").select("district_id,name").eq("id", user.id).single();
