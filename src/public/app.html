@@ -1204,7 +1204,7 @@ function App() {
   const navItems = [
     {id:"home",    label:"Home",       icon:Ic.home},
     {id:"inventory",label:"Items",     icon:Ic.box},
-    ...(isPro ? [{id:"funding", label:"Funding", icon:"💰"}] : []),
+    ...(isPro ? [{id:"funding", label:"Funding", icon:(s=24)=>h("span",{style:{fontSize:s*0.92,lineHeight:1}},"💰")}] : []),
     {id:"profile", label:"Profile",    icon:Ic.user},
   ];
 
