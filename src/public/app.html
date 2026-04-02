@@ -444,7 +444,7 @@ function AuthScreen({onAuth}) {
     h("div",{className:"auth-logo"},
       h("span",{className:"glyph"},"🎭"),
       h("h1",null,"Theatre4u™"),
-      h("p",null,"Inventory · Marketplace · Community")
+      h("p",null,"Inventory · Backstage Exchange · Community")
     ),
     h("div",{className:"auth-form"},
       h("div",{className:"fg"},
@@ -603,7 +603,7 @@ function EditSheet({item, onClose, onSaved, userId}) {
           )
         ),
         h("div",{className:"fg"},h("label",{className:"fl"},"Availability"),h("select",{className:"fs",value:f.avail,onChange:e=>upd("avail",e.target.value)},AVAIL.map(a=>h("option",{key:a},a)))),
-        h("div",{className:"fg"},h("label",{className:"fl"},"Marketplace"),h("select",{className:"fs",value:f.mkt,onChange:e=>upd("mkt",e.target.value)},MKT.map(m=>h("option",{key:m},m)))),
+        h("div",{className:"fg"},h("label",{className:"fl"},"Exchange Status"),h("select",{className:"fs",value:f.mkt,onChange:e=>upd("mkt",e.target.value)},MKT.map(m=>h("option",{key:m},m)))),
         h("div",{className:"fg"},h("label",{className:"fl"},"Notes"),h("textarea",{className:"ft",value:f.notes||"",onChange:e=>upd("notes",e.target.value),rows:3})),
         h("button",{className:"btn btn-gold btn-full",onClick:save,disabled:saving||!f.name?.trim()},saving?"Saving…":"Save Changes")
       )
@@ -709,7 +709,7 @@ function AddSheet({onClose, onAdded, userId}) {
             h("input",{className:"fi",type:"number",min:"1",value:f.qty,onChange:e=>upd("qty",parseInt(e.target.value)||1)})
           ),
           h("div",{className:"fg"},
-            h("label",{className:"fl"},"Marketplace"),
+            h("label",{className:"fl"},"Exchange Status"),
             h("select",{className:"fs",value:f.mkt,onChange:e=>upd("mkt",e.target.value)},
               MKT.map(m=>h("option",{key:m},m))
             )
@@ -933,141 +933,110 @@ function ProfileTab({user, org, onSignOut}) {
 // ── ══════════════════════════════════════════
 // ── PROP 28 MOBILE TAB
 // ── ══════════════════════════════════════════
-const DISCIPLINES_M = ["Music","Visual Arts","Dance","Theater","Media Arts","Multiple"];
-const GRADES_M = ["TK","K","1","2","3","4","5","6","7","8","9","10","11","12"];
-const CURRENT_YEAR = "2024-2025";
 
-function Prop28MobileTab({userId, org, items=[]}) {
-  const [tab, setTab]         = useState("log");  // log | add
-  const [purchases, setPurch] = useState([]);
+
+
+
+function FundingMobileTab({userId}) {
+  const [sources, setSources] = useState([]);
+  const [exps,    setExps]    = useState([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm]       = useState(null);
-  const [saving, setSaving]   = useState(false);
-  const [toast, showT]        = useToast();
+  const [form,    setForm]    = useState(null);
+  const [saving,  setSaving]  = useState(false);
+  const [toast,   showT]      = useToast();
 
-  const blank = {
-    item_description:"", arts_discipline:"Theater", grade_levels:[],
-    students_served:"", cost:"", funding_source:"100% Prop 28",
-    supplement_not_supplant:true, date_purchased:new Date().toISOString().slice(0,10),
-    vendor:"", item_id:"", school_year:CURRENT_YEAR,
-  };
+  const FUND_TYPES = [
+    {id:"grant",label:"Grant",icon:"🏛️"},
+    {id:"allocation",label:"District Allocation",icon:"🏫"},
+    {id:"earned",label:"Earned Income",icon:"🎟️"},
+    {id:"donation",label:"Donation",icon:"🤝"},
+    {id:"booster",label:"Booster/PTA",icon:"⭐"},
+    {id:"other",label:"Other",icon:"📋"},
+  ];
 
   useEffect(()=>{
     (async()=>{
-      const{data}=await SB.from("prop28_purchases").select("*").eq("org_id",userId).eq("school_year",CURRENT_YEAR).order("date_purchased",{ascending:false}).limit(50);
-      setPurch(data||[]);
+      const [sr,er] = await Promise.all([
+        SB.from("funding_sources").select("*").eq("org_id",userId).eq("is_active",true).order("created_at",{ascending:false}),
+        SB.from("funding_expenditures").select("*").eq("org_id",userId).order("purchase_date",{ascending:false}).limit(30),
+      ]);
+      if(sr.data) setSources(sr.data);
+      if(er.data) setExps(er.data);
       setLoading(false);
     })();
   },[userId]);
 
+  const blankExp = ()=>({
+    funding_source_id: sources.find(s=>s.is_active)?.id||"",
+    description:"", amount:"", category:"", vendor:"",
+    purchase_date: new Date().toISOString().slice(0,10),
+  });
+
   const save = async()=>{
-    if(!form.item_description.trim()||!form.cost||!form.students_served) return;
+    if(!form.funding_source_id||!form.description.trim()||!form.amount) return;
     setSaving(true);
-    const row={...form,org_id:userId,cost:parseFloat(form.cost)||0,students_served:parseInt(form.students_served)||0};
-    const{data,error}=await SB.from("prop28_purchases").insert(row).select().single();
+    const row={...form,org_id:userId,amount:parseFloat(form.amount)||0,purchase_date:form.purchase_date||null};
+    const{data,error}=await SB.from("funding_expenditures").insert(row).select().single();
     if(!error&&data){
-      setPurch(p=>[data,...p]);
+      setExps(p=>[data,...p]);
       setForm(null);
-      setTab("log");
-      showT("✓ Purchase logged for Prop 28");
+      showT("✓ Expenditure logged");
     } else { showT("Error: "+(error?.message||"Save failed"),"err"); }
     setSaving(false);
   };
 
-  const toggleGrade = g=>{
-    const cur=form.grade_levels||[];
-    setForm(p=>({...p,grade_levels:cur.includes(g)?cur.filter(x=>x!==g):[...cur,g]}));
-  };
-
-  const totalSpent = purchases.reduce((s,p)=>s+parseFloat(p.cost||0),0);
+  const totalSpent = exps.reduce((s,e)=>s+parseFloat(e.amount||0),0);
   const upd = (k,v)=>setForm(p=>({...p,[k]:v}));
 
   if(form!==null) return h("div",{style:{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}},
     h(Toast,{toast}),
     h("div",{style:{padding:"calc(var(--safe-top) + 12px) 16px 10px",borderBottom:"1px solid var(--border)",background:"var(--bg2)",flexShrink:0,display:"flex",alignItems:"center",gap:12}},
       h("button",{onClick:()=>setForm(null),style:{background:"none",border:"none",color:"var(--muted)",cursor:"pointer",display:"flex",alignItems:"center"}},Ic.back(20)),
-      h("h1",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:700}},"Log Prop 28 Purchase")
+      h("h1",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:700}},"Log Expenditure")
     ),
     h("div",{className:"screen",style:{paddingBottom:100}},
       h("div",{style:{padding:"16px"}},
-        // Item from inventory?
-        items.length>0&&h("div",{className:"fg",style:{marginBottom:14}},
-          h("label",{className:"fl"},"Link to Inventory Item"),
-          h("select",{className:"fs",value:form.item_id||"",onChange:e=>{
-            const item=items.find(i=>i.id===e.target.value);
-            if(item) upd("item_description",item.name);
-            upd("item_id",e.target.value||null);
-          }},
-            h("option",{value:""},"— Manual entry —"),
-            items.map(i=>h("option",{key:i.id,value:i.id},i.name))
+        h("div",{className:"fg"},
+          h("label",{className:"fl"},"Funding Source *"),
+          h("select",{className:"fs",value:form.funding_source_id,onChange:e=>upd("funding_source_id",e.target.value)},
+            h("option",{value:""},"Select a source…"),
+            sources.map(s=>{
+              const ft=FUND_TYPES.find(t=>t.id===s.source_type)||FUND_TYPES[FUND_TYPES.length-1];
+              return h("option",{key:s.id,value:s.id},ft.icon+" "+s.name+(s.fiscal_year?" (FY "+s.fiscal_year+")":""));
+            })
           )
         ),
         h("div",{className:"fg"},
-          h("label",{className:"fl"},"Item Description *"),
-          h("input",{className:"fi",value:form.item_description,onChange:e=>upd("item_description",e.target.value),placeholder:'e.g. "Sheet music for spring musical"',autoFocus:true})
-        ),
-        h("div",{className:"fg"},
-          h("label",{className:"fl"},"Arts Discipline"),
-          h("select",{className:"fs",value:form.arts_discipline,onChange:e=>upd("arts_discipline",e.target.value)},
-            DISCIPLINES_M.map(d=>h("option",{key:d},d))
-          )
-        ),
-        h("div",{className:"fg"},
-          h("label",{className:"fl"},"Grade Levels Served *"),
-          h("div",{style:{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}},
-            GRADES_M.map(g=>h("button",{key:g,type:"button",onClick:()=>toggleGrade(g),
-              style:{padding:"6px 10px",borderRadius:6,border:"1.5px solid",fontFamily:"'DM Sans',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",
-                background:(form.grade_levels||[]).includes(g)?"var(--green)":"var(--bg3)",
-                color:(form.grade_levels||[]).includes(g)?"#fff":"var(--muted)",
-                borderColor:(form.grade_levels||[]).includes(g)?"var(--green)":"var(--border)"}},g)),
-            h("button",{type:"button",onClick:()=>setForm(p=>({...p,grade_levels:[...GRADES_M]})),
-              style:{padding:"6px 10px",borderRadius:6,border:"1.5px solid var(--border)",background:"transparent",color:"var(--muted)",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}},"All")
-          )
+          h("label",{className:"fl"},"Description *"),
+          h("input",{className:"fi",value:form.description,onChange:e=>upd("description",e.target.value),placeholder:"What was purchased or paid for?",autoFocus:true})
         ),
         h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
           h("div",{className:"fg"},
-            h("label",{className:"fl"},"Students Served *"),
-            h("input",{className:"fi",type:"number",min:"0",value:form.students_served,onChange:e=>upd("students_served",e.target.value),placeholder:"150",inputMode:"numeric"})
+            h("label",{className:"fl"},"Amount ($) *"),
+            h("input",{className:"fi",type:"number",min:"0",step:"0.01",value:form.amount,onChange:e=>upd("amount",e.target.value),placeholder:"0.00",inputMode:"decimal"})
           ),
           h("div",{className:"fg"},
-            h("label",{className:"fl"},"Cost ($) *"),
-            h("input",{className:"fi",type:"number",min:"0",step:"0.01",value:form.cost,onChange:e=>upd("cost",e.target.value),placeholder:"0.00",inputMode:"decimal"})
+            h("label",{className:"fl"},"Date"),
+            h("input",{className:"fi",type:"date",value:form.purchase_date||"",onChange:e=>upd("purchase_date",e.target.value)})
           )
         ),
         h("div",{className:"fg"},
-          h("label",{className:"fl"},"Date Purchased"),
-          h("input",{className:"fi",type:"date",value:form.date_purchased||"",onChange:e=>upd("date_purchased",e.target.value)})
-        ),
-        h("div",{className:"fg"},
-          h("label",{className:"fl"},"Vendor"),
-          h("input",{className:"fi",value:form.vendor||"",onChange:e=>upd("vendor",e.target.value),placeholder:"Amazon, J.W. Pepper, etc."})
-        ),
-        h("div",{className:"fg"},
-          h("label",{className:"fl"},"Funding Source"),
-          h("select",{className:"fs",value:form.funding_source,onChange:e=>upd("funding_source",e.target.value)},
-            h("option",null,"100% Prop 28"),h("option",null,"Split Funding")
+          h("label",{className:"fl"},"Category"),
+          h("select",{className:"fs",value:form.category||"",onChange:e=>upd("category",e.target.value)},
+            h("option",{value:""},"Select…"),
+            ["Equipment","Instruments","Supplies","Instruction","Personnel","Travel","Production","Technology","Other"].map(c=>h("option",{key:c},c))
           )
         ),
         h("div",{className:"fg"},
-          h("label",{className:"fl"},"Supplement vs. Supplant"),
-          h("div",{style:{display:"flex",gap:8}},
-            h("button",{type:"button",onClick:()=>upd("supplement_not_supplant",true),
-              style:{flex:1,padding:10,borderRadius:8,border:"1.5px solid",fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",
-                background:form.supplement_not_supplant?"rgba(82,199,132,.15)":"var(--bg3)",
-                color:form.supplement_not_supplant?"var(--green)":"var(--muted)",
-                borderColor:form.supplement_not_supplant?"var(--green)":"var(--border)"}},"✓ New/Expanded"),
-            h("button",{type:"button",onClick:()=>upd("supplement_not_supplant",false),
-              style:{flex:1,padding:10,borderRadius:8,border:"1.5px solid",fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",
-                background:form.supplement_not_supplant===false?"rgba(224,82,82,.15)":"var(--bg3)",
-                color:form.supplement_not_supplant===false?"var(--red)":"var(--muted)",
-                borderColor:form.supplement_not_supplant===false?"var(--red)":"var(--border)"}},"✗ Replacing")
-          )
+          h("label",{className:"fl"},"Vendor / Payee"),
+          h("input",{className:"fi",value:form.vendor||"",onChange:e=>upd("vendor",e.target.value),placeholder:"Store, company, or person"})
         )
       )
     ),
     h("div",{style:{position:"fixed",bottom:0,left:0,right:0,padding:"12px 16px",paddingBottom:"calc(var(--safe-bot) + 12px)",background:"rgba(10,10,15,.95)",borderTop:"1px solid var(--border)"}},
-      h("button",{className:"btn btn-gold btn-full",onClick:save,disabled:saving||!form.item_description.trim()||!form.cost||!form.students_served||(form.grade_levels||[]).length===0},
-        saving?"Saving…":"Log Prop 28 Purchase"
+      h("button",{className:"btn btn-gold btn-full",onClick:save,
+        disabled:saving||!form.funding_source_id||!form.description.trim()||!form.amount},
+        saving?"Saving…":"Log Expenditure"
       )
     )
   );
@@ -1076,54 +1045,63 @@ function Prop28MobileTab({userId, org, items=[]}) {
     h(Toast,{toast}),
     h("div",{style:{padding:"calc(var(--safe-top) + 12px) 16px 12px",flexShrink:0}},
       h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}},
-        h("h1",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:700}},"Prop 28"),
-        h("button",{className:"btn btn-gold btn-sm",onClick:()=>setForm({...blank})},Ic.plus(15)," Log Purchase")
+        h("h1",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:700}},"Funding Tracker"),
+        sources.length>0&&h("button",{className:"btn btn-gold btn-sm",onClick:()=>setForm(blankExp())},Ic.plus(15)," Log Expenditure")
       ),
-      // Stats bar
       h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:4}},
         h("div",{className:"card card-p",style:{padding:"10px 12px",textAlign:"center"}},
-          h("div",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:22,color:"#52c784",fontWeight:700}},"$"+totalSpent.toFixed(2)),
-          h("div",{style:{fontSize:10,color:"var(--muted)",fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginTop:2}},"Total Spent "+CURRENT_YEAR)
+          h("div",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:22,color:"var(--gold)",fontWeight:700}},"$"+totalSpent.toFixed(2)),
+          h("div",{style:{fontSize:10,color:"var(--muted)",fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginTop:2}},"Total Logged")
         ),
         h("div",{className:"card card-p",style:{padding:"10px 12px",textAlign:"center"}},
-          h("div",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:22,color:"var(--gold)",fontWeight:700}},purchases.length),
-          h("div",{style:{fontSize:10,color:"var(--muted)",fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginTop:2}},"Purchases Logged")
+          h("div",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:22,color:"var(--gold)",fontWeight:700}},exps.length),
+          h("div",{style:{fontSize:10,color:"var(--muted)",fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginTop:2}},"Expenditures")
         )
       ),
-      h("div",{style:{fontSize:11,color:"var(--muted)",marginTop:6,textAlign:"center"}},"Manage full reports at theatre4u.org/prop28")
+      h("div",{style:{fontSize:11,color:"var(--muted)",marginTop:6,textAlign:"center"}},"Full reports available at theatre4u.org")
     ),
     h("div",{className:"screen"},
       loading
         ? h("div",{className:"loading"},h("div",{className:"spin"}))
-        : purchases.length===0
+        : sources.length===0
           ? h("div",{className:"empty"},
-              h("div",{className:"ei"},"📋"),
-              h("h3",null,"No Prop 28 Purchases"),
-              h("p",null,"Log arts purchases made with Prop 28 funds. They sync automatically with your full compliance dashboard on theatre4u.org."),
-              h("button",{className:"btn btn-gold",onClick:()=>setForm({...blank})},"+ Log First Purchase")
+              h("div",{className:"ei"},"💰"),
+              h("h3",null,"No Funding Sources"),
+              h("p",null,"Add funding sources on the web app first, then log expenditures here on the go."),
+              h("a",{href:"https://theatre4u.org",className:"btn btn-gold"},"Open theatre4u.org")
             )
-          : h("div",{className:"card"},
-              purchases.map((p,i)=>{
-                const col={Music:"#5299e0","Visual Arts":"#e05299",Dance:"#e07a52",Theater:"#8c52e0","Media Arts":"#52c7b8",Multiple:"#7a8c99"}[p.arts_discipline]||"#7a8c99";
-                return h("div",{key:p.id,className:"item-row"},
-                  h("div",{style:{width:48,height:48,borderRadius:10,background:col+"22",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:2}},
-                    h("span",{style:{fontSize:10,fontWeight:800,color:col,textAlign:"center",lineHeight:1.1}},p.arts_discipline.slice(0,6))
-                  ),
-                  h("div",{className:"item-info"},
-                    h("div",{className:"item-name"},p.item_description),
-                    h("div",{className:"item-sub"},(p.date_purchased||"")," · ",(p.grade_levels||[]).join(", ")||"—"," · ",p.students_served," students")
-                  ),
-                  h("div",{style:{flexShrink:0,textAlign:"right"}},
-                    h("div",{style:{fontWeight:700,fontSize:14,color:"#52c784"}},"$"+parseFloat(p.cost||0).toFixed(2)),
-                    h("div",{style:{fontSize:10,color:p.supplement_not_supplant?"var(--green)":"var(--red)",fontWeight:600,marginTop:2}},
-                      p.supplement_not_supplant?"✓ SNS":"⚠ Review")
-                  )
-                );
-              })
-            )
+          : exps.length===0
+            ? h("div",{className:"empty"},
+                h("div",{className:"ei"},"🧾"),
+                h("h3",null,"No Expenditures Yet"),
+                h("p",null,"Tap + Log Expenditure to record your first spending entry."),
+                h("button",{className:"btn btn-gold",onClick:()=>setForm(blankExp())},"+ Log First Expenditure")
+              )
+            : h("div",{className:"card"},
+                exps.map((e,i)=>{
+                  const src=sources.find(s=>s.id===e.funding_source_id);
+                  return h("div",{key:e.id,className:"item-row"},
+                    h("div",{style:{width:48,height:48,borderRadius:10,background:"rgba(212,168,67,.12)",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}},
+                      h("span",{style:{fontSize:20}},"💰")
+                    ),
+                    h("div",{style:{flex:1,minWidth:0}},
+                      h("div",{style:{fontWeight:700,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},e.description),
+                      h("div",{style:{fontSize:12,color:"var(--muted)",marginTop:2}},
+                        src?src.name:"Unknown source",
+                        e.category?" · "+e.category:"",
+                        e.purchase_date?" · "+new Date(e.purchase_date+"T00:00:00").toLocaleDateString():""
+                      )
+                    ),
+                    h("div",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:18,fontWeight:700,color:"var(--gold)",flexShrink:0}},
+                      "$"+parseFloat(e.amount).toFixed(2)
+                    )
+                  );
+                })
+              )
     )
   );
 }
+
 
 function App() {
   const [user, setUser]       = useState(null);
@@ -1217,7 +1195,7 @@ function App() {
     h("div",{style:{fontSize:64}},"📱"),
     h("div",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:32,fontWeight:700,color:"#d4a843"}},"Pro Feature"),
     h("p",{style:{fontSize:15,color:"var(--muted)",lineHeight:1.7,maxWidth:320}},
-      "The Theatre4u mobile app is included with Pro and District plans. Upgrade at theatre4u.org to unlock mobile inventory management, Prop 28 tracking, and QR scanning."
+      "The Theatre4u™ mobile app is included with Pro and District plans. Upgrade at theatre4u.org to unlock mobile inventory management, Funding Tracker, and QR scanning."
     ),
     h("a",{href:"https://theatre4u.org",style:{background:"linear-gradient(135deg,#d4a843,#8a6a20)",color:"#1a1000",padding:"14px 32px",borderRadius:10,fontWeight:700,fontSize:16,textDecoration:"none"}},"Upgrade at theatre4u.org →"),
     h("button",{onClick:signOut,style:{background:"none",border:"none",color:"var(--muted)",fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",marginTop:8}},"Sign out")
@@ -1226,7 +1204,7 @@ function App() {
   const navItems = [
     {id:"home",    label:"Home",       icon:Ic.home},
     {id:"inventory",label:"Items",     icon:Ic.box},
-    ...(isPro ? [{id:"prop28", label:"Prop 28",  icon:Ic.check}] : []),
+    ...(isPro ? [{id:"funding", label:"Funding", icon:"💰"}] : []),
     {id:"profile", label:"Profile",    icon:Ic.user},
   ];
 
@@ -1240,7 +1218,7 @@ function App() {
       !isStandalone && h(InstallBanner,null),
       tab==="home"      && h(HomeTab,{items,org,onAddItem:()=>setAddOpen(true),onViewItem:handleViewItem}),
       tab==="inventory" && h(InventoryTab,{items,onViewItem:handleViewItem,onAddItem:()=>setAddOpen(true)}),
-      tab==="prop28"    && h(Prop28MobileTab,{userId:user.id,org,items}),
+      tab==="funding"   && h(FundingMobileTab,{userId:user.id}),
       tab==="profile"   && h(ProfileTab,{user,org,onSignOut:signOut})
     ),
     // Bottom nav
@@ -1263,7 +1241,7 @@ createRoot(document.getElementById("root")).render(h(App,null));
 <!-- PWA Manifest inline -->
 <script>
 const manifest = {
-  name:"Theatre4u™",short_name:"Theatre4u™",description:"Inventory, Marketplace & Community for Theatre Programs",
+  name:"Theatre4u™",short_name:"Theatre4u™",description:"Inventory · Backstage Exchange · Community for Theatre Programs",
   start_url:"/app",display:"standalone",background_color:"#0a0a0f",theme_color:"#0a0a0f",
   orientation:"portrait",
   icons:[
