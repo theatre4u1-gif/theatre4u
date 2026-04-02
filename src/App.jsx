@@ -3819,10 +3819,13 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
               <h2 style={{ fontFamily: "var(--serif)", fontSize: 20 }}>Invite a School</h2>
               <button className="btn btn-o btn-sm" onClick={() => setShowInvite(false)}>✕</button>
             </div>
-            <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 18 }}>
-              The school admin will receive an email with a link to create their account and join your district.
+            <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 12 }}>
+              Send an invite link to a school admin. They can accept by signing in to their existing Theatre4u™ account <em>or</em> by creating a new one — their inventory comes with them either way.
               You have <strong>{slotsTotal - slotsUsed}</strong> school slot{slotsTotal - slotsUsed !== 1 ? "s" : ""} remaining.
             </p>
+            <div style={{ background: "rgba(212,168,67,.07)", border: "1px solid rgba(212,168,67,.18)", borderRadius: 8, padding: "9px 12px", marginBottom: 16, fontSize: 12, color: "var(--faint)", lineHeight: 1.6 }}>
+              💡 If the school already has a Theatre4u™ account with inventory, send the invite to that account's email. They sign in, click accept, and everything moves over automatically.
+            </div>
             <div className="fg" style={{ marginBottom: 12 }}>
               <label className="fl">School Admin Email *</label>
               <input className="fi" type="email" value={invEmail} onChange={e => setInvEmail(e.target.value)}
@@ -7518,7 +7521,8 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
 
   useEffect(()=>{
     if(pendingInvite&&!visible){
-      setMode("signup");setVisible(true);
+      // Default to login — existing accounts are the common case for district invites
+      setMode("login");setVisible(true);
       if(inviteInfo?.email) setEmail(inviteInfo.email);
       if(inviteInfo?.school_name) setOrgName(inviteInfo.school_name);
     }
@@ -7610,15 +7614,20 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
           <button onClick={close} style={{background:"none",border:"1px solid #282333",borderRadius:6,color:"#9b93a8",cursor:"pointer",padding:"4px 9px",fontSize:14,lineHeight:1}}>×</button>
         </div>
         {pendingInvite&&inviteInfo&&(
-          <div style={{background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.28)",borderRadius:10,padding:"12px 14px",marginBottom:18,display:"flex",gap:10,alignItems:"flex-start"}}>
-            <span style={{fontSize:20,flexShrink:0}}>🎭</span>
-            <div>
-              <div style={{fontWeight:700,fontSize:13,color:"#d4a843",marginBottom:2}}>You've been invited!</div>
-              <div style={{fontSize:12.5,color:"#c8c0d4",lineHeight:1.5}}>
-                {inviteInfo.district_name?<>Join <strong style={{color:"#ede8df"}}>{inviteInfo.district_name}</strong> on Theatre4u.</>:"You've been invited to join a district on Theatre4u™."}
-                {inviteInfo.school_name&&<> Your school: <strong style={{color:"#ede8df"}}>{inviteInfo.school_name}</strong>.</>}
+          <div style={{background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.28)",borderRadius:10,padding:"12px 14px",marginBottom:18}}>
+            <div style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:10}}>
+              <span style={{fontSize:20,flexShrink:0}}>🎭</span>
+              <div>
+                <div style={{fontWeight:700,fontSize:13,color:"#d4a843",marginBottom:2}}>District Invite</div>
+                <div style={{fontSize:12.5,color:"#c8c0d4",lineHeight:1.5}}>
+                  {inviteInfo.district_name?<>Join <strong style={{color:"#ede8df"}}>{inviteInfo.district_name}</strong> on Theatre4u™.</>:"You've been invited to join a district on Theatre4u™."}
+                  {inviteInfo.school_name&&<> School: <strong style={{color:"#ede8df"}}>{inviteInfo.school_name}</strong>.</>}
+                </div>
               </div>
-              <div style={{fontSize:11,color:"#685f76",marginTop:3}}>Create your free account below to accept.</div>
+            </div>
+            <div style={{background:"rgba(0,0,0,.25)",borderRadius:7,padding:"9px 11px",fontSize:12,color:"#9b93a8",lineHeight:1.6}}>
+              <strong style={{color:"#ede8df"}}>Already have a Theatre4u™ account?</strong> Sign in below — your existing inventory and data will be linked to the district automatically.<br/>
+              <strong style={{color:"#ede8df"}}>New to Theatre4u™?</strong> Switch to Create Account to set up a new school account.
             </div>
           </div>
         )}
@@ -8782,6 +8791,23 @@ function AppRoot(){
         .eq("status", "pending")
         .single();
       if (!invite) { localStorage.removeItem("t4u_pending_invite"); setPendingInvite(null); return; }
+
+      // Check if this org is already in a different district
+      const { data: currentOrg } = await SB.from("orgs").select("district_id,name").eq("id", user.id).single();
+      if (currentOrg?.district_id && currentOrg.district_id !== invite.district_id) {
+        const districtName = invite.districts?.name || "this district";
+        const confirmed = window.confirm(
+          `Your account (${currentOrg.name || user.email}) is currently linked to another district.\n\n` +
+          `Accepting this invite will move your account to "${districtName}".\n\n` +
+          `Your inventory and data will move with you. Continue?`
+        );
+        if (!confirmed) {
+          localStorage.removeItem("t4u_pending_invite");
+          setPendingInvite(null);
+          return;
+        }
+      }
+
       // Link org to district + mark invite accepted
       await SB.from("orgs").update({ district_id: invite.district_id, role: "school_admin" }).eq("id", user.id);
       await SB.from("district_invites").update({ status: "accepted", accepted_at: new Date().toISOString() }).eq("id", invite.id);
@@ -8792,7 +8818,7 @@ function AppRoot(){
       // Reload org data to pick up new district_id
       const { data: updatedOrg } = await SB.from("orgs").select("*").eq("id", user.id).single();
       if (updatedOrg) setOrg(updatedOrg);
-      alert(`✓ You've joined ${invite.districts?.name || "the district"}! Welcome to Theatre4u.`);
+      alert(`✓ You've joined ${invite.districts?.name || "the district"}! Your account and inventory are now linked. Welcome to Theatre4u™.`);
     })();
   }, [user, pendingInvite]);
 
