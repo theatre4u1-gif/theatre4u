@@ -1265,7 +1265,7 @@ function CommunitySpotlight({onViewAll}){
   );
 }
 
-function Dashboard({items,org,goInventory,goMarketplace,goCommunity}){
+function Dashboard({items,org,goInventory,goMarketplace,goCommunity,goProfile}){
   const totalQty=items.reduce((s,i)=>s+(i.qty||1),0);
   const listed=items.filter(i=>i.mkt!=="Not Listed").length;
   const withImg=items.filter(i=>i.img).length;
@@ -1299,18 +1299,18 @@ function Dashboard({items,org,goInventory,goMarketplace,goCommunity}){
           </div>
           <div className="hero-bar"/>
         </div>
-        {/* Profile Completion Nudge */}
-        {(!org?.location||!org?.phone||!org?.bio) && items.length > 0 && (
+        {/* Profile Completion Nudge — show only if 2+ fields missing */}
+        {([!org?.location, !org?.phone, !org?.bio].filter(Boolean).length >= 2) && items.length > 0 && (
           <div style={{background:"linear-gradient(135deg,rgba(212,168,67,.12),rgba(212,168,67,.05))",
             border:"1.5px solid rgba(212,168,67,.3)",borderRadius:14,padding:"14px 18px",
             display:"flex",alignItems:"center",gap:14,marginBottom:20,cursor:"pointer"}}
-            onClick={()=>window.dispatchEvent(new CustomEvent("t4u-nav",{detail:"settings"}))}>
+            onClick={()=>goProfile&&goProfile()}>
             <div style={{fontSize:28,flexShrink:0}}>✏️</div>
             <div style={{flex:1}}>
               <div style={{fontWeight:700,fontSize:14,color:"var(--gold)",marginBottom:3}}>
                 Complete your profile
               </div>
-              <div style={{fontSize:12,color:"var(--t2,#9b93a8)",lineHeight:1.5}}>
+              <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>
                 Add your location, phone, and bio so other programs can find and contact you in Backstage Exchange.
               </div>
             </div>
@@ -9026,7 +9026,7 @@ function AppRoot(){
                       setPendingReqCount(count||0);
                     }}/>}
                   {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
-                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")}/>}
+                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")}/>}
                   {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
