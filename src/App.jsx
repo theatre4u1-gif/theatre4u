@@ -7616,7 +7616,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
           throw error;
         }
         if(data.user){
-          const isLeadingPlayer = betaCode.trim().toUpperCase()==="FOUNDING2026";
+          const isLeadingPlayer = !!betaCode.trim(); // any valid beta code = Leading Player
           await SB.from("orgs").upsert({
             id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:"",
             beta_code:betaCode.trim().toUpperCase()||null,
@@ -7705,7 +7705,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             <div style={{marginBottom:14}}>
               <label style={labelStyle}>Access Code <span style={{fontWeight:400,color:"rgba(255,255,255,.35)",fontSize:11}}>(optional — leave blank if you don't have one)</span></label>
               <input value={betaCode} onChange={e=>setBetaCode(e.target.value.toUpperCase())}
-                placeholder="e.g. LEADING2026"
+                placeholder="e.g. LEADINGPLAYER"
                 style={{...inputStyle,letterSpacing:2,fontFamily:"monospace",fontSize:14}}
                 onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
               {betaCode.trim()&&<div style={{fontSize:11,color:"rgba(212,168,67,.7)",marginTop:4}}>
@@ -7738,11 +7738,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
         </div>
         {mode==="signup"&&(
           <p style={{textAlign:"center",fontSize:11,color:"#685f76",marginTop:14,lineHeight:1.5}}>
-            Free plan includes 50 items. No credit card required.<br/>
-            By signing up you agree to our{" "}
-            <span onClick={()=>setLegal("terms")} style={{color:"#d4a843",textDecoration:"underline",cursor:"pointer"}}>Terms of Service</span>
-            {" "}and{" "}
-            <span onClick={()=>setLegal("privacy")} style={{color:"#d4a843",textDecoration:"underline",cursor:"pointer"}}>Privacy Policy</span>.
+            Free plan includes 50 items. No credit card required.
           </p>
         )}
       </div>
@@ -7757,6 +7753,7 @@ function AuthScreen({onAuth}){
   const[email,setEmail]=useState("");
   const[pass,setPass]=useState("");
   const[orgName,setOrgName]=useState("");
+  const[betaCode,setBetaCode]=useState("");
   const[err,setErr]=useState("");
   const[loading,setLoading]=useState(false);
   const[done,setDone]=useState(false);
@@ -7773,10 +7770,23 @@ function AuthScreen({onAuth}){
     try{
       if(mode==="signup"){
         if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
+        // Validate beta code if provided
+        let codeData = null;
+        const code = betaCode.trim().toUpperCase();
+        if(code){
+          const{data:cd,error:codeErr}=await SB.from("beta_codes").select("code,max_uses,used_count,active").eq("code",code).eq("active",true).single();
+          if(codeErr||!cd){throw new Error("Invalid or expired access code. Please check with your contact.");}
+          if(cd.used_count>=cd.max_uses){throw new Error("This access code has reached its limit. Contact hello@theatre4u.org.");}
+          codeData = cd;
+        }
         const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName},emailRedirectTo:"https://theatre4u.org"}});
         if(error)throw error;
         if(data.user){
-          await SB.from("orgs").upsert({id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:""},{onConflict:"id",ignoreDuplicates:false});
+          const isLeadingPlayer = !!code;
+          await SB.from("orgs").upsert({id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:"",beta_code:code||null,is_leading_player:isLeadingPlayer},{onConflict:"id",ignoreDuplicates:false});
+          if(code&&codeData){
+            await SB.from("beta_codes").update({used_count:codeData.used_count+1}).eq("code",code);
+          }
           if(data.session){
             // Email confirmation is OFF — user is already logged in
             if(typeof onAuth==="function") onAuth(data.user);
@@ -7836,10 +7846,20 @@ function AuthScreen({onAuth}){
           {/* Fields */}
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             {mode==="signup"&&(
-              <div>
-                <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Organization Name</label>
-                <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High Drama Dept." style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--linen)",borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"'Raleway',sans-serif",color:"var(--ink)",outline:"none",boxSizing:"border-box"}}
-                  onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--linen)"}/>
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                <div>
+                  <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Organization Name</label>
+                  <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High Drama Dept." style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--linen)",borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"'Raleway',sans-serif",color:"var(--ink)",outline:"none",boxSizing:"border-box"}}
+                    onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--linen)"}/>
+                </div>
+                <div>
+                  <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Access Code <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:10}}>(optional — leave blank if you don't have one)</span></label>
+                  <input value={betaCode} onChange={e=>setBetaCode(e.target.value.toUpperCase())}
+                    placeholder="e.g. LEADINGPLAYER"
+                    style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--linen)",borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"monospace",letterSpacing:2,color:"var(--ink)",outline:"none",boxSizing:"border-box"}}
+                    onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--linen)"}/>
+                  {betaCode.trim()&&<div style={{fontSize:11,color:"var(--amber)",marginTop:4}}>🎭 Leading Player access — you'll be part of shaping Theatre4u™ from the ground up.</div>}
+                </div>
               </div>
             )}
             <div>
@@ -7860,7 +7880,7 @@ function AuthScreen({onAuth}){
             {loading?"Please wait…":mode==="login"?"Sign In →":"Create Free Account →"}
           </button>
           {mode==="login"&&<button onClick={resetPass} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:"var(--faint)",fontSize:12.5,cursor:"pointer",fontFamily:"'Raleway',sans-serif",textDecoration:"underline"}}>Forgot password?</button>}
-          {mode==="signup"&&<p style={{fontSize:12,color:"var(--faint)",textAlign:"center",marginTop:14,lineHeight:1.6}}>Free to start — no credit card needed.<br/>By creating an account you agree to our{" "}<span onClick={()=>setLegal("terms")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Terms of Service</span>{" "}and{" "}<span onClick={()=>setLegal("privacy")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Privacy Policy</span>, including a perpetual license to content you upload.</p>}
+          {mode==="signup"&&<p style={{fontSize:12,color:"var(--faint)",textAlign:"center",marginTop:14,lineHeight:1.6}}>Free to start — no credit card needed. By creating an account you agree to our{" "}<span onClick={()=>setLegal("terms")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Terms of Service</span>{" "}and{" "}<span onClick={()=>setLegal("privacy")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Privacy Policy</span>.</p>}
         </div>
         <p style={{textAlign:"center",color:"rgba(255,255,255,.25)",fontSize:12,marginTop:20}}>theatre4u.org — Built for the arts community 🎭</p>
       </div>
