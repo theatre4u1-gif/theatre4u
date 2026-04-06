@@ -1486,7 +1486,7 @@ function Dashboard({items,org,goInventory,goMarketplace,goCommunity,goProfile}){
   );
 }
 
-function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null}){
+function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,userEmail=null}){
     const[upgradeReason,setUpgradeReason]=useState(null);
   // Role-based permissions
   const canEdit   = memberRole !== "house";
@@ -1527,7 +1527,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
   const atLimit   = plan==="free" && items.length >= 50;
 
   return(<>
-    {upgradeReason&&<UpgradePrompt reason={upgradeReason} onClose={()=>setUpgradeReason(null)}/>}
+    {upgradeReason&&<UpgradePrompt reason={upgradeReason} onClose={()=>setUpgradeReason(null)} userId={userId} userEmail={userEmail}/>}
     {headerNote}
     {(nearLimit||atLimit)&&(
       <div style={{background:atLimit?"rgba(194,24,91,.12)":"rgba(212,168,67,.1)",border:"1px solid "+(atLimit?"rgba(194,24,91,.3)":"rgba(212,168,67,.25)"),borderRadius:8,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
@@ -3420,7 +3420,7 @@ function Reports({ items, plan="free" }) {
 }
 
 // ── Upgrade prompt modal ─────────────────────────────────────────────────────
-function UpgradePrompt({ reason, onClose }) {
+function UpgradePrompt({ reason, onClose, userId=null, userEmail=null }) {
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div style={{background:"#fdf6ec",border:"1px solid var(--gold)",borderRadius:14,width:"100%",maxWidth:520,padding:28,boxShadow:"0 8px 48px rgba(0,0,0,.4)"}}>
@@ -3429,7 +3429,7 @@ function UpgradePrompt({ reason, onClose }) {
           <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:22,marginBottom:8}}>Upgrade to Continue</h2>
           <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.6}}>{reason}</p>
         </div>
-        <UpgradePlans compact={true}/>
+        <UpgradePlans compact={true} userId={userId} userEmail={userEmail}/>
         <button onClick={onClose} style={{display:"block",margin:"16px auto 0",background:"none",border:"none",color:"var(--faint)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Maybe later</button>
       </div>
     </div>
@@ -3438,9 +3438,18 @@ function UpgradePrompt({ reason, onClose }) {
 
 // ── Shared upgrade/pricing component — used in Settings + any upsell modal ────
 const STRIPE_LINKS = {
-  pro:      { monthly:"https://buy.stripe.com/test_8x26oJ3vhcvy1Wi7eq9sk00", annual:"https://buy.stripe.com/test_8x214p6HtdzCgRc2Ya9sk02" },
-  district: { monthly:"https://buy.stripe.com/test_8x2cN79TF67a0SebuG9sk01", annual:"https://buy.stripe.com/test_28E6oJ5Dp7be30meGS9sk03" },
+  pro:      { monthly:"https://buy.stripe.com/aFadR868xgNRey72ErgA801", annual:"https://buy.stripe.com/9B6dR80Od8hl9dN4MzgA803" },
+  district: { monthly:"https://buy.stripe.com/aFa4gydAZ2X1cpZ6UHgA800", annual:"https://buy.stripe.com/eVqdR88gF1SX9dN0wjgA802" },
 };
+function stripeLink(baseUrl, userId, userEmail) {
+  if (!baseUrl || baseUrl === "#") return "#";
+  try {
+    const url = new URL(baseUrl);
+    if (userId)    url.searchParams.set("client_reference_id", userId);
+    if (userEmail) url.searchParams.set("prefilled_email", userEmail);
+    return url.toString();
+  } catch { return baseUrl; }
+}
 // ── Plan definitions ─────────────────────────────────────────────────────────
 const PLANS_DEF = {
   free:     { label:"Free",     maxItems:50,  marketplace:false, reports:false, monthlyPrice:0,  annualPrice:0   },
@@ -3465,7 +3474,7 @@ const UPGRADE_PLANS = [
     feats:["Multiple organizations","District dashboard","Bulk import","Dedicated support","Everything in Pro"] },
 ];
 
-function UpgradePlans({ compact = false }) {
+function UpgradePlans({ compact = false, userId = null, userEmail = null }) {
   const [billing, setBilling] = useState("monthly");
   return (
     <div>
@@ -3483,7 +3492,7 @@ function UpgradePlans({ compact = false }) {
         {UPGRADE_PLANS.map(p=>{
           const price   = billing==="annual" ? p.annualPrice : p.monthlyPrice;
           const note    = billing==="annual" ? p.annualNote  : null;
-          const link    = STRIPE_LINKS[p.id]?.[billing];
+          const link    = stripeLink(STRIPE_LINKS[p.id]?.[billing], userId, userEmail);
           const isFree  = p.id==="free";
           return (
             <div key={p.id} style={{border:"1.5px solid "+(p.hot?"var(--gold)":"rgba(212,168,67,.2)"),borderRadius:10,padding:16,background:p.hot?"#241808":"#1e1208",position:"relative",display:"flex",flexDirection:"column",color:"#f0e6d3"}}>
@@ -5999,6 +6008,7 @@ const POST_TYPES = [
   { id:"audition",     label:"Audition Notice",  icon:"🎤", color:"#1565c0", desc:"Looking for cast or crew members" },
   { id:"photo",        label:"Production Photos", icon:"📸", color:"#c2185b", desc:"Share photos from your recent shows" },
   { id:"wanted",       label:"Item Wanted",       icon:"🔍", color:"#d84315", desc:"Looking for a specific prop, costume, or equipment" },
+  { id:"resource",     label:"Resource Share",    icon:"🤝", color:"#00838f", desc:"Offering props, costumes, or equipment to borrow or share" },
   { id:"announcement", label:"Announcement",      icon:"📢", color:"#2e7d32", desc:"News, updates, or anything else" },
 ];
 const PT = Object.fromEntries(POST_TYPES.map(p=>[p.id,p]));
@@ -6192,73 +6202,66 @@ function CommunityPostCard({post, orgName, onEdit, onDelete, isOwn}) {
   );
 }
 
-function CommunityPage({userId, org, plan}) {
-  const [posts,    setPosts]   = useState([]);
-  const [orgs,     setOrgs]    = useState({});
-  const [loading,  setLoading] = useState(true);
-  const [viewerLoc,setViewerLoc] = useState(null);
-  const [typeF,    setTypeF]   = useState("all");
-  const [search,   setSearch]  = useState("");
-  const [modal,    setModal]   = useState(null);
-  const [active,   setActive]  = useState(null);
-  const [saving,   setSaving]  = useState(false);
-  const [msg,      setMsg]     = useState("");
+function CommunityPage({userId, org, plan, onLeave}) {
+  const [posts,     setPosts]   = useState([]);
+  const [orgs,      setOrgs]    = useState({});
+  const [loading,   setLoading] = useState(true);
+  const [viewerLoc, setViewerLoc] = useState(null);
+  const [typeF,     setTypeF]   = useState("all");
+  const [stateF,    setStateF]  = useState("all");
+  const [search,    setSearch]  = useState("");
+  const [modal,     setModal]   = useState(null);
+  const [active,    setActive]  = useState(null);
+  const [saving,    setSaving]  = useState(false);
+  const [msg,       setMsg]     = useState("");
+  const [states,    setStates]  = useState([]);
+  const [leaving,   setLeaving] = useState(false);
 
   const load = useCallback(async()=>{
     setLoading(true);
-    // Get viewer location — use stored org coords only, no blocking network calls
     const vLat = org?.lat || null;
     const vLng = org?.lng || null;
-    setViewerLoc(vLat && vLng ? { lat: vLat, lng: vLng } : null);
-
-    // Use proximity RPC — falls back to recency if no location
-    const { data } = await SB.rpc("proximity_community_posts", {
-      viewer_lat:   vLat   || null,
-      viewer_lng:   vLng   || null,
-      radius_miles: 150,
-      row_limit:    80,
+    setViewerLoc(vLat && vLng ? {lat:vLat,lng:vLng} : null);
+    const {data} = await SB.rpc("proximity_community_posts",{
+      viewer_lat:   vLat || null,
+      viewer_lng:   vLng || null,
+      radius_miles: 500,
+      row_limit:    120,
     });
-    // Strip computed RPC columns (distance_miles) before storing
-    setPosts((data || []).map(({distance_miles, ...p}) => p));
-    // Load org names
-    const ids = [...new Set((data || []).map(p => p.org_id))];
-    if (ids.length > 0) {
-      const { data: orgData } = await SB.from("orgs").select("id,name,location").in("id", ids);
-      const map = {}; (orgData || []).forEach(o => { map[o.id] = o.name; });
+    const rawPosts = (data||[]).map(({distance_miles,...p})=>p);
+    setPosts(rawPosts);
+    const ids = [...new Set(rawPosts.map(p=>p.org_id))];
+    if(ids.length>0){
+      const {data:orgData} = await SB.from("orgs").select("id,name,location,state").in("id",ids);
+      const map = {}; (orgData||[]).forEach(o=>{map[o.id]=o;});
       setOrgs(map);
+      const uniqueStates = [...new Set((orgData||[]).map(o=>o.state).filter(Boolean))].sort();
+      setStates(uniqueStates);
     }
     setLoading(false);
-  }, [org?.lat, org?.lng, org?.location]);
+  },[org?.lat, org?.lng]);
 
   useEffect(()=>{load();},[load]);
 
   const save = async(f)=>{
     setSaving(true);
-    try {
-      // Use org's stored coordinates directly — no geocoding needed
-      // The org's lat/lng is already stored from profile setup
-      const geoFields = (org?.lat && org?.lng)
-        ? { lat: org.lat, lng: org.lng }
-        : viewerLoc
-          ? { lat: viewerLoc.lat, lng: viewerLoc.lng }
-          : {};
-      // Convert empty date strings to null — Postgres DATE columns reject ""
-      // Only include real community_posts columns — strip computed fields like distance_miles
+    try{
+      const geoFields = (org?.lat&&org?.lng) ? {lat:org.lat,lng:org.lng} : {};
       const row = {
-        type:           f.type,
-        title:          f.title,
-        body:           f.body         || null,
-        show_title:     f.show_title   || null,
-        venue:          f.venue        || null,
-        location:       f.location     || null,
-        start_date:     f.start_date   || null,
-        end_date:       f.end_date     || null,
-        ticket_url:     f.ticket_url   || null,
-        contact_email:  f.contact_email|| null,
-        tags:           f.tags         || [],
-        images:         f.images       || [],
-        org_id:         userId,
-        status:         "active",
+        type:          f.type,
+        title:         f.title,
+        body:          f.body         ||null,
+        show_title:    f.show_title   ||null,
+        venue:         f.venue        ||null,
+        location:      f.location     ||null,
+        start_date:    f.start_date   ||null,
+        end_date:      f.end_date     ||null,
+        ticket_url:    f.ticket_url   ||null,
+        contact_email: f.contact_email||null,
+        tags:          f.tags         ||[],
+        images:        f.images       ||[],
+        org_id:        userId,
+        status:        "active",
         ...geoFields,
       };
       if(active&&modal==="edit"){
@@ -6272,12 +6275,9 @@ function CommunityPage({userId, org, plan}) {
       }
       setModal(null);setActive(null);
       setTimeout(()=>setMsg(""),3000);
-    } catch(err) {
-      console.error("Community post save error:", err);
-      setMsg("❌ " + (err.message || "Failed to post. Please try again."));
-    } finally {
-      setSaving(false);
-    }
+    }catch(err){
+      setMsg("❌ "+(err.message||"Failed to post."));
+    }finally{setSaving(false);}
   };
 
   const deletePost = async(id)=>{
@@ -6286,13 +6286,35 @@ function CommunityPage({userId, org, plan}) {
     setPosts(p=>p.filter(x=>x.id!==id));
   };
 
+  const handleLeave = async()=>{
+    if(!window.confirm("Leave the Community Board? Your existing posts will remain until removed, but you will no longer appear in the community or be able to post new content. You can rejoin at any time."))return;
+    setLeaving(true);
+    await SB.from("orgs").update({community_enabled:false}).eq("id",userId);
+    onLeave&&onLeave();
+  };
+
   const filtered = posts.filter(p=>{
     if(typeF!=="all"&&p.type!==typeF)return false;
-    if(search){const q=search.toLowerCase();return p.title.toLowerCase().includes(q)||(p.body||"").toLowerCase().includes(q)||(p.show_title||"").toLowerCase().includes(q)||(p.location||"").toLowerCase().includes(q)||(p.tags||[]).some(t=>t.includes(q));}
+    if(stateF!=="all"){const o=orgs[p.org_id];if(!o||o.state!==stateF)return false;}
+    if(search){const q=search.toLowerCase();
+      return p.title.toLowerCase().includes(q)||(p.body||"").toLowerCase().includes(q)||(p.show_title||"").toLowerCase().includes(q)||(p.location||"").toLowerCase().includes(q)||(p.tags||[]).some(t=>t.includes(q));
+    }
     return true;
   });
 
   const myPosts = posts.filter(p=>p.org_id===userId);
+  const hasLocation = !!(org?.lat&&org?.lng);
+
+  const emptyMsg = {
+    show:         {icon:"🎭", h:"No show announcements yet",  p:"Be the first to share your upcoming production."},
+    audition:     {icon:"🎤", h:"No audition notices yet",    p:"Post your audition to find your next cast or crew."},
+    photo:        {icon:"📸", h:"No production photos yet",   p:"Share photos from your recent shows."},
+    wanted:       {icon:"🔍", h:"No wanted posts yet",        p:"Let others know what you need."},
+    resource:     {icon:"🤝", h:"No resource shares yet",     p:"Offer items you are willing to lend or share with other programs."},
+    announcement: {icon:"📢", h:"No announcements yet",       p:"Share news or updates with the community."},
+    all:          {icon:"🎪", h:"No posts yet",               p:"Be the first to post in this community."},
+  };
+  const empty = emptyMsg[typeF]||emptyMsg.all;
 
   return(
     <div style={{position:"relative"}}>
@@ -6304,22 +6326,34 @@ function CommunityPage({userId, org, plan}) {
           <div className="hero-body">
             <div className="hero-eyebrow">🎪 Theatre Community</div>
             <h1 className="hero-title" style={{fontSize:44}}>Community Board</h1>
-            <p className="hero-sub">Upcoming shows, audition notices, production photos, and wanted items — from programs across the network.</p>
+            <p className="hero-sub">Upcoming shows, auditions, production photos, resource shares — from theatre programs across the network.</p>
           </div>
           <div className="hero-bar"/>
         </div>
       </div>
-
       <div style={{padding:"24px 36px 56px",position:"relative",zIndex:1}}>
-        {/* Actions bar */}
-        <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:20,alignItems:"center"}}>
-          <div className="srch" style={{position:"relative",flex:1,minWidth:220}}>
-            <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"var(--muted)",display:"flex",pointerEvents:"none"}}>{Ic.search}</span>
-            <input className="fi" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search shows, auditions, wanted items…" style={{paddingLeft:34,width:"100%"}}/>
+        {!hasLocation&&(
+          <div style={{background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.25)",borderRadius:8,padding:"10px 16px",marginBottom:16,fontSize:13,color:"var(--muted)",display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:18}}>📍</span>
+            <span><strong style={{color:"var(--gold)"}}>Set your city in Profile</strong> to see posts sorted by proximity to your program.</span>
           </div>
+        )}
+        <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:16,alignItems:"center"}}>
+          <div className="srch" style={{position:"relative",flex:"1 1 200px",minWidth:200}}>
+            <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"var(--muted)",display:"flex",pointerEvents:"none"}}>{Ic.search}</span>
+            <input className="fi" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search posts…" style={{paddingLeft:34,width:"100%"}}/>
+          </div>
+          {states.length>1&&(
+            <select value={stateF} onChange={e=>setStateF(e.target.value)}
+              style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:6,padding:"7px 10px",color:"var(--text)",fontSize:13,fontFamily:"inherit",cursor:"pointer"}}>
+              <option value="all">All States</option>
+              {states.map(s=><option key={s} value={s}>{s}</option>)}
+            </select>
+          )}
           <div style={{display:"flex",gap:0,border:"1px solid var(--border)",borderRadius:6,overflow:"hidden"}}>
-            {[["all","All"],["show","🎭 Shows"],["audition","🎤 Auditions"],["photo","📸 Photos"],["wanted","🔍 Wanted"],["announcement","📢 News"]].map(([id,label])=>(
-              <button key={id} onClick={()=>setTypeF(id)} style={{background:typeF===id?"var(--gold)":"transparent",color:typeF===id?"#1a0f00":"var(--muted)",border:"none",padding:"7px 12px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>
+            {[["all","All"],["show","🎭"],["audition","🎤"],["photo","📸"],["wanted","🔍"],["resource","🤝"],["announcement","📢"]].map(([id,label])=>(
+              <button key={id} onClick={()=>setTypeF(id)} title={PT[id]?.label||"All"}
+                style={{background:typeF===id?"var(--gold)":"transparent",color:typeF===id?"#1a0f00":"var(--muted)",border:"none",padding:"7px 11px",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:700,whiteSpace:"nowrap",transition:"all .15s"}}>
                 {label}
               </button>
             ))}
@@ -6329,37 +6363,39 @@ function CommunityPage({userId, org, plan}) {
             <button className="btn btn-g" onClick={()=>{setActive(null);setModal("add");}}>+ Share Something</button>
           </div>
         </div>
-
-        <div style={{display:"grid",gridTemplateColumns:"1fr 320px",gap:24,alignItems:"start"}}>
-          {/* Main feed */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 300px",gap:24,alignItems:"start"}}>
           <div>
             <div style={{fontSize:12,color:"var(--muted)",marginBottom:12,fontWeight:600,display:"flex",alignItems:"center",gap:10}}>
-              <span>{filtered.length} post{filtered.length!==1?"s":""}{typeF!=="all"?` · ${PT[typeF]?.label}`:""}</span>
-              {viewerLoc
-                ? <span style={{color:"var(--green)",fontWeight:700}}>📍 Sorted by proximity to you</span>
-                : <span style={{color:"var(--amber)",fontSize:11}}>⚠️ Set your location in Profile for proximity sorting</span>}
+              <span>{filtered.length} post{filtered.length!==1?"s":""}{typeF!=="all"?` · ${PT[typeF]?.label}`:""}{stateF!=="all"?` · ${stateF}`:""}</span>
+              {hasLocation
+                ? <span style={{color:"var(--green)",fontWeight:700}}>📍 Sorted by proximity</span>
+                : <span style={{color:"var(--amber)",fontSize:11}}>Sorted by recency</span>}
             </div>
             {loading
-              ?<div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading community posts…</div>
-              :filtered.length===0
-                ?<div className="empty">
-                    <div className="empty-ico">🎪</div>
-                    <h3>Be the first to post</h3>
-                    <p>Share your upcoming show, post an audition notice, or let the community know what items you're looking for.</p>
-                    <button className="btn btn-g" onClick={()=>{setActive(null);setModal("add");}}>+ Share Something</button>
+              ? <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading community posts…</div>
+              : filtered.length===0
+                ? <div className="empty">
+                    <div className="empty-ico">{empty.icon}</div>
+                    <h3>{empty.h}</h3>
+                    <p>{empty.p}</p>
+                    <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap",marginTop:12}}>
+                      {(typeF!=="all"||stateF!=="all"||search)&&<button className="btn btn-o" onClick={()=>{setTypeF("all");setStateF("all");setSearch("");}}>Clear filters</button>}
+                      <button className="btn btn-g" onClick={()=>{setActive(null);setModal("add");}}>+ Share Something</button>
+                    </div>
                   </div>
-                :filtered.map(post=>(
-                    <CommunityPostCard key={post.id} post={post} orgName={orgs[post.org_id]||"A Theatre Program"} isOwn={post.org_id===userId} onEdit={p=>{setActive(p);setModal("edit");}} onDelete={deletePost}/>
+                : filtered.map(post=>(
+                    <CommunityPostCard key={post.id} post={post}
+                      orgName={orgs[post.org_id]?.name||"A Theatre Program"}
+                      isOwn={post.org_id===userId}
+                      onEdit={p=>{setActive(p);setModal("edit");}}
+                      onDelete={deletePost}/>
                   ))
             }
           </div>
-
-          {/* Sidebar */}
           <div style={{position:"sticky",top:80}}>
-            {/* Your posts */}
             {myPosts.length>0&&(
               <div className="card card-p" style={{marginBottom:16}}>
-                <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:16,marginBottom:12}}>Your Posts</h3>
+                <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:15,marginBottom:10}}>Your Posts</h3>
                 {myPosts.slice(0,5).map(p=>(
                   <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid var(--linen)"}}>
                     <span style={{fontSize:16}}>{PT[p.type]?.icon||"📢"}</span>
@@ -6372,28 +6408,32 @@ function CommunityPage({userId, org, plan}) {
                 ))}
               </div>
             )}
-
-            {/* What to post guide */}
-            <div className="card card-p" style={{background:"linear-gradient(135deg,rgba(212,168,67,.08),rgba(212,168,67,.03))",borderColor:"rgba(212,168,67,.25)"}}>
-              <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:16,marginBottom:12,color:"var(--gold)"}}>What to Share</h3>
+            <div className="card card-p" style={{marginBottom:16,background:"linear-gradient(135deg,rgba(212,168,67,.08),rgba(212,168,67,.02))",borderColor:"rgba(212,168,67,.25)"}}>
+              <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:15,marginBottom:10,color:"var(--gold)"}}>What to Share</h3>
               {POST_TYPES.map(pt=>(
-                <div key={pt.id} style={{display:"flex",gap:8,padding:"7px 0",borderBottom:"1px solid var(--linen)"}}>
-                  <span style={{fontSize:18,flexShrink:0}}>{pt.icon}</span>
+                <div key={pt.id} style={{display:"flex",gap:8,padding:"6px 0",borderBottom:"1px solid var(--linen)"}}>
+                  <span style={{fontSize:17,flexShrink:0}}>{pt.icon}</span>
                   <div>
                     <div style={{fontSize:12,fontWeight:700,color:pt.color}}>{pt.label}</div>
                     <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.4}}>{pt.desc}</div>
                   </div>
                 </div>
               ))}
-              <div style={{marginTop:10,fontSize:11,color:"var(--muted)",lineHeight:1.5}}>Open to all Theatre4u™ members — free and Pro alike.</div>
-              <div style={{marginTop:8,fontSize:11,color:"var(--amber)",lineHeight:1.5,padding:"6px 8px",background:"rgba(212,168,67,.08)",borderRadius:6}}>
-                📍 Posts are sorted by proximity. Set your city in Profile for best results.
+              <div style={{marginTop:10,fontSize:11,color:"var(--muted)",lineHeight:1.5,padding:"6px 8px",background:"var(--parch)",borderRadius:6}}>
+                🎪 Open to all Theatre4u™ members — free and Pro alike.
               </div>
+            </div>
+            <div className="card card-p" style={{borderColor:"rgba(194,24,91,.15)"}}>
+              <div style={{fontSize:12,fontWeight:700,color:"var(--muted)",marginBottom:6}}>Community Membership</div>
+              <p style={{fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:10}}>You are an active member. Your posts are visible to other opted-in programs.</p>
+              <button onClick={handleLeave} disabled={leaving}
+                style={{background:"none",border:"1px solid rgba(194,24,91,.3)",borderRadius:6,color:"var(--red)",padding:"6px 12px",cursor:leaving?"not-allowed":"pointer",fontSize:12,fontFamily:"inherit",fontWeight:600,opacity:leaving?.6:1}}>
+                {leaving?"Leaving…":"Leave Community Board"}
+              </button>
             </div>
           </div>
         </div>
       </div>
-
       {(modal==="add"||modal==="edit")&&(
         <Modal title={modal==="add"?"Share with the Community":"Edit Post"} onClose={()=>{setModal(null);setActive(null);}}>
           <CommunityPostForm initial={modal==="edit"?active:null} onSave={save} onCancel={()=>{setModal(null);setActive(null);}} saving={saving}/>
@@ -6403,26 +6443,29 @@ function CommunityPage({userId, org, plan}) {
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// COMMUNITY GATE — opt-in wrapper for CommunityPage
-// ══════════════════════════════════════════════════════════════════════════════
+// ═══ COMMUNITY GATE — opt-in wrapper ════════════════════════════════════════════════════════════════════════════════
 function CommunityGate({userId, org, setOrg, plan}) {
   const [joining, setJoining] = useState(false);
 
-  const join = async () => {
+  const join = async()=>{
     setJoining(true);
-    const updated = {...org, community_enabled: true};
+    const updated = {...org, community_enabled:true};
     setOrg(updated);
-    await SB.from("orgs").update({community_enabled: true}).eq("id", userId);
-    // no need to setJoining(false) — component will re-render as CommunityPage
+    await SB.from("orgs").update({community_enabled:true}).eq("id",userId);
   };
 
-  if (org?.community_enabled) {
-    return <CommunityPage userId={userId} org={org} plan={plan}/>;
+  const handleLeave = async()=>{
+    const updated = {...org, community_enabled:false};
+    setOrg(updated);
+    await SB.from("orgs").update({community_enabled:false}).eq("id",userId);
+  };
+
+  if(org?.community_enabled){
+    return <CommunityPage userId={userId} org={org} plan={plan} onLeave={handleLeave}/>;
   }
 
-  return (
-    <div style={{position:"relative",minHeight:"70vh"}}>
+  return(
+    <div style={{position:"relative",minHeight:"80vh"}}>
       <img src={usp("photo-1503095396549-807759245b35",1400,900)} alt="" className="page-bg-img"/>
       <div style={{padding:"32px 36px 0"}}>
         <div className="hero-wrap" style={{height:230}}>
@@ -6431,41 +6474,63 @@ function CommunityGate({userId, org, setOrg, plan}) {
           <div className="hero-body">
             <div className="hero-eyebrow">🎪 Theatre Community</div>
             <h1 className="hero-title" style={{fontSize:44}}>Community Board</h1>
-            <p className="hero-sub">Connect with theatre programs across the network.</p>
+            <p className="hero-sub">Connect with theatre programs across the region.</p>
           </div>
           <div className="hero-bar"/>
         </div>
       </div>
-
-      <div style={{padding:"40px 36px 64px",position:"relative",zIndex:1,maxWidth:700}}>
-        <div className="card card-p" style={{borderColor:"rgba(212,168,67,.3)",background:"linear-gradient(135deg,rgba(212,168,67,.06),rgba(212,168,67,.02))"}}>
-          <div style={{fontSize:44,marginBottom:16,textAlign:"center"}}>🎪</div>
-          <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:26,marginBottom:12,textAlign:"center"}}>Join the Community Board</h2>
-          <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.7,marginBottom:20,textAlign:"center",maxWidth:500,margin:"0 auto 20px"}}>
-            The Community Board is a shared space for theatre programs to connect — post upcoming shows, audition notices, production photos, and wanted items. Other opted-in programs can see your posts.
-          </p>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:24}}>
-            {[
-              ["🎭","Post Show Announcements","Let the network know about your upcoming productions."],
-              ["🎤","Share Audition Notices","Find talent and help others find their next role."],
-              ["📸","Share Production Photos","Celebrate your work with the broader community."],
-              ["🔍","Post Wanted Items","Let others know what you're looking for."],
-            ].map(([icon,title,desc])=>(
-              <div key={title} style={{padding:"14px",background:"var(--parch)",borderRadius:10,border:"1px solid var(--linen)"}}>
-                <div style={{fontSize:24,marginBottom:6}}>{icon}</div>
-                <div style={{fontWeight:700,fontSize:13,marginBottom:4}}>{title}</div>
-                <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.4}}>{desc}</div>
+      <div style={{padding:"40px 36px 64px",position:"relative",zIndex:1,display:"flex",justifyContent:"center"}}>
+        <div style={{maxWidth:660,width:"100%"}}>
+          <div className="card card-p" style={{borderColor:"rgba(212,168,67,.3)",background:"linear-gradient(135deg,rgba(212,168,67,.06),rgba(212,168,67,.02))"}}>
+            <div style={{fontSize:44,marginBottom:16,textAlign:"center"}}>🎪</div>
+            <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:26,marginBottom:8,textAlign:"center"}}>Join the Community Board</h2>
+            <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.7,marginBottom:24,textAlign:"center"}}>
+              A shared bulletin board for opted-in theatre programs. Post your shows, auditions, production photos, and resource shares — and discover what other programs are up to nearby.
+            </p>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:24}}>
+              {[
+                ["🎭","Upcoming Shows","Share production dates and ticket info."],
+                ["🎤","Audition Notices","Find talent or help others find their next role."],
+                ["📸","Production Photos","Celebrate your work with the broader community."],
+                ["🔍","Item Wanted","Let others know what you need."],
+                ["🤝","Resource Shares","Offer props or costumes to borrow."],
+                ["📢","Announcements","News, updates, and anything else."],
+              ].map(([icon,title,desc])=>(
+                <div key={title} style={{padding:"12px",background:"var(--parch)",borderRadius:10,border:"1px solid var(--linen)"}}>
+                  <div style={{fontSize:22,marginBottom:5}}>{icon}</div>
+                  <div style={{fontWeight:700,fontSize:13,marginBottom:3}}>{title}</div>
+                  <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.4}}>{desc}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{background:"var(--parch)",border:"1px solid var(--linen)",borderRadius:10,padding:"16px 18px",marginBottom:24}}>
+              <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>What joining means</div>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {[
+                  ["✅","Your program name and city appear on posts you publish"],
+                  ["✅","You can read posts from all other opted-in programs"],
+                  ["✅","Posts are sorted by proximity to your location"],
+                  ["✅","Open to all plans — free and Pro alike"],
+                  ["🚫","Your inventory, financials, and private data are never shared"],
+                  ["🚫","Joining does not automatically publish anything — you choose what to post"],
+                  ["🚫","You can leave at any time from inside the Community Board"],
+                ].map(([ico,text])=>(
+                  <div key={text} style={{display:"flex",gap:10,alignItems:"flex-start",fontSize:13,color:"var(--muted)"}}>
+                    <span style={{flexShrink:0,fontSize:15}}>{ico}</span>
+                    <span>{text}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"10px 14px",marginBottom:20,fontSize:12,color:"var(--muted)",lineHeight:1.5}}>
-            📍 <strong>Proximity sorted</strong> — posts from nearby programs appear first. Set your city or zip in <strong>Profile</strong> for best results. You can leave the Community Board at any time from <strong>Settings</strong>.
-          </div>
-          <div style={{textAlign:"center"}}>
-            <button className="btn btn-g" style={{fontSize:15,padding:"11px 32px"}}
-              disabled={joining} onClick={join}>
-              {joining ? "Joining…" : "Join the Community Board →"}
-            </button>
+            </div>
+            <div style={{textAlign:"center"}}>
+              <button className="btn btn-g" style={{fontSize:15,padding:"12px 36px"}}
+                disabled={joining} onClick={join}>
+                {joining?"Joining…":"Join the Community Board →"}
+              </button>
+              <div style={{marginTop:10,fontSize:12,color:"var(--muted)"}}>
+                You can leave at any time from inside the Community Board.
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -6473,9 +6538,7 @@ function CommunityGate({userId, org, setOrg, plan}) {
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// MARKETPLACE GATE — opt-in wrapper for Marketplace
-// ══════════════════════════════════════════════════════════════════════════════
+
 function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool, allSchoolsMode}) {
   const [joining, setJoining] = useState(false);
 
@@ -7117,7 +7180,7 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
         <div className="card card-p" style={{marginBottom:20}}>
           <div className="sh"><h2>Plans</h2><p>Choose the right plan for your program.</p></div>
           {/* Billing toggle */}
-          <UpgradePlans />
+          <UpgradePlans userId={userId} userEmail={userEmail}/>
         </div>
 
         {/* Data */}
@@ -9032,7 +9095,7 @@ function AppRoot(){
                     }}/>}
                   {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
                   {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")}/>}
-                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole}/>}
+                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} userEmail={user?.email}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
                       ? <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading {activeSchool.name}…</div>
@@ -9054,7 +9117,7 @@ function AppRoot(){
                   {page==="district"    && plan==="district" && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool}/>}
                   {page==="community"   && <CommunityGate userId={user?.id} org={org} setOrg={setOrg} plan={plan}/>}
                   {page==="credits"     && (plan!=="free"||isAdmin) && <CreditsPage userId={user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
-                  {page==="credits"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:10}}>Theatre Credits is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true}/></div>}
+                  {page==="credits"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:10}}>Theatre Credits is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true} userId={user?.id} userEmail={user?.email}/></div>}
 
 
                   {page==="admin"       && isAdmin && <AdminDashboard currentUser={user}/>}
