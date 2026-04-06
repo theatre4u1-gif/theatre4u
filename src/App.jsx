@@ -8997,7 +8997,7 @@ function AppRoot(){
       ...(!isMember? [{ id:"funding",     label:"Funding Tracker", ico:"💰"  }] : []),
       ...(!isMember? [{ id:"prop28",      label:"Prop 28",         ico:"📋"  }] : []),
       { id:"profile",     label:"My Profile",  ico:"👤"       },
-      ...(!isMember && (plan !== "free" || isAdmin) ? [{ id:"credits", label:"Credits",  ico:"🪙", credits:true }] : []),
+      // Theatre Credits nav hidden — feature paused pending Exchange validation
       
       ...(!isMember && plan === "district" ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
       ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
@@ -9122,8 +9122,7 @@ function AppRoot(){
 
               <div className="sb-foot">
                 <div style={{display:"flex",gap:5,flexDirection:"column"}}>
-                  {(plan!=="free"||isAdmin)&&creditBalance>0&&(
-                    <div onClick={()=>nav("credits")} style={{background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.25)",borderRadius:7,padding:"7px 10px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:2}}>
+ style={{background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.25)",borderRadius:7,padding:"7px 10px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:2}}>
                       <span style={{fontSize:11,color:"rgba(255,255,255,.6)",fontWeight:600}}>🪙 Credits</span>
                       <span style={{fontFamily:"'Playfair Display',serif",fontSize:17,color:"var(--gold)",fontWeight:700}}>{creditBalance.toLocaleString()}</span>
                     </div>
