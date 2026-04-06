@@ -46,6 +46,12 @@ input::placeholder{color:var(--t3)}
 .success-sub{color:var(--t2);text-align:center;font-size:14px;line-height:1.6;margin-bottom:24px}
 .footer{margin-top:20px;text-align:center;font-size:12px;color:var(--t3)}
 .footer a{color:var(--gold);text-decoration:none}
+.role-info{background:rgba(255,255,255,.04);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin:16px 0;font-size:13px}
+.role-info .ri-title{font-weight:700;margin-bottom:6px;color:var(--gold)}
+.role-info ul{list-style:none;display:flex;flex-direction:column;gap:4px}
+.role-info ul li::before{content:"✓ ";color:var(--grn);font-weight:700}
+.role-info ul li.no::before{content:"✗ ";color:var(--t3)}
+.role-info ul li{color:var(--t2);font-size:12.5px}
 </style>
 </head>
 <body>
@@ -106,7 +112,7 @@ input::placeholder{color:var(--t3)}
 
   <div class="footer">
     <a href="https://theatre4u.org">theatre4u.org</a> · 
-    <a href="https://theatre4u.org/help">Help</a>
+    <a href="https://theatre4u.org/help.html">Help & Tutorials</a>
   </div>
 </div>
 
@@ -235,13 +241,41 @@ async function submitCode() {
   await loadCodeInvite(code);
 }
 
+const ROLE_INFO = {
+  stage_manager: {
+    can: ["Add, edit, and delete inventory items","Upload photos","View Backstage Exchange & Community","Access Messages and Requests"],
+    cannot: ["Financial data or Funding Tracker","Settings or billing"]
+  },
+  crew: {
+    can: ["Add and edit inventory items","Upload photos and add tags","Look up items by QR code"],
+    cannot: ["Delete items","Financial data or Settings","Messages or Requests"]
+  },
+  house: {
+    can: ["View and search the full inventory","Look up items by QR code"],
+    cannot: ["Add, edit, or delete items","Any financial or settings data"]
+  },
+  director: {
+    can: ["Full access to all features"],
+    cannot: []
+  }
+};
+
 function goToAuth(orgName, prefillEmail, role) {
-  // Set up org banner in auth step
+  const info = ROLE_INFO[role];
+  const infoHtml = info ? `
+    <div class="role-info">
+      <div class="ri-title">${ROLE_LABELS[role] || role} — What you can do:</div>
+      <ul>
+        ${info.can.map(c=>`<li>${c}</li>`).join("")}
+        ${info.cannot.map(c=>`<li class="no">${c}</li>`).join("")}
+      </ul>
+    </div>` : "";
   document.getElementById("org-banner-auth").innerHTML = `
-    <div class="org-banner" style="margin-bottom:20px">
+    <div class="org-banner" style="margin-bottom:16px">
       <div class="org-name">🎭 ${orgName}</div>
       <div class="role-badge">${ROLE_LABELS[role] || role}</div>
     </div>
+    ${infoHtml}
   `;
   if (prefillEmail) {
     document.getElementById("auth-email").value = prefillEmail;
