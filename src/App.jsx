@@ -88,6 +88,7 @@ function errAlert(key) {
 
 const uid  = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 const fmt$ = n  => "$" + Number(n || 0).toFixed(2);
+const itemNum = n  => n != null ? "#" + String(n).padStart(4, "0") : "";
 // Page background images — 5 confirmed-working Unsplash IDs only
 const usp=(id,w=900,h=500)=>`https://images.unsplash.com/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=82`;
 const BG = {
@@ -753,7 +754,8 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=t
     const w=window.open("","_blank","width=420,height=520");if(!w)return;
     const loc=item.location?"Location: "+item.location:"";
     const itemUrl="theatre4u.org/#/item/"+item.id;
-    w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2><p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qrSrc}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${itemUrl}</p><p style="font-size:11px;color:#bbb">Theatre4u™ Inventory</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
+    const numStr = item.item_number != null ? itemNum(item.item_number) : "";
+    w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}.num{font-size:22px;font-weight:900;font-family:monospace;color:#c4761a;margin:2px 0 6px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2>${numStr?`<div class="num">${numStr}</div>`:""}<p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qrSrc}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${itemUrl}</p><p style="font-size:11px;color:#bbb">Theatre4u™ Inventory</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
     w.document.close();
   };
 
@@ -777,7 +779,7 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=t
       </div>
       {(item.tags||[]).length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>{item.tags.map(t=><span key={t} style={{background:"rgba(196,118,26,.12)",color:"var(--cog)",fontSize:12.5,fontWeight:700,padding:"3px 9px",borderRadius:3}}>#{t}</span>)}</div>}
       <div className="dt-sec"><h3>Details</h3>
-        {[...(schoolName?[["School Site",<span style={{fontWeight:700,color:"#42a5f5"}}>🏫 {schoolName}</span>]]:[]),["Condition",item.condition],["Size",item.size],["Quantity",item.qty],["Availability",item.avail],["Location",item.location||"—"],["Notes",item.notes||"—"],["Added",item.added?new Date(item.added).toLocaleDateString():"—"],["ID",<span style={{fontFamily:"monospace",fontSize:11,color:"var(--faint)"}}>{item.id}</span>]].map(([l,v])=>(
+        {[...(schoolName?[["School Site",<span style={{fontWeight:700,color:"#42a5f5"}}>🏫 {schoolName}</span>]]:[]),["Condition",item.condition],["Size",item.size],["Quantity",item.qty],["Availability",item.avail],["Location",item.location||"—"],["Notes",item.notes||"—"],["Added",item.added?new Date(item.added).toLocaleDateString():"—"],...(item.item_number!=null?[["Item #",<span style={{fontWeight:800,fontSize:14,color:"var(--amber)",fontFamily:"monospace",letterSpacing:1}}>{itemNum(item.item_number)}</span>]]:[]),["UUID",<span style={{fontFamily:"monospace",fontSize:11,color:"var(--faint)"}}>{item.id}</span>]].map(([l,v])=>(
           <div className="dt-row" key={l}><span className="dt-lbl">{l}</span><span>{v}</span></div>
         ))}
       </div>
@@ -816,7 +818,8 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=t
         <div style={{display:"flex",alignItems:"center",gap:16,padding:"14px",background:"var(--parch)",borderRadius:10,border:"1px solid var(--border)"}}>
           <img src={qr||""} alt="QR Code" width={110} height={110} style={{borderRadius:6,flexShrink:0,border:"1px solid var(--linen)"}}/>
           <div>
-            <div style={{fontFamily:"'Lora',serif",fontWeight:600,fontSize:14,marginBottom:4}}>{item.name}</div>
+            <div style={{fontFamily:"'Lora',serif",fontWeight:600,fontSize:14,marginBottom:2}}>{item.name}</div>
+            {item.item_number!=null&&<div style={{fontSize:12,fontWeight:800,color:"var(--amber)",fontFamily:"monospace",letterSpacing:1,marginBottom:4}}>{itemNum(item.item_number)}</div>}
             <p style={{fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:10}}>Print and attach to the item or storage bin. Anyone can scan it to look up details instantly.</p>
             <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
               <button className="btn btn-o btn-sm" onClick={printQR}>
@@ -1634,7 +1637,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
                       <div className="inv-cat" style={{color:cat.color}}>{cat.icon} {cat.label}</div>
                       <div className="inv-name">{item.name}</div>
                       {item.location&&<div style={{fontSize:12,color:"var(--muted)",marginBottom:4,display:"flex",alignItems:"center",gap:3}}>📍 {item.location}</div>}
-                      <div className="inv-meta"><span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span>{item.size!=="N/A"&&<span className="chip">{item.size}</span>}<span className="chip">{item.avail}</span></div>
+                      <div className="inv-meta">{item.item_number!=null&&<span className="chip" style={{fontFamily:"monospace",fontWeight:800,color:"var(--amber)"}}>{itemNum(item.item_number)}</span>}<span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span>{item.size!=="N/A"&&<span className="chip">{item.size}</span>}<span className="chip">{item.avail}</span></div>
                       <div className="inv-foot"><span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span>{item.mkt==="For Loan"?<span style={{fontSize:12,color:"#00838f",fontWeight:700}}>{item.loan_period||2}wk loan{item.deposit>0?" · "+fmt$(item.deposit)+" dep.":""}</span>:item.mkt!=="Not Listed"&&<span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>}</div>
                     </div>
                   </div>
@@ -1645,12 +1648,13 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
         {view==="table"&&(
           <div className="tw">
             <table>
-              <thead><tr><th></th><th>Item</th><th>Category</th><th>Cond.</th><th>Qty</th><th>Location</th><th>Avail.</th><th>Market</th><th></th></tr></thead>
+              <thead><tr><th style={{width:60}}>#</th><th></th><th>Item</th><th>Category</th><th>Cond.</th><th>Qty</th><th>Location</th><th>Avail.</th><th>Market</th><th></th></tr></thead>
               <tbody>
                 {paged.map(item=>{
                   const cat=CAT[item.category]||CAT.other;
                   return(
                     <tr key={item.id}>
+                      <td style={{padding:"4px 10px",fontFamily:"monospace",fontSize:12,fontWeight:800,color:"var(--amber)",whiteSpace:"nowrap"}}>{itemNum(item.item_number)}</td>
                       <td style={{width:40,padding:"4px 8px"}}>{item.img?<img src={item.img} alt="" style={{width:32,height:32,borderRadius:4,objectFit:"cover"}}/>:<CatThumb catId={item.category} size={32}/>}</td>
                       <td style={{fontFamily:"'Lora',serif",fontWeight:600,fontSize:15,cursor:"pointer",color:"var(--ink)"}} onClick={()=>openD(item)}>{item.name}</td>
                       <td style={{fontWeight:700,color:"var(--muted)"}}>{cat.icon} {cat.label}</td>
@@ -7758,8 +7762,6 @@ function AuthScreen({onAuth}){
   const[loading,setLoading]=useState(false);
   const[done,setDone]=useState(false);
   const[legal,setLegal]=useState(null);
-  const[betaCode,setBetaCode]=useState("");
-  const[betaValid,setBetaValid]=useState(null); // null=unchecked, true=valid, false=invalid
 
   const submit=async()=>{
     setErr("");
