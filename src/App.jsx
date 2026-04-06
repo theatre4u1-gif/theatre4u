@@ -1797,13 +1797,14 @@ function milesBetween(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=false}){
+function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=false,onEdit=null,onDelete=null}){
   const[search,   setSrch]    = useState("");
   const[catF,     setCatF]    = useState("all");
   const[typeF,    setTypeF]   = useState("all");
   const[mktTab,   setMktTab]  = useState("browse"); // "browse" | "mine"
   const[pg,       setPg]      = useState(1);
   const[viewing,   setViewing]   = useState(null);
+  const[editingItem,setEditingItem]= useState(null); // editing own item from Exchange
   const[contactItem,setContactItem] = useState(null);
   const[requestItem, setRequestItem]  = useState(null);
   // Location search
@@ -2085,8 +2086,15 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
         <Pager total={filtered.length} page={pg} per={PP} onPage={setPg}/>
       </div>
       {viewing&&<Modal title="Listing Details" onClose={()=>setViewing(null)}>
-        <ItemDetail item={viewing} onEdit={()=>{}} onDelete={()=>{}}
+        <ItemDetail item={viewing}
+          onEdit={viewing.org_id===org?.id&&onEdit ? ()=>{setEditingItem(viewing);setViewing(null);} : null}
+          onDelete={viewing.org_id===org?.id&&onDelete ? id=>{onDelete(id);setViewing(null);} : null}
+          canEdit={viewing.org_id===org?.id}
+          canDelete={viewing.org_id===org?.id}
           schoolName={viewing.org_name&&viewing.org_id!==org?.id?viewing.org_name:null}/>
+      </Modal>}
+      {editingItem&&<Modal title="Edit Item" onClose={()=>setEditingItem(null)}>
+        <ItemForm item={editingItem} onSave={async(form)=>{if(onEdit){await onEdit({...editingItem,...form,id:editingItem.id});setEditingItem(null);}}} onCancel={()=>setEditingItem(null)} userId={org?.id} marketplaceEnabled={!!org?.marketplace_enabled}/>
       </Modal>}
       {contactItem&&<NewConversationModal
         item={contactItem}
@@ -6576,7 +6584,7 @@ function CommunityGate({userId, org, setOrg, plan}) {
 // ══════════════════════════════════════════════════════════════════════════════
 // MARKETPLACE GATE — opt-in wrapper for Marketplace
 // ══════════════════════════════════════════════════════════════════════════════
-function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool, allSchoolsMode}) {
+function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool, allSchoolsMode, onEdit=null, onDelete=null}) {
   const [joining, setJoining] = useState(false);
 
   const join = async () => {
@@ -6589,7 +6597,7 @@ function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool, allSch
   // Free plan users see the upgrade prompt (Marketplace handles that internally)
   // Pro/District users who haven't opted in see the gate
   if (org?.marketplace_enabled || plan === "free") {
-    return <Marketplace items={items} org={org} plan={plan} activeSchool={activeSchool} allSchoolsMode={allSchoolsMode}/>;
+    return <Marketplace items={items} org={org} plan={plan} activeSchool={activeSchool} allSchoolsMode={allSchoolsMode} onEdit={onEdit} onDelete={onDelete}/>;
   }
 
   return (
@@ -9200,7 +9208,7 @@ function AppRoot(){
                           headerNote={<div style={{padding:"8px 12px",background:"rgba(66,165,245,.1)",border:"1px solid rgba(66,165,245,.2)",borderRadius:7,marginBottom:12,fontSize:12,color:"#42a5f5"}}>🏫 Editing inventory for <strong>{activeSchool.name}</strong></div>}
                         />
                   )}
-                  {page==="marketplace" && <MarketplaceGate items={items} org={org} setOrg={setOrg} plan={plan} userId={user?.id} activeSchool={activeSchool} allSchoolsMode={plan==="district"}/>}
+                  {page==="marketplace" && <MarketplaceGate items={items} org={org} setOrg={setOrg} plan={plan} userId={user?.id} activeSchool={activeSchool} allSchoolsMode={plan==="district"} onEdit={edit} onDelete={del}/>}
                   {page==="productions" && <Productions userId={user?.id} allItems={items}/>}
                   {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan}/>}
                   {page==="funding"     && <FundingPage userId={user?.id} org={org} plan={plan}/>}
