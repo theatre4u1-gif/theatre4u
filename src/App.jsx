@@ -1736,20 +1736,23 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
     setLoadingAll(true);
     // Join items with org info in one query
     const{data,error}=await SB.from("items")
-      .select("*, orgs(name,location,state,zipcode,lat,lng)")
+      .select("*, orgs(name,location,state,zipcode,lat,lng,marketplace_enabled)")
       .neq("mkt","Not Listed")
+      .neq("mkt","Private")
       .eq("avail","In Stock")
       .order("added",{ascending:false});
     if(!error&&data){
-      const flat=data.map(i=>({
-        ...i,
-        org_name:    i.orgs?.name     || "Unknown Program",
-        org_location:i.orgs?.location || "",
-        org_state:   i.orgs?.state    || "",
-        org_zipcode: i.orgs?.zipcode  || "",
-        org_lat:     i.orgs?.lat      || null,
-        org_lng:     i.orgs?.lng      || null,
-      }));
+      const flat=data
+        .filter(i=>i.orgs?.marketplace_enabled !== false) // belt-and-suspenders: RLS already enforces
+        .map(i=>({
+          ...i,
+          org_name:    i.orgs?.name     || "Unknown Program",
+          org_location:i.orgs?.location || "",
+          org_state:   i.orgs?.state    || "",
+          org_zipcode: i.orgs?.zipcode  || "",
+          org_lat:     i.orgs?.lat      || null,
+          org_lng:     i.orgs?.lng      || null,
+        }));
       setAllListings(flat);
     }
     setLoadingAll(false);
@@ -1822,10 +1825,11 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
   const paged=useMemo(()=>filtered.slice((pg-1)*PP,pg*PP),[filtered,pg]);
   useEffect(()=>setPg(1),[search,catF,typeF,radius,userCoords,mktTab]);
 
+  // Free plan fallback (gate handles this normally)
   if(plan==="free") return(
     <div style={{padding:"40px 20px",textAlign:"center"}}>
       <div style={{fontSize:44,marginBottom:14}}>🏪</div>
-      <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:22,marginBottom:10}}>Backstage Exchange is a Pro Feature</h2>
+      <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:10}}>Backstage Exchange is a Pro Feature</h2>
       <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Share selected items with other programmes — rent, sell, or loan. Upgrade to Pro to join Backstage Exchange.</p>
       <UpgradePlans compact={true}/>
     </div>
@@ -6540,21 +6544,56 @@ function CommunityGate({userId, org, setOrg, plan}) {
 
 
 function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool, allSchoolsMode}) {
-  const [joining, setJoining] = useState(false);
+  const [joining,  setJoining]  = useState(false);
+  const [leaving,  setLeaving]  = useState(false);
 
   const join = async () => {
     setJoining(true);
-    const updated = {...org, marketplace_enabled: true};
-    setOrg(updated);
+    setOrg({...org, marketplace_enabled: true});
     await SB.from("orgs").update({marketplace_enabled: true}).eq("id", userId);
+    // no setJoining(false) — component re-renders into Exchange view
   };
 
-  // Free plan users see the upgrade prompt (Marketplace handles that internally)
-  // Pro/District users who haven't opted in see the gate
-  if (org?.marketplace_enabled || plan === "free") {
-    return <Marketplace items={items} org={org} plan={plan} activeSchool={activeSchool} allSchoolsMode={allSchoolsMode}/>;
+  const leave = async () => {
+    if (!window.confirm("Leave Backstage Exchange? Your items will no longer appear in other programs’ listings. Your inventory stays intact and you can rejoin at any time.")) return;
+    setLeaving(true);
+    setOrg({...org, marketplace_enabled: false});
+    await SB.from("orgs").update({marketplace_enabled: false}).eq("id", userId);
+    setLeaving(false);
+  };
+
+  // Free plan: show upgrade prompt
+  if (plan === "free") {
+    return (
+      <div style={{padding:"56px 36px",textAlign:"center"}}>
+        <div style={{fontSize:52,marginBottom:16}}>🏪</div>
+        <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:28,marginBottom:10}}>Backstage Exchange is a Pro Feature</h2>
+        <p style={{color:"var(--muted)",fontSize:14,maxWidth:460,margin:"0 auto 28px",lineHeight:1.7}}>
+          Share selected items with other theatre programs — rent, sell, or loan costumes, props, and equipment. Upgrade to Pro to join Backstage Exchange.
+        </p>
+        <UpgradePlans compact={true} userId={userId}/>
+      </div>
+    );
   }
 
+  // Pro/District opted in: show the full Exchange + leave button at bottom
+  if (org?.marketplace_enabled) {
+    return (
+      <div>
+        <Marketplace items={items} org={org} plan={plan} activeSchool={activeSchool} allSchoolsMode={allSchoolsMode}/>
+        <div style={{padding:"0 36px 40px",display:"flex",justifyContent:"flex-end"}}>
+          <button onClick={leave} disabled={leaving}
+            style={{background:"none",border:"1px solid rgba(194,24,91,.3)",borderRadius:6,
+              color:"var(--red)",padding:"6px 14px",cursor:leaving?"not-allowed":"pointer",
+              fontSize:12,fontFamily:"inherit",fontWeight:600,opacity:leaving?.6:1}}>
+            {leaving?"Leaving…":"Leave Backstage Exchange"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Pro/District not yet opted in: show join gate
   return (
     <div style={{position:"relative",minHeight:"70vh"}}>
       <img src={usp(BG.marketplace,1400,900)} alt="" className="page-bg-img"/>
@@ -6565,40 +6604,64 @@ function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool, allSch
           <div className="hero-body">
             <div className="hero-eyebrow">🏪 Backstage Exchange</div>
             <h1 className="hero-title" style={{fontSize:46}}>Backstage Exchange</h1>
-            <p className="hero-sub">Rent, buy, or loan theatre assets from programs near you.</p>
+            <p className="hero-sub">Theatre4u™’s optional resource-sharing network. You control exactly what you share.</p>
           </div>
           <div className="hero-bar"/>
         </div>
       </div>
 
-      <div style={{padding:"40px 36px 64px",position:"relative",zIndex:1,maxWidth:720}}>
-        <div className="card card-p" style={{borderColor:"rgba(212,168,67,.3)",background:"linear-gradient(135deg,rgba(212,168,67,.06),rgba(212,168,67,.02))"}}>
-          <div style={{fontSize:44,marginBottom:16,textAlign:"center"}}>🏪</div>
-          <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:26,marginBottom:12,textAlign:"center"}}>Join Backstage Exchange</h2>
-          <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.7,marginBottom:24,textAlign:"center",maxWidth:520,margin:"0 auto 24px"}}>
-            Backstage Exchange is Theatre4u™'s optional resource-sharing network. You choose exactly which items to share — your full inventory stays completely private. Browse what other programs near you have available.
-          </p>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:24}}>
-            {[
-              ["🔍","Browse Nearby","Find costumes, props, lighting and sound from programs in your area."],
-              ["💰","Earn Revenue","List items for rent or sale and earn income for your program."],
-              ["🤝","Share Resources","Loan items to other programs and earn Theatre Credits in return."],
-            ].map(([icon,title,desc])=>(
-              <div key={title} style={{padding:"14px",background:"var(--parch)",borderRadius:10,border:"1px solid var(--linen)",textAlign:"center"}}>
-                <div style={{fontSize:28,marginBottom:8}}>{icon}</div>
-                <div style={{fontWeight:700,fontSize:13,marginBottom:5}}>{title}</div>
-                <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.4}}>{desc}</div>
+      <div style={{padding:"40px 36px 64px",position:"relative",zIndex:1,display:"flex",justifyContent:"center"}}>
+        <div style={{maxWidth:700,width:"100%"}}>
+          <div className="card card-p" style={{borderColor:"rgba(212,168,67,.3)",background:"linear-gradient(135deg,rgba(212,168,67,.06),rgba(212,168,67,.02))"}}>
+            <div style={{fontSize:44,marginBottom:16,textAlign:"center"}}>🏪</div>
+            <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:26,marginBottom:8,textAlign:"center"}}>Join Backstage Exchange</h2>
+            <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.7,marginBottom:24,textAlign:"center"}}>
+              Backstage Exchange is Theatre4u™’s optional resource-sharing network for opted-in programs. Browse what other programs near you have available — and earn revenue or Theatre Credits sharing yours.
+            </p>
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:24}}>
+              {[
+                ["🔍","Browse Nearby","Find costumes, props, lighting and sound from programmes in your area."],
+                ["💰","Earn Revenue","List items for rent or sale and earn income for your program."],
+                ["🤝","Share Resources","Loan items and earn Theatre Credits for your program."],
+              ].map(([icon,title,desc])=>(
+                <div key={title} style={{padding:"14px",background:"var(--parch)",borderRadius:10,border:"1px solid var(--linen)",textAlign:"center"}}>
+                  <div style={{fontSize:28,marginBottom:8}}>{icon}</div>
+                  <div style={{fontWeight:700,fontSize:13,marginBottom:5}}>{title}</div>
+                  <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.4}}>{desc}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{background:"var(--parch)",border:"1px solid var(--linen)",borderRadius:10,padding:"16px 18px",marginBottom:24}}>
+              <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>What joining means</div>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {[
+                  ["✅","Your organization name and city appear on items you list"],
+                  ["✅","You can browse all listings from other opted-in programs"],
+                  ["✅","Listings are sorted by proximity to your location"],
+                  ["✅","You choose exactly which items to share — mark them For Rent, For Sale, or For Loan in Inventory"],
+                  ["🚫","Your full inventory, private notes, and financials are never shared"],
+                  ["🚫","Joining does not automatically publish any items — you control each one individually"],
+                  ["🚫","You can leave Backstage Exchange at any time from the bottom of this page"],
+                ].map(([ico,text])=>(
+                  <div key={text} style={{display:"flex",gap:10,alignItems:"flex-start",fontSize:13,color:"var(--muted)"}}>
+                    <span style={{flexShrink:0,fontSize:15}}>{ico}</span>
+                    <span>{text}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"10px 14px",marginBottom:20,fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
-            🏷️ <strong>What becomes visible:</strong> your organization name, city, and any items you've marked "For Rent", "For Sale", or "For Loan" in Inventory. Your full item list and private notes are never shared. You can leave Backstage Exchange at any time from <strong>Settings</strong>.
-          </div>
-          <div style={{textAlign:"center"}}>
-            <button className="btn btn-g" style={{fontSize:15,padding:"11px 32px"}}
-              disabled={joining} onClick={join}>
-              {joining ? "Joining…" : "Join Backstage Exchange →"}
-            </button>
+            </div>
+
+            <div style={{textAlign:"center"}}>
+              <button className="btn btn-g" style={{fontSize:15,padding:"12px 36px"}}
+                disabled={joining} onClick={join}>
+                {joining?"Joining…":"Join Backstage Exchange →"}
+              </button>
+              <div style={{marginTop:10,fontSize:12,color:"var(--muted)"}}>
+                You can leave at any time from inside Backstage Exchange.
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -6606,9 +6669,7 @@ function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool, allSch
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// THEATRE CREDITS PAGE
-// ══════════════════════════════════════════════════════════════════════════════
+
 function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
   const [ledger,   setLedger]   = useState([]);
   const [loading,  setLoading]  = useState(true);
@@ -7222,7 +7283,7 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
           <div style={{display:"flex",flexDirection:"column",gap:14,marginTop:16}}>
             {[
               {key:"community_enabled",  icon:"🎪", label:"Community Board",  desc:"Appear in the community directory and post to the shared board. Other programs can see your posts."},
-              {key:"marketplace_enabled",icon:"🏪", label:"Backstage Exchange",  desc:"Share selected items with other theatre programs in the region. You control exactly which items are posted. Browse what others have available."},
+              {key:"marketplace_enabled",icon:"🏪", label:"Backstage Exchange",  desc:"Join Theatre4u™’s optional resource-sharing network. List items for rent, sale, or loan. Browse what other opted-in programs have available. You control exactly which items are shared."},
             ].map(({key,icon,label,desc})=>(
               <div key={key} style={{display:"flex",alignItems:"flex-start",gap:14,padding:"12px 0",borderBottom:"1px solid var(--border)"}}>
                 <div style={{fontSize:22,marginTop:2}}>{icon}</div>
