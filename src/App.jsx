@@ -689,7 +689,7 @@ function LocationDropdown({ userId, value, onChange }) {
 }
 
 
-function ItemForm({item,onSave,onCancel,userId}){
+function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false}){
   const blank={name:"",category:"costumes",condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,loan_period:2,deposit:0,avail:"In Stock",img:null,tags:[]};
   const[f,setF]=useState(item||blank);
   const[ti,setTi]=useState("");
@@ -737,6 +737,14 @@ function ItemForm({item,onSave,onCancel,userId}){
       <div className="fg fu"><label className="fl">Notes</label><textarea className="ft" value={f.notes} onChange={e=>upd("notes",e.target.value)} placeholder="Production history, care instructions…"/></div>
       <div className="fg fu sdiv"><div className="slbl">🏪 Backstage Exchange</div></div>
       <div className="fg"><label className="fl">Listing Status</label><select className="fs" value={f.mkt} onChange={e=>upd("mkt",e.target.value)}>{MKT.map(s=><option key={s}>{s}</option>)}</select></div>
+      {f.mkt!=="Not Listed"&&f.mkt!=="Private"&&!marketplaceEnabled&&(
+        <div className="fg fu" style={{marginTop:-4}}>
+          <div style={{background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.3)",borderRadius:7,padding:"9px 12px",fontSize:12,color:"var(--amber)",lineHeight:1.6,display:"flex",gap:8,alignItems:"flex-start"}}>
+            <span style={{flexShrink:0}}>⚠️</span>
+            <span>This item won't appear in Backstage Exchange until your program joins. Go to <strong>Backstage Exchange</strong> in the nav to opt in — it only takes one click.</span>
+          </div>
+        </div>
+      )}
       <div className="fg"/>
       {showRent&&<div className="fg"><label className="fl">Rental / week ($)</label><input className="fi" type="number" min="0" step="any" placeholder="e.g. 25" value={f.rent||""} onChange={e=>upd("rent",parseFloat(e.target.value)||0)}/></div>}
       {showSale&&<div className="fg"><label className="fl">Sale Price ($)</label><input className="fi" type="number" min="0" step="any" placeholder="e.g. 50" value={f.sale||""} onChange={e=>upd("sale",parseFloat(e.target.value)||0)}/></div>}
@@ -1558,7 +1566,7 @@ function Dashboard({items,org,goInventory,goMarketplace,goCommunity,goProfile}){
   );
 }
 
-function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null}){
+function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null}){
     const[upgradeReason,setUpgradeReason]=useState(null);
   // Role-based permissions
   const canEdit   = memberRole !== "house";
@@ -1711,11 +1719,11 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
       />}
       {modal==="a"&&(<Modal title="Add New Item" onClose={()=>setModal(null)}
          >
-          <ItemForm onSave={handleSave} onCancel={()=>setModal(null)} userId={userId}/>
+          <ItemForm onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled}/>
         </Modal>)}
       {modal==="e"&&active&&(<Modal title="Edit Item" onClose={()=>setModal(null)}
          >
-          <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} userId={userId}/>
+          <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled}/>
         </Modal>)}
       {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{onDelete(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete}/></Modal>}
       {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",user?.id).order("added",{ascending:false});if(data)setItems(data);}}/>}
@@ -8995,7 +9003,7 @@ function AppRoot(){
       ...(!isCrew  ? [{ id:"productions", label:"Productions", ico:"🎭"       }] : []),
       ...(!isMember? [{ id:"reports",     label:"Reports",     ico:Ic.chart   }] : []),
       ...(!isMember? [{ id:"funding",     label:"Funding Tracker", ico:"💰"  }] : []),
-      ...(!isMember? [{ id:"prop28",      label:"Prop 28",         ico:"📋"  }] : []),
+      // Prop 28 nav hidden — legacy data accessible via Funding Tracker migration banner
       { id:"profile",     label:"My Profile",  ico:"👤"       },
       // Theatre Credits nav hidden — feature paused pending Exchange validation
       
@@ -9179,7 +9187,7 @@ function AppRoot(){
                     }}/>}
                   {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
                   {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")}/>}
-                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole}/>}
+                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
                       ? <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading {activeSchool.name}…</div>
