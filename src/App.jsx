@@ -666,6 +666,29 @@ function Modal({title,onClose,children,footer}){
   );
 }
 
+// Inline location picker — loads storage_locations for the org
+function LocationDropdown({ userId, value, onChange }) {
+  const [locs, setLocs] = useState([]);
+  useEffect(() => {
+    if (!userId) return;
+    SB.from("storage_locations").select("id,name,code").eq("org_id", userId).order("name")
+      .then(({ data }) => setLocs(data || []));
+  }, [userId]);
+  if (locs.length === 0) return null;
+  return (
+    <div className="fg">
+      <label className="fl">Assign to Location <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:10}}>(optional)</span></label>
+      <select className="fs" value={value || ""} onChange={e => onChange(e.target.value || null)}>
+        <option value="">No location assigned</option>
+        {locs.map(l => (
+          <option key={l.id} value={l.id}>{l.name}{l.code ? " (" + l.code + ")" : ""}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+
 function ItemForm({item,onSave,onCancel,userId}){
   const blank={name:"",category:"costumes",condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,loan_period:2,deposit:0,avail:"In Stock",img:null,tags:[]};
   const[f,setF]=useState(item||blank);
@@ -698,6 +721,7 @@ function ItemForm({item,onSave,onCancel,userId}){
       <div className="fg"><label className="fl">Quantity</label><input className="fi" type="number" min="0" step="1" placeholder="1" value={f.qty||""} onChange={e=>upd("qty",parseInt(e.target.value)||0)}/></div>
       <div className="fg"><label className="fl">Availability</label><select className="fs" value={f.avail} onChange={e=>upd("avail",e.target.value)}>{AVAIL.map(a=><option key={a}>{a}</option>)}</select></div>
       <div className="fg"><label className="fl">Location</label><input className="fi" value={f.location} onChange={e=>upd("location",e.target.value)} placeholder="e.g. Costume Closet A"/></div>
+      <LocationDropdown userId={userId} value={f.location_id||""} onChange={v=>upd("location_id",v||null)}/>
       <div className="fg fu sdiv">
         <div className="slbl">📷 Photo</div>
         <div style={{display:"flex",gap:10}}>
@@ -754,7 +778,7 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=t
     const w=window.open("","_blank","width=420,height=520");if(!w)return;
     const loc=item.location?"Location: "+item.location:"";
     const itemUrl="theatre4u.org/#/item/"+item.id;
-    const numStr = item.item_number != null ? itemNum(item.item_number) : "";
+    const numStr = item.display_id || (item.item_number != null ? itemNum(item.item_number) : "");
     w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}.num{font-size:22px;font-weight:900;font-family:monospace;color:#c4761a;margin:2px 0 6px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2>${numStr?`<div class="num">${numStr}</div>`:""}<p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qrSrc}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${itemUrl}</p><p style="font-size:11px;color:#bbb">Theatre4u™ Inventory</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
     w.document.close();
   };
@@ -779,7 +803,7 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=t
       </div>
       {(item.tags||[]).length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>{item.tags.map(t=><span key={t} style={{background:"rgba(196,118,26,.12)",color:"var(--cog)",fontSize:12.5,fontWeight:700,padding:"3px 9px",borderRadius:3}}>#{t}</span>)}</div>}
       <div className="dt-sec"><h3>Details</h3>
-        {[...(schoolName?[["School Site",<span style={{fontWeight:700,color:"#42a5f5"}}>🏫 {schoolName}</span>]]:[]),["Condition",item.condition],["Size",item.size],["Quantity",item.qty],["Availability",item.avail],["Location",item.location||"—"],["Notes",item.notes||"—"],["Added",item.added?new Date(item.added).toLocaleDateString():"—"],...(item.item_number!=null?[["Item #",<span style={{fontWeight:800,fontSize:14,color:"var(--amber)",fontFamily:"monospace",letterSpacing:1}}>{itemNum(item.item_number)}</span>]]:[]),["UUID",<span style={{fontFamily:"monospace",fontSize:11,color:"var(--faint)"}}>{item.id}</span>]].map(([l,v])=>(
+        {[...(schoolName?[["School Site",<span style={{fontWeight:700,color:"#42a5f5"}}>🏫 {schoolName}</span>]]:[]),["Condition",item.condition],["Size",item.size],["Quantity",item.qty],["Availability",item.avail],["Location",item.location||"—"],["Notes",item.notes||"—"],["Added",item.added?new Date(item.added).toLocaleDateString():"—"],...(item.display_id?[["Item ID",<span style={{fontWeight:800,fontSize:14,color:"var(--amber)",fontFamily:"monospace",letterSpacing:1}}>{item.display_id}</span>]]:[]),["UUID",<span style={{fontFamily:"monospace",fontSize:11,color:"var(--faint)"}}>{item.id}</span>]].map(([l,v])=>(
           <div className="dt-row" key={l}><span className="dt-lbl">{l}</span><span>{v}</span></div>
         ))}
       </div>
@@ -819,7 +843,7 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=t
           <img src={qr||""} alt="QR Code" width={110} height={110} style={{borderRadius:6,flexShrink:0,border:"1px solid var(--linen)"}}/>
           <div>
             <div style={{fontFamily:"'Lora',serif",fontWeight:600,fontSize:14,marginBottom:2}}>{item.name}</div>
-            {item.item_number!=null&&<div style={{fontSize:12,fontWeight:800,color:"var(--amber)",fontFamily:"monospace",letterSpacing:1,marginBottom:4}}>{itemNum(item.item_number)}</div>}
+            {item.display_id&&<div style={{fontSize:12,fontWeight:800,color:"var(--amber)",fontFamily:"monospace",letterSpacing:1,marginBottom:4}}>{item.display_id}</div>}
             <p style={{fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:10}}>Print and attach to the item or storage bin. Anyone can scan it to look up details instantly.</p>
             <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
               <button className="btn btn-o btn-sm" onClick={printQR}>
@@ -1543,7 +1567,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
 
   const[search,setSrch]=useState("");const[catF,setCatF]=useState("all");
   const[condF,setCondF]=useState("all");const[availF,setAvailF]=useState("all");
-  const[mktF,setMktF]=useState("all");const[view,setView]=useState("grid");
+  const[mktF,setMktF]=useState("all");const[view,setView]=useState("grid"); // grid | table | locations
   const[showF,setShowF]=useState(false);const[pg,setPg]=useState(1);
   const[modal,setModal]=useState(null);const[active,setActive]=useState(null);
   const[showImport,setShowImport]=useState(false);
@@ -1551,7 +1575,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
   const mktCls=m=>m==="For Rent"?"mb-rent":m==="For Sale"?"mb-sale":m==="Rent or Sale"?"mb-both":m==="For Loan"?"mb-loan":"mb-none";
   const filtered=useMemo(()=>{
     let f=items;
-    if(search){const q=search.toLowerCase();f=f.filter(i=>i.name.toLowerCase().includes(q)||(i.notes||"").toLowerCase().includes(q)||(i.location||"").toLowerCase().includes(q)||(i.tags||[]).some(t=>t.includes(q)))}
+    if(search){const q=search.toLowerCase();f=f.filter(i=>i.name.toLowerCase().includes(q)||(i.notes||"").toLowerCase().includes(q)||(i.location||"").toLowerCase().includes(q)||(i.display_id||"").toLowerCase().includes(q)||(i.tags||[]).some(t=>t.includes(q)))}
     if(catF!=="all")f=f.filter(i=>i.category===catF);
     if(condF!=="all")f=f.filter(i=>i.condition===condF);
     if(availF!=="all")f=f.filter(i=>i.avail===availF);
@@ -1603,7 +1627,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
         <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:14,alignItems:"center"}}>
           <div className="srch">{Ic.search}<input value={search} onChange={e=>setSrch(e.target.value)} placeholder="Search items, tags, location…"/></div>
           <button className="ico-btn" style={showF?{borderColor:"var(--gold)",color:"var(--cog)"}:{}} onClick={()=>setShowF(!showF)}>{Ic.filter}</button>
-          <div className="vtog"><button className={view==="grid"?"on":""} onClick={()=>setView("grid")}>Grid</button><button className={view==="table"?"on":""} onClick={()=>setView("table")}>Table</button></div>
+          <div className="vtog"><button className={view==="grid"?"on":""} onClick={()=>setView("grid")}>Grid</button><button className={view==="table"?"on":""} onClick={()=>setView("table")}>Table</button><button className={view==="locations"?"on":""} onClick={()=>setView("locations")}>📦 Locations</button></div>
           <div style={{marginLeft:"auto",display:"flex",gap:7}}>
             <button className="btn btn-o" style={{fontSize:12,padding:"6px 12px"}} onClick={()=>setShowImport(true)}
               title="Import from CSV">⬆ Import CSV</button>
@@ -1637,7 +1661,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
                       <div className="inv-cat" style={{color:cat.color}}>{cat.icon} {cat.label}</div>
                       <div className="inv-name">{item.name}</div>
                       {item.location&&<div style={{fontSize:12,color:"var(--muted)",marginBottom:4,display:"flex",alignItems:"center",gap:3}}>📍 {item.location}</div>}
-                      <div className="inv-meta">{item.item_number!=null&&<span className="chip" style={{fontFamily:"monospace",fontWeight:800,color:"var(--amber)"}}>{itemNum(item.item_number)}</span>}<span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span>{item.size!=="N/A"&&<span className="chip">{item.size}</span>}<span className="chip">{item.avail}</span></div>
+                      <div className="inv-meta">{item.display_id&&<span className="chip" style={{fontFamily:"monospace",fontWeight:800,color:"var(--amber)",letterSpacing:.5}}>{item.display_id}</span>}<span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span>{item.size!=="N/A"&&<span className="chip">{item.size}</span>}<span className="chip">{item.avail}</span></div>
                       <div className="inv-foot"><span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span>{item.mkt==="For Loan"?<span style={{fontSize:12,color:"#00838f",fontWeight:700}}>{item.loan_period||2}wk loan{item.deposit>0?" · "+fmt$(item.deposit)+" dep.":""}</span>:item.mkt!=="Not Listed"&&<span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>}</div>
                     </div>
                   </div>
@@ -1654,7 +1678,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
                   const cat=CAT[item.category]||CAT.other;
                   return(
                     <tr key={item.id}>
-                      <td style={{padding:"4px 10px",fontFamily:"monospace",fontSize:12,fontWeight:800,color:"var(--amber)",whiteSpace:"nowrap"}}>{itemNum(item.item_number)}</td>
+                      <td style={{padding:"4px 10px",fontFamily:"monospace",fontSize:12,fontWeight:800,color:"var(--amber)",whiteSpace:"nowrap"}}>{item.display_id||""}</td>
                       <td style={{width:40,padding:"4px 8px"}}>{item.img?<img src={item.img} alt="" style={{width:32,height:32,borderRadius:4,objectFit:"cover"}}/>:<CatThumb catId={item.category} size={32}/>}</td>
                       <td style={{fontFamily:"'Lora',serif",fontWeight:600,fontSize:15,cursor:"pointer",color:"var(--ink)"}} onClick={()=>openD(item)}>{item.name}</td>
                       <td style={{fontWeight:700,color:"var(--muted)"}}>{cat.icon} {cat.label}</td>
@@ -1679,6 +1703,12 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
         )}
         <Pager total={filtered.length} page={pg} per={PP} onPage={setPg}/>
       </div>
+      {view==="locations"&&<LocationsPanel
+        userId={userId}
+        items={items}
+        onEditItem={item=>{setActive(item);setModal("e");}}
+        onDeleteItem={id=>{onDelete(id);}}
+      />}
       {modal==="a"&&(<Modal title="Add New Item" onClose={()=>setModal(null)}
          >
           <ItemForm onSave={handleSave} onCancel={()=>setModal(null)} userId={userId}/>
@@ -9534,6 +9564,254 @@ function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav }) {
   );
 
   return null;
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// STORAGE LOCATIONS — manage named locations, browse items by location
+// ══════════════════════════════════════════════════════════════════════════════
+function LocationsPanel({ userId, items, onEditItem, onDeleteItem }) {
+  const [locations,    setLocations]    = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [modal,        setModal]        = useState(null); // "add"|"edit"|"browse"
+  const [active,       setActive]       = useState(null);
+  const [saving,       setSaving]       = useState(false);
+  const [browseItems,  setBrowseItems]  = useState([]);
+  const [msg,          setMsg]          = useState("");
+
+  const flash = m => { setMsg(m); setTimeout(() => setMsg(""), 3000); };
+
+  // Load locations with item counts
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data } = await SB.from("storage_locations")
+      .select("*")
+      .eq("org_id", userId)
+      .order("name");
+    setLocations(data || []);
+    setLoading(false);
+  }, [userId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Save location (add or edit)
+  const saveLocation = async (f) => {
+    setSaving(true);
+    if (active) {
+      const { data, error } = await SB.from("storage_locations")
+        .update({ name: f.name.trim(), code: f.code.trim() || null, description: f.description.trim() || null, updated_at: new Date().toISOString() })
+        .eq("id", active.id).select().single();
+      if (error) { flash("❌ " + EM.fundingSave.body); }
+      else { setLocations(p => p.map(x => x.id === data.id ? data : x)); flash("✓ Location updated"); setModal(null); setActive(null); }
+    } else {
+      const { data, error } = await SB.from("storage_locations")
+        .insert({ org_id: userId, name: f.name.trim(), code: f.code.trim() || null, description: f.description.trim() || null })
+        .select().single();
+      if (error) { flash("❌ " + EM.fundingSave.body); }
+      else { setLocations(p => [...p, data]); flash("✓ Location added"); setModal(null); }
+    }
+    setSaving(false);
+  };
+
+  const deleteLocation = async (id) => {
+    if (!window.confirm("Delete this location? Items assigned here will lose their location link, but won't be deleted.")) return;
+    await SB.from("storage_locations").delete().eq("id", id);
+    setLocations(p => p.filter(x => x.id !== id));
+    flash("Location removed");
+  };
+
+  const browseLocation = (loc) => {
+    setActive(loc);
+    // Find items with this location_id OR whose free-text location matches the name
+    const matched = items.filter(i =>
+      i.location_id === loc.id ||
+      (i.location && i.location.toLowerCase() === loc.name.toLowerCase())
+    );
+    setBrowseItems(matched);
+    setModal("browse");
+  };
+
+  // Print QR label for a location container
+  const printLocationQR = async (loc) => {
+    const qrUrl = `https://theatre4u.org/#/location/${loc.id}`;
+    const qrSrc = await QR.toDataURL(qrUrl, 200);
+    if (!qrSrc) return;
+    const w = window.open("", "_blank", "width=420,height=540");
+    if (!w) return;
+    const itemCount = items.filter(i => i.location_id === loc.id || (i.location && i.location.toLowerCase() === loc.name.toLowerCase())).length;
+    w.document.write(`<html><head><title>QR – ${loc.name}</title>
+      <style>body{font-family:sans-serif;text-align:center;padding:40px}
+      img{margin:12px 0;border:1px solid #eee;border-radius:6px}
+      h2{margin-bottom:2px;font-size:20px}.code{font-size:28px;font-weight:900;font-family:monospace;color:#c4761a;margin:4px 0}
+      p{color:#666;font-size:13px;margin:3px 0}</style></head>
+      <body>
+      <p style="font-size:11px;color:#bbb;margin-bottom:4px">📦 Storage Location</p>
+      <h2>${loc.name}</h2>
+      ${loc.code ? `<div class="code">${loc.code}</div>` : ""}
+      ${loc.description ? `<p style="color:#888;font-style:italic">${loc.description}</p>` : ""}
+      <p style="font-weight:700;color:#333">${itemCount} item${itemCount !== 1 ? "s" : ""}</p>
+      <img src="${qrSrc}" width="180" height="180"/>
+      <p style="font-size:11px;margin-top:8px;color:#aaa">Theatre4u™ — Scan to view contents</p>
+      <script>setTimeout(function(){window.print()},300)<\/script>
+      </body></html>`);
+    w.document.close();
+  };
+
+  const card = { background: "var(--parch)", border: "1px solid var(--border)", borderRadius: 10, padding: 14, marginBottom: 10 };
+  const inp  = { background: "var(--white)", border: "1px solid var(--border)", borderRadius: 6, padding: "8px 10px", color: "var(--text)", fontSize: 13, fontFamily: "inherit", outline: "none", width: "100%", boxSizing: "border-box" };
+  const lbl  = { fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", display: "block", marginBottom: 4 };
+
+  return (
+    <div>
+      {msg && (
+        <div style={{ position: "fixed", top: 16, right: 16, zIndex: 9999, background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 600, color: msg.startsWith("❌") ? "var(--red)" : "var(--green)", boxShadow: "0 4px 20px rgba(0,0,0,.4)" }}>{msg}</div>
+      )}
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div>
+          <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6 }}>
+            Define named storage locations — rooms, closets, containers, racks. Assign items to a location and browse by container. Each location gets its own printable QR label.
+          </p>
+        </div>
+        <button className="btn btn-g" style={{ flexShrink: 0 }} onClick={() => { setActive(null); setModal("add"); }}>
+          + Add Location
+        </button>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 48, color: "var(--muted)" }}>Loading locations…</div>
+      ) : locations.length === 0 ? (
+        <div className="empty">
+          <div className="empty-ico">📦</div>
+          <h3>No locations yet</h3>
+          <p>Add your first storage location — a closet, a container, a room — and start assigning items to it.</p>
+          <button className="btn btn-g" onClick={() => setModal("add")}>+ Add First Location</button>
+        </div>
+      ) : (
+        locations.map(loc => {
+          const count = items.filter(i =>
+            i.location_id === loc.id ||
+            (i.location && i.location.toLowerCase() === loc.name.toLowerCase())
+          ).length;
+          return (
+            <div key={loc.id} style={card}>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                    <span style={{ fontSize: 22 }}>📦</span>
+                    <span style={{ fontWeight: 700, fontSize: 15 }}>{loc.name}</span>
+                    {loc.code && (
+                      <span style={{ fontFamily: "monospace", fontWeight: 800, fontSize: 13, color: "var(--amber)", background: "rgba(196,118,26,.12)", padding: "2px 8px", borderRadius: 4 }}>{loc.code}</span>
+                    )}
+                  </div>
+                  {loc.description && (
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6, fontStyle: "italic" }}>{loc.description}</div>
+                  )}
+                  <button onClick={() => browseLocation(loc)}
+                    style={{ background: "none", border: "none", color: "var(--gold)", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
+                    {count} item{count !== 1 ? "s" : ""} →
+                  </button>
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <button className="btn btn-o bsm" style={{ fontSize: 11 }} onClick={() => printLocationQR(loc)}>
+                    🖨 QR Label
+                  </button>
+                  <button className="btn btn-o bsm" onClick={() => { setActive(loc); setModal("edit"); }}>Edit</button>
+                  <button className="btn btn-d bsm" onClick={() => deleteLocation(loc.id)}>Delete</button>
+                </div>
+              </div>
+            </div>
+          );
+        })
+      )}
+
+      {/* ── Add/Edit Modal ── */}
+      {(modal === "add" || modal === "edit") && (
+        <LocationFormModal
+          initial={modal === "edit" ? active : null}
+          saving={saving}
+          onSave={saveLocation}
+          onCancel={() => { setModal(null); setActive(null); }}
+          inp={inp} lbl={lbl}
+        />
+      )}
+
+      {/* ── Browse items in location ── */}
+      {modal === "browse" && active && (
+        <Modal title={`📦 ${active.name}${active.code ? " · " + active.code : ""}`} onClose={() => { setModal(null); setActive(null); setBrowseItems([]); }}>
+          <div style={{ marginBottom: 12, fontSize: 13, color: "var(--muted)" }}>
+            {browseItems.length} item{browseItems.length !== 1 ? "s" : ""} in this location
+          </div>
+          {browseItems.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 32, color: "var(--muted)" }}>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>
+              <div>No items assigned to this location yet.</div>
+              <div style={{ fontSize: 12, marginTop: 6 }}>Assign items here by editing them and selecting this location.</div>
+            </div>
+          ) : (
+            browseItems.map(item => {
+              const cat = CAT[item.category] || CAT.other;
+              return (
+                <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--linen)" }}>
+                  <div style={{ width: 36, height: 36, background: cat.color + "22", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{cat.icon}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>{item.name}</div>
+                    <div style={{ fontSize: 11, color: "var(--muted)", display: "flex", gap: 8 }}>
+                      {item.display_id && <span style={{ fontFamily: "monospace", fontWeight: 800, color: "var(--amber)" }}>{item.display_id}</span>}
+                      <span>{cat.label}</span>
+                      <span>{item.condition}</span>
+                      <span>×{item.qty}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 5 }}>
+                    <button className="btn btn-o bsm" onClick={() => { setModal(null); onEditItem(item); }}>Edit</button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function LocationFormModal({ initial, saving, onSave, onCancel, inp, lbl }) {
+  const blank = { name: "", code: "", description: "" };
+  const [f, setF] = useState(initial || blank);
+  const upd = (k, v) => setF(p => ({ ...p, [k]: v }));
+  return (
+    <Modal title={(initial ? "Edit" : "Add") + " Storage Location"} onClose={onCancel}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div>
+          <label style={lbl}>Location Name *</label>
+          <input style={inp} value={f.name} onChange={e => upd("name", e.target.value)}
+            placeholder="e.g. Storage Container 1, Costume Closet A, Prop Room Shelf 3" autoFocus />
+        </div>
+        <div>
+          <label style={lbl}>Short Code <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, fontSize: 10 }}>(optional — for labels)</span></label>
+          <input style={{ ...inp, fontFamily: "monospace", letterSpacing: 2, textTransform: "uppercase" }}
+            value={f.code} onChange={e => upd("code", e.target.value.toUpperCase())}
+            placeholder="e.g. SC1, CCA, PS3" maxLength={8} />
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>Appears large on the printed QR label for quick visual ID.</div>
+        </div>
+        <div>
+          <label style={lbl}>Description <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, fontSize: 10 }}>(optional)</span></label>
+          <textarea style={{ ...inp, minHeight: 56, resize: "vertical" }}
+            value={f.description} onChange={e => upd("description", e.target.value)}
+            placeholder="Upstage right, blue rolling rack, near loading dock…" />
+        </div>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+          <button className="btn btn-o" onClick={onCancel}>Cancel</button>
+          <button className="btn btn-g" disabled={!f.name.trim() || saving}
+            style={{ opacity: !f.name.trim() || saving ? 0.45 : 1 }}
+            onClick={() => { if (f.name.trim()) onSave(f); }}>
+            {saving ? "Saving…" : initial ? "Save Changes" : "Add Location"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
 }
 
 function Prop28Page({userId, org, onNav}) {
