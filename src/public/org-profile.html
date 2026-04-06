@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Theatre4u — Programme Profile</title>
+<title>Theatre4u™ — Program Profile</title>
 <meta name="description" content="Theatre inventory and marketplace listing"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
@@ -105,7 +105,7 @@ async function load() {
 
   // Fetch listed items
   const itemsRes = await fetch(
-    `${SB_URL}/rest/v1/items?org_id=eq.${org.id}&mkt=neq.Not Listed&avail=eq.In Stock&select=*&order=added.desc&limit=48`,
+    `${SB_URL}/rest/v1/items?org_id=eq.${org.id}&mkt=neq.Not%20Listed&mkt=neq.Private&avail=eq.In%20Stock&select=id,name,category,condition,mkt,rent,sale,deposit,img,display_id&order=added.desc&limit=48`,
     { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
   );
   const items = await itemsRes.json() || [];
@@ -138,7 +138,7 @@ function renderProfile(org, items) {
         ${org.email ? `<a href="mailto:${org.email}">✉️ Contact</a>` : ''}
         ${org.website ? `<a href="${org.website}" target="_blank">🌐 Website</a>` : ''}
         ${org.instagram ? `<a href="https://instagram.com/${org.instagram.replace('@','')}" target="_blank">📸 Instagram</a>` : ''}
-        <a href="https://theatre4u.org">🎭 View in Marketplace</a>
+        <a href="https://theatre4u.org">🎭 View in Backstage Exchange</a>
       </div>
     </div>
 
@@ -157,7 +157,7 @@ function renderProfile(org, items) {
           <div class="grid">
             ${items.map(item => {
               const icon = CAT_ICONS[item.category] || '📦';
-              const color = STATUS_COLORS[item.market_status] || '#757575';
+              const color = STATUS_COLORS[item.mkt] || '#757575';
               return `
                 <div class="item-card">
                   <div class="item-img">
@@ -165,14 +165,14 @@ function renderProfile(org, items) {
                   </div>
                   <div class="item-body">
                     <div class="item-name" title="${item.name}">${item.name}</div>
-                    <div class="item-cat">${item.category || 'Other'} · ${item.condition || ''}</div>
+                    <div class="item-cat">${item.display_id ? `<span style="font-family:monospace;font-weight:800;color:#b07d20;font-size:10px">${item.display_id}</span> · ` : ""}${item.category || 'Other'} · ${item.condition || ''}</div>
                     <div class="item-foot">
-                      <span class="item-status" style="background:${color}22;color:${color}">${item.market_status}</span>
+                      <span class="item-status" style="background:${color}22;color:${color}">${item.mkt}</span>
                       <span class="item-price">
-                        ${item.rental_price > 0 ? fmt$(item.rental_price) + '/wk' : ''}
-                        ${item.sale_price > 0 && item.rental_price > 0 ? ' · ' : ''}
-                        ${item.sale_price > 0 ? fmt$(item.sale_price) : ''}
-                        ${item.market_status === 'For Loan' ? 'Free' : ''}
+                        ${item.rent > 0 ? fmt$(item.rent) + '/wk' : ''}
+                        ${item.sale > 0 && item.rent > 0 ? ' · ' : ''}
+                        ${item.sale > 0 ? fmt$(item.sale) : ''}
+                        ${item.mkt === 'For Loan' ? 'Free' : ''}
                       </span>
                     </div>
                   </div>
@@ -190,14 +190,14 @@ function renderProfile(org, items) {
         <h2>Need costumes, props, or gear?</h2>
         <p>Theatre4u connects theatre programs across your region so you can rent, borrow, and share resources.</p>
         <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-          <a href="https://theatre4u.org" class="btn btn-gold">🎭 Browse All Listings</a>
+          <a href="https://theatre4u.org" class="btn btn-gold">🎭 Browse Backstage Exchange</a>
           <a href="https://theatre4u.org" class="btn btn-o">Get Started Free</a>
         </div>
       </div>
     </div>
 
     <footer>
-      <a href="https://theatre4u.org">Theatre4u</a> · Inventory · Marketplace · Community ·
+      <a href="https://theatre4u.org">Theatre4u</a> · Inventory · Backstage Exchange · Community ·
       <a href="https://theatre4u.org/help.html">Help Center</a>
     </footer>
   `;
