@@ -8669,6 +8669,7 @@ function AppRoot(){
   const [openConvId,    setOpenConvId]    = useState(null);
   const [pendingReqCount, setPendingReqCount] = useState(0);
   const [creditBalance, setCreditBalance] = useState(0);
+  const [onboardingStep, setOnboardingStep] = useState(null); // null=loading, 0-4
   const [schoolItems,setSchoolItems]     = useState([]);
   const [schoolLoading,setSchoolLoading] = useState(false);
   // Invite token from URL — persisted in localStorage so it survives
@@ -8733,6 +8734,8 @@ function AppRoot(){
         setOrg({...orgData, _memberRole: memberRole, _isMember: !!memberData});
         setMemberRole(memberRole);
         setPlanState(effectivePlan);
+        // Load onboarding step — 0 = brand new user
+        setOnboardingStep(orgData.onboarding_step ?? 0);
       } else { setPlanState(effectivePlan); }
       const{data:itemData}=await SB.from("items").select("*").eq("org_id",targetOrgId).order("added",{ascending:false});
       if(itemData) setItems(itemData);
@@ -8812,8 +8815,30 @@ function AppRoot(){
 
   const signOut = async()=>{ await SB.auth.signOut(); };
 
-  const nav = p => { setPage(p); setMob(false); setActiveSchool(null); };
+  const nav = p => {
+    // Handle special onboarding actions
+    if (p === "inventory-csv") { setPage("inventory"); setMob(false); setActiveSchool(null);
+      window.history.pushState({ t4uPage: "inventory" }, "", window.location.pathname);
+      // Signal inventory to open CSV modal after mount
+      setTimeout(()=>window.__t4u_open_csv&&window.__t4u_open_csv(), 400); return; }
+    if (p === "sample") { setPage("dashboard"); setMob(false); setActiveSchool(null);
+      window.history.pushState({ t4uPage: "dashboard" }, "", window.location.pathname);
+      setTimeout(()=>window.__t4u_load_samples&&window.__t4u_load_samples(), 400); return; }
+    setPage(p); setMob(false); setActiveSchool(null);
+    // Push a history entry so browser back button navigates within the app
+    window.history.pushState({ t4uPage: p }, "", window.location.pathname);
+  };
+  // Onboarding: auto-advance when item milestones are hit
+  useEffect(()=>{
+    if (onboardingStep === null) return;
+    // Step 2 triggers after first item is added
+    if (onboardingStep === 2 && items.length === 0) return; // wait for item
+    // Step 3 triggers after 5+ items
+    if (onboardingStep === 3 && items.length < 5) return;
+  },[onboardingStep, items.length]);
+
   // Redirect to dashboard if current page's flag gets turned off
+
   useEffect(()=>{
     if(page==="community"  && !org?.community_enabled)   setPage("dashboard");
     if(page==="marketplace"&& !org?.marketplace_enabled) setPage("dashboard");
@@ -8823,6 +8848,23 @@ function AppRoot(){
     window.__t4u_nav_messages = (convId) => { setOpenConvId(convId); setPage("messages"); setMob(false); };
     window.__t4u_nav_requests = ()       => { setPage("requests"); setMob(false); };
     return () => { delete window.__t4u_nav_messages; delete window.__t4u_nav_requests; };
+  },[]);
+  // Back button: intercept popstate and navigate within the app
+  useEffect(()=>{
+    // Seed initial history entry so there's always somewhere to go back to
+    window.history.replaceState({ t4uPage: "dashboard" }, "", window.location.pathname);
+    const onPop = (e) => {
+      const p = e.state?.t4uPage;
+      if (p) {
+        setPage(p); setMob(false); setActiveSchool(null);
+      } else {
+        // No state means we've gone back past our first entry — push again to trap
+        window.history.pushState({ t4uPage: page }, "", window.location.pathname);
+      }
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
   const isDesk = typeof window !== "undefined" && window.innerWidth > 900;
   const listed = items.filter(i=>i.mkt!=="Not Listed").length;
@@ -9128,6 +9170,23 @@ function AppRoot(){
       {legalPage==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegalPage(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
       {legalPage==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegalPage(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
       {user && <FeedbackWidget userId={user.id} orgName={org?.name||""} isLeadingPlayer={org?.is_leading_player||false}/>}
+      {/* ── Onboarding overlay ─ shown once to new users ── */}
+      {user && onboardingStep !== null && onboardingStep < 4 && (
+        (onboardingStep === 0 ||
+         onboardingStep === 1 ||
+         (onboardingStep === 2 && items.length >= 1) ||
+         (onboardingStep === 3 && items.length >= 5)
+        ) ? (
+          <OnboardingOverlay
+            step={onboardingStep}
+            org={org}
+            userId={user?.id}
+            items={items}
+            onUpdate={(updated) => { setOrg(p=>({...p,...updated})); setOnboardingStep(updated.onboarding_step ?? 4); }}
+            onNav={nav}
+          />
+        ) : null
+      )}
     </>
   );
 }
@@ -9145,6 +9204,316 @@ const FUND_CATS = ["Equipment","Instruments","Supplies","Instruction","Personnel
 // ══════════════════════════════════════════════════════════════════════════════
 // PROP 28 PAGE — view legacy data + one-click migration to Funding Tracker
 // ══════════════════════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ONBOARDING OVERLAY SYSTEM
+// Tracks state in orgs.onboarding_step (0=new, 1=welcomed, 2=profiled,
+// 3=first-item celebrated, 4=participation prompted / complete)
+// ══════════════════════════════════════════════════════════════════════════════
+
+function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav }) {
+  const [saving, setSaving] = useState(false);
+
+  // Profile form state (step 2)
+  const [pf, setPf] = useState({
+    name:     org?.name     || "",
+    type:     org?.type     || "",
+    location: org?.location || "",
+    bio:      org?.bio      || "",
+  });
+
+  // Participation toggles (step 4)
+  const [joinCommunity,  setJoinCommunity]  = useState(false);
+  const [joinExchange,   setJoinExchange]   = useState(false);
+
+  const advance = async (nextStep, orgUpdates = {}) => {
+    setSaving(true);
+    const update = { onboarding_step: nextStep, ...orgUpdates };
+    await SB.from("orgs").update(update).eq("id", userId);
+    onUpdate({ ...org, ...update });
+    setSaving(false);
+  };
+
+  const saveProfile = async () => {
+    setSaving(true);
+    const update = {
+      onboarding_step: 2,
+      name:     pf.name.trim()     || org.name,
+      type:     pf.type            || org.type,
+      location: pf.location.trim() || org.location,
+      bio:      pf.bio.trim()      || org.bio,
+    };
+    await SB.from("orgs").update(update).eq("id", userId);
+    onUpdate({ ...org, ...update });
+    setSaving(false);
+  };
+
+  const saveParticipation = async () => {
+    setSaving(true);
+    const update = {
+      onboarding_step:    4,
+      community_enabled:  joinCommunity,
+      marketplace_enabled: joinExchange,
+    };
+    await SB.from("orgs").update(update).eq("id", userId);
+    onUpdate({ ...org, ...update });
+    setSaving(false);
+  };
+
+  // Overlay shell styles
+  const ov = {
+    position:"fixed", inset:0, background:"rgba(13,11,17,.88)",
+    zIndex:4000, display:"flex", alignItems:"center", justifyContent:"center",
+    padding:20, animation:"fi .2s ease",
+  };
+  const box = {
+    background:"var(--cream,#fdf6ec)", borderRadius:16, width:"100%",
+    maxWidth:520, maxHeight:"92vh", overflow:"auto",
+    boxShadow:"0 24px 80px rgba(0,0,0,.6)", animation:"su .25s ease",
+  };
+  const hdr = {
+    padding:"28px 32px 0", textAlign:"center",
+  };
+  const bod = { padding:"20px 32px 28px" };
+  const btn = (primary) => ({
+    display:"inline-flex", alignItems:"center", justifyContent:"center",
+    gap:6, padding:"11px 24px", borderRadius:8, fontFamily:"inherit",
+    fontSize:14, fontWeight:700, cursor:saving?"not-allowed":"pointer",
+    opacity:saving?0.6:1, border:"none", transition:"all .15s",
+    background: primary ? "linear-gradient(135deg,var(--gold,#d4a843),#a37f2c)" : "transparent",
+    color: primary ? "#1a0f00" : "var(--muted,#9b93a8)",
+    ...(primary ? {} : {border:"1px solid var(--border,#282333)"}),
+  });
+  const inp = {
+    background:"rgba(255,255,255,.06)", border:"1px solid var(--border,#282333)",
+    borderRadius:7, padding:"9px 12px", color:"var(--ink,#ede8df)",
+    fontSize:13, fontFamily:"inherit", outline:"none", width:"100%",
+    boxSizing:"border-box",
+  };
+  const lbl = {
+    fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:1,
+    color:"var(--muted,#9b93a8)", display:"block", marginBottom:4,
+  };
+
+  // ── STEP 0 — Welcome ──────────────────────────────────────────────────────
+  if (step === 0) return (
+    <div style={ov}>
+      <div style={box}>
+        <div style={{...hdr, paddingTop:36}}>
+          <div style={{fontSize:52, marginBottom:12}}>🎭</div>
+          <h2 style={{fontFamily:"'Playfair Display',serif", fontSize:26, marginBottom:8, color:"var(--ink,#1a0f00)"}}>
+            Welcome to Theatre4u™
+          </h2>
+          <p style={{fontSize:14, color:"var(--muted,#685f76)", lineHeight:1.7, marginBottom:4}}>
+            Your backstage command center is ready. Let's get your inventory started — pick how you'd like to begin:
+          </p>
+        </div>
+        <div style={bod}>
+          <div style={{display:"flex", flexDirection:"column", gap:10, marginBottom:20}}>
+            {[
+              ["📝", "Add items one by one",    "Start with a few key pieces — costumes, props, lights.",    "inventory"],
+              ["📥", "Import from a spreadsheet","Already have a list? Upload a CSV and we'll map the columns.","inventory-csv"],
+              ["🎪", "Load sample data",         "See how Theatre4u looks with a full inventory loaded in.",   "sample"],
+            ].map(([ico, title, desc, action]) => (
+              <button key={action} onClick={async () => {
+                await advance(1);
+                if (action === "inventory")     onNav("inventory");
+                if (action === "inventory-csv") onNav("inventory-csv");
+                if (action === "sample")        onNav("sample");
+              }} style={{
+                display:"flex", alignItems:"flex-start", gap:14, padding:"14px 16px",
+                background:"rgba(212,168,67,.08)", border:"1.5px solid rgba(212,168,67,.25)",
+                borderRadius:10, cursor:"pointer", textAlign:"left", fontFamily:"inherit",
+                transition:"all .15s",
+              }}>
+                <span style={{fontSize:26, flexShrink:0}}>{ico}</span>
+                <div>
+                  <div style={{fontWeight:700, fontSize:14, color:"var(--ink,#1a0f00)", marginBottom:3}}>{title}</div>
+                  <div style={{fontSize:12, color:"var(--muted,#685f76)", lineHeight:1.5}}>{desc}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+          <div style={{textAlign:"center"}}>
+            <button style={btn(false)} onClick={() => advance(1)}>Skip for now</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── STEP 1 — Profile prompt ───────────────────────────────────────────────
+  if (step === 1) return (
+    <div style={ov}>
+      <div style={box}>
+        <div style={hdr}>
+          <div style={{fontSize:40, marginBottom:10}}>🏫</div>
+          <h2 style={{fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:6, color:"var(--ink,#1a0f00)"}}>
+            Tell us about your program
+          </h2>
+          <p style={{fontSize:13, color:"var(--muted,#685f76)", lineHeight:1.6, marginBottom:4}}>
+            This helps other programs find you in the community and makes your listings more trustworthy. You can always update this in Profile.
+          </p>
+        </div>
+        <div style={bod}>
+          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16}}>
+            <div style={{gridColumn:"1/-1"}}>
+              <label style={lbl}>Program / School Name *</label>
+              <input style={inp} value={pf.name} onChange={e=>setPf(p=>({...p,name:e.target.value}))}
+                placeholder="Lincoln High Drama · Valley Rep · etc." autoFocus/>
+            </div>
+            <div>
+              <label style={lbl}>Program Type</label>
+              <select style={{...inp, cursor:"pointer"}} value={pf.type} onChange={e=>setPf(p=>({...p,type:e.target.value}))}>
+                <option value="">Select…</option>
+                {["School","District","Community Theatre","College","Professional","Other"].map(t=>(
+                  <option key={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={lbl}>City, State</label>
+              <input style={inp} value={pf.location} onChange={e=>setPf(p=>({...p,location:e.target.value}))}
+                placeholder="Portland, OR"/>
+            </div>
+            <div style={{gridColumn:"1/-1"}}>
+              <label style={lbl}>About your program <span style={{fontWeight:400,textTransform:"none",letterSpacing:0}}>(optional)</span></label>
+              <textarea style={{...inp, minHeight:64, resize:"vertical"}} value={pf.bio}
+                onChange={e=>setPf(p=>({...p,bio:e.target.value}))}
+                placeholder="A line or two about what your program does, what shows you produce…"/>
+            </div>
+          </div>
+          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", gap:8}}>
+            <button style={btn(false)} onClick={() => advance(2)}>Skip for now</button>
+            <button style={btn(true)} disabled={saving || !pf.name.trim()} onClick={saveProfile}>
+              {saving ? "Saving…" : "Save Profile →"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── STEP 2 — First item celebration ──────────────────────────────────────
+  if (step === 2 && items.length >= 1) return (
+    <div style={ov}>
+      <div style={box}>
+        <div style={{...hdr, paddingTop:36}}>
+          <div style={{fontSize:52, marginBottom:10}}>🎉</div>
+          <h2 style={{fontFamily:"'Playfair Display',serif", fontSize:24, marginBottom:8, color:"var(--ink,#1a0f00)"}}>
+            Your inventory is live!
+          </h2>
+          <p style={{fontSize:14, color:"var(--muted,#685f76)", lineHeight:1.7}}>
+            {org?.name ? `${org.name} now has` : "You now have"} {items.length} item{items.length!==1?"s":""} in Theatre4u™. Here's what to do next:
+          </p>
+        </div>
+        <div style={bod}>
+          <div style={{display:"flex", flexDirection:"column", gap:8, marginBottom:22}}>
+            {[
+              ["📦", "Keep adding items",       "The more you catalog, the more useful it becomes — especially before strike."],
+              ["🔖", "Print QR labels",          "Every item gets a scannable code. Stick one on the bin and you'll always know what's inside."],
+              ["🏪", "Explore Backstage Exchange","Browse what nearby programs have available for rent, sale, or loan."],
+            ].map(([ico, title, desc]) => (
+              <div key={title} style={{display:"flex", gap:12, padding:"10px 12px",
+                background:"rgba(212,168,67,.06)", borderRadius:8,
+                border:"1px solid rgba(212,168,67,.18)"}}>
+                <span style={{fontSize:22, flexShrink:0}}>{ico}</span>
+                <div>
+                  <div style={{fontWeight:700, fontSize:13, color:"var(--ink,#1a0f00)", marginBottom:2}}>{title}</div>
+                  <div style={{fontSize:12, color:"var(--muted,#685f76)", lineHeight:1.5}}>{desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button style={{...btn(true), width:"100%"}} disabled={saving}
+            onClick={() => advance(3)}>
+            {saving ? "…" : "Got it — let's go!"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── STEP 3 — Participation prompt (5+ items) ──────────────────────────────
+  if (step === 3 && items.length >= 5) return (
+    <div style={ov}>
+      <div style={box}>
+        <div style={hdr}>
+          <div style={{fontSize:44, marginBottom:10}}>🎪</div>
+          <h2 style={{fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:6, color:"var(--ink,#1a0f00)"}}>
+            Want to connect with other theatre programs?
+          </h2>
+          <p style={{fontSize:13, color:"var(--muted,#685f76)", lineHeight:1.65, marginBottom:0}}>
+            Theatre4u™ has two optional community features. Both are completely opt-in — nothing is shared until you say so.
+          </p>
+        </div>
+        <div style={bod}>
+          {[
+            {
+              key:  "community",
+              ico:  "🎭",
+              title:"Community Board",
+              desc: "Post your upcoming shows, share audition notices, and see what other programs are up to nearby. Your program name and city appear on posts you make. Your inventory stays private.",
+              val:  joinCommunity,
+              set:  setJoinCommunity,
+            },
+            {
+              key:  "exchange",
+              ico:  "🏪",
+              title:"Backstage Exchange",
+              desc: "Browse items other programs are renting, selling, or loaning. List your own items to earn revenue or Theatre Credits. You control exactly which items appear — everything else stays invisible.",
+              val:  joinExchange,
+              set:  setJoinExchange,
+            },
+          ].map(opt => (
+            <div key={opt.key} style={{
+              padding:"14px 16px", marginBottom:10,
+              background: opt.val ? "rgba(212,168,67,.10)" : "rgba(255,255,255,.03)",
+              border: `1.5px solid ${opt.val ? "rgba(212,168,67,.4)" : "var(--border,#282333)"}`,
+              borderRadius:10, transition:"all .2s",
+            }}>
+              <div style={{display:"flex", alignItems:"flex-start", gap:12}}>
+                <span style={{fontSize:26, flexShrink:0}}>{opt.ico}</span>
+                <div style={{flex:1}}>
+                  <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:5}}>
+                    <div style={{fontWeight:700, fontSize:14, color:"var(--ink,#1a0f00)"}}>{opt.title}</div>
+                    <button onClick={()=>opt.set(!opt.val)} style={{
+                      width:44, height:24, borderRadius:12, border:"none", cursor:"pointer",
+                      background: opt.val ? "var(--gold,#d4a843)" : "var(--border,#282333)",
+                      position:"relative", flexShrink:0, transition:"background .2s",
+                    }}>
+                      <span style={{
+                        position:"absolute", top:3, left: opt.val ? 22 : 2,
+                        width:18, height:18, borderRadius:"50%",
+                        background:"#fff", transition:"left .2s",
+                        display:"block",
+                      }}/>
+                    </button>
+                  </div>
+                  <div style={{fontSize:12, color:"var(--muted,#685f76)", lineHeight:1.55}}>{opt.desc}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+          <div style={{fontSize:11, color:"var(--muted,#685f76)", lineHeight:1.6, marginBottom:16,
+            padding:"8px 10px", background:"rgba(255,255,255,.03)", borderRadius:7,
+            border:"1px solid var(--border,#282333)"}}>
+            You can join or leave either feature at any time from Settings.
+          </div>
+          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", gap:8}}>
+            <button style={btn(false)} onClick={() => advance(4)}>Maybe later</button>
+            <button style={btn(true)} disabled={saving} onClick={saveParticipation}>
+              {saving ? "Saving…" : "Save & Finish"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return null;
+}
+
 function Prop28Page({userId, org, onNav}) {
   const [purchases,   setPurchases]   = useState([]);
   const [loading,     setLoading]     = useState(true);
