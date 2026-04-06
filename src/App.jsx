@@ -9122,11 +9122,6 @@ function AppRoot(){
 
               <div className="sb-foot">
                 <div style={{display:"flex",gap:5,flexDirection:"column"}}>
- style={{background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.25)",borderRadius:7,padding:"7px 10px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:2}}>
-                      <span style={{fontSize:11,color:"rgba(255,255,255,.6)",fontWeight:600}}>🪙 Credits</span>
-                      <span style={{fontFamily:"'Playfair Display',serif",fontSize:17,color:"var(--gold)",fontWeight:700}}>{creditBalance.toLocaleString()}</span>
-                    </div>
-                  )}
                   {(plan==="pro"||plan==="district"||isAdmin)&&(
                     <a href="/app.html" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
                       style={{color:"var(--gold)",borderColor:"rgba(212,168,67,.3)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
