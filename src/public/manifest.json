@@ -1,0 +1,35 @@
+{
+  "name": "Theatre4u™",
+  "short_name": "Theatre4u",
+  "description": "Inventory management and Backstage Exchange for theatre programs",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0b11",
+  "theme_color": "#d4a843",
+  "orientation": "portrait-primary",
+  "categories": ["education", "business", "productivity"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23d4a843'/><text y='.9em' font-size='72' x='12'>🎭</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add Item",
+      "short_name": "Add",
+      "description": "Add a new inventory item",
+      "url": "/?action=add",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Backstage Exchange",
+      "short_name": "Exchange",
+      "description": "Browse Backstage Exchange listings",
+      "url": "/?page=marketplace",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
