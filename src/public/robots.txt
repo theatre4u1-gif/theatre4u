@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Allow: /help.html
+Allow: /app
+Allow: /join
+
+Disallow: /api/
+Disallow: /assets/
+
+Sitemap: https://theatre4u.org/sitemap.xml
