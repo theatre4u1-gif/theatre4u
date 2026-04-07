@@ -2094,7 +2094,14 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
           schoolName={viewing.org_name&&viewing.org_id!==org?.id?viewing.org_name:null}/>
       </Modal>}
       {editingItem&&<Modal title="Edit Item" onClose={()=>setEditingItem(null)}>
-        <ItemForm item={editingItem} onSave={async(form)=>{if(onEdit){await onEdit({...editingItem,...form,id:editingItem.id});setEditingItem(null);}}} onCancel={()=>setEditingItem(null)} userId={org?.id} marketplaceEnabled={!!org?.marketplace_enabled}/>
+        <ItemForm item={editingItem} onSave={async(form)=>{
+          if(onEdit){
+            // Merge form over base item, then strip any joined org_ fields before saving
+            const merged={...editingItem,...form,id:editingItem.id};
+            Object.keys(merged).forEach(k=>{ if(k.startsWith('org_')||k==='orgs') delete merged[k]; });
+            await onEdit(merged); setEditingItem(null);
+          }
+        }} onCancel={()=>setEditingItem(null)} userId={org?.id} marketplaceEnabled={!!org?.marketplace_enabled}/>
       </Modal>}
       {contactItem&&<NewConversationModal
         item={contactItem}
@@ -8840,9 +8847,9 @@ function AppRoot(){
 
   const edit = useCallback(async(item)=>{
     const payload={...item};
-    delete payload.id;
-    delete payload.org_id;
-    delete payload.added;
+    // Strip immutable fields and any joined org_ fields from Exchange cross-org queries
+    delete payload.id; delete payload.org_id; delete payload.added;
+    Object.keys(payload).forEach(k=>{ if(k.startsWith('org_')||k==='orgs') delete payload[k]; });
     const{data,error}=await SB.from("items").update(payload).eq("id",item.id).select().single();
     if(error){ alert("Could not update item: "+error.message); console.error(error); return; }
     if(data) setItems(p=>p.map(x=>x.id===item.id?data:x));
