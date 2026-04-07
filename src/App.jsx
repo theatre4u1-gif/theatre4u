@@ -7674,6 +7674,15 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
         }
         if(data.user){
           const isLeadingPlayer = !!betaCode.trim(); // any valid beta code = Leading Player
+          // Track signup conversion with UTM attribution
+          const _sid = window.__t4u_sid || sessionStorage.getItem("t4u_sid") || null;
+          const _utm = window.__t4u_utm || JSON.parse(sessionStorage.getItem("t4u_utm")||"{}");
+          await SB.from("signup_events").insert({
+            session_id: _sid, org_id: data.user.id,
+            beta_code: betaCode.trim().toUpperCase()||null,
+            utm_source: _utm.source||null, utm_medium: _utm.medium||null, utm_campaign: _utm.campaign||null,
+            referrer: document.referrer||null
+          }).then(()=>{}).catch(()=>{}); // fire and forget
           await SB.from("orgs").upsert({
             id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:"",
             beta_code:betaCode.trim().toUpperCase()||null,
