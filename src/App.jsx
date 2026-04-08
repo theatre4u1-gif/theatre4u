@@ -1586,12 +1586,29 @@ function Dashboard({items,org,goInventory,goMarketplace,goCommunity,goProfile}){
   );
 }
 
-function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null}){
+function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null}){
     const[upgradeReason,setUpgradeReason]=useState(null);
   // Role-based permissions
   const canEdit   = memberRole !== "house";
   const canAdd    = memberRole !== "house";
   const canDelete = memberRole === "director" || memberRole === "stage_manager";
+
+  // ── Deep link: auto-filter by location when scanned from QR ─────────────────
+  const [locFilter, setLocFilter] = useState(deepLinkLocationId || "all");
+  const [locFilterName, setLocFilterName] = useState(null); // display name for banner
+  useEffect(()=>{
+    if (!deepLinkLocationId) return;
+    setLocFilter(deepLinkLocationId);
+    setTab && setTab("grid");  // ensure grid view is active
+    // Look up location name to show in banner
+    (async()=>{
+      try{
+        const {data} = await SB.from("storage_locations").select("name,code,description").eq("id", deepLinkLocationId).single();
+        if (data) setLocFilterName(data);
+      } catch(e){}
+      if (onDeepLinkConsumed) onDeepLinkConsumed(); // clear from AppRoot so refresh doesn't re-trigger
+    })();
+  }, [deepLinkLocationId]);
 
   const[search,setSrch]=useState("");const[catF,setCatF]=useState("all");
   const[condF,setCondF]=useState("all");const[availF,setAvailF]=useState("all");
@@ -1608,8 +1625,10 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
     if(condF!=="all")f=f.filter(i=>i.condition===condF);
     if(availF!=="all")f=f.filter(i=>i.avail===availF);
     if(mktF!=="all")f=f.filter(i=>i.mkt===mktF);
+    // Deep-link location filter — applied when scanned from a location QR code
+    if(locFilter!=="all")f=f.filter(i=>i.location_id===locFilter||(i.location&&i.location.toLowerCase()===(locFilterName?.name||"").toLowerCase()));
     return f;
-  },[items,search,catF,condF,availF,mktF]);
+  },[items,search,catF,condF,availF,mktF,locFilter,locFilterName]);
   const paged=useMemo(()=>filtered.slice((pg-1)*PP,pg*PP),[filtered,pg]);
   useEffect(()=>setPg(1),[search,catF,condF,availF,mktF]);
   const openD=item=>{setActive(item);setModal("d")};
@@ -1628,6 +1647,18 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
 
   return(<>
     {upgradeReason&&<UpgradePrompt reason={upgradeReason} onClose={()=>setUpgradeReason(null)}/>}
+    {/* ── Location QR deep-link banner ─────────────────────────── */}
+    {locFilter!=="all"&&locFilterName&&(
+      <div style={{display:"flex",alignItems:"center",gap:10,background:"rgba(232,184,93,.1)",border:"1px solid rgba(232,184,93,.3)",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
+        <span style={{fontSize:20}}>📦</span>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:700,fontSize:14,color:"var(--gold)"}}>{locFilterName.name}{locFilterName.code?` · ${locFilterName.code}`:""}</div>
+          <div style={{fontSize:12,color:"var(--t2)",marginTop:1}}>Showing items in this location · {filtered.length} item{filtered.length!==1?"s":""}</div>
+          {locFilterName.description&&<div style={{fontSize:11,color:"var(--t3)",marginTop:1,fontStyle:"italic"}}>{locFilterName.description}</div>}
+        </div>
+        <button onClick={()=>{setLocFilter("all");setLocFilterName(null);}} style={{background:"none",border:"1px solid rgba(232,184,93,.3)",borderRadius:6,color:"var(--t2)",padding:"4px 10px",cursor:"pointer",fontSize:12,fontFamily:"inherit",whiteSpace:"nowrap"}}>Show All</button>
+      </div>
+    )}
     {headerNote}
     {(nearLimit||atLimit)&&(
       <div style={{background:atLimit?"rgba(194,24,91,.12)":"rgba(212,168,67,.1)",border:"1px solid "+(atLimit?"rgba(194,24,91,.3)":"rgba(212,168,67,.25)"),borderRadius:8,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
@@ -8745,15 +8776,20 @@ export default AppWithBoundary;
 function AppRoot(){
   const [user,setUser]     = useState(null);
   // ── Hash routing — handles #/item/:id for public QR scans ─────────────────
-  const [publicItemId, setPublicItemId] = useState(()=>{
-    const h = window.location.hash;
-    const m = h.match(/^#\/item\/(.+)$/);
-    return m ? m[1] : null;
+  // ── Hash routing — #/item/:id and #/location/:id for QR code deep links ─────
+  const parseHash = (hash) => ({
+    itemId:     (hash.match(/^#\/item\/(.+)$/)    ||[])[1] || null,
+    locationId: (hash.match(/^#\/location\/(.+)$/)   ||[])[1] || null,
   });
+  const [publicItemId,     setPublicItemId]     = useState(()=>parseHash(window.location.hash).itemId);
+  const [deepLinkLocation, setDeepLinkLocation] = useState(()=>parseHash(window.location.hash).locationId);
   useEffect(()=>{
     const onHash = () => {
-      const m = window.location.hash.match(/^#\/item\/(.+)$/);
-      setPublicItemId(m ? m[1] : null);
+      const {itemId, locationId} = parseHash(window.location.hash);
+      setPublicItemId(itemId);
+      setDeepLinkLocation(locationId);
+      // If location QR scanned while logged in → go straight to inventory
+      if (locationId && !itemId) setPage("inventory");
     };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
@@ -9031,6 +9067,15 @@ function AppRoot(){
     })();
   }, [user, pendingInvite]);
 
+  // ── Location deep link: once loaded and authed, navigate to inventory ────────
+  useEffect(()=>{
+    if (deepLinkLocation && loaded && user) {
+      setPage("inventory");
+      // Clear the hash so refresh doesn't re-trigger
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [deepLinkLocation, loaded, user]);
+
   const isAdmin = isAdminEmail(user?.email);
   const NAV = (() => {
     const role = memberRole; // null=director/owner, stage_manager, crew, house
@@ -9242,7 +9287,7 @@ function AppRoot(){
                     }}/>}
                   {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
                   {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")}/>}
-                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org}/>}
+                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
                       ? <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading {activeSchool.name}…</div>
