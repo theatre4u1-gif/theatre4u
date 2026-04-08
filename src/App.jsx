@@ -167,6 +167,39 @@ const SIZES = ["XS","S","M","L","XL","XXL","One Size","N/A"];
 const AVAIL = ["In Stock","In Use","Checked Out","Being Repaired","Lost","Retired"];
 const MKT   = ["Not Listed","For Rent","For Sale","Rent or Sale","For Loan"];
 
+// ══ Real Theatre4u Logo — comedy/tragedy masks with sparkles ══════════════════
+// Extracted from Theatre4u_LogoDk.svg (uploaded to src/public/)
+// Used as <img> tags — the real brand asset, not a geometric placeholder
+
+// The masks icon at multiple sizes (56px sidebar, 120px hero)
+// Files live at /Theatre4u_LogoDk.svg and /Theatre4u_Logo_Lt__2_.svg in src/public/
+const LOGO_DARK_URL  = "/Theatre4u_LogoDk.svg";
+const LOGO_LIGHT_URL = "/Theatre4u_Logo_Lt__2_.svg";
+
+// LogoMarkDark — real masks icon for dark backgrounds (sidebar, dark panels)
+const LogoMarkDark = ({size=40}) => (
+  <img
+    src={LOGO_DARK_URL}
+    width={size} height={size}
+    alt="Theatre4u"
+    style={{flexShrink:0, display:"block", objectFit:"contain"}}
+  />
+);
+
+// LogoMarkLight — real masks icon for light backgrounds (print, light panels)
+const LogoMarkLight = ({size=40}) => (
+  <img
+    src={LOGO_LIGHT_URL}
+    width={size} height={size}
+    alt="Theatre4u"
+    style={{flexShrink:0, display:"block", objectFit:"contain"}}
+  />
+);
+
+// Inline fallback for non-React print contexts (keeps gold color)
+const LOGO_MARK_SVG_DARK = `<svg width="40" height="40" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#1a0c06" rx="10"/><rect x="12" y="12" width="76" height="76" rx="10" stroke="#e8b85d" fill="none" stroke-width="2"/><path d="M28 50 Q42 30 56 50 Q42 65 28 50Z" fill="#e8b85d"/><path d="M44 50 Q58 70 72 50 Q58 35 44 50Z" fill="#e8b85d"/></svg>`;
+
+
 // ── QR Code Generator (pure canvas, no dependencies) ─────────────────────────
 // ── QR Code — generated client-side via esm.sh/qrcode ───────────────────────
 let _qrMod = null;
@@ -247,11 +280,11 @@ async function uploadPhoto(file, userId) {
 }
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Lora:ital,wght@0,500;0,600;1,400;1,500&family=Raleway:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600&family=Lora:ital,wght@0,500;0,600;1,400;1,500&family=Raleway:wght@500;600;700;800&display=swap');
 :root{
-  --ink:#120600;--deep:#2a0e00;--cog:#8b3a0f;--amber:#c4761a;--gold:#d4a843;--gilt:#f5d870;
-  --cream:#fdf6ec;--parch:#f3e6cc;--linen:#e6d3b3;--sand:#ccb890;
-  --text:#2a1008;--muted:#7a4e28;--faint:#b09060;--border:#ddc8a0;
+  --ink:#1a0c06;--deep:#2a0f09;--cog:#8b5a0f;--amber:#c49a30;--gold:#e8b85d;--gilt:#f5cc70;
+  --cream:#f5ede3;--parch:#ede0cf;--linen:#ddd0ba;--sand:#c8b895;
+  --text:#3b2a1f;--muted:#7a5538;--faint:#b09060;--border:#d4c09a;
   --white:#ffffff;--red:#8b1a2a;--green:#265e2a;--blue:#1a3570;
   --sh1:0 2px 14px rgba(18,6,0,.1);--sh2:0 6px 28px rgba(18,6,0,.17);--sh3:0 14px 52px rgba(18,6,0,.25);
   --r:5px;--rm:12px;--rl:18px;
@@ -275,8 +308,8 @@ body{font-family:'Raleway',sans-serif;-webkit-font-smoothing:antialiased}
 .sb-photo::after{content:'';position:absolute;inset:0;background:linear-gradient(175deg,rgba(18,6,0,.5) 0%,rgba(18,6,0,.9) 60%,rgba(18,6,0,.97) 100%)}
 .sb-inner{position:relative;z-index:1;display:flex;flex-direction:column;height:100%;overflow-y:auto}
 .sb-logo{padding:28px 20px 20px;border-bottom:1px solid rgba(212,168,67,.15)}
-.sb-glyph{font-size:36px;display:block;margin-bottom:8px;line-height:1}
-.sb-name{font-family:'Abril Fatface',display;font-size:27px;color:var(--gold);letter-spacing:.8px;line-height:1}
+.sb-glyph{display:none}
+.sb-name{font-family:'Cormorant Garamond','Playfair Display',serif;font-size:27px;color:var(--gold);letter-spacing:.8px;line-height:1;font-weight:700}
 .sb-sub{font-size:9.5px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:3px;margin-top:6px;font-weight:700}
 .sb-nav{padding:14px 10px;flex:1}
 .sb-section{font-size:9px;text-transform:uppercase;letter-spacing:3px;color:rgba(255,255,255,.2);padding:14px 12px 5px;font-weight:800}
@@ -291,7 +324,7 @@ body{font-family:'Raleway',sans-serif;-webkit-font-smoothing:antialiased}
 /* Topbar */
 .topbar{display:flex;align-items:center;gap:14px;padding:14px 36px;border-bottom:1px solid var(--border);background:var(--cream);flex-shrink:0;position:relative}
 .topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--amber),var(--gilt) 50%,transparent 80%)}
-.topbar-title{font-family:'Abril Fatface',display;font-size:27px;color:var(--ink);letter-spacing:.5px}
+.topbar-title{font-family:'Cormorant Garamond','Playfair Display',serif;font-size:27px;color:var(--ink);letter-spacing:.5px}
 .menu-btn{display:none;background:none;border:none;cursor:pointer;color:var(--muted);padding:4px}
 .menu-btn svg{width:22px;height:22px}
 
@@ -306,13 +339,13 @@ body{font-family:'Raleway',sans-serif;-webkit-font-smoothing:antialiased}
 .hero-fade{position:absolute;inset:0;background:linear-gradient(135deg,rgba(18,6,0,.88) 0%,rgba(18,6,0,.5) 55%,rgba(18,6,0,.08) 100%)}
 .hero-body{position:absolute;bottom:0;left:0;right:0;z-index:1;padding:42px 50px;display:flex;flex-direction:column}
 .hero-eyebrow{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:4.5px;color:var(--gold);margin-bottom:10px}
-.hero-title{font-family:'Abril Fatface',display;font-size:52px;color:var(--white);line-height:1.05;margin-bottom:10px;text-shadow:0 3px 24px rgba(0,0,0,.45);white-space:pre-line}
+.hero-title{font-family:'Playfair Display',serif;font-size:52px;color:var(--white);line-height:1.05;margin-bottom:10px;text-shadow:0 3px 24px rgba(0,0,0,.45);white-space:pre-line}
 .hero-sub{font-family:'Lora',serif;font-size:17px;font-style:italic;color:rgba(255,255,255,.72);max-width:520px;line-height:1.65}
 .hero-bar{position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--gold),var(--gilt),transparent 75%)}
 
 /* Section heading */
 .sh{margin-bottom:22px}
-.sh h2{font-family:'Abril Fatface',display;font-size:32px;color:var(--ink);line-height:1.1;margin-bottom:3px}
+.sh h2{font-family:'Playfair Display',serif;font-size:32px;color:var(--ink);line-height:1.1;margin-bottom:3px}
 .sh p{font-family:'Lora',serif;font-size:15.5px;font-style:italic;color:var(--muted)}
 
 /* Stats */
@@ -320,7 +353,7 @@ body{font-family:'Raleway',sans-serif;-webkit-font-smoothing:antialiased}
 .stat{background:rgba(253,246,236,.9);border:1px solid var(--border);border-radius:var(--rm);padding:20px 18px;box-shadow:var(--sh1);backdrop-filter:blur(8px);position:relative;overflow:hidden;transition:box-shadow .18s,transform .18s}
 .stat:hover{box-shadow:var(--sh2);transform:translateY(-2px)}
 .stat-ico{font-size:26px;margin-bottom:9px}
-.stat-val{font-family:'Abril Fatface',display;font-size:38px;color:var(--ink);line-height:1}
+.stat-val{font-family:'Playfair Display',serif;font-size:38px;color:var(--ink);line-height:1}
 .stat-lbl{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-top:5px}
 
 /* Mosaic */
@@ -336,7 +369,7 @@ body{font-family:'Raleway',sans-serif;-webkit-font-smoothing:antialiased}
 .img-div img{width:100%;height:100%;object-fit:cover;display:block}
 .img-div-fade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(18,6,0,.83) 0%,rgba(18,6,0,.35) 60%,transparent 100%)}
 .img-div-text{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;justify-content:center;padding:0 42px}
-.img-div-text h3{font-family:'Abril Fatface',display;font-size:30px;color:var(--white);margin-bottom:5px}
+.img-div-text h3{font-family:'Playfair Display',serif;font-size:30px;color:var(--white);margin-bottom:5px}
 .img-div-text p{font-family:'Lora',serif;font-size:15px;font-style:italic;color:rgba(255,255,255,.7)}
 
 /* Showcase */
@@ -354,7 +387,7 @@ body{font-family:'Raleway',sans-serif;-webkit-font-smoothing:antialiased}
 .sc-body{padding:14px 16px}
 .sc-cat{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--amber);margin-bottom:4px}
 .sc-name{font-family:'Lora',serif;font-size:17px;font-weight:600;color:var(--ink);margin-bottom:5px;line-height:1.3}
-.sc-price{font-family:'Abril Fatface',display;font-size:19px;color:var(--cog)}
+.sc-price{font-family:'Playfair Display',serif;font-size:19px;color:var(--cog)}
 
 /* Category tiles */
 .cat-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px}
@@ -387,7 +420,7 @@ body{font-family:'Raleway',sans-serif;-webkit-font-smoothing:antialiased}
 .mb-both{background:rgba(196,118,26,.12);color:var(--cog)}
 .mb-none{background:var(--parch);color:var(--faint)}
 .mb-loan{background:rgba(0,131,143,.1);color:#00838f}
-.price{font-family:'Abril Fatface',display;font-size:18px;color:var(--cog)}
+.price{font-family:'Playfair Display',serif;font-size:18px;color:var(--cog)}
 
 /* Bar charts */
 .bar-row{display:flex;align-items:center;gap:12px;padding:7px 0}
@@ -422,7 +455,7 @@ body{font-family:'Raleway',sans-serif;-webkit-font-smoothing:antialiased}
 .overlay{position:fixed;inset:0;background:rgba(18,6,0,.76);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;animation:fi .15s}
 .modal{background:var(--cream);border-radius:var(--rl);width:100%;max-width:720px;max-height:92vh;display:flex;flex-direction:column;box-shadow:var(--sh3);animation:su .22s}
 .modal-hd{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);background:var(--parch);border-radius:var(--rl) var(--rl) 0 0}
-.modal-hd h2{font-family:'Abril Fatface',display;font-size:23px;color:var(--ink)}
+.modal-hd h2{font-family:'Playfair Display',serif;font-size:23px;color:var(--ink)}
 .modal-bd{padding:24px;overflow-y:auto;flex:1}
 .modal-ft{padding:16px 24px;border-top:2px solid var(--linen);background:var(--parch);border-radius:0 0 var(--rl) var(--rl);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
 
@@ -501,7 +534,7 @@ tr:hover td{background:rgba(243,230,204,.55)}
 /* Empty */
 .empty{text-align:center;padding:66px 20px}
 .empty-ico{font-size:58px;margin-bottom:16px;opacity:.3}
-.empty h3{font-family:'Abril Fatface',display;font-size:28px;color:var(--ink);margin-bottom:8px}
+.empty h3{font-family:'Playfair Display',serif;font-size:28px;color:var(--ink);margin-bottom:8px}
 .empty p{font-family:'Lora',serif;font-style:italic;color:var(--muted);font-size:16px;margin-bottom:20px}
 
 /* Pricing */
@@ -509,8 +542,8 @@ tr:hover td{background:rgba(243,230,204,.55)}
 .pricing-card{background:#1e1208;border:1.5px solid rgba(212,168,67,.2);border-radius:var(--rm);padding:22px;transition:all .2s;color:#f0e6d3}
 .pricing-card:hover{box-shadow:var(--sh2)}
 .pricing-card.hot{background:#241808;border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,168,67,.2)}
-.pname{font-family:'Abril Fatface',display;font-size:23px;color:var(--ink);margin-bottom:4px}
-.pprice{font-family:'Abril Fatface',display;font-size:36px;color:var(--cog)}
+.pname{font-family:'Playfair Display',serif;font-size:23px;color:var(--ink);margin-bottom:4px}
+.pprice{font-family:'Playfair Display',serif;font-size:36px;color:var(--cog)}
 .pprice span{font-size:14px;color:var(--muted);font-family:'Raleway',sans-serif;font-weight:600}
 .pdesc{font-family:'Lora',serif;font-style:italic;font-size:14px;color:var(--muted);margin:8px 0 16px}
 .pfeat{display:flex;align-items:flex-start;gap:7px;font-size:13.5px;font-weight:700;margin-bottom:7px;color:var(--text)}
@@ -787,7 +820,7 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=t
     const loc=item.location?"Location: "+item.location:"";
     const itemUrl="theatre4u.org/#/item/"+item.id;
     const numStr = item.display_id || (item.item_number != null ? itemNum(item.item_number) : "");
-    w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}.num{font-size:22px;font-weight:900;font-family:monospace;color:#c4761a;margin:2px 0 6px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2>${numStr?`<div class="num">${numStr}</div>`:""}<p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qrSrc}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${itemUrl}</p><p style="font-size:11px;color:#bbb">Theatre4u™ Inventory</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
+    w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}.num{font-size:22px;font-weight:900;font-family:monospace;color:#c4761a;margin:2px 0 6px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2>${numStr?`<div class="num">${numStr}</div>`:""}<p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qrSrc}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${itemUrl}</p><p style="font-size:11px;color:#bbb">Theatre4u™ · theatre4u.org</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
     w.document.close();
   };
 
@@ -806,7 +839,7 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=t
         <div style={{width:50,height:50,background:cat.color+"22",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0,border:`1.5px solid ${cat.color}44`}}>{cat.icon}</div>
         <div>
           <div style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1.5,color:cat.color}}>{cat.label}</div>
-          <div style={{fontFamily:"'Abril Fatface',display",fontSize:24,color:"var(--ink)",lineHeight:1.1}}>{item.name}</div>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:"var(--ink)",lineHeight:1.1}}>{item.name}</div>
         </div>
       </div>
       {(item.tags||[]).length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>{item.tags.map(t=><span key={t} style={{background:"rgba(196,118,26,.12)",color:"var(--cog)",fontSize:12.5,fontWeight:700,padding:"3px 9px",borderRadius:3}}>#{t}</span>)}</div>}
@@ -1239,7 +1272,7 @@ function CommunitySpotlight({onViewAll}){
   if(posts.length===0) return(
     <div style={{background:"var(--parch)",border:"2px dashed var(--border)",borderRadius:"var(--rl)",padding:"32px 24px",textAlign:"center",marginBottom:32}}>
       <div style={{fontSize:40,marginBottom:10}}>🎪</div>
-      <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:20,marginBottom:6}}>Nothing posted yet</h3>
+      <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:20,marginBottom:6}}>Nothing posted yet</h3>
       <p style={{color:"var(--muted)",fontSize:13,maxWidth:380,margin:"0 auto 16px",lineHeight:1.6}}>Be the first to share an upcoming show, post an audition notice, or connect with your theatre community.</p>
       <button className="btn btn-g" onClick={onViewAll}>+ Post to Community Board</button>
     </div>
@@ -1279,7 +1312,7 @@ function CommunitySpotlight({onViewAll}){
           </div>
 
           {/* Title */}
-          <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:22,lineHeight:1.2,marginBottom:8,color:"var(--ink)"}}>{post.title}</h3>
+          <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:22,lineHeight:1.2,marginBottom:8,color:"var(--ink)"}}>{post.title}</h3>
 
           {/* Show meta */}
           {(post.show_title||post.start_date||post.venue)&&(
@@ -1437,7 +1470,7 @@ function Dashboard({items,org,goInventory,goMarketplace,goCommunity,goProfile}){
         {highlights.length===0?(
           <div style={{background:"var(--parch)",border:"2px dashed var(--border)",borderRadius:"var(--rl)",padding:"40px 32px",textAlign:"center",marginBottom:36}}>
             <div style={{fontSize:44,marginBottom:12}}>🏪</div>
-            <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:8}}>No Listings Yet</h3>
+            <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:8}}>No Listings Yet</h3>
             <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 18px"}}>When you or other programs post items to Backstage Exchange, they'll be showcased here for the whole community to discover.</p>
             <button className="btn btn-g" onClick={()=>goMarketplace&&goMarketplace()}>Browse Backstage Exchange</button>
           </div>
@@ -2359,7 +2392,7 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
                   </div>
                   <div style={{display:"flex",justifyContent:"space-between",paddingTop:6,borderTop:"1px solid var(--linen)"}}>
                     <span style={{fontWeight:800}}>Cash due to owner</span>
-                    <span style={{fontFamily:"'Abril Fatface',display",fontSize:18,color:"var(--cog)"}}>${Math.max(0,(type==="rent"?(item.rent||0):(item.sale||0))-creditAmt).toFixed(2)}</span>
+                    <span style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"var(--cog)"}}>${Math.max(0,(type==="rent"?(item.rent||0):(item.sale||0))-creditAmt).toFixed(2)}</span>
                   </div>
                   <div style={{fontSize:12,color:"var(--red)",fontWeight:600,marginTop:8,padding:"7px 10px",background:"rgba(139,26,42,.06)",border:"1px solid rgba(139,26,42,.15)",borderRadius:6,lineHeight:1.5}}>
                     ⚠️ <strong>Payment responsibility:</strong> The cash balance above must be paid <strong>directly to the item owner</strong> outside of Theatre4u (e.g. check, Venmo, invoice). Theatre4u does not collect or transfer cash payments between organizations. By applying credits and submitting this request, you agree to pay this balance to the owner upon delivery or as otherwise arranged.
@@ -2469,7 +2502,7 @@ function TransactionDocForm({ req, docType, existing, org, onSave, onCancel }) {
         alignItems:"center", gap:12 }}>
         <span style={{ fontSize:30 }}>{dt.icon}</span>
         <div>
-          <div style={{ fontFamily:"'Abril Fatface',display", fontSize:18, color:"#fff" }}>{dt.label}</div>
+          <div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, color:"#fff" }}>{dt.label}</div>
           <div style={{ fontSize:12, color:"rgba(255,255,255,.7)", marginTop:2 }}>
             {req.item_name} · {req.ownerOrg?.name || "Owner"} → {req.requesterOrg?.name || req.requester_name || "Borrower"}
           </div>
@@ -3379,7 +3412,7 @@ function Reports({ items, plan="free" }) {
   if(plan==="free") return(
     <div style={{padding:"40px 20px",textAlign:"center"}}>
       <div style={{fontSize:44,marginBottom:14}}>📊</div>
-      <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:10}}>Reports is a Pro Feature</h2>
+      <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>Reports is a Pro Feature</h2>
       <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Get detailed analytics, condition reports, location breakdowns, and CSV export. Upgrade to Pro to unlock Reports.</p>
       <UpgradePlans compact={true}/>
     </div>
@@ -3428,14 +3461,14 @@ function Reports({ items, plan="free" }) {
                       <td style={{fontWeight:700}}>{c.icon} {c.label}</td>
                       <td>{c.count}</td>
                       <td style={{fontWeight:800}}>{c.qty}</td>
-                      <td style={{fontFamily:"'Abril Fatface',display",color:"var(--cog)",fontSize:16}}>{c.val>0?fmt$(c.val):"—"}</td>
+                      <td style={{fontFamily:"'Playfair Display',serif",color:"var(--cog)",fontSize:16}}>{c.val>0?fmt$(c.val):"—"}</td>
                     </tr>
                   ))}
                   <tr style={{background:"var(--parch)"}}>
-                    <td style={{fontFamily:"'Abril Fatface',display",fontSize:17}}>Total</td>
+                    <td style={{fontFamily:"'Playfair Display',serif",fontSize:17}}>Total</td>
                     <td style={{fontWeight:800}}>{items.length}</td>
                     <td style={{fontWeight:800}}>{totalQty}</td>
-                    <td style={{fontFamily:"'Abril Fatface',display",color:"var(--cog)",fontSize:18}}>{fmt$(catData.reduce((s,c)=>s+c.val,0))}</td>
+                    <td style={{fontFamily:"'Playfair Display',serif",color:"var(--cog)",fontSize:18}}>{fmt$(catData.reduce((s,c)=>s+c.val,0))}</td>
                   </tr>
                 </tbody>
               </table>
@@ -3492,7 +3525,7 @@ function Reports({ items, plan="free" }) {
                 <div key={loc} style={{marginBottom:24}}>
                   <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,paddingBottom:6,borderBottom:"1px solid var(--border)"}}>
                     <span style={{fontSize:18}}>📍</span>
-                    <span style={{fontFamily:"'Abril Fatface',display",fontSize:17}}>{loc}</span>
+                    <span style={{fontFamily:"'Playfair Display',serif",fontSize:17}}>{loc}</span>
                     <span style={{marginLeft:"auto",background:"var(--linen)",borderRadius:20,padding:"2px 10px",fontSize:12,fontWeight:700,color:"var(--muted)"}}>{data.qty} item{data.qty!==1?"s":""}</span>
                   </div>
                   <div className="tw">
@@ -4519,7 +4552,7 @@ function AdminDashboard({ currentUser }) {
         {adminTab==="codes"&&(<>
           <div style={{marginBottom:16}}>
             <div className="card card-p">
-              <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:18,marginBottom:12}}>🎟 Beta Access Codes</h3>
+              <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:18,marginBottom:12}}>🎟 Beta Access Codes</h3>
               <div className="tw">
                 <table>
                   <thead><tr>
@@ -4549,7 +4582,7 @@ function AdminDashboard({ currentUser }) {
 
           {/* Leading Players list */}
           <div className="card card-p">
-            <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:18,marginBottom:12}}>🎭 Leading Players</h3>
+            <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:18,marginBottom:12}}>🎭 Leading Players</h3>
             {orgs.filter(o=>o.is_leading_player).length===0
               ?<p style={{fontSize:13,color:"var(--muted)"}}>No leading players yet — share the code and check back.</p>
               :<div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -6255,7 +6288,7 @@ function CommunityPostCard({post, orgName, onEdit, onDelete, isOwn}) {
             <div style={{width:40,height:40,borderRadius:10,background:pt.color+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{pt.icon}</div>
             <div style={{minWidth:0}}>
               <div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:pt.color,marginBottom:2}}>{pt.label}</div>
-              <div style={{fontFamily:"'Abril Fatface',display",fontSize:17,lineHeight:1.2,color:"var(--ink)"}}>{post.title}</div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:17,lineHeight:1.2,color:"var(--ink)"}}>{post.title}</div>
             </div>
           </div>
           {isOwn&&<div style={{display:"flex",gap:4,flexShrink:0}}>
@@ -6474,7 +6507,7 @@ function CommunityPage({userId, org, plan}) {
             {/* Your posts */}
             {myPosts.length>0&&(
               <div className="card card-p" style={{marginBottom:16}}>
-                <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:16,marginBottom:12}}>Your Posts</h3>
+                <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:12}}>Your Posts</h3>
                 {myPosts.slice(0,5).map(p=>(
                   <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid var(--linen)"}}>
                     <span style={{fontSize:16}}>{PT[p.type]?.icon||"📢"}</span>
@@ -6490,7 +6523,7 @@ function CommunityPage({userId, org, plan}) {
 
             {/* What to post guide */}
             <div className="card card-p" style={{background:"linear-gradient(135deg,rgba(212,168,67,.08),rgba(212,168,67,.03))",borderColor:"rgba(212,168,67,.25)"}}>
-              <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:16,marginBottom:12,color:"var(--gold)"}}>What to Share</h3>
+              <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:12,color:"var(--gold)"}}>What to Share</h3>
               {POST_TYPES.map(pt=>(
                 <div key={pt.id} style={{display:"flex",gap:8,padding:"7px 0",borderBottom:"1px solid var(--linen)"}}>
                   <span style={{fontSize:18,flexShrink:0}}>{pt.icon}</span>
@@ -6555,7 +6588,7 @@ function CommunityGate({userId, org, setOrg, plan}) {
       <div style={{padding:"40px 36px 64px",position:"relative",zIndex:1,maxWidth:700}}>
         <div className="card card-p" style={{borderColor:"rgba(212,168,67,.3)",background:"linear-gradient(135deg,rgba(212,168,67,.06),rgba(212,168,67,.02))"}}>
           <div style={{fontSize:44,marginBottom:16,textAlign:"center"}}>🎪</div>
-          <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:26,marginBottom:12,textAlign:"center"}}>Join the Community Board</h2>
+          <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:26,marginBottom:12,textAlign:"center"}}>Join the Community Board</h2>
           <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.7,marginBottom:20,textAlign:"center",maxWidth:500,margin:"0 auto 20px"}}>
             The Community Board is a shared space for theatre programs to connect — post upcoming shows, audition notices, production photos, and wanted items. Other opted-in programs can see your posts.
           </p>
@@ -6626,7 +6659,7 @@ function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool, allSch
       <div style={{padding:"40px 36px 64px",position:"relative",zIndex:1,maxWidth:720}}>
         <div className="card card-p" style={{borderColor:"rgba(212,168,67,.3)",background:"linear-gradient(135deg,rgba(212,168,67,.06),rgba(212,168,67,.02))"}}>
           <div style={{fontSize:44,marginBottom:16,textAlign:"center"}}>🏪</div>
-          <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:26,marginBottom:12,textAlign:"center"}}>Join Backstage Exchange</h2>
+          <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:26,marginBottom:12,textAlign:"center"}}>Join Backstage Exchange</h2>
           <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.7,marginBottom:24,textAlign:"center",maxWidth:520,margin:"0 auto 24px"}}>
             Backstage Exchange is Theatre4u™'s optional resource-sharing network. You choose exactly which items to share — your full inventory stays completely private. Browse what other programs near you have available.
           </p>
@@ -6734,7 +6767,7 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
             <div>
               <div style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", marginBottom: 6 }}>Your Balance</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-                <span style={{ fontFamily: "'Abril Fatface',display", fontSize: 64, color: "var(--gold)", lineHeight: 1 }}>{balance.toLocaleString()}</span>
+                <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 64, color: "var(--gold)", lineHeight: 1 }}>{balance.toLocaleString()}</span>
                 <span style={{ fontSize: 18, color: "var(--muted)", fontWeight: 700 }}>credits</span>
               </div>
               <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>≈ ${balance.toFixed(2)} value toward future rentals</div>
@@ -6747,7 +6780,7 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
               ].map(s => (
                 <div key={s.label} className="card card-p" style={{ textAlign: "center", padding: "12px 18px", minWidth: 100 }}>
                   <div style={{ fontSize: 20, marginBottom: 3 }}>{s.icon}</div>
-                  <div style={{ fontFamily: "'Abril Fatface',display", fontSize: 22, color: s.col }}>{s.val.toLocaleString()}</div>
+                  <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, color: s.col }}>{s.val.toLocaleString()}</div>
                   <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: .5, marginTop: 2 }}>{s.label}</div>
                 </div>
               ))}
@@ -6818,11 +6851,11 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
                             {row.description}
                           </td>
                           <td style={{ padding: "9px 14px" }}>
-                            <span style={{ fontFamily: "'Abril Fatface',display", fontSize: 16, color: row.amount > 0 ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
+                            <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, color: row.amount > 0 ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
                               {row.amount > 0 ? "+" : ""}{row.amount.toLocaleString()}
                             </span>
                           </td>
-                          <td style={{ padding: "9px 14px", fontFamily: "'Abril Fatface',display", fontSize: 15, color: "var(--gold)" }}>
+                          <td style={{ padding: "9px 14px", fontFamily: "'Playfair Display',serif", fontSize: 15, color: "var(--gold)" }}>
                             {runningBal.toLocaleString()}
                           </td>
                         </tr>
@@ -6852,7 +6885,7 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
                 body: "Theatre4u reserves the right to adjust or revoke credits in cases of abuse, fraudulent transactions, or violations of the Terms of Service. The admin_adjust transaction type will appear in your history if a correction is made." },
             ].map(r => (
               <div key={r.title} className="card card-p">
-                <h3 style={{ fontFamily: "'Abril Fatface',display", fontSize: 17, marginBottom: 8 }}>{r.title}</h3>
+                <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 17, marginBottom: 8 }}>{r.title}</h3>
                 <p style={{ fontSize: 14, color: "var(--muted)", lineHeight: 1.7 }}>{r.body}</p>
               </div>
             ))}
@@ -6862,7 +6895,7 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
         {/* ── Admin ── */}
         {tab === "admin" && isAdmin && (
           <div className="card card-p" style={{ maxWidth: 480 }}>
-            <h3 style={{ fontFamily: "'Abril Fatface',display", fontSize: 18, marginBottom: 14 }}>🔧 Award Credits to Any Org</h3>
+            <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 18, marginBottom: 14 }}>🔧 Award Credits to Any Org</h3>
             <div className="fg2">
               <div className="fg fu">
                 <label className="fl">Org ID</label>
@@ -7422,7 +7455,7 @@ function LandingPage({onSignIn, onSignUp}){
     <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:1000,padding:"0 32px",height:64,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?"rgba(13,10,8,.97)":"transparent",borderBottom:scrolled?"1px solid rgba(255,255,255,.08)":"none",backdropFilter:scrolled?"blur(12px)":"none",transition:"all .3s"}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <div style={{width:34,height:34,background:"linear-gradient(135deg,var(--gold),var(--goldd))",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🎭</div>
-        <span style={{fontFamily:"'Abril Fatface',display",fontSize:20,color:"var(--gold)"}}>Theatre4u™</span>
+        <span style={{fontFamily:"'Playfair Display',serif",fontSize:20,color:"var(--gold)"}}>Theatre4u™</span>
       </div>
       <div style={{display:"flex",gap:10,alignItems:"center"}}>
         <button onClick={onSignIn} style={{background:"none",border:"1px solid rgba(255,255,255,.25)",color:"rgba(255,255,255,.8)",padding:"7px 16px",borderRadius:7,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:600}}>Sign In</button>
@@ -7439,7 +7472,7 @@ function LandingPage({onSignIn, onSignUp}){
         <div style={{display:"inline-flex",alignItems:"center",gap:7,padding:"4px 14px",background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.3)",borderRadius:20,fontSize:12,fontWeight:700,color:"var(--gold)",textTransform:"uppercase",letterSpacing:1,marginBottom:20}}>
           🎭 The Platform for Theatre Programs
         </div>
-        <h1 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(42px,7vw,76px)",lineHeight:1.05,marginBottom:20,color:"#fff"}}>
+        <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(42px,7vw,76px)",lineHeight:1.05,marginBottom:20,color:"#fff"}}>
           Everything your theatre program needs —{" "}
           <span style={{color:"var(--gold)"}}>in one place</span>
         </h1>
@@ -7473,7 +7506,7 @@ function LandingPage({onSignIn, onSignUp}){
     <div style={{padding:"80px 32px",maxWidth:1100,margin:"0 auto"}}>
       <div style={{textAlign:"center",marginBottom:52}}>
         <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>What Theatre4u™ does</div>
-        <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(32px,5vw,48px)",color:"#fff",lineHeight:1.15}}>Built for busy drama directors</h2>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(32px,5vw,48px)",color:"#fff",lineHeight:1.15}}>Built for busy drama directors</h2>
         <p style={{fontSize:16,color:"rgba(255,255,255,.55)",marginTop:12,maxWidth:520,margin:"12px auto 0"}}>Not a generic inventory app. Built specifically for theatre programs, schools, and the broader performing arts community — by someone who has lived it.</p>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:20}}>
@@ -7482,7 +7515,7 @@ function LandingPage({onSignIn, onSignUp}){
             onMouseEnter={e=>{e.currentTarget.style.background="rgba(212,168,67,.08)";e.currentTarget.style.borderColor="rgba(212,168,67,.25)";}}
             onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.04)";e.currentTarget.style.borderColor="rgba(255,255,255,.08)";}}>
             <div style={{fontSize:32,marginBottom:12}}>{f.icon}</div>
-            <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:19,color:"#fff",marginBottom:8,lineHeight:1.2}}>{f.title}</h3>
+            <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:19,color:"#fff",marginBottom:8,lineHeight:1.2}}>{f.title}</h3>
             <p style={{fontSize:13.5,color:"rgba(255,255,255,.55)",lineHeight:1.7}}>{f.desc}</p>
           </div>
         ))}
@@ -7494,13 +7527,13 @@ function LandingPage({onSignIn, onSignUp}){
       <div style={{maxWidth:900,margin:"0 auto"}}>
         <div style={{textAlign:"center",marginBottom:48}}>
           <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>Get started in minutes</div>
-          <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(28px,4vw,42px)",color:"#fff"}}>How it works</h2>
+          <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(28px,4vw,42px)",color:"#fff"}}>How it works</h2>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:24}}>
           {steps.map(s=>(
             <div key={s.n} style={{textAlign:"center"}}>
-              <div style={{width:48,height:48,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),var(--goldd))",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Abril Fatface',display",fontSize:22,color:"#1a0f00",margin:"0 auto 14px"}}>{s.n}</div>
-              <h3 style={{fontFamily:"'Abril Fatface',display",fontSize:16,color:"#fff",marginBottom:7}}>{s.title}</h3>
+              <div style={{width:48,height:48,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),var(--goldd))",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontSize:22,color:"#1a0f00",margin:"0 auto 14px"}}>{s.n}</div>
+              <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:16,color:"#fff",marginBottom:7}}>{s.title}</h3>
               <p style={{fontSize:13,color:"rgba(255,255,255,.5)",lineHeight:1.6}}>{s.desc}</p>
             </div>
           ))}
@@ -7512,7 +7545,7 @@ function LandingPage({onSignIn, onSignUp}){
     <div style={{padding:"80px 32px",maxWidth:1000,margin:"0 auto"}}>
       <div style={{textAlign:"center",marginBottom:48}}>
         <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>Simple, honest pricing</div>
-        <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(28px,4vw,42px)",color:"#fff"}}>Plans for every program</h2>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(28px,4vw,42px)",color:"#fff"}}>Plans for every program</h2>
         <p style={{fontSize:14,color:"rgba(255,255,255,.45)",marginTop:10}}>Annual plans available — save up to 2 months free</p>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:20}}>
@@ -7520,9 +7553,9 @@ function LandingPage({onSignIn, onSignUp}){
           <div key={p.name} style={{borderRadius:16,overflow:"hidden",border:p.primary?"1px solid rgba(212,168,67,.4)":"1px solid rgba(255,255,255,.1)",position:"relative",boxShadow:p.primary?"0 8px 40px rgba(212,168,67,.2)":"none"}}>
             {p.primary&&<div style={{position:"absolute",top:14,right:14,background:"var(--gold)",color:"#1a0f00",fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:10,textTransform:"uppercase",letterSpacing:.5}}>Most Popular</div>}
             <div style={{background:p.color,padding:"28px 24px 20px"}}>
-              <div style={{fontFamily:"'Abril Fatface',display",fontSize:24,color:p.textColor,marginBottom:4}}>{p.name}</div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:p.textColor,marginBottom:4}}>{p.name}</div>
               <div style={{display:"flex",alignItems:"baseline",gap:4}}>
-                <span style={{fontFamily:"'Abril Fatface',display",fontSize:42,color:p.textColor}}>{p.price}</span>
+                <span style={{fontFamily:"'Playfair Display',serif",fontSize:42,color:p.textColor}}>{p.price}</span>
                 <span style={{fontSize:14,color:p.textColor,opacity:.7}}>{p.period}</span>
               </div>
               {p.annual&&<div style={{fontSize:11,color:p.textColor,opacity:.6,marginTop:3}}>{p.annual} · save 2 months</div>}
@@ -7546,7 +7579,7 @@ function LandingPage({onSignIn, onSignUp}){
 
     {/* ── Final CTA ── */}
     <div style={{textAlign:"center",padding:"72px 32px 96px",borderTop:"1px solid rgba(255,255,255,.06)"}}>
-      <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(28px,5vw,52px)",color:"#fff",marginBottom:16,lineHeight:1.15}}>
+      <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(28px,5vw,52px)",color:"#fff",marginBottom:16,lineHeight:1.15}}>
         Ready to get your<br/><span style={{color:"var(--gold)"}}>theatre organized?</span>
       </h2>
       <p style={{fontSize:16,color:"rgba(255,255,255,.5)",marginBottom:32,maxWidth:440,margin:"0 auto 32px"}}>Join theatre programs already using Theatre4u™ to get their inventory under control, track their shows, and connect with their community.</p>
@@ -7561,7 +7594,7 @@ function LandingPage({onSignIn, onSignUp}){
       <div style={{display:"inline-block",padding:"4px 14px",background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.2)",borderRadius:20,fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:20}}>
         Our Story
       </div>
-      <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:"clamp(26px,4vw,40px)",marginBottom:24,lineHeight:1.2}}>
+      <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(26px,4vw,40px)",marginBottom:24,lineHeight:1.2}}>
         Thirty Years in the Theatre,<br/><span style={{color:"var(--gold)"}}>Building Something Better.</span>
       </h2>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,textAlign:"left",marginBottom:40}}>
@@ -7591,7 +7624,7 @@ function LandingPage({onSignIn, onSignUp}){
         ].map(s=>(
           <div key={s.lbl} style={{textAlign:"center",padding:"16px 20px",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,minWidth:130}}>
             <div style={{fontSize:26,marginBottom:6}}>{s.ico}</div>
-            {s.val&&<div style={{fontFamily:"'Abril Fatface',display",fontSize:24,color:"var(--gold)",marginBottom:2}}>{s.val}</div>}
+            {s.val&&<div style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:"var(--gold)",marginBottom:2}}>{s.val}</div>}
             <div style={{fontSize:12,color:"rgba(255,255,255,.5)",fontWeight:600}}>{s.lbl}</div>
           </div>
         ))}
@@ -7602,7 +7635,7 @@ function LandingPage({onSignIn, onSignUp}){
     <div style={{borderTop:"1px solid rgba(255,255,255,.06)",padding:"24px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
         <div style={{width:26,height:26,background:"linear-gradient(135deg,var(--gold),var(--goldd))",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🎭</div>
-        <span style={{fontFamily:"'Abril Fatface',display",fontSize:15,color:"var(--gold)"}}>Theatre4u™</span>
+        <span style={{fontFamily:"'Playfair Display',serif",fontSize:15,color:"var(--gold)"}}>Theatre4u™</span>
         <span style={{fontSize:12,color:"rgba(255,255,255,.3)"}}>© 2026</span>
       </div>
       <div style={{display:"flex",gap:18,fontSize:12,color:"rgba(255,255,255,.35)"}}>
@@ -7879,7 +7912,7 @@ function AuthScreen({onAuth}){
       <style>{CSS}</style>
       <div style={{background:"var(--cream)",borderRadius:16,padding:"48px 40px",maxWidth:440,width:"100%",textAlign:"center",boxShadow:"0 12px 48px rgba(0,0,0,.4)"}}>
         <div style={{fontSize:52,marginBottom:12}}>🎭</div>
-        <h2 style={{fontFamily:"'Abril Fatface',display",fontSize:28,color:"var(--ink)",marginBottom:8}}>Check your email!</h2>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:28,color:"var(--ink)",marginBottom:8}}>Check your email!</h2>
         <p style={{color:"var(--muted)",fontSize:15,lineHeight:1.6,marginBottom:24}}>We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account and get started.</p>
         <button className="btn btn-o" onClick={()=>{setDone(false);setMode("login");}}>Back to Login</button>
       </div>
@@ -7894,7 +7927,7 @@ function AuthScreen({onAuth}){
         {/* Logo */}
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{fontSize:52,marginBottom:6}}>🎭</div>
-          <div style={{fontFamily:"'Abril Fatface',display",fontSize:36,color:"var(--gold)",letterSpacing:1}}>Theatre4u™</div>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:36,color:"var(--gold)",letterSpacing:1}}>Theatre4u™</div>
           <div style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:15,color:"rgba(255,255,255,.5)",marginTop:2}}>Inventory · Backstage Exchange · Community</div>
         </div>
         {/* Card */}
@@ -7995,7 +8028,7 @@ function PublicItemPage({ itemId }) {
       <div style={{background:"linear-gradient(135deg,#1a0d2e,#0d1829)",borderBottom:"1px solid rgba(255,255,255,.08)",padding:"14px 20px",display:"flex",alignItems:"center",gap:10}}>
         <span style={{fontSize:26}}>🎭</span>
         <div>
-          <div style={{fontFamily:"'Abril Fatface',display",fontSize:18,color:"var(--gold)",lineHeight:1}}>Theatre4u™</div>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"var(--gold)",lineHeight:1}}>Theatre4u™</div>
           <div style={{fontSize:10,color:"rgba(255,255,255,.4)",letterSpacing:2,textTransform:"uppercase"}}>Inventory · Backstage Exchange · Community</div>
         </div>
         <a href="https://theatre4u.org" style={{marginLeft:"auto",fontSize:12,color:"var(--gold)",textDecoration:"none",border:"1px solid rgba(212,168,67,.3)",borderRadius:6,padding:"5px 12px"}}>Visit Site →</a>
@@ -8012,7 +8045,7 @@ function PublicItemPage({ itemId }) {
         {err && (
           <div style={{textAlign:"center",padding:60}}>
             <div style={{fontSize:42,marginBottom:12}}>🔍</div>
-            <div style={{fontSize:20,fontFamily:"'Abril Fatface',display",marginBottom:8,color:"var(--gold)"}}>Item Not Found</div>
+            <div style={{fontSize:20,fontFamily:"'Playfair Display',serif",marginBottom:8,color:"var(--gold)"}}>Item Not Found</div>
             <div style={{color:"rgba(255,255,255,.5)",fontSize:14}}>This QR code may be outdated or the item has been removed.</div>
           </div>
         )}
@@ -8033,7 +8066,7 @@ function PublicItemPage({ itemId }) {
             <div style={{width:44,height:44,borderRadius:8,background:cat.color+"33",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{cat.icon}</div>
             <div>
               <div style={{fontSize:11,color:cat.color,fontWeight:700,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>{cat.label}</div>
-              <div style={{fontFamily:"'Abril Fatface',display",fontSize:22,lineHeight:1.2}}>{item.name}</div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,lineHeight:1.2}}>{item.name}</div>
             </div>
           </div>
 
@@ -8250,7 +8283,7 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
         {!editing && (
           <div className="card card-p" style={{ marginBottom: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-              <h3 style={{ fontFamily: "'Abril Fatface',display", fontSize: 20 }}>Profile Preview</h3>
+              <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20 }}>Profile Preview</h3>
               <button className="btn btn-o btn-sm" onClick={() => setEditing(true)}>✏️ Edit Profile</button>
             </div>
 
@@ -8264,7 +8297,7 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
                   {f.logo_url ? <img src={f.logo_url} alt="" style={{ width: "100%", height: "100%", borderRadius: 12, objectFit: "cover" }} /> : "🎭"}
                 </div>
                 <div>
-                  <div style={{ fontFamily: "'Abril Fatface',display", fontSize: 22 }}>{f.name || "Your Program Name"}</div>
+                  <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 22 }}>{f.name || "Your Program Name"}</div>
                   <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>
                     {[f.type, f.location].filter(Boolean).join(" · ") || "Location not set"}
                   </div>
@@ -8292,7 +8325,7 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
         {/* Edit form */}
         {editing && (
           <div className="card card-p" style={{ marginBottom: 20 }}>
-            <h3 style={{ fontFamily: "'Abril Fatface',display", fontSize: 20, marginBottom: 16 }}>Edit Profile</h3>
+            <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, marginBottom: 16 }}>Edit Profile</h3>
             <div className="fg2">
               <div className="fg fu"><label className="fl">Organization Name</label>
                 <input className="fi" value={f.name || ""} onChange={e => upd("name", e.target.value)} placeholder="Lincoln High Drama Dept." /></div>
@@ -8369,7 +8402,7 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
         {/* Listed items preview */}
         {listed > 0 && (
           <div className="card card-p">
-            <h3 style={{ fontFamily: "'Abril Fatface',display", fontSize: 18, marginBottom: 4 }}>Backstage Exchange — Your Listings</h3>
+            <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 18, marginBottom: 4 }}>Backstage Exchange — Your Listings</h3>
             <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 14 }}>These items appear on your public profile. Anyone can browse them without logging in.</p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 10 }}>
               {items.filter(i => i.market_status && i.market_status !== "Not Listed" && i.market_status !== "Private").slice(0, 6).map(item => {
@@ -8515,7 +8548,7 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
           {/* Header */}
           <div style={{background:"linear-gradient(135deg,#1a0a2e,#2d1054)",padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",borderRadius:"12px 12px 0 0"}}>
             <div>
-              <div style={{fontFamily:"'Abril Fatface',display",fontSize:18,color:"var(--gold2)"}}>Share Feedback</div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"var(--gold2)"}}>Share Feedback</div>
               <div style={{fontSize:13,color:"rgba(255,255,255,.55)",marginTop:2}}>You're a Leading Player — your voice shapes this tool.</div>
             </div>
             {isLeadingPlayer && <span style={{fontSize:11,background:"rgba(212,168,67,.2)",color:"var(--gold2)",padding:"2px 8px",borderRadius:6,fontWeight:800}}>🎭 LEADING PLAYER</span>}
@@ -8539,7 +8572,7 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
             {done ? (
               <div style={{textAlign:"center",padding:"24px 0"}}>
                 <div style={{fontSize:44,marginBottom:12}}>🙏</div>
-                <div style={{fontFamily:"'Abril Fatface',display",fontSize:20,color:"var(--green)"}}>Thank you!</div>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,color:"var(--green)"}}>Thank you!</div>
                 <div style={{fontSize:13,color:"var(--muted)",marginTop:4}}>Your feedback is making Theatre4u better.</div>
               </div>
             ) : tab === "quick" ? (
@@ -9045,7 +9078,7 @@ function AppRoot(){
     <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexDirection:"column"}}>
       <style>{CSS}</style>
       <div style={{fontSize:52}}>🎭</div>
-      <div style={{fontFamily:"'Abril Fatface',display",fontSize:22,color:"var(--gold)"}}>Loading Theatre4u™…</div>
+      <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--gold)"}}>Loading Theatre4u™…</div>
       <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
     </div>
   );
@@ -9078,13 +9111,24 @@ function AppRoot(){
         <aside className={`sidebar ${isDesk ? "" : mob ? "open" : "hidden"}`}
                style={isDesk ? {position:"relative",transform:"none"} : {}}>
           <div className="sb-root">
-            <div className="sb-photo" style={{background:"linear-gradient(180deg,#0d1829 0%,#1a0d2e 40%,#2d0a1e 100%)",position:"relative",overflow:"hidden"}}>
-              <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:120,opacity:.07,userSelect:"none"}}>🎭</div>
+            <div className="sb-photo" style={{background:"linear-gradient(180deg,#0F0B0A 0%,#1a1208 50%,#0F0B0A 100%)",position:"relative",overflow:"hidden"}}>
+              <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",opacity:.06,userSelect:"none"}}>
+                <svg width="180" height="180" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="5" y="5" width="90" height="90" rx="14" stroke="#D4A64A" fill="none" strokeWidth="3"/>
+                  <path d="M20 50 Q37 22 54 50 Q37 72 20 50Z" fill="#D4A64A"/>
+                  <path d="M46 50 Q63 78 80 50 Q63 28 46 50Z" fill="#D4A64A"/>
+                </svg>
+              </div>
             </div>
             <div className="sb-inner">
               <div className="sb-logo">
-                <span className="sb-glyph">🎭</span>
-                <div className="sb-name">Theatre4u™</div>
+                <div style={{display:"flex",alignItems:"center",gap:12}}>
+                  <LogoMarkDark size={44}/>
+                  <div>
+                    <div className="sb-name">Theatre4u™</div>
+                    <div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"rgba(212,168,67,.5)",marginTop:2,fontFamily:"'Raleway',sans-serif",fontWeight:700}}>Inventory · Exchange</div>
+                  </div>
+                </div>
                 <div style={{marginTop:8,display:"flex",alignItems:"center",gap:6}}>
                   <span style={{padding:"2px 8px",background:plan==="free"?"rgba(255,255,255,.08)":plan==="pro"?"rgba(212,168,67,.2)":"rgba(66,165,245,.2)",color:plan==="free"?"rgba(255,255,255,.35)":plan==="pro"?"var(--gold)":"#42a5f5",borderRadius:9,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>
                     {plan==="free"?"Free Plan":plan==="pro"?"Pro":"District"}
@@ -9194,13 +9238,16 @@ function AppRoot(){
           <div style={{height:3,background:"linear-gradient(90deg,var(--gold),var(--amber),var(--gilt) 55%,transparent 82%)",flexShrink:0}}/>
           <div className="topbar">
             <button className="menu-btn" onClick={()=>setMob(!mob)}>{mob?Ic.x:Ic.menu}</button>
-            <span className="topbar-title">{TITLES[page]}</span>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <LogoMarkLight size={32}/>
+              <span className="topbar-title">{TITLES[page]}</span>
+            </div>
           </div>
           <div className="scroll-area" onClick={()=>mob&&setMob(false)}>
             {!loaded
               ? <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:18,color:"var(--faint)"}}>
                   <div style={{fontSize:52}}>🎭</div>
-                  <div style={{fontFamily:"'Abril Fatface',display",fontSize:24,color:"var(--muted)"}}>Loading your collection…</div>
+                  <div style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:"var(--muted)"}}>Loading your collection…</div>
                   <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
                 </div>
               : <div className="fin">
@@ -9234,7 +9281,7 @@ function AppRoot(){
                   {page==="district"    && plan==="district" && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool}/>}
                   {page==="community"   && <CommunityGate userId={user?.id} org={org} setOrg={setOrg} plan={plan}/>}
                   {page==="credits"     && (plan!=="free"||isAdmin) && <CreditsPage userId={user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
-                  {page==="credits"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Abril Fatface',display",fontSize:22,marginBottom:10}}>Theatre Credits is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true}/></div>}
+                  {page==="credits"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>Theatre Credits is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true}/></div>}
 
 
                   {page==="admin"       && isAdmin && <AdminDashboard currentUser={user}/>}
