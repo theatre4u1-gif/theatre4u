@@ -2426,7 +2426,7 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
 
   const paymentNote = type === "loan"
     ? null
-    : `By submitting this request, you agree that any agreed cash payment will be made directly to the item owner outside of Theatre4u. Theatre4u does not process or guarantee payments between organizations.`;
+    : `By submitting this request, you agree that any agreed cash payment will be made directly to the item owner outside of Theatre4u. ArtStracker LLC does not process or guarantee payments between organizations.`;
 
   const typeColor = { rent:"#1554a0", loan:"#00838f", buy:"#27723a" };
 
@@ -3009,18 +3009,18 @@ function printDocument(doc, req) {
           <div>3. Deposit will be returned within 7 business days of item return, less deductions for documented damage.</div>
           <div>4. Payment is due prior to or at the time of pickup unless otherwise agreed in writing by both parties.</div>
           <div>5. Late fees apply for each day the item is retained beyond the agreed return date.</div>
-          <div>6. This agreement is between the two organizations named above. Theatre4u serves as the platform facilitating this agreement and is not a party to this transaction.</div>
+          <div>6. This agreement is between the two organizations named above. ArtStracker LLC (operating Theatre4u™) serves as the platform facilitating this agreement and is not a party to this transaction.</div>
         ` : doc.type === "loan_agreement" ? `
           <div>1. The borrower agrees to return all item(s) in the same condition as received, reasonable wear excepted.</div>
           <div>2. The borrower is responsible for any damage, loss, or theft occurring during the loan period.</div>
           <div>3. This is a free loan between theatre organizations. No monetary exchange is required or implied.</div>
           <div>4. The borrower agrees to return all item(s) by the agreed return date.</div>
-          <div>5. This agreement is between the two organizations named above. Theatre4u serves as the platform facilitating this agreement and is not a party to this transaction.</div>
+          <div>5. This agreement is between the two organizations named above. ArtStracker LLC (operating Theatre4u™) serves as the platform facilitating this agreement and is not a party to this transaction.</div>
         ` : `
           <div>1. Item is sold in "as-is" condition as described above. No warranty is expressed or implied.</div>
           <div>2. Title and ownership transfer to the buyer upon receipt of full payment.</div>
           <div>3. All sales are final unless otherwise agreed in writing between both parties prior to sale.</div>
-          <div>4. This agreement is between the two organizations named above. Theatre4u serves as the platform facilitating this agreement and is not a party to this transaction.</div>
+          <div>4. This agreement is between the two organizations named above. ArtStracker LLC (operating Theatre4u™) serves as the platform facilitating this agreement and is not a party to this transaction.</div>
         `}
       </div>
     </div>` : `
@@ -7548,22 +7548,22 @@ function LegalModal({title, onClose, children}){
 }
 
 const TERMS_CONTENT = [
-  ["1. Acceptance of Terms","By accessing or using Theatre4u at theatre4u.org, you agree to be bound by these Terms of Service. If you do not agree, please do not use the Service. Theatre4u is operated by its founder based in California, USA."],
+  ["1. Acceptance of Terms","By accessing or using Theatre4u at theatre4u.org, you agree to be bound by these Terms of Service. If you do not agree, please do not use the Service. Theatre4u™ is a product of ArtStracker LLC, a California limited liability company (theatre4u.org)."],
   ["2. Description of Service","Theatre4u™ is a cloud-based inventory management, resource-sharing, and community platform for theatre programs, schools, community theatres, and performing arts organizations. We reserve the right to modify or discontinue the Service at any time with reasonable notice."],
   ["3. Account Registration","You must create an account with accurate information and are responsible for maintaining confidentiality of your credentials. You must be at least 18 years old, or have authorization of a parent, guardian, or school administrator if a minor acting on behalf of an organization."],
   ["4. Subscription Plans and Payments","Theatre4u offers free and paid plans billed monthly via Stripe. Subscriptions auto-renew unless cancelled. All fees are non-refundable except as required by law. We may change pricing with 30 days notice to current subscribers."],
   ["5. User Content & License Grant","You retain all ownership of content you upload to Theatre4u™, including text, photos, images, and other materials ('User Content'). By uploading User Content, you grant Theatre4u a worldwide, non-exclusive, royalty-free, perpetual, irrevocable license to store, display, reproduce, and use that content to operate, improve, and promote the Service. This license persists even if you later remove the content or close your account. You represent that you have all necessary rights to grant this license, that your content does not infringe any third-party rights, and that you have obtained appropriate permissions for any photographs or images of identifiable individuals. Theatre4u may remove any content that violates these Terms or applicable law."],
   ["6. Exchange Transactions","Theatre4u™ provides the Backstage Exchange platform for listing items for rent, sale, or loan. We are not a party to any transaction between users. All agreements are solely between listing users and interested parties. We do not handle payments between users."],
   ["7. Prohibited Conduct","You agree not to: use the Service unlawfully; upload false or fraudulent content; attempt unauthorized access; interfere with the Service; use automated scraping tools; impersonate others; or transmit spam or malware. Violations may result in immediate account termination."],
-  ["8. Intellectual Property","The Theatre4u™ name, logo, design, software, and all platform content are owned by Theatre4u and protected by United States and international intellectual property laws. Theatre4u is a trademark of its founder. Nothing in these Terms grants you any right to use our trademarks, trade names, or other intellectual property without prior written consent. All rights not expressly granted are reserved."],
+  ["8. Intellectual Property","The Theatre4u™ name, logo, design, software, and all platform content are owned by ArtStracker LLC and protected by United States and international intellectual property laws. Theatre4u™ is a trademark of ArtStracker LLC. Nothing in these Terms grants you any right to use our trademarks, trade names, or other intellectual property without prior written consent. All rights not expressly granted are reserved."],
   ["9. Disclaimer of Warranties","THE SERVICE IS PROVIDED AS IS WITHOUT WARRANTIES OF ANY KIND. We do not warrant that the Service will be uninterrupted, error-free, or free of harmful components."],
   ["10. Limitation of Liability","TO THE FULLEST EXTENT PERMITTED BY CALIFORNIA LAW, WE SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES. Our total liability shall not exceed amounts paid by you in the three months preceding the claim."],
   ["11. Governing Law","These Terms are governed by California law. Disputes shall be resolved through binding arbitration in California under AAA rules, except either party may seek injunctive relief in court. You waive the right to class action."],
-  ["12. Changes & Contact","We may modify these Terms with 14 days notice. Continued use constitutes acceptance. Questions: hello@theatre4u.org"],
+  ["12. Changes & Contact","We may modify these Terms with 14 days notice. Continued use constitutes acceptance. Questions: hello@theatre4u.org | ArtStracker LLC, California, USA"],
 ];
 
 const PRIVACY_CONTENT = [
-  ["1. Introduction", "Theatre4u (theatre4u.org) is operated by a sole proprietor based in California. We are committed to protecting the privacy and security of all users, with special attention to the requirements applicable to educational institutions and school districts. This Privacy Policy complies with the California Consumer Privacy Act (CCPA), CalOPPA, the Family Educational Rights and Privacy Act (FERPA), and the Children's Online Privacy Protection Act (COPPA)."],
+  ["1. Introduction", "Theatre4u™ (theatre4u.org) is a product of ArtStracker LLC, a California limited liability company. We are committed to protecting the privacy and security of all users, with special attention to the requirements applicable to educational institutions and school districts. This Privacy Policy complies with the California Consumer Privacy Act (CCPA), CalOPPA, the Family Educational Rights and Privacy Act (FERPA), and the Children's Online Privacy Protection Act (COPPA)."],
   ["2. Who Uses Theatre4u", "Theatre4u is designed for use by theatre educators, school drama departments, community theatre organizations, and district administrators. Users must be 18 years or older to create an account. Theatre4u is not intended for direct use by students under 18. School administrators and teachers are responsible for ensuring appropriate use within their programs."],
   ["3. Information We Collect", "Account Information: organization name, email address, password (encrypted via Supabase Auth — we never see plaintext passwords), and optional profile details including phone, city, and bio. Inventory Data: item names, descriptions, photos, locations, and condition notes you add to your account. Communication Data: messages sent between organizations on the platform. Usage Data: pages visited and features used, to improve the platform. We do NOT collect student personally identifiable information (PII). All data belongs to your organization."],
   ["4. How We Use Your Information", "To provide and operate the Theatre4u platform. To facilitate Backstage Exchange listings and rental/loan requests between theatre programs. To send transactional emails (request notifications, account confirmation) via Resend from hello@theatre4u.org. To improve the platform based on anonymized usage patterns. We do NOT sell your data. We do NOT use your data for advertising. We do NOT share your data with third parties except as described in section 5."],
@@ -7573,8 +7573,8 @@ const PRIVACY_CONTENT = [
   ["8. Data Security", "All data is encrypted in transit via TLS 1.2+. Database data is encrypted at rest via AES-256 (Supabase/AWS). Passwords are hashed using bcrypt — we cannot access your password. Authentication tokens expire automatically. Row-Level Security (RLS) is enforced on all database tables — each organization can only access its own data. Security headers (HSTS, CSP, X-Frame-Options) are enforced on all pages. The anon key exposed in the client is restricted by RLS policies and cannot access other organizations' private data."],
   ["9. Data Retention & Deletion", "Your data is retained as long as your account is active. You may request complete deletion of your account and all associated data at any time by emailing hello@theatre4u.org. We will complete deletion within 30 days. Deleted data is not recoverable. Anonymized aggregate statistics (total item counts, etc.) may be retained. Backup snapshots are retained for 7 days before permanent deletion."],
   ["10. Your Rights (CCPA)", "California residents have the right to: know what personal data we collect and how it is used; request deletion of your data; opt out of sale of personal data (we do not sell data); non-discrimination for exercising privacy rights. To exercise any right: email hello@theatre4u.org with 'Privacy Request' in the subject line."],
-  ["11. District Data Agreements", "For school district subscribers (District plan), Theatre4u will execute a Data Processing Agreement (DPA) upon request. Contact hello@theatre4u.org. We will cooperate with district IT security reviews and questionnaires. Theatre4u's infrastructure (Supabase/Vercel) can provide SOC 2 and ISO 27001 documentation upon request for your district's vendor review process."],
-  ["12. Changes & Contact", "We will notify users of material changes to this policy with at least 14 days notice via email. Questions, data requests, or security concerns: hello@theatre4u.org | theatre4u.org | California, USA. For security vulnerabilities, please email hello@theatre4u.org with 'Security' in the subject line."],
+  ["11. District Data Agreements", "For school district subscribers (District plan), ArtStracker LLC will execute a Data Processing Agreement (DPA) upon request. Contact hello@theatre4u.org. We will cooperate with district IT security reviews and questionnaires. Theatre4u's infrastructure (Supabase/Vercel) can provide SOC 2 and ISO 27001 documentation upon request for your district's vendor review process."],
+  ["12. Changes & Contact", "We will notify users of material changes to this policy with at least 14 days notice via email. Questions, data requests, or security concerns: hello@theatre4u.org | theatre4u.org | ArtStracker LLC, California, USA. For security vulnerabilities, please email hello@theatre4u.org with 'Security' in the subject line."],
 ];
 // ── Landing Page ──────────────────────────────────────────────────────────────
 function LandingPage({onSignIn, onSignUp}){
@@ -7794,7 +7794,7 @@ function LandingPage({onSignIn, onSignUp}){
       <div style={{display:"flex",alignItems:"center",gap:8}}>
         <div style={{width:26,height:26,background:"linear-gradient(135deg,var(--gold),var(--goldd))",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🎭</div>
         <span style={{fontFamily:"'Playfair Display',serif",fontSize:15,color:"var(--gold)"}}>Theatre4u™</span>
-        <span style={{fontSize:12,color:"rgba(255,255,255,.3)"}}>© 2026</span>
+        <span style={{fontSize:12,color:"rgba(255,255,255,.3)"}}>© 2026 ArtStracker LLC</span>
       </div>
       <div style={{display:"flex",gap:18,fontSize:12,color:"rgba(255,255,255,.35)"}}>
         <a href="/help.html" target="_blank" style={{color:"rgba(255,255,255,.35)",textDecoration:"none"}} onMouseEnter={e=>e.target.style.color="var(--gold)"} onMouseLeave={e=>e.target.style.color="rgba(255,255,255,.35)"}>Help Center</a>
@@ -8137,7 +8137,7 @@ function AuthScreen({onAuth}){
           {mode==="login"&&<button onClick={resetPass} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:"var(--faint)",fontSize:12.5,cursor:"pointer",fontFamily:"'Raleway',sans-serif",textDecoration:"underline"}}>Forgot password?</button>}
           {mode==="signup"&&<p style={{fontSize:12,color:"var(--faint)",textAlign:"center",marginTop:14,lineHeight:1.6}}>Free to start — no credit card needed. By creating an account you agree to our{" "}<span onClick={()=>setLegal("terms")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Terms of Service</span>{" "}and{" "}<span onClick={()=>setLegal("privacy")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Privacy Policy</span>.</p>}
         </div>
-        <p style={{textAlign:"center",color:"rgba(255,255,255,.25)",fontSize:12,marginTop:20}}>theatre4u.org — Built for the arts community 🎭</p>
+        <p style={{textAlign:"center",color:"rgba(255,255,255,.25)",fontSize:12,marginTop:20}}>Theatre4u™ · ArtStracker LLC · theatre4u.org</p>
       </div>
       {legal==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegal(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
       {legal==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegal(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
