@@ -725,11 +725,55 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false}){
   const addTag=()=>{const t=ti.trim().toLowerCase();if(t&&!(f.tags||[]).includes(t))upd("tags",[...(f.tags||[]),t]);setTi("");};
   // Load active funding sources for the "charge to fund" dropdown
   const[fundSources,setFundSources]=useState([]);
+  const[storLocs,setStorLocs]=useState([]);
   useEffect(()=>{
     if(!userId)return;
     SB.from("funding_sources").select("id,name,source_type").eq("org_id",userId).eq("is_active",true).order("name")
       .then(({data})=>{ if(data) setFundSources(data); });
+    SB.from("storage_locations").select("id,name,code").eq("org_id",userId).order("name")
+      .then(({data})=>{ if(data) setStorLocs(data); });
   },[userId]);
+
+  // Quick-add state — inline creation of new location or funding source
+  const[qloc, setQloc] = useState(false);  // showing new-location mini-form
+  const[qfund,setQfund]= useState(false);  // showing new-fund-source mini-form
+  const[qlocName, setQlocName] = useState("");
+  const[qlocCode, setQlocCode] = useState("");
+  const[qfundName, setQfundName] = useState("");
+  const[qfundType, setQfundType] = useState("grant");
+  const[qsaving,  setQsaving]   = useState(false);
+
+  const addLocation = async()=>{
+    if(!qlocName.trim()||qsaving) return;
+    setQsaving(true);
+    const{data,error}=await SB.from("storage_locations").insert({
+      org_id:userId, name:qlocName.trim(), code:qlocCode.trim()||null
+    }).select("id,name,code").single();
+    setQsaving(false);
+    if(error){alert("Could not create location: "+error.message);return;}
+    if(data){
+      setStorLocs(p=>[...p,data]);
+      upd("location_id",data.id);
+      upd("location",data.name);
+    }
+    setQlocName("");setQlocCode("");setQloc(false);
+  };
+
+  const addFundSource = async()=>{
+    if(!qfundName.trim()||qsaving) return;
+    setQsaving(true);
+    const{data,error}=await SB.from("funding_sources").insert({
+      org_id:userId, name:qfundName.trim(), source_type:qfundType, is_active:true
+    }).select("id,name,source_type").single();
+    setQsaving(false);
+    if(error){alert("Could not create funding source: "+error.message);return;}
+    if(data){
+      setFundSources(p=>[...p,data]);
+      upd("funding_source_id",data.id);
+    }
+    setQfundName("");setQfund(false);
+  };
+
   return(
     <div className="fg2">
       <div className="fg fu"><label className="fl">Item Name *</label><input className="fi" value={f.name} onChange={e=>upd("name",e.target.value)} placeholder="e.g. Victorian Ball Gown" autoFocus/></div>
@@ -739,7 +783,37 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false}){
       <div className="fg"><label className="fl">Quantity</label><input className="fi" type="number" min="0" step="1" placeholder="1" value={f.qty||""} onChange={e=>upd("qty",parseInt(e.target.value)||0)}/></div>
       <div className="fg"><label className="fl">Availability</label><select className="fs" value={f.avail} onChange={e=>upd("avail",e.target.value)}>{AVAIL.map(a=><option key={a}>{a}</option>)}</select></div>
       <div className="fg"><label className="fl">Location</label><input className="fi" value={f.location} onChange={e=>upd("location",e.target.value)} placeholder="e.g. Costume Closet A"/></div>
-      <LocationDropdown userId={userId} value={f.location_id||""} onChange={v=>upd("location_id",v||null)}/>
+      <div className="fg fu">
+        <label className="fl">Storage Location</label>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <select className="fs" style={{flex:1}} value={f.location_id||""} onChange={e=>{
+            upd("location_id",e.target.value||null);
+            const loc=storLocs.find(l=>l.id===e.target.value);
+            if(loc)upd("location",loc.name);
+          }}>
+            <option value="">— None —</option>
+            {storLocs.map(l=><option key={l.id} value={l.id}>{l.name}{l.code?" ("+l.code+")":""}</option>)}
+          </select>
+          <button type="button" className="btn btn-o btn-sm" style={{whiteSpace:"nowrap",flexShrink:0}}
+            onClick={()=>{setQloc(v=>!v);setQfund(false);}}>+ New</button>
+        </div>
+        {qloc&&(
+          <div style={{marginTop:8,padding:"12px 14px",background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.25)",borderRadius:8}}>
+            <div style={{fontWeight:700,fontSize:12,color:"var(--gold)",marginBottom:8}}>New Storage Location</div>
+            <div style={{display:"flex",gap:6,marginBottom:6}}>
+              <input className="fi" style={{flex:1}} placeholder="Name (e.g. Costume Closet A)" value={qlocName}
+                onChange={e=>setQlocName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addLocation()}/>
+              <input className="fi" style={{width:80}} placeholder="Code" value={qlocCode}
+                onChange={e=>setQlocCode(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addLocation()}/>
+            </div>
+            <div style={{display:"flex",gap:6}}>
+              <button type="button" className="btn btn-g btn-sm" onClick={addLocation}
+                disabled={!qlocName.trim()||qsaving}>{qsaving?"Saving…":"Create & Select"}</button>
+              <button type="button" className="btn btn-o btn-sm" onClick={()=>{setQloc(false);setQlocName("");setQlocCode("");}}>Cancel</button>
+            </div>
+          </div>
+        )}
+      </div>
       <div className="fg fu sdiv">
         <div className="slbl">📷 Photo</div>
         <div style={{display:"flex",gap:10}}>
@@ -788,32 +862,54 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false}){
         <input className="fi" placeholder="e.g. Goodwill, Amazon, Drama Bookshop"
           value={f.purchase_vendor||""} onChange={e=>upd("purchase_vendor",e.target.value)}/>
       </div>
-      {fundSources.length>0&&(
-        <div className="fg fu">
-          <label className="fl">Charge to Funding Source</label>
-          <select className="fs" value={f.funding_source_id||""} onChange={e=>upd("funding_source_id",e.target.value)}>
-            <option value="">— None (no fund tracking entry) —</option>
+      <div className="fg fu">
+        <label className="fl">Charge to Funding Source</label>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <select className="fs" style={{flex:1}} value={f.funding_source_id||""} onChange={e=>upd("funding_source_id",e.target.value)}>
+            <option value="">— None —</option>
             {fundSources.map(s=><option key={s.id} value={s.id}>{s.name}{s.source_type?" ("+s.source_type+")":""}</option>)}
           </select>
-          {f.funding_source_id&&f.purchase_cost&&(
-            <div style={{fontSize:11.5,color:"var(--amber)",marginTop:5,lineHeight:1.5}}>
-              ✓ A ${parseFloat(f.purchase_cost||0).toFixed(2)} expenditure will be added to this funding source automatically.
-            </div>
-          )}
-          {f.funding_source_id&&!f.purchase_cost&&(
-            <div style={{fontSize:11.5,color:"var(--t3)",marginTop:5}}>
-              Enter an item cost above to log an expenditure to this fund.
-            </div>
-          )}
+          <button type="button" className="btn btn-o btn-sm" style={{whiteSpace:"nowrap",flexShrink:0}}
+            onClick={()=>{setQfund(v=>!v);setQloc(false);}}>+ New</button>
         </div>
-      )}
-      {fundSources.length===0&&userId&&(
-        <div className="fg fu">
-          <div style={{fontSize:12,color:"var(--t3)",fontStyle:"italic"}}>
-            No active funding sources found. Add one in the Funding Tracker to track expenditures here.
+        {f.funding_source_id&&f.purchase_cost&&parseFloat(f.purchase_cost)>0&&(
+          <div style={{fontSize:11.5,color:"var(--amber)",marginTop:5,lineHeight:1.5}}>
+            ✓ A ${parseFloat(f.purchase_cost||0).toFixed(2)} expenditure will be added to this fund automatically.
           </div>
-        </div>
-      )}
+        )}
+        {f.funding_source_id&&(!f.purchase_cost||parseFloat(f.purchase_cost)===0)&&(
+          <div style={{fontSize:11.5,color:"var(--t3)",marginTop:5}}>
+            Enter an item cost above to log an expenditure to this fund.
+          </div>
+        )}
+        {fundSources.length===0&&!qfund&&(
+          <div style={{fontSize:12,color:"var(--t3)",marginTop:4,fontStyle:"italic"}}>
+            No active funding sources yet — click "+ New" to create one.
+          </div>
+        )}
+        {qfund&&(
+          <div style={{marginTop:8,padding:"12px 14px",background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.25)",borderRadius:8}}>
+            <div style={{fontWeight:700,fontSize:12,color:"var(--gold)",marginBottom:8}}>New Funding Source</div>
+            <div style={{display:"flex",gap:6,marginBottom:6}}>
+              <input className="fi" style={{flex:1}} placeholder="Name (e.g. Prop 28, Booster Fund)"
+                value={qfundName} onChange={e=>setQfundName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addFundSource()}/>
+              <select className="fs" style={{width:140}} value={qfundType} onChange={e=>setQfundType(e.target.value)}>
+                <option value="grant">Grant</option>
+                <option value="district">District Allocation</option>
+                <option value="booster">Booster/Fundraising</option>
+                <option value="earned">Earned Income</option>
+                <option value="donation">Donation</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div style={{display:"flex",gap:6}}>
+              <button type="button" className="btn btn-g btn-sm" onClick={addFundSource}
+                disabled={!qfundName.trim()||qsaving}>{qsaving?"Saving…":"Create & Select"}</button>
+              <button type="button" className="btn btn-o btn-sm" onClick={()=>{setQfund(false);setQfundName("");}}>Cancel</button>
+            </div>
+          </div>
+        )}
+      </div>
 
     {/* Save / Cancel — always visible at bottom of form */}
     <div style={{display:"flex",gap:8,justifyContent:"flex-end",
@@ -8948,6 +9044,13 @@ function AppRoot(){
   // ── CRUD ─────────────────────────────────────────────────────────────────
   const add = useCallback(async(item)=>{
     const row={...item,org_id:user.id};
+    // Sanitize optional numeric/date/uuid fields — empty string → null
+    if(!row.purchase_cost || row.purchase_cost==="")    row.purchase_cost    = null;
+    else row.purchase_cost = parseFloat(row.purchase_cost) || null;
+    if(!row.purchase_date  || row.purchase_date==="")   row.purchase_date    = null;
+    if(!row.purchase_vendor|| row.purchase_vendor==="") row.purchase_vendor  = null;
+    if(!row.funding_source_id||row.funding_source_id==="") row.funding_source_id = null;
+    if(!row.location_id    || row.location_id==="")     row.location_id      = null;
     const{data,error}=await SB.from("items").insert(row).select().single();
     if(error){ alert("Could not save item: "+error.message); console.error(error); return; }
     if(data){
@@ -8973,6 +9076,14 @@ function AppRoot(){
     // Strip immutable fields and any joined org_ fields from Exchange cross-org queries
     delete payload.id; delete payload.org_id; delete payload.added;
     Object.keys(payload).forEach(k=>{ if(k.startsWith('org_')||k==='orgs') delete payload[k]; });
+    // Sanitize optional numeric/date/uuid fields — empty string → null
+    if(payload.purchase_cost===""||payload.purchase_cost===null||isNaN(parseFloat(payload.purchase_cost)))
+      payload.purchase_cost = null;
+    else payload.purchase_cost = parseFloat(payload.purchase_cost);
+    if(!payload.purchase_date    ||payload.purchase_date==="")    payload.purchase_date    = null;
+    if(!payload.purchase_vendor  ||payload.purchase_vendor==="")  payload.purchase_vendor  = null;
+    if(!payload.funding_source_id||payload.funding_source_id==="")payload.funding_source_id= null;
+    if(!payload.location_id      ||payload.location_id==="")      payload.location_id      = null;
     const{data,error}=await SB.from("items").update(payload).eq("id",item.id).select().single();
     if(error){ alert("Could not update item: "+error.message); console.error(error); return; }
     if(data){
