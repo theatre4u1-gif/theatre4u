@@ -1579,7 +1579,7 @@ function Dashboard({items,org,goInventory,goMarketplace,goCommunity,goProfile}){
             );})}
           </div>
         ):(
-          <div className="empty"><div className="empty-ico">🎭</div><h3>Your Stage Awaits</h3><p>Load sample data from Settings, or add your first item to begin.</p></div>
+          <div className="empty"><div className="empty-ico"><img src={_T4U_ICON_SM} style={{width:"auto",height:40,display:"block",margin:"0 auto"}} alt=""/></div><h3>Your Stage Awaits</h3><p>Load sample data from Settings, or add your first item to begin.</p></div>
         )}
       </div>
     </div>
@@ -1707,7 +1707,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
         )}
         <div style={{fontSize:13,fontWeight:700,color:"var(--faint)",marginBottom:12}}>{filtered.length} item{filtered.length!==1?"s":""}</div>
         {view==="grid"&&(paged.length===0
-          ?<div className="empty"><div className="empty-ico">🎭</div><h3>No Items Found</h3><p>{items.length===0?"Add your first item to build your catalog.":"Try adjusting search or filters."}</p>{items.length===0&&<button className="btn btn-g" onClick={()=>{setActive(null);setModal("a")}}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add First Item</button>}</div>
+          ?<div className="empty"><div className="empty-ico"><img src={_T4U_ICON_SM} style={{width:"auto",height:40,display:"block",margin:"0 auto"}} alt=""/></div><h3>No Items Found</h3><p>{items.length===0?"Add your first item to build your catalog.":"Try adjusting search or filters."}</p>{items.length===0&&<button className="btn btn-g" onClick={()=>{setActive(null);setModal("a")}}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add First Item</button>}</div>
           :<div className="inv-grid">
               {paged.map(item=>{
                 const cat=CAT[item.category]||CAT.other;
@@ -4599,13 +4599,13 @@ function AdminDashboard({ currentUser }) {
 
           {/* Leading Players list */}
           <div className="card card-p">
-            <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:18,marginBottom:12}}>🎭 Leading Players</h3>
+            <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:18,marginBottom:12,display:"flex",alignItems:"center",gap:8}}><img src={_T4U_ICON_SM} style={{height:20,width:"auto"}} alt=""/> Leading Players</h3>
             {orgs.filter(o=>o.is_leading_player).length===0
               ?<p style={{fontSize:13,color:"var(--muted)"}}>No leading players yet — share the code and check back.</p>
               :<div style={{display:"flex",flexDirection:"column",gap:8}}>
                 {orgs.filter(o=>o.is_leading_player).map(o=>(
                   <div key={o.id} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 12px",background:"var(--parch)",borderRadius:8,border:"1px solid var(--border)"}}>
-                    <span style={{fontSize:20}}>🎭</span>
+                    <img src={_T4U_ICON_SM} style={{height:20,width:"auto",verticalAlign:"middle"}} alt=""/>
                     <div style={{flex:1}}>
                       <div style={{fontWeight:700,fontSize:14}}>{o.name}</div>
                       <div style={{fontSize:11,color:"var(--muted)"}}>{o.email} · Joined {new Date(o.created_at).toLocaleDateString()}</div>
@@ -4798,7 +4798,7 @@ function AddToProductionPicker({ item, userId, onClose }) {
             <div style={{ textAlign:"center", padding:24, color:"var(--muted)" }}>Loading…</div>
           ) : productions.length === 0 ? (
             <div style={{ textAlign:"center", padding:24 }}>
-              <div style={{ fontSize:32, marginBottom:8 }}>🎭</div>
+              <div style={{marginBottom:8,display:"flex",justifyContent:"center"}}><LogoMarkDark size="sm"/></div>
               <p style={{ color:"var(--muted)", fontSize:13, marginBottom:12 }}>
                 No active productions yet. Create one on the Productions page first.
               </p>
@@ -4968,7 +4968,7 @@ function ProductionDetail({ prod, allItems, userId, onEdit, onDelete, onClose })
       <div style={{ display:"flex", alignItems:"flex-start", gap:14, marginBottom:20 }}>
         <div style={{ width:48, height:48, borderRadius:10, background:prod.color||"var(--gold)",
           flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center",
-          fontSize:24 }}>🎭</div>
+          display:"flex",alignItems:"center",justifyContent:"center",padding:4}}><img src={_T4U_ICON_SM} style={{width:22,height:"auto"}} alt=""/></div>
         <div style={{ flex:1 }}>
           <div style={{ fontFamily:"var(--serif)", fontSize:20, fontWeight:700 }}>{prod.name}</div>
           {prod.show_title && <div style={{ fontSize:12, color:"var(--muted)" }}>{prod.show_title}</div>}
@@ -5170,7 +5170,7 @@ function Productions({ userId, allItems }) {
           <div style={{ textAlign:"center", padding:48, color:"var(--muted)" }}>Loading…</div>
         ) : visible.length === 0 ? (
           <div style={{ textAlign:"center", padding:56 }}>
-            <div style={{ fontSize:48, marginBottom:14 }}>🎭</div>
+            <div style={{marginBottom:14,display:"flex",justifyContent:"center"}}><LogoMarkDark size="lg"/></div>
             <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:8 }}>
               {filter==="all" ? "No Productions Yet" : `No ${filter} productions`}
             </h3>
@@ -5499,7 +5499,7 @@ function ChatWindow({ convId, currentUserId, orgNames, onClose, onUnreadChange }
         background:"var(--parch)",flexShrink:0}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <div style={{width:36,height:36,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),var(--amber))",
-            display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>🎭</div>
+            display:"flex",alignItems:"center",justifyContent:"center",padding:4,flexShrink:0}}><img src={_T4U_ICON_SM} style={{width:22,height:"auto"}} alt=""/></div>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontWeight:700,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{otherName}</div>
             {conv?.item_name && <div style={{fontSize:11,color:"var(--muted)"}}>Re: {conv.item_name}</div>}
@@ -5729,7 +5729,7 @@ function Messages({ userId, orgName, openConvId, onClearOpenConv }) {
                   <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
                     <div style={{width:38,height:38,borderRadius:"50%",
                       background:"linear-gradient(135deg,var(--gold),var(--amber))",
-                      display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>🎭</div>
+                      display:"flex",alignItems:"center",justifyContent:"center",padding:4,flexShrink:0}}><img src={_T4U_ICON_SM} style={{width:22,height:"auto"}} alt=""/></div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:2}}>
                         <div style={{fontWeight:unread>0?800:600,fontSize:13,overflow:"hidden",
@@ -6334,7 +6334,7 @@ function CommunityPostCard({post, orgName, onEdit, onDelete, isOwn}) {
         {/* Footer */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{width:24,height:24,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),var(--amber))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>🎭</div>
+            <div style={{width:24,height:24,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),var(--amber))",display:"flex",alignItems:"center",justifyContent:"center",padding:3}}><img src={_T4U_ICON_SM} style={{width:"100%",height:"auto"}} alt=""/></div>
             <div>
               <div style={{fontSize:12,fontWeight:700,color:"var(--ink)"}}>{orgName}</div>
               {post.location&&<div style={{fontSize:11,color:"var(--faint)"}}>{post.location}</div>}
@@ -7049,7 +7049,7 @@ function TeamSettings({ userId, orgName, plan }) {
   return (
     <div className="card card-p" style={{ marginBottom: 20 }}>
       <div className="sh">
-        <h2>🎭 Your Backstage Team</h2>
+        <h2 style={{display:"flex",alignItems:"center",gap:8}}><img src={_T4U_ICON_SM} style={{height:22,width:"auto"}} alt=""/> Your Backstage Team</h2>
         <p>Invite people to help manage your inventory. Each role has different access levels.</p>
       </div>
 
@@ -7471,7 +7471,7 @@ function LandingPage({onSignIn, onSignUp}){
     {/* ── Sticky Nav ── */}
     <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:1000,padding:"0 32px",height:64,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?"rgba(13,10,8,.97)":"transparent",borderBottom:scrolled?"1px solid rgba(255,255,255,.08)":"none",backdropFilter:scrolled?"blur(12px)":"none",transition:"all .3s"}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <div style={{width:34,height:34,background:"linear-gradient(135deg,var(--gold),var(--goldd))",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🎭</div>
+        <div style={{width:34,height:34,background:"linear-gradient(135deg,var(--gold),var(--goldd))",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",padding:5}}><img src={_T4U_ICON_SM} style={{width:"100%",height:"auto"}} alt=""/></div>
         <span style={{fontFamily:"'Playfair Display',serif",fontSize:20,color:"var(--gold)"}}>Theatre4u™</span>
       </div>
       <div style={{display:"flex",gap:10,alignItems:"center"}}>
@@ -7487,7 +7487,7 @@ function LandingPage({onSignIn, onSignUp}){
       <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,rgba(13,10,8,.7) 0%,rgba(13,10,8,.5) 50%,rgba(13,10,8,.95) 100%)",pointerEvents:"none"}}/>
       <div style={{position:"relative",zIndex:1,maxWidth:760}}>
         <div style={{display:"inline-flex",alignItems:"center",gap:7,padding:"4px 14px",background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.3)",borderRadius:20,fontSize:12,fontWeight:700,color:"var(--gold)",textTransform:"uppercase",letterSpacing:1,marginBottom:20}}>
-          🎭 The Platform for Theatre Programs
+          Theatre4u™ — The Platform for Theatre Programs
         </div>
         <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(42px,7vw,76px)",lineHeight:1.05,marginBottom:20,color:"#fff"}}>
           Everything your theatre program needs —{" "}
@@ -7651,7 +7651,7 @@ function LandingPage({onSignIn, onSignUp}){
     {/* Footer */}
     <div style={{borderTop:"1px solid rgba(255,255,255,.06)",padding:"24px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
-        <div style={{width:26,height:26,background:"linear-gradient(135deg,var(--gold),var(--goldd))",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🎭</div>
+        <div style={{width:26,height:26,background:"linear-gradient(135deg,var(--gold),var(--goldd))",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",padding:4}}><img src={_T4U_ICON_SM} style={{width:"100%",height:"auto"}} alt=""/></div>
         <span style={{fontFamily:"'Playfair Display',serif",fontSize:15,color:"var(--gold)"}}>Theatre4u™</span>
         <span style={{fontSize:12,color:"rgba(255,255,255,.3)"}}>© 2026</span>
       </div>
@@ -7769,7 +7769,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
   if(done) return(
     <div style={overlayStyle}>
       <div style={{...cardStyle,textAlign:"center"}}>
-        <div style={{fontSize:52,marginBottom:12}}>🎭</div>
+        <div style={{marginBottom:12,display:"flex",justifyContent:"center"}}><LogoMarkDark size="lg"/></div>
         <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:"#d4a843",marginBottom:8}}>{inviteInfo?"Almost there!":"Check your email!"}</h2>
         <p style={{color:"#9b93a8",fontSize:14,lineHeight:1.6,marginBottom:24}}>{inviteInfo?<>We sent a confirmation link to <strong style={{color:"#ede8df"}}>{email}</strong>. Click it to activate and you'll be linked to {inviteInfo.district_name||"your district"}.</>:<>We sent a confirmation link to <strong style={{color:"#ede8df"}}>{email}</strong>. Click it to activate your account.</>}</p>
         <button onClick={()=>{setDone(false);setMode("login");}} style={{background:"#1d1925",border:"1px solid #282333",color:"#ede8df",padding:"10px 24px",borderRadius:6,cursor:"pointer",fontSize:14,fontFamily:"'DM Sans',sans-serif"}}>Back to Sign In</button>
@@ -7790,7 +7790,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
         {pendingInvite&&inviteInfo&&(
           <div style={{background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.28)",borderRadius:10,padding:"12px 14px",marginBottom:18}}>
             <div style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:10}}>
-              <span style={{fontSize:20,flexShrink:0}}>🎭</span>
+              <img src={_T4U_ICON_SM} style={{height:22,width:"auto",flexShrink:0,display:"block"}} alt=""/>
               <div>
                 <div style={{fontWeight:700,fontSize:13,color:"#d4a843",marginBottom:2}}>District Invite</div>
                 <div style={{fontSize:12.5,color:"#c8c0d4",lineHeight:1.5}}>
@@ -7928,7 +7928,7 @@ function AuthScreen({onAuth}){
     <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
       <style>{CSS}</style>
       <div style={{background:"var(--cream)",borderRadius:16,padding:"48px 40px",maxWidth:440,width:"100%",textAlign:"center",boxShadow:"0 12px 48px rgba(0,0,0,.4)"}}>
-        <div style={{fontSize:52,marginBottom:12}}>🎭</div>
+        <div style={{marginBottom:12,display:"flex",justifyContent:"center"}}><LogoMarkDark size="lg"/></div>
         <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:28,color:"var(--ink)",marginBottom:8}}>Check your email!</h2>
         <p style={{color:"var(--muted)",fontSize:15,lineHeight:1.6,marginBottom:24}}>We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account and get started.</p>
         <button className="btn btn-o" onClick={()=>{setDone(false);setMode("login");}}>Back to Login</button>
@@ -7943,7 +7943,7 @@ function AuthScreen({onAuth}){
       <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:440}}>
         {/* Logo */}
         <div style={{textAlign:"center",marginBottom:32}}>
-          <div style={{fontSize:52,marginBottom:6}}>🎭</div>
+          <div style={{marginBottom:6,display:"flex",justifyContent:"center"}}><LogoMarkDark size="lg"/></div>
           <div style={{fontFamily:"'Playfair Display',serif",fontSize:36,color:"var(--gold)",letterSpacing:1}}>Theatre4u™</div>
           <div style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:15,color:"rgba(255,255,255,.5)",marginTop:2}}>Inventory · Backstage Exchange · Community</div>
         </div>
@@ -8043,7 +8043,7 @@ function PublicItemPage({ itemId }) {
 
       {/* Header */}
       <div style={{background:"linear-gradient(135deg,#1a0d2e,#0d1829)",borderBottom:"1px solid rgba(255,255,255,.08)",padding:"14px 20px",display:"flex",alignItems:"center",gap:10}}>
-        <span style={{fontSize:26}}>🎭</span>
+        <img src={_T4U_ICON_SM} style={{height:26,width:"auto",display:"inline-block",verticalAlign:"middle"}} alt=""/>
         <div>
           <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"var(--gold)",lineHeight:1}}>Theatre4u™</div>
           <div style={{fontSize:10,color:"rgba(255,255,255,.4)",letterSpacing:2,textTransform:"uppercase"}}>Inventory · Backstage Exchange · Community</div>
@@ -8054,7 +8054,7 @@ function PublicItemPage({ itemId }) {
       <div style={{maxWidth:640,margin:"0 auto",padding:"24px 16px"}}>
         {!item && !err && (
           <div style={{textAlign:"center",padding:60,color:"rgba(255,255,255,.4)"}}>
-            <div style={{fontSize:42,marginBottom:12}}>🎭</div>
+            <div style={{marginBottom:12,display:"flex",justifyContent:"center"}}><LogoMarkDark size="lg"/></div>
             <div>Loading item…</div>
           </div>
         )}
@@ -8311,7 +8311,7 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
                   width: 60, height: 60, borderRadius: 12, background: "linear-gradient(135deg,var(--gold2),var(--gold))",
                   display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0
                 }}>
-                  {f.logo_url ? <img src={f.logo_url} alt="" style={{ width: "100%", height: "100%", borderRadius: 12, objectFit: "cover" }} /> : "🎭"}
+                  {f.logo_url ? <img src={f.logo_url} alt="" style={{ width: "100%", height: "100%", borderRadius: 12, objectFit: "cover" }} /> : <img src={_T4U_ICON_SM} style={{width:"100%",height:"auto",objectFit:"contain",padding:4}} alt="Theatre4u"/>}
                 </div>
                 <div>
                   <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 22 }}>{f.name || "Your Program Name"}</div>
@@ -8747,7 +8747,7 @@ class ErrorBoundary extends React.Component {
     if(this.state.err)return(
       <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
         height:"100vh",gap:20,padding:40,textAlign:"center",background:"var(--bg,#0d0b11)",color:"var(--t1,#ede8df)"}}>
-        <div style={{fontSize:52}}>🎭</div>
+        <div style={{display:"flex",justifyContent:"center",marginBottom:8}}><LogoMarkDark size="lg"/></div>
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--gold,#d4a843)"}}>
           Something went wrong
         </div>
@@ -9108,7 +9108,7 @@ function AppRoot(){
   if(!authChk) return(
     <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexDirection:"column"}}>
       <style>{CSS}</style>
-      <div style={{fontSize:52}}>🎭</div>
+      <div style={{display:"flex",justifyContent:"center",marginBottom:8}}><LogoMarkDark size="lg"/></div>
       <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--gold)"}}>Loading Theatre4u™…</div>
       <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
     </div>
@@ -9220,7 +9220,7 @@ function AppRoot(){
                     {n.id==="requests"   && pendingReqCount>0 && <span className="sb-badge" style={{background:"var(--red)",color:"#fff"}}>{pendingReqCount}</span>}
                     {n.id==="inventory"  && items.length>0 && <span className="sb-badge">{activeSchool ? schoolItems.length : items.length}</span>}
                     {n.id==="marketplace"&& listed>0       && <span className="sb-badge">{listed}</span>}
-                    {n.id==="productions"&& <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--gold)"}}>🎭</span>}
+                    {n.id==="productions"&& <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--gold)",display:"flex",alignItems:"center",gap:2}}><img src={_T4U_ICON_SM} style={{height:12,width:"auto"}} alt=""/></span>}
                     
                     {n.id==="credits"    && creditBalance>0 && <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--gold)"}}>{creditBalance}</span>}
                   </div>
@@ -9274,7 +9274,7 @@ function AppRoot(){
           <div className="scroll-area" onClick={()=>mob&&setMob(false)}>
             {!loaded
               ? <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:18,color:"var(--faint)"}}>
-                  <div style={{fontSize:52}}>🎭</div>
+                  <div style={{display:"flex",justifyContent:"center",marginBottom:8}}><LogoMarkDark size="lg"/></div>
                   <div style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:"var(--muted)"}}>Loading your collection…</div>
                   <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
                 </div>
@@ -9453,7 +9453,7 @@ function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav }) {
     <div style={ov}>
       <div style={box}>
         <div style={{...hdr, paddingTop:36}}>
-          <div style={{fontSize:52, marginBottom:12}}>🎭</div>
+          <div style={{marginBottom:12,display:"flex",justifyContent:"center"}}><LogoMarkDark size="lg"/></div>
           <h2 style={{fontFamily:"'Playfair Display',serif", fontSize:26, marginBottom:8, color:"var(--ink,#1a0f00)"}}>
             Welcome to Theatre4u™
           </h2>
