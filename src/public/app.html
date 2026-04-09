@@ -204,6 +204,15 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 /* ── Page transitions ── */
 .fin{animation:fadeIn .2s ease}
 </style>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K509H4V1KF"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-K509H4V1KF');
+    </script>
 </head>
 <body>
 <div id="root"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;background:#0a0a0f"><div style="font-size:52px">🎭</div><div style="width:32px;height:32px;border:2.5px solid #2a2a38;border-top-color:#d4a843;border-radius:50%;animation:spin .7s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div></div>
@@ -511,6 +520,7 @@ function ItemDetail({item, onBack, onEdited, onDeleted, userId}) {
           h("div",{style:{padding:"4px 16px"}},
             [
               ["Category", cat.icon+" "+cat.label],
+              item.display_id ? ["ID", item.display_id] : null,
               ["Condition", item.condition],
               ["Size", item.size],
               ["Quantity", item.qty],
@@ -615,8 +625,17 @@ function EditSheet({item, onClose, onSaved, userId}) {
 // ── ADD ITEM SHEET
 // ── ══════════════════════════════════════════
 function AddSheet({onClose, onAdded, userId}) {
-  const [step, setStep] = useState("photo"); // photo | details
-  const [f, setF] = useState({name:"",category:"costumes",condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,avail:"In Stock",tags:[],img:null});
+  const [step, setStep] = useState("photo");
+  const [storLocs,    setStorLocs]    = useState([]);
+  const [fundSources, setFundSources] = useState([]);
+  useEffect(()=>{
+    if(!userId) return;
+    SB.from("storage_locations").select("id,name,code").eq("org_id",userId).order("name")
+      .then(({data})=>{ if(data) setStorLocs(data); });
+    SB.from("funding_sources").select("id,name").eq("org_id",userId).eq("is_active",true).order("name")
+      .then(({data})=>{ if(data) setFundSources(data); });
+  },[userId]); // photo | details
+  const [f, setF] = useState({name:"",category:"costumes",condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,avail:"In Stock",tags:[],img:null,purchase_cost:"",purchase_date:"",purchase_vendor:"",funding_source_id:"",location_id:null});
   const [saving, setSaving] = useState(false);
   const [uploading, setUpl] = useState(false);
   const fileRef = useRef();
@@ -637,8 +656,29 @@ function AddSheet({onClose, onAdded, userId}) {
     if(!f.name.trim()) return;
     setSaving(true);
     const row = {...f, org_id:userId};
+    // Sanitize optional numeric/uuid fields — empty string → null (prevents Postgres type errors)
+    if(!row.purchase_cost||row.purchase_cost==="") row.purchase_cost=null;
+    else row.purchase_cost=parseFloat(row.purchase_cost)||null;
+    if(!row.purchase_date||row.purchase_date==="")   row.purchase_date=null;
+    if(!row.purchase_vendor||row.purchase_vendor==="")row.purchase_vendor=null;
+    if(!row.funding_source_id||row.funding_source_id==="")row.funding_source_id=null;
+    if(!row.location_id||row.location_id==="")       row.location_id=null;
     const {data,error} = await SB.from("items").insert(row).select().single();
-    if(!error && data) { onAdded(data); onClose(); }
+    if(error){alert("Could not save item: "+error.message);setSaving(false);return;}
+    if(data){
+      onAdded(data);
+      // Auto-log expenditure to Funding Tracker if cost + source provided
+      if(row.funding_source_id&&row.purchase_cost&&row.purchase_cost>0){
+        await SB.from("funding_expenditures").insert({
+          org_id:userId,funding_source_id:row.funding_source_id,item_id:data.id,
+          amount:row.purchase_cost,description:data.name||"Inventory item",
+          vendor:row.purchase_vendor||null,
+          purchase_date:row.purchase_date||new Date().toISOString().slice(0,10),
+          category:"Supplies"
+        });
+      }
+      onClose();
+    }
     setSaving(false);
   };
 
@@ -700,8 +740,29 @@ function AddSheet({onClose, onAdded, userId}) {
           )
         ),
         h("div",{className:"fg"},
-          h("label",{className:"fl"},"Location"),
-          h("input",{className:"fi",value:f.location,onChange:e=>upd("location",e.target.value),placeholder:"Costume Closet A"})
+          h("label",{className:"fl"},"Storage Location"),
+          h("select",{className:"fs",value:f.location_id||"",onChange:e=>{
+            upd("location_id",e.target.value||null);
+            const loc=storLocs.find(l=>l.id===e.target.value);
+            upd("location",loc?loc.name:f.location);
+          }},
+            h("option",{value:""},"— None —"),
+            storLocs.map(l=>h("option",{key:l.id,value:l.id},l.name+(l.code?" ("+l.code+")":"")))
+          )
+        ),
+        h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
+          h("div",{className:"fg"},
+            h("label",{className:"fl"},"Item Cost ($)"),
+            h("input",{className:"fi",type:"number",min:"0",step:"any",placeholder:"0.00",
+              value:f.purchase_cost||"",onChange:e=>upd("purchase_cost",e.target.value)})
+          ),
+          h("div",{className:"fg"},
+            h("label",{className:"fl"},"Fund Source"),
+            h("select",{className:"fs",value:f.funding_source_id||"",onChange:e=>upd("funding_source_id",e.target.value)},
+              h("option",{value:""},"— None —"),
+              fundSources.map(s=>h("option",{key:s.id,value:s.id},s.name))
+            )
+          )
         ),
         h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
           h("div",{className:"fg"},
@@ -921,7 +982,10 @@ function ProfileTab({user, org, onSignOut}) {
           h("strong",{style:{color:"var(--text)"}},"theatre4u.org/app")," in Safari and use Share → Add to Home Screen."
         )
       ),
-      h("button",{className:"btn btn-danger btn-full",onClick:onSignOut,style:{marginBottom:32}},"Sign Out")
+      h("button",{className:"btn btn-danger btn-full",onClick:onSignOut,style:{marginBottom:16}},"Sign Out"),
+      h("p",{style:{textAlign:"center",fontSize:11,color:"var(--faint)",marginBottom:32}},
+        "© 2026 ArtStracker LLC · Theatre4u™"
+      )
     )
   );
 }
@@ -1195,7 +1259,7 @@ function App() {
     h("div",{style:{fontSize:64}},"📱"),
     h("div",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:32,fontWeight:700,color:"#d4a843"}},"Pro Feature"),
     h("p",{style:{fontSize:15,color:"var(--muted)",lineHeight:1.7,maxWidth:320}},
-      "The Theatre4u™ mobile app is included with Pro and District plans. Upgrade at theatre4u.org to unlock mobile inventory management, the Funding Tracker, Community Board, Backstage Exchange posting, and unlimited inventory."
+      "The Theatre4u™ mobile app is included with Pro and District plans. Theatre4u™ is a product of ArtStracker LLC. Upgrade at theatre4u.org to unlock mobile inventory management, the Funding Tracker, Community Board, Backstage Exchange posting, and unlimited inventory."
     ),
     h("a",{href:"https://theatre4u.org",style:{background:"linear-gradient(135deg,#d4a843,#8a6a20)",color:"#1a1000",padding:"14px 32px",borderRadius:10,fontWeight:700,fontSize:16,textDecoration:"none"}},"Upgrade at theatre4u.org →"),
     h("button",{onClick:signOut,style:{background:"none",border:"none",color:"var(--muted)",fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",marginTop:8}},"Sign out")
