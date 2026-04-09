@@ -701,7 +701,7 @@ function LocationDropdown({ userId, value, onChange }) {
 
 
 function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false}){
-  const blank={name:"",category:"costumes",condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,loan_period:2,deposit:0,avail:"In Stock",img:null,tags:[]};
+  const blank={name:"",category:"costumes",condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,loan_period:2,deposit:0,avail:"In Stock",img:null,tags:[],purchase_cost:"",purchase_date:"",purchase_vendor:"",funding_source_id:""};
   const[f,setF]=useState(item||blank);
   const[ti,setTi]=useState("");
   const[upl,setUpl]=useState(false);
@@ -723,6 +723,13 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false}){
     if(fr.current)fr.current.value="";
   };
   const addTag=()=>{const t=ti.trim().toLowerCase();if(t&&!(f.tags||[]).includes(t))upd("tags",[...(f.tags||[]),t]);setTi("");};
+  // Load active funding sources for the "charge to fund" dropdown
+  const[fundSources,setFundSources]=useState([]);
+  useEffect(()=>{
+    if(!userId)return;
+    SB.from("funding_sources").select("id,name,source_type").eq("org_id",userId).eq("is_active",true).order("name")
+      .then(({data})=>{ if(data) setFundSources(data); });
+  },[userId]);
   return(
     <div className="fg2">
       <div className="fg fu"><label className="fl">Item Name *</label><input className="fi" value={f.name} onChange={e=>upd("name",e.target.value)} placeholder="e.g. Victorian Ball Gown" autoFocus/></div>
@@ -761,6 +768,52 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false}){
       {showSale&&<div className="fg"><label className="fl">Sale Price ($)</label><input className="fi" type="number" min="0" step="any" placeholder="e.g. 50" value={f.sale||""} onChange={e=>upd("sale",parseFloat(e.target.value)||0)}/></div>}
       {showLoan&&<div className="fg"><label className="fl">Loan Period (weeks)</label><input className="fi" type="number" min="1" step="1" placeholder="e.g. 2" value={f.loan_period||""} onChange={e=>upd("loan_period",parseInt(e.target.value)||2)}/></div>}
       {showLoan&&<div className="fg"><label className="fl">Refundable Deposit ($)</label><input className="fi" type="number" min="0" step="any" placeholder="0 = free loan" value={f.deposit||""} onChange={e=>upd("deposit",parseFloat(e.target.value)||0)}/></div>}
+
+      {/* Purchase & Funding Source — optional, links item to Funding Tracker */}
+      <div className="fg fu sdiv">
+        <div className="slbl">💰 Purchase & Funding</div>
+      </div>
+      <div className="fg">
+        <label className="fl">Item Cost ($)</label>
+        <input className="fi" type="number" min="0" step="any" placeholder="e.g. 49.99"
+          value={f.purchase_cost||""} onChange={e=>upd("purchase_cost",e.target.value)}/>
+      </div>
+      <div className="fg">
+        <label className="fl">Purchase Date</label>
+        <input className="fi" type="date" value={f.purchase_date||""}
+          onChange={e=>upd("purchase_date",e.target.value)}/>
+      </div>
+      <div className="fg fu">
+        <label className="fl">Vendor / Supplier</label>
+        <input className="fi" placeholder="e.g. Goodwill, Amazon, Drama Bookshop"
+          value={f.purchase_vendor||""} onChange={e=>upd("purchase_vendor",e.target.value)}/>
+      </div>
+      {fundSources.length>0&&(
+        <div className="fg fu">
+          <label className="fl">Charge to Funding Source</label>
+          <select className="fs" value={f.funding_source_id||""} onChange={e=>upd("funding_source_id",e.target.value)}>
+            <option value="">— None (no fund tracking entry) —</option>
+            {fundSources.map(s=><option key={s.id} value={s.id}>{s.name}{s.source_type?" ("+s.source_type+")":""}</option>)}
+          </select>
+          {f.funding_source_id&&f.purchase_cost&&(
+            <div style={{fontSize:11.5,color:"var(--amber)",marginTop:5,lineHeight:1.5}}>
+              ✓ A ${parseFloat(f.purchase_cost||0).toFixed(2)} expenditure will be added to this funding source automatically.
+            </div>
+          )}
+          {f.funding_source_id&&!f.purchase_cost&&(
+            <div style={{fontSize:11.5,color:"var(--t3)",marginTop:5}}>
+              Enter an item cost above to log an expenditure to this fund.
+            </div>
+          )}
+        </div>
+      )}
+      {fundSources.length===0&&userId&&(
+        <div className="fg fu">
+          <div style={{fontSize:12,color:"var(--t3)",fontStyle:"italic"}}>
+            No active funding sources found. Add one in the Funding Tracker to track expenditures here.
+          </div>
+        </div>
+      )}
 
     {/* Save / Cancel — always visible at bottom of form */}
     <div style={{display:"flex",gap:8,justifyContent:"flex-end",
@@ -8897,7 +8950,22 @@ function AppRoot(){
     const row={...item,org_id:user.id};
     const{data,error}=await SB.from("items").insert(row).select().single();
     if(error){ alert("Could not save item: "+error.message); console.error(error); return; }
-    if(data) setItems(p=>[data,...p]);
+    if(data){
+      setItems(p=>[data,...p]);
+      // Auto-create funding expenditure if a funding source and cost were provided
+      if(item.funding_source_id && item.purchase_cost && parseFloat(item.purchase_cost)>0){
+        await SB.from("funding_expenditures").insert({
+          org_id:           user.id,
+          funding_source_id: item.funding_source_id,
+          item_id:          data.id,
+          amount:           parseFloat(item.purchase_cost),
+          description:      item.name || "Inventory item",
+          vendor:           item.purchase_vendor || null,
+          purchase_date:    item.purchase_date || new Date().toISOString().slice(0,10),
+          category:         "Supplies",
+        });
+      }
+    }
   },[user]);
 
   const edit = useCallback(async(item)=>{
@@ -8907,8 +8975,35 @@ function AppRoot(){
     Object.keys(payload).forEach(k=>{ if(k.startsWith('org_')||k==='orgs') delete payload[k]; });
     const{data,error}=await SB.from("items").update(payload).eq("id",item.id).select().single();
     if(error){ alert("Could not update item: "+error.message); console.error(error); return; }
-    if(data) setItems(p=>p.map(x=>x.id===item.id?data:x));
-  },[]);
+    if(data){
+      setItems(p=>p.map(x=>x.id===item.id?data:x));
+      // If a funding source + cost is set, upsert the expenditure linked to this item
+      // (only create if none exists yet for this item — avoid duplicating on every edit)
+      if(item.funding_source_id && item.purchase_cost && parseFloat(item.purchase_cost)>0){
+        const{data:existing}=await SB.from("funding_expenditures").select("id").eq("item_id",item.id).maybeSingle();
+        if(!existing){
+          await SB.from("funding_expenditures").insert({
+            org_id:           user.id,
+            funding_source_id: item.funding_source_id,
+            item_id:          item.id,
+            amount:           parseFloat(item.purchase_cost),
+            description:      item.name || "Inventory item",
+            vendor:           item.purchase_vendor || null,
+            purchase_date:    item.purchase_date || new Date().toISOString().slice(0,10),
+            category:         "Supplies",
+          });
+        } else {
+          // Update existing expenditure amount/source if changed
+          await SB.from("funding_expenditures").update({
+            funding_source_id: item.funding_source_id,
+            amount:           parseFloat(item.purchase_cost),
+            vendor:           item.purchase_vendor || null,
+            purchase_date:    item.purchase_date || existing.purchase_date,
+          }).eq("id",existing.id);
+        }
+      }
+    }
+  },[user]);
 
   const del = useCallback(async(id)=>{
     await SB.from("items").delete().eq("id",id);
