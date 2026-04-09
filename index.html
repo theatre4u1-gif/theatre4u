@@ -12,7 +12,7 @@
     <meta name="robots" content="index, follow"/>
     <link rel="canonical" href="https://theatre4u.org/"/>
 
-    <!-- ═══ OPEN GRAPH (Facebook, LinkedIn, iMessage previews) ═══════════ -->
+    <!-- ═══ OPEN GRAPH ════════════════════════════════════════════════════ -->
     <meta property="og:type" content="website"/>
     <meta property="og:url" content="https://theatre4u.org/"/>
     <meta property="og:title" content="Theatre4u™ — Inventory & Backstage Exchange for Theatre Programs"/>
@@ -31,7 +31,7 @@
     <meta name="twitter:description" content="Finally know what's in your costume loft. Catalog costumes, props, lighting, and sets. Print QR labels. Share resources with nearby programs. Free to start."/>
     <meta name="twitter:image" content="https://theatre4u.org/og-image.png"/>
 
-    <!-- ═══ STRUCTURED DATA — Organization ════════════════════════════════ -->
+    <!-- ═══ STRUCTURED DATA — SoftwareApplication ════════════════════════ -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -131,17 +131,12 @@
     <!-- ═══ ANALYTICS — Lightweight visit tracker ══════════════════════════ -->
     <script>
     (function(){
-      // Generate or retrieve anonymous session ID
       var sid = sessionStorage.getItem('t4u_sid');
       if(!sid){ sid = Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('t4u_sid',sid); }
-      
-      // Parse UTM params and store for signup attribution
       var p = new URLSearchParams(location.search);
       var utm = { source: p.get('utm_source'), medium: p.get('utm_medium'), campaign: p.get('utm_campaign') };
       if(utm.source) sessionStorage.setItem('t4u_utm', JSON.stringify(utm));
       var savedUtm = JSON.parse(sessionStorage.getItem('t4u_utm')||'{}');
-
-      // Track page view — fire and forget
       fetch('https://ldmmphwivnnboyhlxipl.supabase.co/rest/v1/site_visits', {
         method: 'POST',
         headers: {
@@ -160,30 +155,24 @@
           user_agent: navigator.userAgent
         })
       }).catch(function(){});
-
-      // Expose session ID for app to use after signup
       window.__t4u_sid = sid;
       window.__t4u_utm = savedUtm;
     })();
     </script>
 
-    <!-- Google tag (gtag.js) — replace G-XXXXXXXXXX with your GA4 measurement ID -->
-    <!-- UNCOMMENT AFTER CREATING GOOGLE ANALYTICS 4 PROPERTY -->
-    <!--
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-GE80EDY9H5"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-XXXXXXXXXX');
+      gtag('config', 'G-GE80EDY9H5');
     </script>
-    -->
+
+    <script type="module" crossorigin src="/assets/index-DQ5OOqEi.js"></script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-
-    <!-- Fallback for crawlers / no-JS — hidden from users -->
     <noscript>
       <div style="font-family:sans-serif;max-width:700px;margin:60px auto;padding:0 24px;color:#1a1008">
         <h1>Theatre4u™ — Inventory & Backstage Exchange for Theatre Programs</h1>
