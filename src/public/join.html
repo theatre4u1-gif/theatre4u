@@ -53,6 +53,15 @@ input::placeholder{color:var(--t3)}
 .role-info ul li.no::before{content:"✗ ";color:var(--t3)}
 .role-info ul li{color:var(--t2);font-size:12.5px}
 </style>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-GE80EDY9H5"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-GE80EDY9H5');
+    </script>
 </head>
 <body>
 <div class="wrap">
@@ -67,7 +76,6 @@ input::placeholder{color:var(--t3)}
       <h1>Join a Team</h1>
       <p class="subtitle">You've been invited to join a theatre program's backstage team on Theatre4u.</p>
       <div id="entry-content">
-        <!-- Populated by JS based on URL params -->
         <div style="color:var(--t3);font-size:13px">Loading invite details…</div>
       </div>
     </div>
@@ -94,7 +102,7 @@ input::placeholder{color:var(--t3)}
       <button class="btn btn-gold" id="auth-btn" onclick="submitAuth()">Join Team →</button>
       <div class="divider"><span>or</span></div>
       <p style="text-align:center;color:var(--t2);font-size:13px">
-        Already have an account? 
+        Already have an account?
         <a href="#" onclick="toggleAuthMode()" style="color:var(--gold)" id="toggle-link">Sign in instead</a>
       </p>
     </div>
@@ -111,7 +119,7 @@ input::placeholder{color:var(--t3)}
   </div>
 
   <div class="footer">
-    <a href="https://theatre4u.org">theatre4u.org</a> · 
+    <a href="https://theatre4u.org">theatre4u.org</a> ·
     <a href="https://theatre4u.org/help.html">Help & Tutorials</a>
   </div>
 </div>
@@ -132,14 +140,12 @@ const ROLE_LABELS = {
 };
 
 let currentInvite = null;
-let authMode = "signup"; // or "login"
+let authMode = "signup";
 
-// ── Parse URL params ──────────────────────────────────────────────────────────
 const params = new URLSearchParams(window.location.search);
 const token  = params.get("token");
 const code   = params.get("code");
 
-// ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
   if (token) {
     await loadTokenInvite(token);
@@ -236,7 +242,6 @@ function showManualCodeEntry(msg = "") {
 async function submitCode() {
   const raw = document.getElementById("manual-code")?.value?.trim().toUpperCase();
   if (!raw) return;
-  // Format: ensure ABC-123 format
   const code = raw.length === 7 ? raw : raw.slice(0,3) + "-" + raw.slice(3);
   await loadCodeInvite(code);
 }
@@ -318,7 +323,6 @@ async function submitAuth() {
     btn.disabled = false; return;
   }
 
-  // Add member to org
   const { error: memberErr } = await SB.from("org_members").insert({
     org_id:     currentInvite.org_id,
     user_id:    userId,
@@ -328,12 +332,10 @@ async function submitAuth() {
   });
 
   if (memberErr && !memberErr.message.includes("unique")) {
-    // If it's a unique conflict they're already a member — that's fine
     showAuthMsg("Could not join team: " + memberErr.message, "err");
     btn.disabled = false; return;
   }
 
-  // Mark invite as accepted (for email invites; code invites stay reusable)
   if (currentInvite.invite_type === "email") {
     await SB.from("org_invites").update({
       accepted_at: new Date().toISOString(),
@@ -341,7 +343,6 @@ async function submitAuth() {
     }).eq("id", currentInvite.id);
   }
 
-  // Show success
   const orgName = currentInvite.orgs?.name || "the team";
   const roleLabel = ROLE_LABELS[currentInvite.role] || currentInvite.role;
   document.getElementById("success-title").textContent = "You're on the team!";
@@ -370,7 +371,7 @@ function showError(msg) {
   document.getElementById("entry-content").innerHTML = `
     <div class="err">${msg}</div>
     <p style="color:var(--t2);font-size:13px;margin-top:12px">
-      Contact your director for a new invite, or 
+      Contact your director for a new invite, or
       <a href="https://theatre4u.org" style="color:var(--gold)">return to Theatre4u</a>.
     </p>
   `;
@@ -385,14 +386,12 @@ function goBack() {
   showStep("step-entry");
 }
 
-// Expose to onclick handlers
 window.submitCode = submitCode;
 window.submitAuth = submitAuth;
 window.toggleAuthMode = toggleAuthMode;
 window.goToAuth = goToAuth;
 window.goBack = goBack;
 
-// Init
 init();
 </script>
 </body>
