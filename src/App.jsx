@@ -1599,7 +1599,6 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
   useEffect(()=>{
     if (!deepLinkLocationId) return;
     setLocFilter(deepLinkLocationId);
-    setTab && setTab("grid");  // ensure grid view is active
     // Look up location name to show in banner
     (async()=>{
       try{
