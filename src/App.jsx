@@ -9060,7 +9060,7 @@ function AppRoot(){
         // Load onboarding step — 0 = brand new user
         setOnboardingStep(orgData.onboarding_step ?? 0);
       } else { setPlanState(effectivePlan); }
-      const{data:itemData}=await SB.from("items").select("*").eq("org_id",targetOrgId).order("added",{ascending:false});
+      const{data:itemData}=await SB.from("items").select("*").eq("org_id",targetOrgId).order("added",{ascending:false}).limit(2000);
       if(itemData) setItems(itemData);
       setLoaded(true);
       // Load unread message count
@@ -9075,13 +9075,8 @@ function AppRoot(){
         .eq("owner_id", user.id)
         .eq("status", "pending");
       setPendingReqCount(reqCount || 0);
-      // Load credit balance
-      if(plan !== "free") {
-        const { data: bal } = await SB.rpc("get_my_credit_balance");
-        setCreditBalance(bal || 0);
-        // Check catalog bonus trigger
-        await SB.rpc("check_catalog_bonus", { p_org_id: user.id });
-      }
+      // Theatre Credits balance — loaded on-demand when Credits page is visited
+      // (removed from startup to reduce login query count)
     })();
   },[user]);
 
