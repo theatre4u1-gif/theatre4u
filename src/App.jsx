@@ -8697,36 +8697,37 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
       {open && (
         <div style={{
           position:"fixed", top:64, right:16, zIndex:900,
-          width:420, background:"#1e1a2e", border:"1.5px solid rgba(255,255,255,.12)",
-          borderRadius:14, boxShadow:"0 8px 40px rgba(0,0,0,.5)",
+          width:420, background:"#ffffff", border:"1.5px solid #e0d8f0",
+          borderRadius:14, boxShadow:"0 8px 40px rgba(0,0,0,.18)",
           overflow:"hidden", animation:"feedIn .2s ease",
+          color:"#1a1008",
         }}>
           <style>{`@keyframes feedIn{from{opacity:0;transform:translateY(-10px) scale(.97)}to{opacity:1;transform:none}}`}</style>
 
           {/* Header */}
-          <div style={{background:"linear-gradient(135deg,#1a0a2e,#2d1054)",padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",borderRadius:"12px 12px 0 0"}}>
+          <div style={{background:"linear-gradient(135deg,#2d1054,#4a1a8a)",padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",borderRadius:"12px 12px 0 0"}}>
             <div>
-              <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"var(--gold2)"}}>Share Feedback</div>
-              <div style={{fontSize:13,color:"rgba(255,255,255,.55)",marginTop:2}}>You're a Leading Player — your voice shapes this tool.</div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"#f0c866"}}>Share Feedback</div>
+              <div style={{fontSize:13,color:"rgba(255,255,255,.85)",marginTop:2}}>You're a Leading Player — your voice shapes this tool.</div>
             </div>
-            {isLeadingPlayer && <span style={{fontSize:11,background:"rgba(212,168,67,.2)",color:"var(--gold2)",padding:"2px 8px",borderRadius:6,fontWeight:800}}>🎭 LEADING PLAYER</span>}
+            {isLeadingPlayer && <span style={{fontSize:11,background:"rgba(212,168,67,.3)",color:"#f0c866",padding:"2px 8px",borderRadius:6,fontWeight:800}}>🎭 LEADING PLAYER</span>}
           </div>
 
           {/* Tabs */}
           {isLeadingPlayer && (
-            <div style={{display:"flex",borderBottom:"1px solid var(--border)"}}>
+            <div style={{display:"flex",borderBottom:"1px solid #e0d8f0",background:"#f8f5ff"}}>
               {[["quick","Quick Note"],["survey","Leading Player Survey"]].map(([id,label])=>(
                 <button key={id} onClick={()=>setTab(id)} style={{
                   flex:1,padding:"9px 12px",background:"none",border:"none",
-                  borderBottom:`2px solid ${tab===id?"var(--gold)":"transparent"}`,
-                  color:tab===id?"var(--gold)":"var(--muted)",fontFamily:"inherit",
+                  borderBottom:`2px solid ${tab===id?"#7c3aed":"transparent"}`,
+                  color:tab===id?"#7c3aed":"#6b7280",fontFamily:"inherit",
                   fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .15s",
                 }}>{label}</button>
               ))}
             </div>
           )}
 
-          <div style={{padding:"20px 22px"}}>
+          <div style={{padding:"20px 22px",background:"#ffffff",color:"#1a1008"}}>
             {done ? (
               <div style={{textAlign:"center",padding:"24px 0"}}>
                 <div style={{fontSize:44,marginBottom:12}}>🙏</div>
@@ -8741,9 +8742,9 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
                     <button key={c.id} onClick={()=>setCategory(c.id)} style={{
                       padding:"4px 10px",borderRadius:20,border:"1.5px solid",
                       fontFamily:"inherit",fontSize:13,fontWeight:700,cursor:"pointer",
-                      background:category===c.id?c.color+"22":"transparent",
-                      color:category===c.id?c.color:"var(--muted)",
-                      borderColor:category===c.id?c.color:"var(--border)",
+                      background:category===c.id?c.color+"22":"#f3f4f6",
+                      color:category===c.id?c.color:"#374151",
+                      borderColor:category===c.id?c.color:"#d1d5db",
                     }}>{c.label}</button>
                   ))}
                 </div>
@@ -8758,26 +8759,26 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
                     "Tell us anything on your mind…"
                   }
                   style={{
-                    width:"100%",minHeight:80,background:"rgba(0,0,0,.25)",
-                    border:"1.5px solid var(--border)",borderRadius:8,padding:"9px 11px",
-                    color:"var(--text,#ede8df)",fontFamily:"'DM Sans',sans-serif",
+                    width:"100%",minHeight:80,background:"#f9fafb",
+                    border:"1.5px solid #d1d5db",borderRadius:8,padding:"9px 11px",
+                    color:"#111827",fontFamily:"'DM Sans',sans-serif",
                     fontSize:14,resize:"vertical",outline:"none",lineHeight:1.6,
                     marginBottom:12,
                   }}
-                  onFocus={e=>e.target.style.borderColor="var(--gold)"}
-                  onBlur={e=>e.target.style.borderColor="var(--border)"}
+                  onFocus={e=>e.target.style.borderColor="#7c3aed"}
+                  onBlur={e=>e.target.style.borderColor="#d1d5db"}
                 />
 
                 {/* Star rating */}
                 <div style={{marginBottom:14}}>
-                  <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:8}}>
+                  <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"#6b7280",marginBottom:8}}>
                     Overall experience so far
                   </div>
                   <div style={{display:"flex",gap:4}}>
                     {[1,2,3,4,5].map(n=>(
                       <button key={n} onClick={()=>setRating(n)} style={{
                         background:"none",border:"none",fontSize:22,cursor:"pointer",
-                        color:rating>=n?"#f9a825":"var(--border)",transition:"color .1s",padding:"0 2px",
+                        color:rating>=n?"#f9a825":"#d1d5db",transition:"color .1s",padding:"0 2px",
                       }}>★</button>
                     ))}
                   </div>
@@ -8785,8 +8786,8 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
 
                 <button onClick={submitQuick} disabled={saving||(!message.trim()&&!rating)} style={{
                   width:"100%",padding:"10px 0",borderRadius:8,border:"none",
-                  background:(!message.trim()&&!rating)?"var(--border)":"linear-gradient(135deg,var(--gold2),var(--gold))",
-                  color:(!message.trim()&&!rating)?"var(--muted)":"#1a1200",
+                  background:(!message.trim()&&!rating)?"#e5e7eb":"linear-gradient(135deg,#f0c866,#d4a843)",
+                  color:(!message.trim()&&!rating)?"#9ca3af":"#1a1200",
                   fontFamily:"inherit",fontSize:15,fontWeight:700,cursor:(!message.trim()&&!rating)?"default":"pointer",
                 }}>
                   {saving?"Sending…":"Send Feedback"}
@@ -8795,26 +8796,26 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
             ) : (
               /* Leading Player Survey */
               <>
-                <div style={{fontSize:12,color:"var(--muted)",marginBottom:14,lineHeight:1.6}}>
+                <div style={{fontSize:12,color:"#6b7280",marginBottom:14,lineHeight:1.6}}>
                   Your answers directly shape the next features we build. Takes about 3 minutes.
                 </div>
 
                 {/* Q1 */}
                 <div style={{marginBottom:14}}>
-                  <label style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:8}}>
+                  <label style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"#6b7280",display:"block",marginBottom:8}}>
                     1. What inventory is hardest to track right now?
                   </label>
                   <input value={q1} onChange={e=>setQ1(e.target.value)}
                     placeholder="e.g. Small props, lighting gels, period costumes…"
-                    style={{width:"100%",background:"rgba(0,0,0,.25)",border:"1.5px solid var(--border)",
-                      borderRadius:8,padding:"10px 12px",color:"var(--text,#ede8df)",fontFamily:"inherit",fontSize:14,outline:"none"}}
-                    onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--border)"}
+                    style={{width:"100%",background:"#f9fafb",border:"1.5px solid #d1d5db",
+                      borderRadius:8,padding:"10px 12px",color:"#111827",fontFamily:"inherit",fontSize:14,outline:"none"}}
+                    onFocus={e=>e.target.style.borderColor="#7c3aed"} onBlur={e=>e.target.style.borderColor="#d1d5db"}
                   />
                 </div>
 
                 {/* Q2 */}
                 <div style={{marginBottom:14}}>
-                  <label style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:8}}>
+                  <label style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"#6b7280",display:"block",marginBottom:8}}>
                     2. How useful is the Funding Tracker — 1 (not useful) to 10 (essential)?
                   </label>
                   <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
@@ -8822,9 +8823,9 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
                       <button key={n} onClick={()=>setQ2(n)} style={{
                         width:34,height:34,borderRadius:6,border:"1.5px solid",
                         background:q2===n?"var(--gold)":"transparent",
-                        color:q2===n?"#1a1200":"var(--muted)",
+                        color:q2===n?"#1a1200":"#374151",
                         fontFamily:"inherit",fontSize:13,fontWeight:700,cursor:"pointer",
-                        borderColor:q2===n?"var(--gold)":"var(--border)",
+                        borderColor:q2===n?"#d4a843":"#d1d5db",
                       }}>{n}</button>
                     ))}
                   </div>
@@ -8832,12 +8833,12 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
 
                 {/* Q3 */}
                 <div style={{marginBottom:14}}>
-                  <label style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:8}}>
+                  <label style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"#6b7280",display:"block",marginBottom:8}}>
                     3. What stops you from lending items to other schools?
                   </label>
                   <select value={q3} onChange={e=>setQ3(e.target.value)} style={{
-                    width:"100%",background:"rgba(0,0,0,.25)",border:"1.5px solid var(--border)",
-                    borderRadius:8,padding:"10px 12px",color:"var(--text,#ede8df)",fontFamily:"inherit",fontSize:14,outline:"none",
+                    width:"100%",background:"#f9fafb",border:"1.5px solid #d1d5db",
+                    borderRadius:8,padding:"10px 12px",color:"#111827",fontFamily:"inherit",fontSize:14,outline:"none",
                   }}>
                     <option value="">Select the biggest one…</option>
                     <option value="fear_damage">Fear of damage or loss</option>
@@ -8852,15 +8853,15 @@ function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
 
                 {/* Q4 */}
                 <div style={{marginBottom:16}}>
-                  <label style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:8}}>
+                  <label style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"#6b7280",display:"block",marginBottom:8}}>
                     4. What one thing could save you an hour a week?
                   </label>
                   <textarea value={q4} onChange={e=>setQ4(e.target.value)}
                     placeholder="e.g. Better funding reports, scan items in/out on my phone…"
-                    style={{width:"100%",minHeight:64,background:"rgba(0,0,0,.25)",border:"1.5px solid var(--border)",
-                      borderRadius:8,padding:"8px 10px",color:"var(--text,#ede8df)",fontFamily:"inherit",fontSize:12,
+                    style={{width:"100%",minHeight:64,background:"#f9fafb",border:"1.5px solid #d1d5db",
+                      borderRadius:8,padding:"8px 10px",color:"#111827",fontFamily:"inherit",fontSize:12,
                       resize:"vertical",outline:"none",lineHeight:1.5}}
-                    onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--border)"}
+                    onFocus={e=>e.target.style.borderColor="#7c3aed"} onBlur={e=>e.target.style.borderColor="#d1d5db"}
                   />
                 </div>
 
