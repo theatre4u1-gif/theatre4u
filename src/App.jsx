@@ -9371,7 +9371,7 @@ function AppRoot(){
       ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
     ];
   })();
-  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Backstage Exchange", productions:"Productions", reports:"Reports", settings:"Profile", admin:"Admin Dashboard", district:"District", credits:"Theatre Credits", community:"Community Board" };
+  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Backstage Exchange", productions:"Productions", reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:"Theatre Credits", community:"Community Board" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicItemId) return <PublicItemPage itemId={publicItemId} />;
@@ -9519,7 +9519,7 @@ function AppRoot(){
                     </button>
                   )}
                   <button className="btn btn-o btn-sm btn-full" style={{color:"rgba(255,255,255,.85)",borderColor:"rgba(255,255,255,.28)",fontSize:13,padding:"8px 12px"}} onClick={()=>nav("settings")}>
-                    <span style={{width:13,height:13,display:"flex"}}>{Ic.settings}</span>Profile
+                    <span style={{width:13,height:13,display:"flex"}}>{Ic.settings}</span>Settings
                   </button>
                   <button className="btn btn-sm btn-full" style={{background:"rgba(139,26,42,.22)",border:"1px solid rgba(139,26,42,.38)",color:"rgba(255,255,255,.85)",fontSize:13,padding:"8px 12px"}} onClick={signOut}>
                     Sign Out
