@@ -7213,7 +7213,7 @@ function TeamSettings({ userId, orgName, plan }) {
     flash("✓ Role updated");
   };
 
-  const joinUrl = joinCode ? `theatre4u.org/join?code=${joinCode}` : null;
+  const joinUrl = joinCode ? `theatre4u.org/join.html?code=${joinCode}` : null;
 
   return (
     <div className="card card-p" style={{ marginBottom: 20 }}>
@@ -7288,7 +7288,7 @@ function TeamSettings({ userId, orgName, plan }) {
                 </div>
               </div>
               <button onClick={() => {
-                const url = `https://theatre4u.org/join?token=${inv.token}`;
+                const url = `https://theatre4u.org/join.html?token=${inv.token}`;
                 if (navigator.clipboard?.writeText) {
                   navigator.clipboard.writeText(url)
                     .then(() => flash("✓ Invite link copied!"))
@@ -7350,13 +7350,13 @@ function TeamSettings({ userId, orgName, plan }) {
               <div style={{ flex: 1, minWidth: 160 }}>
                 <div style={{ fontSize: 11, color: "var(--faint)", marginBottom: 4 }}>Or share this link</div>
                 <div style={{ fontSize: 12, color: "var(--muted)", wordBreak: "break-all" }}>
-                  theatre4u.org/join?code={joinCode}
+                  theatre4u.org/join.html?code={joinCode}
                 </div>
               </div>
               <button className="btn bs bsm" onClick={() => {
-                navigator.clipboard?.writeText(`https://theatre4u.org/join?code=${joinCode}`)
+                navigator.clipboard?.writeText(`https://theatre4u.org/join.html?code=${joinCode}`)
                   .then(() => flash("✓ Link copied to clipboard!"))
-                  .catch(() => flash("✓ Link: https://theatre4u.org/join?code=" + joinCode));
+                  .catch(() => flash("✓ Link: https://theatre4u.org/join.html?code=" + joinCode));
                 flash("✓ Link copied!");
               }}>Copy Link</button>
             </div>
@@ -8995,13 +8995,17 @@ function AppRoot(){
   // Supabase's email confirmation redirect (which strips query params)
   const [pendingInvite,setPendingInvite] = useState(() => {
     const p = new URLSearchParams(window.location.search);
-    const fromUrl = p.get("invite");
+    const fromUrl = p.get("invite") || p.get("token"); // team invites use 'token'
     if (fromUrl) {
       localStorage.setItem("t4u_pending_invite", fromUrl);
+      // Also detect if it's a team token vs district token
+      const itype = p.get("token") ? "team" : "district";
+      localStorage.setItem("t4u_pending_invite_type", itype);
       return fromUrl;
     }
     return localStorage.getItem("t4u_pending_invite") || null;
   });
+  const pendingInviteType = localStorage.getItem("t4u_pending_invite_type") || "district";
   const [inviteInfo, setInviteInfo] = useState(null);
   useEffect(()=>{
     if(!pendingInvite||user) return;
@@ -9260,15 +9264,54 @@ function AppRoot(){
   // Handle invite token — after login, accept the invite
   useEffect(() => {
     if (!user || !pendingInvite) return;
+    const itype = localStorage.getItem("t4u_pending_invite_type") || "district";
+
+    const clearInvite = () => {
+      localStorage.removeItem("t4u_pending_invite");
+      localStorage.removeItem("t4u_pending_invite_type");
+      setPendingInvite(null);
+      window.history.replaceState({}, "", window.location.pathname);
+    };
+
     (async () => {
+      // ── TEAM INVITE (org_invites) ──────────────────────────────────────
+      if (itype === "team") {
+        // Use SECURITY DEFINER RPC to bypass RLS — handles insert + mark accepted
+        const { data: result, error: rpcErr } = await SB.rpc("accept_team_invite", {
+          p_token: pendingInvite,
+        });
+
+        if (rpcErr || result?.error) {
+          console.error("accept_team_invite error:", rpcErr || result?.error);
+          clearInvite();
+          const msg = result?.error || "Something went wrong accepting the invite.";
+          if (msg.includes("Already a member")) {
+            alert("You're already a member of this team!");
+          } else if (msg.includes("expired")) {
+            alert("This invite has expired. Ask the director to send a new invite.");
+          } else {
+            alert(msg + " Please try again or contact hello@theatre4u.org.");
+          }
+          return;
+        }
+
+        clearInvite();
+        const orgName = result?.org_name || "the program";
+        const roleLabel = result?.role === "stage_manager" ? "Stage Manager"
+          : result?.role === "crew" ? "Crew" : "House";
+        alert(`✓ Welcome to ${orgName}'s Backstage Team! You've joined as ${roleLabel}. The page will reload to show your team inventory.`);
+        window.location.reload();
+        return;
+      }
+
+      // ── DISTRICT INVITE (district_invites) ────────────────────────────
       const { data: invite } = await SB.from("district_invites")
         .select("*, districts(id,name)")
         .eq("token", pendingInvite)
         .eq("status", "pending")
         .single();
       if (!invite) {
-        localStorage.removeItem("t4u_pending_invite");
-        setPendingInvite(null);
+        clearInvite();
         alert("This invite link has expired or has already been used. Ask your district administrator to send a fresh invite link.");
         return;
       }
@@ -9282,20 +9325,13 @@ function AppRoot(){
           `Accepting this invite will move your account to "${districtName}".\n\n` +
           `Your inventory and data will move with you. Continue?`
         );
-        if (!confirmed) {
-          localStorage.removeItem("t4u_pending_invite");
-          setPendingInvite(null);
-          return;
-        }
+        if (!confirmed) { clearInvite(); return; }
       }
 
       // Link org to district + mark invite accepted
       await SB.from("orgs").update({ district_id: invite.district_id, role: "school_admin" }).eq("id", user.id);
       await SB.from("district_invites").update({ status: "accepted", accepted_at: new Date().toISOString() }).eq("id", invite.id);
-      // Clean URL and clear stored token
-      window.history.replaceState({}, "", window.location.pathname);
-      localStorage.removeItem("t4u_pending_invite");
-      setPendingInvite(null);
+      clearInvite();
       // Reload org data to pick up new district_id
       const { data: updatedOrg } = await SB.from("orgs").select("*").eq("id", user.id).single();
       if (updatedOrg) setOrg(updatedOrg);
