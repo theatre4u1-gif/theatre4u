@@ -7123,24 +7123,27 @@ function TeamSettings({ userId, orgName, plan }) {
   // Generate or show join code
   const getJoinCode = async () => {
     if (joinCode) { setShowCode(true); return; }
-    // Create a new code invite
-    const { data } = await SB.from("org_invites").insert({
+    // Insert — DB trigger auto-generates join_code
+    const { error } = await SB.from("org_invites").insert({
       org_id: userId,
       role: "crew",
       invite_type: "code",
-      join_code: null, // DB trigger generates it — but we use a function
-    }).select().single();
-    if (data) { setJoinCode(data.join_code); setShowCode(true); }
-    else {
-      // Generate code client-side as fallback
-      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-      let c = "";
-      for (let i = 0; i < 6; i++) c += chars[Math.floor(Math.random() * chars.length)];
-      const code = c.slice(0,3) + "-" + c.slice(3);
-      const { data: d2 } = await SB.from("org_invites").insert({
-        org_id: userId, role: "crew", invite_type: "code", join_code: code,
-      }).select().single();
-      if (d2) { setJoinCode(d2.join_code); setShowCode(true); }
+    });
+    if (error) { flash("❌ Could not generate join code. Try again."); return; }
+    // Re-fetch the newly created code invite (RLS: org_id = auth.uid())
+    const { data: fetched } = await SB.from("org_invites")
+      .select("join_code")
+      .eq("org_id", userId)
+      .eq("invite_type", "code")
+      .is("accepted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    if (fetched?.join_code) {
+      setJoinCode(fetched.join_code);
+      setShowCode(true);
+    } else {
+      flash("❌ Code generated but couldn't load — try refreshing.");
     }
   };
 
@@ -7148,17 +7151,42 @@ function TeamSettings({ userId, orgName, plan }) {
   const sendInvite = async () => {
     if (!inviteEmail.trim()) return;
     setSending(true);
+    // Step 1: Insert the invite row
     const { data, error } = await SB.from("org_invites").insert({
       org_id: userId,
       email: inviteEmail.trim().toLowerCase(),
       role: inviteRole,
       invite_type: "email",
     }).select().single();
-    if (error) { flash("❌ " + EM.sendInvite.body); }
-    else {
-      setInvites(p => [data, ...p]);
-      setInviteEmail("");
-      flash("✓ Invite created — share this link: theatre4u.org/join?token=" + data.token);
+    if (error || !data) {
+      flash("❌ " + EM.sendInvite.body);
+      setSending(false);
+      return;
+    }
+    setInvites(p => [data, ...p]);
+    setInviteEmail("");
+    // Step 2: Call edge function to send the email
+    try {
+      const { data: { session } } = await SB.auth.getSession();
+      const res = await fetch(
+        "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/team-invite",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + session?.access_token,
+          },
+          body: JSON.stringify({ invite_id: data.id }),
+        }
+      );
+      const result = await res.json();
+      if (result.email_sent) {
+        flash("✓ Invite email sent to " + data.email);
+      } else {
+        flash("✓ Invite saved — copy the link below to share manually");
+      }
+    } catch {
+      flash("✓ Invite saved — copy the link below to share manually");
     }
     setSending(false);
   };
@@ -7260,8 +7288,12 @@ function TeamSettings({ userId, orgName, plan }) {
                 </div>
               </div>
               <button onClick={() => {
-                navigator.clipboard?.writeText(`https://theatre4u.org/join?token=${inv.token}`);
-                flash("✓ Invite link copied!");
+                const url = `https://theatre4u.org/join?token=${inv.token}`;
+                if (navigator.clipboard?.writeText) {
+                  navigator.clipboard.writeText(url)
+                    .then(() => flash("✓ Invite link copied!"))
+                    .catch(() => { prompt("Copy this link:", url); });
+                } else { prompt("Copy this link:", url); }
               }} style={{ background: "var(--parch)", border: "1px solid var(--bd)", borderRadius: 6,
                 color: "var(--muted)", padding: "4px 10px", cursor: "pointer", fontSize: 11,
                 fontFamily: "inherit" }}>Copy Link</button>
@@ -7322,7 +7354,9 @@ function TeamSettings({ userId, orgName, plan }) {
                 </div>
               </div>
               <button className="btn bs bsm" onClick={() => {
-                navigator.clipboard?.writeText(`https://theatre4u.org/join?code=${joinCode}`);
+                navigator.clipboard?.writeText(`https://theatre4u.org/join?code=${joinCode}`)
+                  .then(() => flash("✓ Link copied to clipboard!"))
+                  .catch(() => flash("✓ Link: https://theatre4u.org/join?code=" + joinCode));
                 flash("✓ Link copied!");
               }}>Copy Link</button>
             </div>
@@ -7335,8 +7369,13 @@ function TeamSettings({ userId, orgName, plan }) {
       </div>
 
       {msg && (
-        <div style={{ marginTop: 14, fontSize: 13, fontWeight: 700,
-          color: msg.startsWith("❌") ? "var(--red)" : "var(--green)" }}>
+        <div style={{
+          position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
+          zIndex: 9999, background: msg.startsWith("❌") ? "#7f1d1d" : "#14532d",
+          color: "#fff", padding: "10px 22px", borderRadius: 10,
+          fontSize: 14, fontWeight: 700, boxShadow: "0 4px 20px rgba(0,0,0,.35)",
+          whiteSpace: "nowrap", pointerEvents: "none",
+        }}>
           {msg}
         </div>
       )}
