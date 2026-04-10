@@ -1,58 +1,164 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-<meta name="theme-color" content="#0d0b11"/>
-<title>Join a Theatre4u™ Team</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-<style>
-:root{--bg:#0d0b11;--bg2:#15121b;--bg3:#1d1925;--bd:#282333;--t1:#ede8df;--t2:#9b93a8;--t3:#685f76;--gold:#d4a843;--goldd:#a37f2c;--red:#c2185b;--grn:#4caf50;--r:12px}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{min-height:100vh;background:var(--bg);color:var(--t1);font-family:'DM Sans',sans-serif;font-size:14px}
-.wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
-.card{background:var(--bg2);border:1px solid var(--bd);border-radius:20px;padding:36px 32px;width:100%;max-width:440px;box-shadow:0 8px 48px rgba(0,0,0,.4)}
-.logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
-.logo-mark{width:42px;height:42px;background:linear-gradient(135deg,var(--gold),var(--goldd));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
-.logo-text{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--gold)}
-h1{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;margin-bottom:6px}
-.subtitle{color:var(--t2);font-size:14px;margin-bottom:28px;line-height:1.5}
-.org-banner{background:linear-gradient(135deg,rgba(212,168,67,.15),rgba(212,168,67,.05));border:1px solid rgba(212,168,67,.3);border-radius:10px;padding:14px 16px;margin-bottom:24px}
-.org-name{font-weight:700;font-size:16px;color:var(--gold)}
-.org-sub{font-size:12px;color:var(--t2);margin-top:3px}
-.role-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid var(--bd);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;margin-top:8px}
-.field{margin-bottom:16px}
-label{display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t2);margin-bottom:5px}
-input{width:100%;background:#110f18;border:1px solid var(--bd);border-radius:8px;padding:10px 12px;color:var(--t1);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border .2s}
-input:focus{border-color:var(--gold)}
-input::placeholder{color:var(--t3)}
-.btn{width:100%;padding:12px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:all .2s;margin-top:4px}
-.btn-gold{background:linear-gradient(135deg,var(--gold),var(--goldd));color:#1a1200}
-.btn-gold:hover{filter:brightness(1.1);transform:translateY(-1px)}
-.btn-gold:disabled{opacity:.4;cursor:not-allowed;transform:none}
-.err{background:rgba(194,24,91,.12);border:1px solid rgba(194,24,91,.3);border-radius:8px;padding:10px 14px;color:#f48fb1;font-size:13px;margin-bottom:16px}
-.ok{background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.3);border-radius:8px;padding:10px 14px;color:#81c784;font-size:13px;margin-bottom:16px}
-.divider{display:flex;align-items:center;gap:10px;margin:20px 0}
-.divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--bd)}
-.divider span{color:var(--t3);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px}
-.code-input{text-align:center;font-size:22px;font-weight:900;letter-spacing:6px;text-transform:uppercase;font-family:'DM Sans',sans-serif}
-.step{display:none}
-.step.active{display:block}
-.back{background:none;border:none;color:var(--t3);cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;margin-bottom:20px;padding:0;display:flex;align-items:center;gap:4px}
-.back:hover{color:var(--t1)}
-.success-ico{font-size:56px;text-align:center;margin-bottom:16px}
-.success-title{font-family:'Playfair Display',serif;font-size:24px;text-align:center;margin-bottom:8px}
-.success-sub{color:var(--t2);text-align:center;font-size:14px;line-height:1.6;margin-bottom:24px}
-.footer{margin-top:20px;text-align:center;font-size:12px;color:var(--t3)}
-.footer a{color:var(--gold);text-decoration:none}
-.role-info{background:rgba(255,255,255,.04);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin:16px 0;font-size:13px}
-.role-info .ri-title{font-weight:700;margin-bottom:6px;color:var(--gold)}
-.role-info ul{list-style:none;display:flex;flex-direction:column;gap:4px}
-.role-info ul li::before{content:"✓ ";color:var(--grn);font-weight:700}
-.role-info ul li.no::before{content:"✗ ";color:var(--t3)}
-.role-info ul li{color:var(--t2);font-size:12.5px}
-</style>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- ═══ PRIMARY SEO ═══════════════════════════════════════════════════ -->
+    <title>Theatre4u™ — Inventory & Backstage Exchange for Theatre Programs</title>
+    <meta name="description" content="Theatre4u helps high school and community theatre programs catalog costumes, props, lighting, and sets. Print QR labels, track funding, and share resources with nearby programs through Backstage Exchange. Free to start."/>
+    <meta name="keywords" content="theatre inventory management, drama program software, costume inventory, prop management, theatre program tools, backstage exchange, theatre educator tools, high school drama inventory, QR labels theatre, prop tracking software, theatre resources, drama teacher tools, theatre management software"/>
+    <meta name="author" content="Theatre4u"/>
+    <meta name="robots" content="index, follow"/>
+    <link rel="canonical" href="https://theatre4u.org/"/>
+
+    <!-- ═══ OPEN GRAPH ════════════════════════════════════════════════════ -->
+    <meta property="og:type" content="website"/>
+    <meta property="og:url" content="https://theatre4u.org/"/>
+    <meta property="og:title" content="Theatre4u™ — Inventory & Backstage Exchange for Theatre Programs"/>
+    <meta property="og:description" content="Finally know what's in your costume loft. Catalog every costume, prop, and set piece. Print QR labels for every bin. Share resources with nearby programs. Built by a theatre director, for theatre directors."/>
+    <meta property="og:image" content="https://theatre4u.org/og-image.png"/>
+    <meta property="og:image:width" content="1200"/>
+    <meta property="og:image:height" content="630"/>
+    <meta property="og:image:alt" content="Theatre4u — Inventory management and Backstage Exchange for theatre programs"/>
+    <meta property="og:site_name" content="Theatre4u™"/>
+    <meta property="og:locale" content="en_US"/>
+
+    <!-- ═══ TWITTER / X CARD ══════════════════════════════════════════════ -->
+    <meta name="twitter:card" content="summary_large_image"/>
+    <meta name="twitter:site" content="@theatre4u"/>
+    <meta name="twitter:title" content="Theatre4u™ — Inventory & Backstage Exchange for Theatre Programs"/>
+    <meta name="twitter:description" content="Finally know what's in your costume loft. Catalog costumes, props, lighting, and sets. Print QR labels. Share resources with nearby programs. Free to start."/>
+    <meta name="twitter:image" content="https://theatre4u.org/og-image.png"/>
+
+    <!-- ═══ STRUCTURED DATA — SoftwareApplication ════════════════════════ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Theatre4u™",
+      "url": "https://theatre4u.org",
+      "description": "Inventory management, QR labeling, Backstage Exchange, and community tools for high school and community theatre programs.",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web, iOS, Android",
+      "offers": {
+        "@type": "AggregateOffer",
+        "lowPrice": "0",
+        "highPrice": "49",
+        "priceCurrency": "USD",
+        "offerCount": "3"
+      },
+      "creator": {
+        "@type": "Person",
+        "name": "Bob Zick",
+        "jobTitle": "Theatre Educator"
+      },
+      "featureList": [
+        "Costume and prop inventory management",
+        "QR code labels for storage bins and items",
+        "Backstage Exchange — rent, loan, and sell items between programs",
+        "Funding Tracker for grants and allocations",
+        "Community Board for theatre program networking",
+        "CSV import and export",
+        "Team access for students and staff",
+        "District-wide multi-school management"
+      ],
+      "screenshot": "https://theatre4u.org/og-image.png",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "5",
+        "reviewCount": "6"
+      }
+    }
+    </script>
+
+    <!-- ═══ STRUCTURED DATA — FAQ ══════════════════════════════════════════ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is Theatre4u free for theatre programs?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Theatre4u is free to start with up to 50 inventory items, QR labels, and CSV export. Pro plans start at $12/month for unlimited items, the Funding Tracker, Community Board, and Backstage Exchange posting."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is the Backstage Exchange?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Backstage Exchange is a private network where theatre programs can rent, loan, or sell items to each other. Browse what nearby programs have available, or list your own items to earn revenue or reduce costs for other programs."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can students use Theatre4u to help manage inventory?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Theatre4u supports team roles: Stage Manager (add, edit, delete items), Crew (add and edit items), and House (view only). Invite students with a join code and assign the appropriate role."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does Theatre4u work on mobile phones?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Theatre4u has a mobile app available at theatre4u.org/app. Install it on iPhone or Android from your browser using Add to Home Screen — no App Store download required."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <!-- ═══ PWA & MOBILE ═══════════════════════════════════════════════════ -->
+    <meta name="theme-color" content="#0d0b11"/>
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+    <meta name="apple-mobile-web-app-title" content="Theatre4u™"/>
+    <link rel="apple-touch-icon" href="/icons/icon-192.png"/>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+    <link rel="manifest" href="/manifest.json"/>
+
+    <!-- ═══ PERFORMANCE ════════════════════════════════════════════════════ -->
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://ldmmphwivnnboyhlxipl.supabase.co"/>
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com"/>
+
+    <!-- ═══ ANALYTICS — Lightweight visit tracker ══════════════════════════ -->
+    <script>
+    (function(){
+      var sid = sessionStorage.getItem('t4u_sid');
+      if(!sid){ sid = Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('t4u_sid',sid); }
+      var p = new URLSearchParams(location.search);
+      var utm = { source: p.get('utm_source'), medium: p.get('utm_medium'), campaign: p.get('utm_campaign') };
+      if(utm.source) sessionStorage.setItem('t4u_utm', JSON.stringify(utm));
+      var savedUtm = JSON.parse(sessionStorage.getItem('t4u_utm')||'{}');
+      fetch('https://ldmmphwivnnboyhlxipl.supabase.co/rest/v1/site_visits', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          session_id: sid,
+          page: location.pathname || '/',
+          referrer: document.referrer || null,
+          utm_source: savedUtm.source || null,
+          utm_medium: savedUtm.medium || null,
+          utm_campaign: savedUtm.campaign || null,
+          user_agent: navigator.userAgent
+        })
+      }).catch(function(){});
+      window.__t4u_sid = sid;
+      window.__t4u_utm = savedUtm;
+    })();
+    </script>
 
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-K509H4V1KF"></script>
@@ -62,333 +168,28 @@ input::placeholder{color:var(--t3)}
       gtag('js', new Date());
       gtag('config', 'G-K509H4V1KF');
     </script>
-</head>
-<body>
-<div class="wrap">
-  <div class="card">
-    <div class="logo">
-      <div class="logo-mark">🎭</div>
-      <div class="logo-text">Theatre4u™</div>
-    </div>
 
-    <!-- Step 1: Entry — auto-detected from URL params -->
-    <div class="step active" id="step-entry">
-      <h1>Join a Team</h1>
-      <p class="subtitle">You've been invited to join a theatre program's backstage team on Theatre4u.</p>
-      <div id="entry-content">
-        <div style="color:var(--t3);font-size:13px">Loading invite details…</div>
+    <script type="module" src="/src/main.jsx"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      <div style="font-family:sans-serif;max-width:700px;margin:60px auto;padding:0 24px;color:#1a1008">
+        <h1>Theatre4u™ — Inventory & Backstage Exchange for Theatre Programs</h1>
+        <p>Theatre4u helps high school and community theatre programs catalog costumes, props, lighting, sets, and scripts. Print QR labels for every bin, track funding, and share resources with nearby programs through Backstage Exchange.</p>
+        <h2>Features</h2>
+        <ul>
+          <li>Costume, prop, lighting, and set inventory management</li>
+          <li>QR code labels for storage bins and items</li>
+          <li>Backstage Exchange — rent, loan, or sell items between programs</li>
+          <li>Funding Tracker for grants and district allocations</li>
+          <li>Community Board for regional theatre networking</li>
+          <li>Team access for students and staff</li>
+          <li>Free to start — no credit card required</li>
+        </ul>
+        <p>Visit <a href="https://theatre4u.org">theatre4u.org</a> to create your free account.</p>
+        <p style="margin-top:16px;font-size:12px;color:#888">© 2026 Artstracker LLC · Theatre4u™ is operated by Artstracker LLC, a California limited liability company.</p>
       </div>
-    </div>
-
-    <!-- Step 2: Create account or sign in -->
-    <div class="step" id="step-auth">
-      <button class="back" onclick="goBack()">← Back</button>
-      <div id="org-banner-auth"></div>
-      <h1 id="auth-heading">Create Your Account</h1>
-      <p class="subtitle" id="auth-sub">Enter your details to join the team.</p>
-      <div id="auth-msg"></div>
-      <div class="field">
-        <label>Email</label>
-        <input id="auth-email" type="email" placeholder="you@school.edu" autocapitalize="none"/>
-      </div>
-      <div class="field">
-        <label>Password</label>
-        <input id="auth-pass" type="password" placeholder="Create a password (min 6 chars)"/>
-      </div>
-      <div class="field" id="name-field">
-        <label>Your Name</label>
-        <input id="auth-name" type="text" placeholder="First Last"/>
-      </div>
-      <button class="btn btn-gold" id="auth-btn" onclick="submitAuth()">Join Team →</button>
-      <div class="divider"><span>or</span></div>
-      <p style="text-align:center;color:var(--t2);font-size:13px">
-        Already have an account?
-        <a href="#" onclick="toggleAuthMode()" style="color:var(--gold)" id="toggle-link">Sign in instead</a>
-      </p>
-    </div>
-
-    <!-- Step 3: Success -->
-    <div class="step" id="step-success">
-      <div class="success-ico">🎭</div>
-      <div class="success-title" id="success-title">You're on the team!</div>
-      <div class="success-sub" id="success-sub">Welcome to the team. You now have access to the inventory.</div>
-      <button class="btn btn-gold" onclick="window.location.href='https://theatre4u.org'">
-        Open Theatre4u →
-      </button>
-    </div>
-  </div>
-
-  <div class="footer">
-    <a href="https://theatre4u.org">theatre4u.org</a> ·
-    <a href="https://theatre4u.org/help.html">Help & Tutorials</a>
-    <br><span style="opacity:.5">© 2026 Artstracker LLC</span>
-  </div>
-</div>
-
-<script type="module">
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const SB = createClient(
-  "https://ldmmphwivnnboyhlxipl.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA"
-);
-
-const ROLE_LABELS = {
-  stage_manager: "📋 Stage Manager",
-  crew: "🔧 Crew",
-  house: "🎟 House",
-  director: "🎬 Director",
-};
-
-let currentInvite = null;
-let authMode = "signup";
-
-const params = new URLSearchParams(window.location.search);
-const token  = params.get("token");
-const code   = params.get("code");
-
-async function init() {
-  if (token) {
-    await loadTokenInvite(token);
-  } else if (code) {
-    await loadCodeInvite(code);
-  } else {
-    showManualCodeEntry();
-  }
-}
-
-async function loadTokenInvite(tok) {
-  const { data, error } = await SB.from("org_invites")
-    .select("*, orgs(name)")
-    .eq("token", tok)
-    .is("accepted_at", null)
-    .single();
-
-  if (error || !data) {
-    showError("This invite link is invalid or has already been used.");
-    return;
-  }
-  if (new Date(data.expires_at) < new Date()) {
-    showError("This invite link has expired. Ask your director to send a new one.");
-    return;
-  }
-
-  currentInvite = data;
-  const orgName = data.orgs?.name || "a theatre program";
-
-  document.getElementById("entry-content").innerHTML = `
-    <div class="org-banner">
-      <div class="org-name">🎭 ${orgName}</div>
-      <div class="org-sub">You've been invited to join their backstage team</div>
-      <div class="role-badge">${ROLE_LABELS[data.role] || data.role}</div>
-    </div>
-    <p style="color:var(--t2);font-size:13px;margin-bottom:20px;line-height:1.6">
-      Create a free Theatre4u account to accept this invitation and start managing inventory.
-    </p>
-    <button class="btn btn-gold" onclick="goToAuth('${orgName}', '${data.email || ''}', '${data.role}')">
-      Accept Invitation →
-    </button>
-  `;
-}
-
-async function loadCodeInvite(joinCode) {
-  const { data, error } = await SB.from("org_invites")
-    .select("*, orgs(name)")
-    .eq("join_code", joinCode)
-    .eq("invite_type", "code")
-    .is("accepted_at", null)
-    .single();
-
-  if (error || !data) {
-    showManualCodeEntry("Invalid or expired join code. Try entering it again:");
-    return;
-  }
-  if (new Date(data.expires_at) < new Date()) {
-    showManualCodeEntry("This code has expired. Ask your director for a new one.");
-    return;
-  }
-
-  currentInvite = data;
-  const orgName = data.orgs?.name || "a theatre program";
-
-  document.getElementById("entry-content").innerHTML = `
-    <div class="org-banner">
-      <div class="org-name">🎭 ${orgName}</div>
-      <div class="org-sub">Join their backstage team as Crew</div>
-      <div class="role-badge">${ROLE_LABELS[data.role] || data.role}</div>
-    </div>
-    <p style="color:var(--t2);font-size:13px;margin-bottom:20px;line-height:1.6">
-      Create a free Theatre4u account to join the team and start managing inventory together.
-    </p>
-    <button class="btn btn-gold" onclick="goToAuth('${orgName}', '', '${data.role}')">
-      Join as Crew →
-    </button>
-  `;
-}
-
-function showManualCodeEntry(msg = "") {
-  document.getElementById("entry-content").innerHTML = `
-    ${msg ? `<div class="err">${msg}</div>` : ""}
-    <p class="subtitle" style="margin-bottom:16px">Enter the join code your director gave you:</p>
-    <div class="field">
-      <label>Join Code</label>
-      <input id="manual-code" class="code-input" placeholder="ABC-123" maxlength="7"
-        oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')"
-        onkeydown="if(event.key==='Enter')submitCode()"/>
-    </div>
-    <button class="btn btn-gold" onclick="submitCode()">Look Up Code →</button>
-  `;
-}
-
-async function submitCode() {
-  const raw = document.getElementById("manual-code")?.value?.trim().toUpperCase();
-  if (!raw) return;
-  const code = raw.length === 7 ? raw : raw.slice(0,3) + "-" + raw.slice(3);
-  await loadCodeInvite(code);
-}
-
-const ROLE_INFO = {
-  stage_manager: {
-    can: ["Add, edit, and delete inventory items","Upload photos","View Backstage Exchange & Community","Access Messages and Requests"],
-    cannot: ["Financial data or Funding Tracker","Settings or billing"]
-  },
-  crew: {
-    can: ["Add and edit inventory items","Upload photos and add tags","Look up items by QR code"],
-    cannot: ["Delete items","Financial data or Settings","Messages or Requests"]
-  },
-  house: {
-    can: ["View and search the full inventory","Look up items by QR code"],
-    cannot: ["Add, edit, or delete items","Any financial or settings data"]
-  },
-  director: {
-    can: ["Full access to all features"],
-    cannot: []
-  }
-};
-
-function goToAuth(orgName, prefillEmail, role) {
-  const info = ROLE_INFO[role];
-  const infoHtml = info ? `
-    <div class="role-info">
-      <div class="ri-title">${ROLE_LABELS[role] || role} — What you can do:</div>
-      <ul>
-        ${info.can.map(c=>`<li>${c}</li>`).join("")}
-        ${info.cannot.map(c=>`<li class="no">${c}</li>`).join("")}
-      </ul>
-    </div>` : "";
-  document.getElementById("org-banner-auth").innerHTML = `
-    <div class="org-banner" style="margin-bottom:16px">
-      <div class="org-name">🎭 ${orgName}</div>
-      <div class="role-badge">${ROLE_LABELS[role] || role}</div>
-    </div>
-    ${infoHtml}
-  `;
-  if (prefillEmail) {
-    document.getElementById("auth-email").value = prefillEmail;
-  }
-  showStep("step-auth");
-}
-
-async function submitAuth() {
-  const email    = document.getElementById("auth-email").value.trim();
-  const password = document.getElementById("auth-pass").value;
-  const name     = document.getElementById("auth-name")?.value?.trim();
-  const btn      = document.getElementById("auth-btn");
-  const msgEl    = document.getElementById("auth-msg");
-
-  msgEl.innerHTML = "";
-  if (!email || !password) { showAuthMsg("Please fill in all fields.", "err"); return; }
-  if (authMode === "signup" && password.length < 6) {
-    showAuthMsg("Password must be at least 6 characters.", "err"); return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = authMode === "signup" ? "Creating account…" : "Signing in…";
-
-  let userId;
-  if (authMode === "signup") {
-    const { data, error } = await SB.auth.signUp({
-      email, password,
-      options: { data: { full_name: name, org_name: name ? name + "'s Account" : email.split("@")[0] } }
-    });
-    if (error) { showAuthMsg(error.message, "err"); btn.disabled = false; btn.textContent = "Join Team →"; return; }
-    userId = data.user?.id;
-  } else {
-    const { data, error } = await SB.auth.signInWithPassword({ email, password });
-    if (error) { showAuthMsg(error.message, "err"); btn.disabled = false; btn.textContent = "Sign In →"; return; }
-    userId = data.user?.id;
-  }
-
-  if (!userId || !currentInvite) {
-    showAuthMsg("Something went wrong. Please try again.", "err");
-    btn.disabled = false; return;
-  }
-
-  // Use SECURITY DEFINER RPC — handles org_members insert + marks invite accepted,
-  // bypassing RLS safely with full validation server-side.
-  const inviteKey = currentInvite.token || currentInvite.join_code;
-  const { data: rpcResult, error: rpcErr } = await SB.rpc("accept_team_invite", { p_token: inviteKey });
-
-  if (rpcErr || rpcResult?.error) {
-    const msg = rpcResult?.error || rpcErr?.message || "Could not join team.";
-    if (msg.includes("Already a member")) {
-      // Already a member is fine — proceed to success
-    } else {
-      showAuthMsg(msg, "err");
-      btn.disabled = false; return;
-    }
-  }
-
-  const orgName = rpcResult?.org_name || currentInvite.orgs?.name || "the team";
-  const roleLabel = ROLE_LABELS[rpcResult?.role || currentInvite.role] || currentInvite.role;
-  document.getElementById("success-title").textContent = "You're on the team!";
-  document.getElementById("success-sub").innerHTML =
-    `Welcome to <strong>${orgName}</strong>. You've joined as <strong>${roleLabel}</strong>.<br><br>
-     Open Theatre4u to start managing inventory with your team.`;
-  showStep("step-success");
-}
-
-function toggleAuthMode() {
-  authMode = authMode === "signup" ? "login" : "signup";
-  document.getElementById("auth-heading").textContent = authMode === "signup" ? "Create Your Account" : "Sign In";
-  document.getElementById("auth-sub").textContent = authMode === "signup" ?
-    "Enter your details to join the team." : "Sign in to your existing Theatre4u account.";
-  document.getElementById("auth-btn").textContent = authMode === "signup" ? "Join Team →" : "Sign In →";
-  document.getElementById("toggle-link").textContent = authMode === "signup" ? "Sign in instead" : "Create an account";
-  document.getElementById("name-field").style.display = authMode === "signup" ? "" : "none";
-  document.getElementById("auth-msg").innerHTML = "";
-}
-
-function showAuthMsg(msg, type) {
-  document.getElementById("auth-msg").innerHTML = `<div class="${type}">${msg}</div>`;
-}
-
-function showError(msg) {
-  document.getElementById("entry-content").innerHTML = `
-    <div class="err">${msg}</div>
-    <p style="color:var(--t2);font-size:13px;margin-top:12px">
-      Contact your director for a new invite, or
-      <a href="https://theatre4u.org" style="color:var(--gold)">return to Theatre4u</a>.
-    </p>
-  `;
-}
-
-function showStep(id) {
-  document.querySelectorAll(".step").forEach(s => s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-}
-
-function goBack() {
-  showStep("step-entry");
-}
-
-window.submitCode = submitCode;
-window.submitAuth = submitAuth;
-window.toggleAuthMode = toggleAuthMode;
-window.goToAuth = goToAuth;
-window.goBack = goBack;
-
-init();
-</script>
-</body>
+    </noscript>
+  </body>
 </html>
