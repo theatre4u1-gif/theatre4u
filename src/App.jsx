@@ -7858,6 +7858,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
   const[legal,setLegal]=useState(null);
   const[betaCode,setBetaCode]=useState("");
   const[betaValid,setBetaValid]=useState(null); // null=unchecked, true=valid, false=invalid
+  const[showPass,setShowPass]=useState(false);
 
   useEffect(()=>{
     window.__t4u_show_auth=(m)=>{setMode(m||"login");setErr("");setVisible(true);};
@@ -7898,7 +7899,9 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
         const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName},emailRedirectTo:"https://theatre4u.org"}});
         if(error){
           if(error.message?.toLowerCase().includes('already registered')||error.message?.toLowerCase().includes('already exists')){
-            throw new Error("An account with this email already exists. Use Sign In instead, or reset your password below.");
+            setMode("login");
+            setErr("An account with this email already exists — switching you to Sign In. Use Forgot password if needed.");
+            setLoading(false); return;
           }
           throw error;
         }
@@ -7926,7 +7929,13 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
         }
       } else {
         const{data,error}=await SB.auth.signInWithPassword({email,password:pass});
-        if(error)throw error;
+        if(error){
+          // If credentials invalid — could be wrong password OR no account yet
+          if(error.message?.toLowerCase().includes("invalid")||error.message?.toLowerCase().includes("credentials")){
+            throw new Error("Incorrect email or password. If you don't have an account yet, click Create Account above. Or use Forgot password to reset.");
+          }
+          throw error;
+        }
         onAuth(data.user);
         close();
       }
@@ -7988,7 +7997,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
         {/* Tabs */}
         <div style={{display:"flex",borderBottom:"2px solid #282333",marginBottom:22,gap:2}}>
           {["login","signup"].map(m=>(
-            <button key={m} onClick={()=>{setMode(m);setErr("");}} style={{flex:1,background:"none",border:"none",borderBottom:`3px solid ${mode===m?"#d4a843":"transparent"}`,padding:"7px 0 9px",fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:13,color:mode===m?"#d4a843":"#685f76",cursor:"pointer",textTransform:"uppercase",letterSpacing:1,marginBottom:-2,transition:"all .2s"}}>
+            <button key={m} onClick={()=>{setMode(m);setErr("");setShowPass(false);}} style={{flex:1,background:"none",border:"none",borderBottom:`3px solid ${mode===m?"#d4a843":"transparent"}`,padding:"7px 0 9px",fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:13,color:mode===m?"#d4a843":"#685f76",cursor:"pointer",textTransform:"uppercase",letterSpacing:1,marginBottom:-2,transition:"all .2s"}}>
               {m==="login"?"Sign In":"Create Account"}
             </button>
           ))}
@@ -8013,7 +8022,22 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@school.edu" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"} onKeyDown={e=>e.key==="Enter"&&submit()}/>
           </div>
           <div><label style={labelStyle}>Password</label>
-            <input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder={mode==="signup"?"Min. 6 characters":"••••••••"} style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"} onKeyDown={e=>e.key==="Enter"&&submit()}/>
+            <div style={{position:"relative"}}>
+              <input type={showPass?"text":"password"} value={pass} onChange={e=>setPass(e.target.value)}
+                placeholder={mode==="signup"?"Min. 6 characters":"••••••••"}
+                style={{...inputStyle,paddingRight:42}}
+                onFocus={e=>e.target.style.borderColor="#d4a843"}
+                onBlur={e=>e.target.style.borderColor="#282333"}
+                onKeyDown={e=>e.key==="Enter"&&submit()}/>
+              <button type="button" onClick={()=>setShowPass(p=>!p)}
+                style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",
+                  background:"none",border:"none",cursor:"pointer",color:"#685f76",
+                  fontSize:13,fontFamily:"'DM Sans',sans-serif",padding:"2px 4px",
+                  fontWeight:600,userSelect:"none"}}
+                title={showPass?"Hide password":"Show password"}>
+                {showPass?"Hide":"Show"}
+              </button>
+            </div>
           </div>
         </div>
         {err&&<div style={{marginTop:12,padding:"9px 12px",background:err.includes("sent")?"rgba(76,175,80,.1)":"rgba(194,24,91,.1)",border:`1px solid ${err.includes("sent")?"rgba(76,175,80,.3)":"rgba(194,24,91,.25)"}`,borderRadius:7,fontSize:13,color:err.includes("sent")?"#4caf50":"#e57373"}}>{err}</div>}
@@ -9020,6 +9044,14 @@ function AppRoot(){
     SB.auth.getSession().then(({data:{session}})=>{
       setUser(session?.user||null);
       setAuthChk(true);
+      // If no valid session but stale tokens exist, clear them
+      // This prevents the "signed out after inactivity" message on fresh visits
+      if(!session){
+        try{
+          const keys=Object.keys(localStorage).filter(k=>k.startsWith("sb-"));
+          if(keys.length>0){keys.forEach(k=>localStorage.removeItem(k));}
+        }catch(e){}
+      }
     });
     const{data:{subscription}}=SB.auth.onAuthStateChange((_,session)=>{
       const u = session?.user||null;
