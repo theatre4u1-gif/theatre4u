@@ -7472,7 +7472,7 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
               </div>
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 <a
-                  href={"https://billing.stripe.com/p/login/aFa5kO8gF9lxcvZ4MzgA800" + (org?.stripe_customer_id ? "?prefilled_email=" + encodeURIComponent(userEmail) : "")}
+                  href={"https://billing.stripe.com/p/login/aFa4gydAZ2X1cpZ6UHgA800" + (userEmail ? "?prefilled_email=" + encodeURIComponent(userEmail) : "")}
                   target="_blank" rel="noopener noreferrer"
                   className="btn btn-o btn-sm"
                   style={{fontSize:12}}>
