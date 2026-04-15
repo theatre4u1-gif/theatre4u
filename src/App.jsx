@@ -529,7 +529,7 @@ tr:hover td{background:rgba(243,230,204,.55)}
 
 .mob-overlay{position:fixed;inset:0;background:rgba(18,6,0,.55);z-index:190}
 @keyframes fi{from{opacity:0}to{opacity:1}}
-@keyframes su{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes su{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes mkt-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 .fin{animation:fi .35s ease}
@@ -7463,6 +7463,30 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
           <div className="sh"><h2>Plans</h2><p>Choose the right plan for your program.</p></div>
           {/* Billing toggle */}
           <UpgradePlans />
+          {/* Manage / Cancel billing — only shown to paid non-admin users */}
+          {plan !== "free" && !isAdminEmail(userEmail) && (
+            <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid var(--bd)"}}>
+              <div style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>
+                You are on the <strong style={{color:"var(--gold)",textTransform:"capitalize"}}>{plan}</strong> plan.
+                Your subscription renews automatically. Cancel anytime — you keep access until the end of your billing period.
+              </div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <a
+                  href={"https://billing.stripe.com/p/login/aFa5kO8gF9lxcvZ4MzgA800" + (org?.stripe_customer_id ? "?prefilled_email=" + encodeURIComponent(userEmail) : "")}
+                  target="_blank" rel="noopener noreferrer"
+                  className="btn btn-o btn-sm"
+                  style={{fontSize:12}}>
+                  💳 Manage Billing &amp; Cancel
+                </a>
+                <a href="mailto:hello@theatre4u.org?subject=Cancel Subscription" className="btn btn-o btn-sm" style={{fontSize:12}}>
+                  ✉️ Email Us to Cancel
+                </a>
+              </div>
+              <div style={{fontSize:11,color:"var(--faint)",marginTop:8,lineHeight:1.6}}>
+                Need help? Email <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)"}}>hello@theatre4u.org</a> — we respond personally.
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Data */}
@@ -7590,7 +7614,8 @@ const TERMS_CONTENT = [
   ["1. Acceptance of Terms","By accessing or using Theatre4u at theatre4u.org, you agree to be bound by these Terms of Service. If you do not agree, please do not use the Service. Theatre4u™ is a product of Artstracker LLC, a California limited liability company (theatre4u.org)."],
   ["2. Description of Service","Theatre4u™ is a cloud-based inventory management, resource-sharing, and community platform for theatre programs, schools, community theatres, and performing arts organizations. We reserve the right to modify or discontinue the Service at any time with reasonable notice."],
   ["3. Account Registration","You must create an account with accurate information and are responsible for maintaining confidentiality of your credentials. You must be at least 18 years old, or have authorization of a parent, guardian, or school administrator if a minor acting on behalf of an organization."],
-  ["4. Subscription Plans and Payments","Theatre4u offers free and paid plans billed monthly via Stripe. Subscriptions auto-renew unless cancelled. All fees are non-refundable except as required by law. We may change pricing with 30 days notice to current subscribers."],
+  ["4. Subscription Plans and Payments","Theatre4u offers Free, Pro ($12/month or $120/year), and District ($49/month or $500/year) plans billed via Stripe. Subscriptions auto-renew unless cancelled. We may change pricing with 30 days notice to current subscribers."],
+  ["4a. Cancellation Policy","You may cancel your subscription at any time through Settings → Plans → Manage Billing, or by emailing hello@theatre4u.org. Upon cancellation, your access continues until the end of the current billing period — no partial refunds are issued for unused time. For annual plans, a full refund is available within 30 days of purchase if you have added fewer than 10 items. After 30 days, annual plan fees are non-refundable. Your inventory data is preserved for 90 days after your plan downgrades to Free; you may export a full CSV backup at any time from the Reports page. Leading Players have guaranteed free Pro access through April 9, 2027 and are not affected by this policy."],
   ["5. User Content & License Grant","You retain all ownership of content you upload to Theatre4u™, including text, photos, images, and other materials ('User Content'). By uploading User Content, you grant Theatre4u a worldwide, non-exclusive, royalty-free, perpetual, irrevocable license to store, display, reproduce, and use that content to operate, improve, and promote the Service. This license persists even if you later remove the content or close your account. You represent that you have all necessary rights to grant this license, that your content does not infringe any third-party rights, and that you have obtained appropriate permissions for any photographs or images of identifiable individuals. Theatre4u may remove any content that violates these Terms or applicable law."],
   ["6. Exchange Transactions","Theatre4u™ provides the Backstage Exchange platform for listing items for rent, sale, or loan. We are not a party to any transaction between users. All agreements are solely between listing users and interested parties. We do not handle payments between users."],
   ["7. Prohibited Conduct","You agree not to: use the Service unlawfully; upload false or fraudulent content; attempt unauthorized access; interfere with the Service; use automated scraping tools; impersonate others; or transmit spam or malware. Violations may result in immediate account termination."],
@@ -8977,6 +9002,157 @@ class ErrorBoundary extends React.Component {
 const AppWithBoundary = ()=><ErrorBoundary><AppRoot/></ErrorBoundary>;
 export default AppWithBoundary;
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── AI Help Bubble ────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+function AIHelpBubble({ user }) {
+  const [open, setOpen]       = useState(false);
+  const [msgs, setMsgs]       = useState([]);
+  const [input, setInput]     = useState("");
+  const [loading, setLoading] = useState(false);
+  const [unread, setUnread]   = useState(false);
+  const bottomRef = useRef(null);
+  const inputRef  = useRef(null);
+
+  const EDGE_URL = "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/ai-help";
+
+  useEffect(() => {
+    if (open) {
+      setUnread(false);
+      setTimeout(() => inputRef.current?.focus(), 120);
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 80);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [msgs]);
+
+  const send = async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+    const userMsg = { role: "user", content: text };
+    setMsgs(p => [...p, userMsg]);
+    setInput("");
+    setLoading(true);
+    try {
+      const { data: { session } } = await SB.auth.getSession();
+      const res = await fetch(EDGE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { "Authorization": "Bearer " + session.access_token } : {}),
+        },
+        body: JSON.stringify({ messages: [...msgs, userMsg] }),
+      });
+      const json = await res.json();
+      const reply = json.reply || "Sorry, I had trouble with that. Try emailing hello@theatre4u.org.";
+      setMsgs(p => [...p, { role: "assistant", content: reply }]);
+      if (!open) setUnread(true);
+    } catch {
+      setMsgs(p => [...p, { role: "assistant", content: "Connection error. Please check your internet and try again, or email hello@theatre4u.org." }]);
+    }
+    setLoading(false);
+  };
+
+  const bubbleStyle = {
+    position: "fixed", bottom: 24, right: 24, zIndex: 9000,
+    display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10,
+    fontFamily: "'DM Sans', sans-serif",
+  };
+  const panelStyle = {
+    width: 340, maxWidth: "calc(100vw - 32px)",
+    height: 440, maxHeight: "calc(100vh - 120px)",
+    background: "var(--bg2)", border: "1px solid var(--bd)",
+    borderRadius: 16, display: "flex", flexDirection: "column",
+    boxShadow: "0 8px 40px rgba(0,0,0,.5)",
+    overflow: "hidden", animation: "su .2s ease",
+  };
+
+  return (
+    <div style={bubbleStyle}>
+      {open && (
+        <div style={panelStyle}>
+          {/* Header */}
+          <div style={{ padding: "12px 16px", background: "linear-gradient(135deg,#d4a843,#a37f2c)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              <span style={{ fontSize: 20 }}>🎭</span>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: "#1a0f00" }}>Theatre4u Help</div>
+                <div style={{ fontSize: 11, color: "rgba(26,15,0,.65)" }}>Powered by Claude AI</div>
+              </div>
+            </div>
+            <button onClick={() => setOpen(false)} style={{ background: "rgba(0,0,0,.15)", border: "none", borderRadius: 6, color: "#1a0f00", cursor: "pointer", padding: "4px 8px", fontSize: 16, lineHeight: 1 }}>×</button>
+          </div>
+          {/* Messages */}
+          <div style={{ flex: 1, overflowY: "auto", padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+            {msgs.length === 0 && (
+              <div style={{ textAlign: "center", padding: "24px 12px" }}>
+                <div style={{ fontSize: 32, marginBottom: 10 }}>👋</div>
+                <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, marginBottom: 6, color: "var(--t1)" }}>Hi! How can I help?</div>
+                <div style={{ fontSize: 12.5, color: "var(--t3)", lineHeight: 1.6 }}>Ask me anything about Theatre4u — inventory, QR codes, Exchange, team sharing, and more.</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center", marginTop: 14 }}>
+                  {["How do QR codes work?", "How do I invite my crew?", "What's in the Pro plan?", "How do I export my inventory?"].map(q => (
+                    <button key={q} onClick={() => { setInput(q); setTimeout(() => inputRef.current?.focus(), 50); }}
+                      style={{ background: "var(--bg3)", border: "1px solid var(--bd)", borderRadius: 20, padding: "5px 11px", fontSize: 11.5, color: "var(--t2)", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", transition: "all .15s" }}
+                      onMouseEnter={e => e.target.style.borderColor = "var(--gold)"}
+                      onMouseLeave={e => e.target.style.borderColor = "var(--bd)"}>
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {msgs.map((m, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
+                <div style={{
+                  maxWidth: "82%", padding: "9px 12px", borderRadius: m.role === "user" ? "12px 12px 3px 12px" : "12px 12px 12px 3px",
+                  background: m.role === "user" ? "linear-gradient(135deg,#d4a843,#a37f2c)" : "var(--bg3)",
+                  color: m.role === "user" ? "#1a0f00" : "var(--t1)",
+                  fontSize: 13, lineHeight: 1.55, border: m.role === "user" ? "none" : "1px solid var(--bd)",
+                  whiteSpace: "pre-wrap", wordBreak: "break-word",
+                }}>
+                  {m.content}
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div style={{ display: "flex", gap: 5, padding: "8px 12px" }}>
+                {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--gold)", animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`, opacity: 0.6 }}/>)}
+              </div>
+            )}
+            <div ref={bottomRef}/>
+          </div>
+          {/* Input */}
+          <div style={{ padding: "10px 12px", borderTop: "1px solid var(--bd)", flexShrink: 0, display: "flex", gap: 8, alignItems: "center", background: "var(--bg2)" }}>
+            <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), send())}
+              placeholder="Ask anything…"
+              style={{ flex: 1, background: "var(--bgi)", border: "1px solid var(--bd)", borderRadius: 8, padding: "8px 11px", color: "var(--t1)", fontSize: 13, fontFamily: "'DM Sans',sans-serif", outline: "none" }}
+              onFocus={e => e.target.style.borderColor = "var(--gold)"}
+              onBlur={e => e.target.style.borderColor = "var(--bd)"}
+            />
+            <button onClick={send} disabled={!input.trim() || loading}
+              style={{ background: "linear-gradient(135deg,#d4a843,#a37f2c)", border: "none", borderRadius: 8, padding: "8px 13px", cursor: input.trim() && !loading ? "pointer" : "not-allowed", opacity: input.trim() && !loading ? 1 : 0.5, fontSize: 16, display: "flex", alignItems: "center" }}>
+              ➤
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Floating button */}
+      <button onClick={() => setOpen(p => !p)}
+        style={{ width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg,#d4a843,#a37f2c)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, boxShadow: "0 4px 20px rgba(212,168,67,.45)", transition: "all .2s", position: "relative" }}
+        title="Get help"
+        onMouseEnter={e => e.currentTarget.style.transform = "scale(1.08)"}
+        onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}>
+        {open ? "×" : "?"}
+        {unread && !open && <span style={{ position: "absolute", top: 2, right: 2, width: 12, height: 12, background: "#c2185b", borderRadius: "50%", border: "2px solid var(--bg)" }}/>}
+      </button>
+    </div>
+  );
+}
+
 function AppRoot(){
   const [user,setUser]     = useState(null);
   // ── Hash routing — handles #/item/:id for public QR scans ─────────────────
@@ -9430,6 +9606,7 @@ function AppRoot(){
       />
       <AuthOverlay onAuth={u=>{setUser(u);}} pendingInvite={pendingInvite} inviteInfo={inviteInfo}/>
       {user && <FeedbackWidget userId={user.id} orgName={org?.name||""} isLeadingPlayer={org?.is_leading_player||false}/>}
+      {user && <AIHelpBubble user={user} />}
     </>
   );
 
@@ -9625,6 +9802,7 @@ function AppRoot(){
       {legalPage==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegalPage(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
       {legalPage==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegalPage(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
       {user && <FeedbackWidget userId={user.id} orgName={org?.name||""} isLeadingPlayer={org?.is_leading_player||false}/>}
+      {user && <AIHelpBubble user={user} />}
       {/* ── Onboarding overlay ─ shown once to new users ── */}
       {user && onboardingStep !== null && onboardingStep < 4 && (
         (onboardingStep === 0 ||
