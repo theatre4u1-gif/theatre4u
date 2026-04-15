@@ -215,7 +215,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
     </script>
 </head>
 <body>
-<div id="root"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;background:#0a0a0f"><div style="font-size:52px">🎭</div><div style="width:32px;height:32px;border:2.5px solid #2a2a38;border-top-color:#d4a843;border-radius:50%;animation:spin .7s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div></div>
+<div id="root"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;background:#0a0a0f"><div style="font-size:52px">🎭</div><div style="width:32px;height:32px;border:2.5px solid #2a2a38;border-top-color:#d4a843;border-radius:50%;animation:spin .7s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}@keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}}</style></div></div>
 
 <script type="module">
 // Catch any module-level errors and show them visibly
@@ -1055,6 +1055,26 @@ function ProfileTab({user, org, onSignOut}) {
           h("strong",{style:{color:"var(--text)"}},"theatre4u.org/app")," in Safari and use Share → Add to Home Screen."
         )
       ),
+      (org?.plan==="pro"||org?.plan==="district") && h("div",{className:"card card-p",style:{marginBottom:16}},
+        h("div",{style:{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:14}},"Billing"),
+        h("div",{style:{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginBottom:12}},
+          "You are on the ",
+          h("strong",{style:{color:"var(--gold)",textTransform:"capitalize"}},org.plan),
+          " plan. Subscriptions renew automatically. Cancel anytime — access continues until the end of your billing period."
+        ),
+        h("a",{href:"https://billing.stripe.com/p/login/aFa4gydAZ2X1cpZ6UHgA800"+(org?.email?"?prefilled_email="+encodeURIComponent(org.email):""),
+          target:"_blank",rel:"noreferrer",className:"btn btn-full",
+          style:{display:"block",textAlign:"center",textDecoration:"none",marginBottom:8,fontSize:13}},
+          "💳 Manage Billing & Cancel"
+        ),
+        h("a",{href:"mailto:hello@theatre4u.org?subject=Cancel Subscription",
+          className:"btn btn-full",style:{display:"block",textAlign:"center",textDecoration:"none",fontSize:13}},
+          "✉️ Email Us to Cancel"
+        ),
+        h("div",{style:{fontSize:11,color:"var(--faint)",marginTop:10,lineHeight:1.6,textAlign:"center"}},
+          "Need help? We respond to every email personally."
+        )
+      ),
       h("button",{className:"btn btn-danger btn-full",onClick:onSignOut,style:{marginBottom:16}},"Sign Out"),
       h("p",{style:{textAlign:"center",fontSize:11,color:"var(--faint)",marginBottom:32}},
         "© 2026 Artstracker LLC · Theatre4u™"
@@ -1064,6 +1084,102 @@ function ProfileTab({user, org, onSignOut}) {
 }
 
 // ── ══════════════════════════════════════════
+
+// ── AI Help Bubble ─────────────────────────────────────────────
+function AIHelpBubble({user}) {
+  const [open,    setOpen]    = useState(false);
+  const [msgs,    setMsgs]    = useState([]);
+  const [input,   setInput]   = useState("");
+  const [loading, setLoading] = useState(false);
+  const inputRef  = useRef(null);
+  const bottomRef = useRef(null);
+  const EDGE_URL  = "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/ai-help";
+
+  useEffect(()=>{
+    if(open){ setTimeout(()=>inputRef.current?.focus(),120); }
+  },[open]);
+
+  useEffect(()=>{
+    bottomRef.current?.scrollIntoView({behavior:"smooth"});
+  },[msgs]);
+
+  const send = async()=>{
+    const text=input.trim(); if(!text||loading) return;
+    const userMsg={role:"user",content:text};
+    setMsgs(p=>[...p,userMsg]); setInput(""); setLoading(true);
+    try{
+      const{data:{session}}=await SB.auth.getSession();
+      const res=await fetch(EDGE_URL,{
+        method:"POST",
+        headers:{"Content-Type":"application/json",
+          ...(session?.access_token?{"Authorization":"Bearer "+session.access_token}:{})},
+        body:JSON.stringify({messages:[...msgs,userMsg]}),
+      });
+      const json=await res.json();
+      const reply=json.reply||"Sorry, I had trouble with that. Try emailing hello@theatre4u.org.";
+      setMsgs(p=>[...p,{role:"assistant",content:reply}]);
+    }catch{
+      setMsgs(p=>[...p,{role:"assistant",content:"Connection error. Please check your connection and try again, or email hello@theatre4u.org."}]);
+    }
+    setLoading(false);
+  };
+
+  const SUGGESTIONS = ["How do QR codes work?","How do I invite my crew?","What does Pro include?","How do I export inventory?"];
+
+  return h("div",{style:{position:"fixed",bottom:80,right:16,zIndex:9500,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10,fontFamily:"'DM Sans',sans-serif"}},
+    open && h("div",{style:{width:300,height:380,background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:16,display:"flex",flexDirection:"column",boxShadow:"0 8px 32px rgba(0,0,0,.6)",overflow:"hidden"}},
+      // Header
+      h("div",{style:{padding:"10px 14px",background:"linear-gradient(135deg,#d4a843,#a37f2c)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}},
+        h("div",{style:{display:"flex",alignItems:"center",gap:8}},
+          h("span",{style:{fontSize:18}},String.fromCodePoint(0x1F3AD)),
+          h("div",null,
+            h("div",{style:{fontWeight:700,fontSize:13,color:"#1a0f00"}},"Theatre4u Help"),
+            h("div",{style:{fontSize:10,color:"rgba(26,15,0,.6)"}},"Powered by Claude AI")
+          )
+        ),
+        h("button",{onClick:()=>setOpen(false),style:{background:"rgba(0,0,0,.15)",border:"none",borderRadius:6,color:"#1a0f00",cursor:"pointer",padding:"3px 7px",fontSize:15,lineHeight:1}},"×")
+      ),
+      // Messages
+      h("div",{style:{flex:1,overflowY:"auto",padding:12,display:"flex",flexDirection:"column",gap:8}},
+        msgs.length===0 && h("div",{style:{textAlign:"center",padding:"16px 8px"}},
+          h("div",{style:{fontSize:28,marginBottom:8}},String.fromCodePoint(0x1F44B)),
+          h("div",{style:{fontSize:15,fontWeight:700,marginBottom:4}},"Hi! How can I help?"),
+          h("div",{style:{fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:12}},"Ask anything about Theatre4u."),
+          h("div",{style:{display:"flex",flexDirection:"column",gap:6}},
+            SUGGESTIONS.map(q=>h("button",{key:q,onClick:()=>{setInput(q);setTimeout(()=>inputRef.current?.focus(),50);},
+              style:{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,padding:"6px 10px",fontSize:11.5,color:"var(--muted)",cursor:"pointer",textAlign:"left",fontFamily:"'DM Sans',sans-serif"}},q))
+          )
+        ),
+        msgs.map((m,i)=>h("div",{key:i,style:{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}},
+          h("div",{style:{maxWidth:"85%",padding:"8px 11px",
+            borderRadius:m.role==="user"?"12px 12px 3px 12px":"12px 12px 12px 3px",
+            background:m.role==="user"?"linear-gradient(135deg,#d4a843,#a37f2c)":"var(--bg3)",
+            color:m.role==="user"?"#1a0f00":"var(--text)",
+            fontSize:12.5,lineHeight:1.55,border:m.role==="user"?"none":"1px solid var(--border)",
+            whiteSpace:"pre-wrap",wordBreak:"break-word"}},m.content)
+        )),
+        loading && h("div",{style:{display:"flex",gap:5,padding:"6px 10px"}},
+          [0,1,2].map(i=>h("div",{key:i,style:{width:7,height:7,borderRadius:"50%",background:"var(--gold)",opacity:.6,animation:`pulse 1.2s ease-in-out ${i*.2}s infinite`}}))
+        ),
+        h("div",{ref:bottomRef})
+      ),
+      // Input
+      h("div",{style:{padding:"8px 10px",borderTop:"1px solid var(--border)",display:"flex",gap:7,flexShrink:0,background:"var(--bg2)"}},
+        h("input",{ref:inputRef,value:input,onChange:e=>setInput(e.target.value),
+          onKeyDown:e=>e.key==="Enter"&&(e.preventDefault(),send()),
+          placeholder:"Ask anything…",
+          style:{flex:1,background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,padding:"7px 10px",color:"var(--text)",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none"}}),
+        h("button",{onClick:send,disabled:!input.trim()||loading,
+          style:{background:"linear-gradient(135deg,#d4a843,#a37f2c)",border:"none",borderRadius:8,padding:"7px 12px",cursor:input.trim()&&!loading?"pointer":"not-allowed",opacity:input.trim()&&!loading?1:.5,fontSize:15}},"➤")
+      )
+    ),
+    // FAB button
+    h("button",{onClick:()=>setOpen(p=>!p),
+      style:{width:46,height:46,borderRadius:"50%",background:"linear-gradient(135deg,#d4a843,#a37f2c)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:open?20:18,fontWeight:700,boxShadow:"0 4px 16px rgba(212,168,67,.45)",color:"#1a0f00"}},
+      open?"×":"?")
+  );
+}
+
 // ── ROOT APP
 // ── ══════════════════════════════════════════
 
@@ -1415,7 +1531,9 @@ function App() {
     // FAB — only on home and inventory
     !viewItem && (tab==="home"||tab==="inventory") && org?._memberRole !== "house" && h("button",{className:"fab",onClick:()=>setAddOpen(true)},Ic.plus(26)),
     // Add sheet
-    addOpen && h(AddSheet,{onClose:()=>setAddOpen(false),onAdded:handleItemAdded,userId:org?.id||user.id})
+    addOpen && h(AddSheet,{onClose:()=>setAddOpen(false),onAdded:handleItemAdded,userId:org?.id||user.id}),
+    // AI Help bubble
+    h(AIHelpBubble,{user})
   );
 }
 
