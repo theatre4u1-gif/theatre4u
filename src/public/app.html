@@ -638,8 +638,43 @@ function AddSheet({onClose, onAdded, userId}) {
   const [f, setF] = useState({name:"",category:"costumes",condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,avail:"In Stock",tags:[],img:null,purchase_cost:"",purchase_date:"",purchase_vendor:"",funding_source_id:"",location_id:null});
   const [saving, setSaving] = useState(false);
   const [uploading, setUpl] = useState(false);
+  const [showNewLoc,  setShowNewLoc]  = useState(false);
+  const [newLocName,  setNewLocName]  = useState("");
+  const [newLocCode,  setNewLocCode]  = useState("");
+  const [savingLoc,   setSavingLoc]   = useState(false);
+  const [showNewFund, setShowNewFund] = useState(false);
+  const [newFundName, setNewFundName] = useState("");
+  const [newFundType, setNewFundType] = useState("grant");
+  const [savingFund,  setSavingFund]  = useState(false);
   const fileRef = useRef();
   const upd = (k,v) => setF(p=>({...p,[k]:v}));
+
+  const saveNewLoc = async () => {
+    if(!newLocName.trim()) return;
+    setSavingLoc(true);
+    const row = { org_id: userId, name: newLocName.trim(), code: newLocCode.trim()||null };
+    const { data, error } = await SB.from("storage_locations").insert(row).select("id,name,code").single();
+    if(!error && data) {
+      setStorLocs(p => [...p, data].sort((a,b)=>a.name.localeCompare(b.name)));
+      upd("location_id", data.id);
+      upd("location", data.name);
+      setNewLocName(""); setNewLocCode(""); setShowNewLoc(false);
+    }
+    setSavingLoc(false);
+  };
+
+  const saveNewFund = async () => {
+    if(!newFundName.trim()) return;
+    setSavingFund(true);
+    const row = { org_id: userId, name: newFundName.trim(), source_type: newFundType, is_active: true };
+    const { data, error } = await SB.from("funding_sources").insert(row).select("id,name").single();
+    if(!error && data) {
+      setFundSources(p => [...p, data]);
+      upd("funding_source_id", data.id);
+      setNewFundName(""); setNewFundType("grant"); setShowNewFund(false);
+    }
+    setSavingFund(false);
+  };
 
   const handlePhoto = async e => {
     const file = e.target.files?.[0]; if(!file) return;
@@ -740,15 +775,31 @@ function AddSheet({onClose, onAdded, userId}) {
           )
         ),
         h("div",{className:"fg"},
-          h("label",{className:"fl"},"Storage Location"),
-          h("select",{className:"fs",value:f.location_id||"",onChange:e=>{
-            upd("location_id",e.target.value||null);
-            const loc=storLocs.find(l=>l.id===e.target.value);
-            upd("location",loc?loc.name:f.location);
-          }},
-            h("option",{value:""},"— None —"),
-            storLocs.map(l=>h("option",{key:l.id,value:l.id},l.name+(l.code?" ("+l.code+")":"")))
-          )
+          h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}},
+            h("label",{className:"fl",style:{margin:0}},"Storage Location"),
+            h("button",{onClick:()=>setShowNewLoc(p=>!p),
+              style:{background:"none",border:"none",color:"var(--gold)",fontSize:12,fontWeight:700,
+                cursor:"pointer",fontFamily:"inherit",padding:0,letterSpacing:.3}},
+              showNewLoc ? "✕ Cancel" : "+ New Location")
+          ),
+          showNewLoc
+            ? h("div",{style:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:10,padding:12,display:"flex",flexDirection:"column",gap:8}},
+                h("input",{className:"fi",placeholder:"Location name (e.g. Costume Closet A)",value:newLocName,
+                  onChange:e=>setNewLocName(e.target.value),autoFocus:true}),
+                h("input",{className:"fi",placeholder:"Short code — optional (e.g. CCA)",value:newLocCode,
+                  onChange:e=>setNewLocCode(e.target.value.toUpperCase())}),
+                h("button",{className:"btn btn-gold",onClick:saveNewLoc,
+                  disabled:savingLoc||!newLocName.trim()},
+                  savingLoc ? "Saving…" : "✓ Save Location")
+              )
+            : h("select",{className:"fs",value:f.location_id||"",onChange:e=>{
+                upd("location_id",e.target.value||null);
+                const loc=storLocs.find(l=>l.id===e.target.value);
+                upd("location",loc?loc.name:f.location);
+              }},
+                h("option",{value:""},"— None —"),
+                storLocs.map(l=>h("option",{key:l.id,value:l.id},l.name+(l.code?" ("+l.code+")":"")))
+              )
         ),
         h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
           h("div",{className:"fg"},
@@ -757,11 +808,33 @@ function AddSheet({onClose, onAdded, userId}) {
               value:f.purchase_cost||"",onChange:e=>upd("purchase_cost",e.target.value)})
           ),
           h("div",{className:"fg"},
-            h("label",{className:"fl"},"Fund Source"),
-            h("select",{className:"fs",value:f.funding_source_id||"",onChange:e=>upd("funding_source_id",e.target.value)},
-              h("option",{value:""},"— None —"),
-              fundSources.map(s=>h("option",{key:s.id,value:s.id},s.name))
-            )
+            h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}},
+              h("label",{className:"fl",style:{margin:0}},"Fund Source"),
+              h("button",{onClick:()=>setShowNewFund(p=>!p),
+                style:{background:"none",border:"none",color:"var(--gold)",fontSize:12,fontWeight:700,
+                  cursor:"pointer",fontFamily:"inherit",padding:0,letterSpacing:.3}},
+                showNewFund ? "✕ Cancel" : "+ New")
+            ),
+            showNewFund
+              ? h("div",{style:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:10,padding:12,display:"flex",flexDirection:"column",gap:8}},
+                  h("input",{className:"fi",placeholder:"Source name (e.g. Booster Grant)",value:newFundName,
+                    onChange:e=>setNewFundName(e.target.value),autoFocus:true}),
+                  h("select",{className:"fs",value:newFundType,onChange:e=>setNewFundType(e.target.value)},
+                    h("option",{value:"grant"},"🏛️ Grant"),
+                    h("option",{value:"allocation"},"🏫 District Allocation"),
+                    h("option",{value:"earned"},"🎟️ Earned Income"),
+                    h("option",{value:"donation"},"🤝 Donation"),
+                    h("option",{value:"booster"},"⭐ Booster/PTA"),
+                    h("option",{value:"other"},"📋 Other")
+                  ),
+                  h("button",{className:"btn btn-gold",onClick:saveNewFund,
+                    disabled:savingFund||!newFundName.trim()},
+                    savingFund ? "Saving…" : "✓ Save Source")
+                )
+              : h("select",{className:"fs",value:f.funding_source_id||"",onChange:e=>upd("funding_source_id",e.target.value)},
+                  h("option",{value:""},"— None —"),
+                  fundSources.map(s=>h("option",{key:s.id,value:s.id},s.name))
+                )
           )
         ),
         h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
@@ -1008,6 +1081,23 @@ function FundingMobileTab({userId}) {
   const [form,    setForm]    = useState(null);
   const [saving,  setSaving]  = useState(false);
   const [toast,   showT]      = useToast();
+  const [showNewSrc,  setShowNewSrc]  = useState(false);
+  const [newSrcName,  setNewSrcName]  = useState("");
+  const [newSrcType,  setNewSrcType]  = useState("grant");
+  const [savingSrc,   setSavingSrc]   = useState(false);
+
+  const saveNewSource = async () => {
+    if(!newSrcName.trim()) return;
+    setSavingSrc(true);
+    const row = { org_id: userId, name: newSrcName.trim(), source_type: newSrcType, is_active: true };
+    const { data, error } = await SB.from("funding_sources").insert(row).select("*").single();
+    if(!error && data) {
+      setSources(p => [data, ...p]);
+      setNewSrcName(""); setNewSrcType("grant"); setShowNewSrc(false);
+      showT("✓ Funding source added");
+    } else { showT("Error: "+(error?.message||"Save failed"), "err"); }
+    setSavingSrc(false);
+  };
 
   const FUND_TYPES = [
     {id:"grant",label:"Grant",icon:"🏛️"},
@@ -1110,7 +1200,12 @@ function FundingMobileTab({userId}) {
     h("div",{style:{padding:"calc(var(--safe-top) + 12px) 16px 12px",flexShrink:0}},
       h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}},
         h("h1",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:700}},"Funding Tracker"),
-        sources.length>0&&h("button",{className:"btn btn-gold btn-sm",onClick:()=>setForm(blankExp())},Ic.plus(15)," Log Expenditure")
+        h("div",{style:{display:"flex",gap:8}},
+          sources.length>0&&h("button",{className:"btn btn-gold btn-sm",onClick:()=>setForm(blankExp())},Ic.plus(15)," Log Expenditure"),
+          h("button",{className:"btn btn-sm",style:{borderColor:"var(--gold)",color:"var(--gold)"},
+            onClick:()=>setShowNewSrc(p=>!p)},
+            showNewSrc?"✕ Cancel":"+ Source")
+        )
       ),
       h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:4}},
         h("div",{className:"card card-p",style:{padding:"10px 12px",textAlign:"center"}},
@@ -1128,11 +1223,36 @@ function FundingMobileTab({userId}) {
       loading
         ? h("div",{className:"loading"},h("div",{className:"spin"}))
         : sources.length===0
-          ? h("div",{className:"empty"},
-              h("div",{className:"ei"},"💰"),
-              h("h3",null,"No Funding Sources"),
-              h("p",null,"Add funding sources on the web app first, then log expenditures here on the go."),
-              h("a",{href:"https://theatre4u.org",className:"btn btn-gold"},"Open theatre4u.org")
+          ? h("div",{style:{padding:16,display:"flex",flexDirection:"column",gap:16}},
+              showNewSrc
+                ? h("div",{className:"card",style:{padding:16,display:"flex",flexDirection:"column",gap:12}},
+                    h("div",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:20,fontWeight:700,color:"var(--gold)"}},
+                      "Add Funding Source"),
+                    h("input",{className:"fi",placeholder:"Source name (e.g. Prop 28 Grant)",
+                      value:newSrcName,onChange:e=>setNewSrcName(e.target.value),autoFocus:true}),
+                    h("select",{className:"fs",value:newSrcType,onChange:e=>setNewSrcType(e.target.value)},
+                      h("option",{value:"grant"},"🏛️ Grant"),
+                      h("option",{value:"allocation"},"🏫 District Allocation"),
+                      h("option",{value:"earned"},"🎟️ Earned Income"),
+                      h("option",{value:"donation"},"🤝 Donation"),
+                      h("option",{value:"booster"},"⭐ Booster/PTA"),
+                      h("option",{value:"other"},"📋 Other")
+                    ),
+                    h("div",{style:{display:"flex",gap:8}},
+                      h("button",{className:"btn btn-gold",onClick:saveNewSource,
+                        disabled:savingSrc||!newSrcName.trim(),style:{flex:1}},
+                        savingSrc?"Saving…":"✓ Save Source"),
+                      h("button",{className:"btn",onClick:()=>setShowNewSrc(false),
+                        style:{flex:1}}, "Cancel")
+                    )
+                  )
+                : h("div",{className:"empty"},
+                    h("div",{className:"ei"},"💰"),
+                    h("h3",null,"No Funding Sources Yet"),
+                    h("p",null,"Add your first funding source to start tracking expenditures."),
+                    h("button",{className:"btn btn-gold",onClick:()=>setShowNewSrc(true)},
+                      "+ Add Funding Source")
+                  )
             )
           : exps.length===0
             ? h("div",{className:"empty"},
