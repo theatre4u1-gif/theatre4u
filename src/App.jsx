@@ -3761,14 +3761,129 @@ const ADMIN_EMAILS = [
 const isAdminEmail = (e) => ADMIN_EMAILS.includes((e||"").toLowerCase().trim());
 const ADMIN_EMAIL  = ADMIN_EMAILS[0]; // legacy alias
 
+// ══════════════════════════════════════════════════════════════════════════════
+// PRICING MODEL — DO NOT CHANGE WITHOUT REVIEWING THIS RATIONALE
+// Last reviewed: April 2026
+//
+// PRO ($12/mo | $120/yr): One theatre program, unlimited inventory.
+//   Basis: Market rate for single-user SaaS tools in education.
+//
+// DISTRICT S ($49/mo | $500/yr): Up to 6 schools.
+//   Basis: HBUHSD has 6 high schools. 6 × $144/yr (Pro) = $864/yr individual.
+//   District price = $500/yr → 42% savings for district buyer.
+//   This is the anchoring district unit. Do not raise school count without
+//   adjusting price — the discount math breaks above ~8 schools at this price.
+//
+// PLANNED FUTURE TIERS (not yet in product — see Obsidian: District-Pricing.md):
+//   District M: Up to 15 schools → $99/mo | $999/yr  (54% savings)
+//   District L: Up to 30 schools → $179/mo | $1,799/yr (58% savings)
+//   Enterprise: 31+ schools → Custom quote, starting ~$2,500/yr for 50 schools
+//               Add $25/school/year above 50 schools.
+//               LAUSD fine arts dept (~80 schools) = ~$3,250/yr example.
+//               Includes DPA, dedicated support, onboarding call.
+//
+// NEVER offer more than 6 schools on the current District plan without
+// creating a new District M tier and updating Stripe products first.
+// ══════════════════════════════════════════════════════════════════════════════
 const UPGRADE_PLANS = [
   { id:"free",     name:"Free",     monthlyPrice:"$0",  annualPrice:"Free",   per:"/forever", annualNote:null,       desc:"Perfect for getting started.",     hot:false,
     feats:["Up to 50 items","QR code labels","Photo uploads","CSV export"] },
   { id:"pro",      name:"Pro",      monthlyPrice:"$12", annualPrice:"$10",  annualTotal:"$120/yr", per:"/month", annualNote:"save $24", desc:"For active programs & companies.", hot:true,
     feats:["Unlimited inventory","Full Backstage Exchange access","Photo storage 5GB","Analytics dashboard","Email support"] },
-  { id:"district", name:"District", monthlyPrice:"$49", annualPrice:"$42",  annualTotal:"$500/yr", per:"/month", annualNote:"save $88", desc:"Multiple schools, one platform.",  hot:false,
+  { id:"district", name:"District (up to 6 schools)", monthlyPrice:"$49", annualPrice:"$42",  annualTotal:"$500/yr", per:"/month", annualNote:"save $88", desc:"Multiple schools, one platform.",  hot:false,
     feats:["Multiple organizations","District dashboard","Bulk import","Dedicated support","Everything in Pro"] },
+  { id:"enterprise",  name:"Enterprise", monthlyPrice:"Custom", annualPrice:"Custom", per:"", annualNote:null, desc:"Large districts — custom contract.", hot:false,
+    feats:["Everything in District","Unlimited schools","Custom PO/invoicing","Data Processing Agreement","Dedicated support","Custom pricing"] },
 ];
+
+
+// ── Invoice Request Form — sends automated invoice via edge function ──────────
+function InvoiceRequestForm({ orgName, userEmail }) {
+  const [form, setForm] = useState({ name: orgName||"", email: userEmail||"", plan: "pro", period: "annual", contact: "", po: "" });
+  const [sending, setSending] = useState(false);
+  const [done, setDone]       = useState(false);
+  const [err, setErr]         = useState("");
+  const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+
+  const submit = async () => {
+    if(!form.name.trim()||!form.email.trim()||!form.contact.trim()) { setErr("Please fill in Organization, Email, and Contact Name."); return; }
+    setSending(true); setErr("");
+    try {
+      const res = await fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/invoice-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form)
+      });
+      const json = await res.json();
+      if(json.success) setDone(true);
+      else setErr(json.error || "Something went wrong. Please email hello@theatre4u.org directly.");
+    } catch(e) {
+      setErr("Connection error. Please email hello@theatre4u.org directly.");
+    }
+    setSending(false);
+  };
+
+  if(done) return (
+    <div style={{marginTop:16,padding:16,background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.3)",borderRadius:10,textAlign:"center"}}>
+      <div style={{fontSize:28,marginBottom:8}}>✅</div>
+      <div style={{fontWeight:700,fontSize:15,color:"var(--text)",marginBottom:4}}>Invoice request sent!</div>
+      <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Check your inbox — we sent a copy to <strong>{form.email}</strong> and will follow up within one business day. Questions? Email <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)"}}>hello@theatre4u.org</a>.</div>
+    </div>
+  );
+
+  const inputStyle = { width:"100%", background:"var(--bgi,#110f18)", border:"1px solid var(--border,#282333)", borderRadius:6, padding:"8px 10px", color:"var(--text,#ede8df)", fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:"none", boxSizing:"border-box" };
+  const labelStyle = { fontSize:11, fontWeight:600, color:"var(--muted)", textTransform:"uppercase", letterSpacing:1, display:"block", marginBottom:3 };
+
+  return (
+    <div style={{marginTop:16,display:"flex",flexDirection:"column",gap:10}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        <div>
+          <label style={labelStyle}>Organization Name *</label>
+          <input style={inputStyle} value={form.name} onChange={e=>upd("name",e.target.value)} placeholder="Lincoln High Drama Dept."/>
+        </div>
+        <div>
+          <label style={labelStyle}>Contact Email *</label>
+          <input style={inputStyle} type="email" value={form.email} onChange={e=>upd("email",e.target.value)} placeholder="you@school.edu"/>
+        </div>
+        <div>
+          <label style={labelStyle}>Contact Name *</label>
+          <input style={inputStyle} value={form.contact} onChange={e=>upd("contact",e.target.value)} placeholder="Jane Smith, AP Coordinator"/>
+        </div>
+        <div>
+          <label style={labelStyle}>PO Number (if available)</label>
+          <input style={inputStyle} value={form.po} onChange={e=>upd("po",e.target.value)} placeholder="PO-2026-XXXX or leave blank"/>
+        </div>
+        <div>
+          <label style={labelStyle}>Plan</label>
+          <select style={{...inputStyle,cursor:"pointer"}} value={form.plan} onChange={e=>upd("plan",e.target.value)}>
+            <option value="pro">Pro — $12/month or $120/year</option>
+            <option value="district">District — $49/month or $500/year</option>
+            <option value="enterprise">Enterprise — Custom (district will contact)</option>
+          </select>
+        </div>
+        <div>
+          <label style={labelStyle}>Billing Period</label>
+          <select style={{...inputStyle,cursor:"pointer"}} value={form.period} onChange={e=>upd("period",e.target.value)}>
+            <option value="annual">Annual (best value)</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+      </div>
+      {err && <div style={{fontSize:12.5,color:"#e57373",padding:"8px 10px",background:"rgba(194,24,91,.08)",borderRadius:6,border:"1px solid rgba(194,24,91,.2)"}}>{err}</div>}
+      <div style={{display:"flex",gap:8}}>
+        <button className="btn btn-g" style={{flex:1}} onClick={submit} disabled={sending}>
+          {sending ? "Sending…" : "✉️ Send Me an Invoice"}
+        </button>
+        <a href="mailto:hello@theatre4u.org?subject=District Enterprise Inquiry" className="btn btn-o" style={{flex:1,textDecoration:"none",display:"flex",justifyContent:"center"}}>
+          🏫 Enterprise / PO Inquiry
+        </a>
+      </div>
+      <div style={{fontSize:11,color:"var(--faint)",lineHeight:1.6}}>
+        We will email a formal invoice to you within one business day. Payment by check payable to <strong>Artstracker LLC</strong>. Net-30 available for districts.
+      </div>
+    </div>
+  );
+}
 
 function UpgradePlans({ compact = false, userId = null, userEmail = null }) {
   const [billing, setBilling] = useState("monthly");
@@ -3781,6 +3896,9 @@ function UpgradePlans({ compact = false, userId = null, userEmail = null }) {
         </button>
         <button onClick={()=>setBilling("annual")} style={{background:billing==="annual"?"var(--gold)":"transparent",color:billing==="annual"?"#1a0f00":"var(--muted)",border:"none",borderRadius:5,padding:"6px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .2s",display:"flex",alignItems:"center",gap:6}}>
           Annual <span style={{fontSize:10,padding:"1px 6px",background:billing==="annual"?"rgba(0,0,0,.15)":"rgba(212,168,67,.15)",color:billing==="annual"?"#1a0f00":"var(--gold)",borderRadius:9,fontWeight:700}}>Save 17%</span>
+        </button>
+        <button onClick={()=>setBilling("invoice")} style={{background:billing==="invoice"?"var(--gold)":"transparent",color:billing==="invoice"?"#1a0f00":"var(--muted)",border:"none",borderRadius:5,padding:"6px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .2s",display:"flex",alignItems:"center",gap:5}}>
+          <span style={{fontSize:11}}>🏛️</span> Check / PO
         </button>
       </div>
       {/* Cards */}
@@ -3811,7 +3929,9 @@ function UpgradePlans({ compact = false, userId = null, userEmail = null }) {
               </ul>
               {isFree
                 ? <button className="btn btn-o btn-full" style={{opacity:.5,cursor:"default"}} disabled>Current Plan</button>
-                : <a href={link} target="_blank" rel="noreferrer" className={"btn btn-full "+(p.hot?"btn-g":"")} style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",...(!p.hot?{background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}:{})}}>
+                : p.id==="enterprise"
+                  ? <a href="mailto:hello@theatre4u.org?subject=Enterprise District Inquiry" className="btn btn-o btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto"}}>Contact Us →</a>
+                  : <a href={link} target="_blank" rel="noreferrer" className={"btn btn-full "+(p.hot?"btn-g":"")} style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",...(!p.hot?{background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}:{})}}>
                     {billing==="annual" ? "Get "+p.name+" Annual →" : "Get "+p.name+" →"}
                   </a>
               }
@@ -3819,7 +3939,42 @@ function UpgradePlans({ compact = false, userId = null, userEmail = null }) {
           );
         })}
       </div>
-      <p style={{textAlign:compact?"left":"center",marginTop:12,fontSize:11.5,color:"var(--faint)"}}>All paid plans include a 14-day free trial · No credit card required to start · Cancel any time</p>
+      {billing === "invoice" ? (
+        <div style={{marginTop:16,background:"rgba(212,168,67,.06)",border:"1.5px solid rgba(212,168,67,.25)",borderRadius:12,padding:20}}>
+          <div style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:17,fontWeight:700,color:"var(--gold)",marginBottom:6}}>🏛️ Pay by Check or Purchase Order</div>
+          <p style={{fontSize:13,color:"var(--text)",lineHeight:1.7,marginBottom:14}}>
+            School districts and organizations that cannot pay by credit card can subscribe via check or purchase order.
+            We will issue a formal invoice and accept payment by school check, district PO, or ACH transfer.
+          </p>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+            <div style={{background:"rgba(0,0,0,.2)",borderRadius:8,padding:12}}>
+              <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--gold)",marginBottom:6}}>Pro Plan</div>
+              <div style={{fontSize:20,fontWeight:800,color:"#f0e6d3",marginBottom:2}}>$12<span style={{fontSize:12,color:"rgba(240,230,211,.5)"}}>/month</span></div>
+              <div style={{fontSize:11,color:"rgba(240,230,211,.5)",marginBottom:8}}>or $120/year (billed annually)</div>
+              <div style={{fontSize:12,color:"rgba(240,230,211,.7)"}}>Unlimited inventory · Backstage Exchange · Funding Tracker · Team sharing</div>
+            </div>
+            <div style={{background:"rgba(0,0,0,.2)",borderRadius:8,padding:12}}>
+              <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--gold)",marginBottom:6}}>District Plan</div>
+              <div style={{fontSize:20,fontWeight:800,color:"#f0e6d3",marginBottom:2}}>$49<span style={{fontSize:12,color:"rgba(240,230,211,.5)"}}>/month</span></div>
+              <div style={{fontSize:11,color:"rgba(240,230,211,.5)",marginBottom:8}}>or $500/year (billed annually)</div>
+              <div style={{fontSize:12,color:"rgba(240,230,211,.7)"}}>All Pro features · Multiple schools · District dashboard</div>
+            </div>
+          </div>
+          <div style={{fontSize:12.5,color:"var(--muted)",lineHeight:1.7,marginBottom:14}}>
+            <strong style={{color:"var(--text)"}}>To get started:</strong> Email us at{" "}
+            <a href="mailto:hello@theatre4u.org?subject=Check/PO Subscription Request&body=Hi, I would like to subscribe to Theatre4u via check/purchase order.%0A%0AOrganization name:%0APlan requested (Pro / District):%0ABilling period (monthly / annual):%0AContact name:%0APO number (if applicable):%0AAccounts payable email:" style={{color:"var(--gold)"}}>hello@theatre4u.org</a>
+            {" "}with your organization name, plan, and billing period. We will send a formal invoice within one business day.
+          </div>
+          <InvoiceRequestForm orgName={userId||""} userEmail={userEmail||""} />
+          <div style={{marginTop:12,fontSize:11,color:"var(--faint)",lineHeight:1.6}}>
+            Payment by check should be made payable to <strong style={{color:"var(--text)"}}>Artstracker LLC</strong>.
+            Purchase orders are accepted from accredited educational institutions.
+            Net-30 terms available for district accounts. Questions? Call or email — we respond personally.
+          </div>
+        </div>
+      ) : (
+        <p style={{textAlign:compact?"left":"center",marginTop:12,fontSize:11.5,color:"var(--faint)"}}>All paid plans include a 14-day free trial · No credit card required to start · Cancel any time</p>
+      )}
     </div>
   );
 }
@@ -7462,7 +7617,7 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
         <div className="card card-p" style={{marginBottom:20}}>
           <div className="sh"><h2>Plans</h2><p>Choose the right plan for your program.</p></div>
           {/* Billing toggle */}
-          <UpgradePlans />
+          <UpgradePlans userId={userId} userEmail={userEmail}/>
           {/* Manage / Cancel billing — only shown to paid non-admin users */}
           {plan !== "free" && !isAdminEmail(userEmail) && (
             <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid var(--bd)"}}>
@@ -7484,6 +7639,11 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
               </div>
               <div style={{fontSize:11,color:"var(--faint)",marginTop:8,lineHeight:1.6}}>
                 Need help? Email <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)"}}>hello@theatre4u.org</a> — we respond personally.
+              </div>
+              <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid var(--bd)",fontSize:12,color:"var(--muted)",lineHeight:1.7}}>
+                <span style={{fontWeight:700,color:"var(--text)"}}>🏛️ Paying by check or PO?</span> Email{" "}
+                <a href="mailto:hello@theatre4u.org?subject=Check/PO Subscription Request" style={{color:"var(--gold)"}}>hello@theatre4u.org</a>
+                {" "}and we'll send a formal invoice. Payment made payable to <strong>Artstracker LLC</strong>. Net-30 available for districts.
               </div>
             </div>
           )}
