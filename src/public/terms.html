@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Terms of Service — Theatre4u™</title>
+<meta name="description" content="Terms of Service for Theatre4u™, a product of Artstracker LLC."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#fdf8f1;--bg2:#f5ede0;--ink:#1a1008;--gold:#c4922a;--gold2:#e8b84b;
+  --border:#e8dcc8;--muted:#7a6a54;--faint:#b8a890;--card:#ffffff;
+  --shadow:0 2px 16px rgba(60,30,0,.08);--r:12px;--rs:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.7}
+a{color:var(--gold);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* Nav */
+.topnav{background:var(--ink);padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.topnav .logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.topnav .logo-mark{width:34px;height:34px;background:linear-gradient(135deg,var(--gold2),var(--gold));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.topnav .logo-text{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--gold2)}
+.topnav-links{display:flex;gap:6px;align-items:center}
+.topnav-links a{color:rgba(255,255,255,.7);font-size:13px;font-weight:600;padding:6px 12px;border-radius:6px;transition:all .15s}
+.topnav-links a:hover{background:rgba(255,255,255,.1);color:#fff;text-decoration:none}
+.topnav-links .cta{background:var(--gold);color:var(--ink) !important;font-weight:700}
+.topnav-links .cta:hover{background:var(--gold2)}
+
+/* Hero */
+.hero{background:linear-gradient(135deg,var(--ink) 0%,#2a1a08 100%);padding:52px 32px 44px;text-align:center}
+.hero-eyebrow{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--gold2);margin-bottom:10px}
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:44px;font-weight:700;color:#fff;margin-bottom:10px;line-height:1.15}
+.hero h1 span{color:var(--gold2)}
+.hero p{font-size:15px;color:rgba(255,255,255,.55);max-width:500px;margin:0 auto}
+
+/* Layout */
+.wrap{max-width:900px;margin:0 auto;padding:0 28px}
+.page-body{padding:48px 0 80px}
+
+/* Sidebar + content grid */
+.layout{display:grid;grid-template-columns:220px 1fr;gap:36px;align-items:start}
+
+/* TOC Sidebar */
+.toc{position:sticky;top:76px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+.toc-header{padding:14px 16px 8px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--faint);border-bottom:1px solid var(--border)}
+.toc a{display:block;padding:8px 16px;font-size:12.5px;font-weight:500;color:var(--muted);border-left:3px solid transparent;transition:all .12s;text-decoration:none;line-height:1.4}
+.toc a:hover{color:var(--ink);background:var(--bg2);text-decoration:none}
+.toc a.active{color:var(--gold);font-weight:700;border-left-color:var(--gold);background:rgba(196,146,42,.06)}
+
+/* Section cards */
+.section{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px 32px;margin-bottom:16px;box-shadow:var(--shadow);scroll-margin-top:80px}
+.section-num{display:inline-block;background:var(--gold);color:var(--ink);font-size:10px;font-weight:800;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.section h2{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--ink);margin-bottom:12px}
+.section p{color:#3a2e24;font-size:14.5px;line-height:1.75}
+.section p strong{color:var(--ink)}
+
+/* Special callout */
+.callout{background:rgba(196,146,42,.07);border:1px solid rgba(196,146,42,.25);border-radius:var(--rs);padding:14px 18px;margin-top:14px;font-size:13.5px;color:#5a4020;line-height:1.7}
+.callout strong{color:var(--ink)}
+
+/* Effective date bar */
+.effective{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:14px 20px;margin-bottom:24px;display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--muted)}
+.effective strong{color:var(--ink)}
+
+/* Footer */
+footer{background:var(--ink);padding:32px;text-align:center}
+footer .footer-logo{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--gold2);margin-bottom:8px}
+footer p{font-size:12.5px;color:rgba(255,255,255,.4);line-height:1.8}
+footer a{color:rgba(255,255,255,.5)}
+footer a:hover{color:var(--gold2)}
+
+/* Responsive */
+@media(max-width:720px){
+  .layout{grid-template-columns:1fr}
+  .toc{position:static;margin-bottom:24px}
+  .hero h1{font-size:32px}
+  .wrap{padding:0 16px}
+  .section{padding:20px}
+}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="topnav">
+  <a href="https://theatre4u.org" class="logo">
+    <div class="logo-mark">🎭</div>
+    <span class="logo-text">Theatre4u™</span>
+  </a>
+  <div class="topnav-links">
+    <a href="/help.html">Help</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="https://theatre4u.org" class="cta">Sign In</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="wrap">
+    <div class="hero-eyebrow">Legal</div>
+    <h1>Terms of <span>Service</span></h1>
+    <p>Please read these terms carefully before using Theatre4u™.</p>
+  </div>
+</div>
+
+<!-- Body -->
+<div class="wrap">
+<div class="page-body">
+
+  <div class="effective">
+    <span>📅</span>
+    <span><strong>Effective date:</strong> March 2026 &nbsp;·&nbsp; Artstracker LLC &nbsp;·&nbsp; <a href="mailto:hello@theatre4u.org">hello@theatre4u.org</a></span>
+  </div>
+
+  <div class="layout">
+
+    <!-- TOC -->
+    <aside class="toc">
+      <div class="toc-header">Contents</div>
+      <a href="#s1">1. Acceptance of Terms</a>
+      <a href="#s2">2. Description of Service</a>
+      <a href="#s3">3. Account Registration</a>
+      <a href="#s4">4. Subscription Plans</a>
+      <a href="#s4a">4a. Cancellation Policy</a>
+      <a href="#s5">5. User Content</a>
+      <a href="#s6">6. Exchange Transactions</a>
+      <a href="#s7">7. Prohibited Conduct</a>
+      <a href="#s8">8. Intellectual Property</a>
+      <a href="#s9">9. Disclaimer of Warranties</a>
+      <a href="#s10">10. Limitation of Liability</a>
+      <a href="#s11">11. Governing Law</a>
+      <a href="#s12">12. Changes &amp; Contact</a>
+    </aside>
+
+    <!-- Sections -->
+    <div class="sections">
+
+      <div class="section" id="s1">
+        <div class="section-num">Section 1</div>
+        <h2>Acceptance of Terms</h2>
+        <p>By accessing or using Theatre4u at theatre4u.org, you agree to be bound by these Terms of Service. If you do not agree, please do not use the Service. Theatre4u™ is a product of Artstracker LLC, a California limited liability company (theatre4u.org).</p>
+      </div>
+
+      <div class="section" id="s2">
+        <div class="section-num">Section 2</div>
+        <h2>Description of Service</h2>
+        <p>Theatre4u™ is a cloud-based inventory management, resource-sharing, and community platform for theatre programs, schools, community theatres, and performing arts organizations. We reserve the right to modify or discontinue the Service at any time with reasonable notice.</p>
+      </div>
+
+      <div class="section" id="s3">
+        <div class="section-num">Section 3</div>
+        <h2>Account Registration</h2>
+        <p>You must create an account with accurate information and are responsible for maintaining confidentiality of your credentials. You must be at least 18 years old, or have authorization of a parent, guardian, or school administrator if a minor acting on behalf of an organization.</p>
+      </div>
+
+      <div class="section" id="s4">
+        <div class="section-num">Section 4</div>
+        <h2>Subscription Plans and Payments</h2>
+        <p>Theatre4u offers Free, Pro ($12/month or $120/year), and District ($49/month or $500/year) plans billed via Stripe. Subscriptions auto-renew unless cancelled. We may change pricing with 30 days notice to current subscribers.</p>
+      </div>
+
+      <div class="section" id="s4a">
+        <div class="section-num">Section 4a</div>
+        <h2>Cancellation Policy</h2>
+        <p>You may cancel your subscription at any time through Settings → Plans → Manage Billing, or by emailing <a href="mailto:hello@theatre4u.org">hello@theatre4u.org</a>. Upon cancellation, your access continues until the end of the current billing period — no partial refunds are issued for unused time.</p>
+        <div class="callout">
+          <strong>Annual plans:</strong> A full refund is available within 30 days of purchase if you have added fewer than 10 items. After 30 days, annual plan fees are non-refundable. Your inventory data is preserved for 90 days after your plan downgrades to Free; you may export a full CSV backup at any time from the Reports page. Leading Players have guaranteed free Pro access through April 9, 2027 and are not affected by this policy.
+        </div>
+      </div>
+
+      <div class="section" id="s5">
+        <div class="section-num">Section 5</div>
+        <h2>User Content &amp; License Grant</h2>
+        <p>You retain all ownership of content you upload to Theatre4u™, including text, photos, images, and other materials ("User Content"). By uploading User Content, you grant Theatre4u a worldwide, non-exclusive, royalty-free, perpetual, irrevocable license to store, display, reproduce, and use that content to operate, improve, and promote the Service. This license persists even if you later remove the content or close your account.</p>
+        <p style="margin-top:10px">You represent that you have all necessary rights to grant this license, that your content does not infringe any third-party rights, and that you have obtained appropriate permissions for any photographs or images of identifiable individuals. Theatre4u may remove any content that violates these Terms or applicable law.</p>
+      </div>
+
+      <div class="section" id="s6">
+        <div class="section-num">Section 6</div>
+        <h2>Exchange Transactions</h2>
+        <p>Theatre4u™ provides the Backstage Exchange platform for listing items for rent, sale, or loan. We are not a party to any transaction between users. All agreements are solely between listing users and interested parties. We do not handle payments between users.</p>
+      </div>
+
+      <div class="section" id="s7">
+        <div class="section-num">Section 7</div>
+        <h2>Prohibited Conduct</h2>
+        <p>You agree not to: use the Service unlawfully; upload false or fraudulent content; attempt unauthorized access; interfere with the Service; use automated scraping tools; impersonate others; or transmit spam or malware. Violations may result in immediate account termination.</p>
+      </div>
+
+      <div class="section" id="s8">
+        <div class="section-num">Section 8</div>
+        <h2>Intellectual Property</h2>
+        <p>The Theatre4u™ name, logo, design, software, and all platform content are owned by Artstracker LLC and protected by United States and international intellectual property laws. Theatre4u™ is a trademark of Artstracker LLC. Nothing in these Terms grants you any right to use our trademarks, trade names, or other intellectual property without prior written consent. All rights not expressly granted are reserved.</p>
+      </div>
+
+      <div class="section" id="s9">
+        <div class="section-num">Section 9</div>
+        <h2>Disclaimer of Warranties</h2>
+        <p>THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND. We do not warrant that the Service will be uninterrupted, error-free, or free of harmful components.</p>
+      </div>
+
+      <div class="section" id="s10">
+        <div class="section-num">Section 10</div>
+        <h2>Limitation of Liability</h2>
+        <p>TO THE FULLEST EXTENT PERMITTED BY CALIFORNIA LAW, WE SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES. Our total liability shall not exceed amounts paid by you in the three months preceding the claim.</p>
+      </div>
+
+      <div class="section" id="s11">
+        <div class="section-num">Section 11</div>
+        <h2>Governing Law</h2>
+        <p>These Terms are governed by California law. Disputes shall be resolved through binding arbitration in California under AAA rules, except either party may seek injunctive relief in court. You waive the right to class action.</p>
+      </div>
+
+      <div class="section" id="s12">
+        <div class="section-num">Section 12</div>
+        <h2>Changes &amp; Contact</h2>
+        <p>We may modify these Terms with 14 days notice. Continued use constitutes acceptance.</p>
+        <div class="callout">
+          Questions or concerns? Email <a href="mailto:hello@theatre4u.org"><strong>hello@theatre4u.org</strong></a> — all messages are read personally by the founder.<br>
+          Artstracker LLC · 10525 Carol Ln, Garden Grove, CA 92840
+        </div>
+      </div>
+
+    </div><!-- /sections -->
+  </div><!-- /layout -->
+</div><!-- /page-body -->
+</div><!-- /wrap -->
+
+<footer>
+  <div class="footer-logo">Theatre4u™</div>
+  <p>
+    A product of Artstracker LLC · 10525 Carol Ln, Garden Grove, CA 92840<br>
+    <a href="mailto:hello@theatre4u.org">hello@theatre4u.org</a> ·
+    <a href="https://theatre4u.org">theatre4u.org</a> ·
+    <a href="/privacy.html">Privacy Policy</a> ·
+    <a href="/terms.html">Terms of Service</a> ·
+    <a href="/help.html">Help Center</a>
+  </p>
+</footer>
+
+<script>
+// Highlight active TOC link on scroll
+const sections = document.querySelectorAll('.section');
+const tocLinks = document.querySelectorAll('.toc a');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      tocLinks.forEach(l => l.classList.remove('active'));
+      const active = document.querySelector('.toc a[href="#' + entry.target.id + '"]');
+      if (active) active.classList.add('active');
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px' });
+sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
