@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Privacy Policy — Theatre4u™</title>
+<meta name="description" content="Privacy Policy for Theatre4u™, a product of Artstracker LLC. CCPA, FERPA, and COPPA compliant."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#fdf8f1;--bg2:#f5ede0;--ink:#1a1008;--gold:#c4922a;--gold2:#e8b84b;
+  --border:#e8dcc8;--muted:#7a6a54;--faint:#b8a890;--card:#ffffff;
+  --green:#2d6e3a;--blue:#1a4fa0;
+  --shadow:0 2px 16px rgba(60,30,0,.08);--r:12px;--rs:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.7}
+a{color:var(--gold);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* Nav */
+.topnav{background:var(--ink);padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.topnav .logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.topnav .logo-mark{width:34px;height:34px;background:linear-gradient(135deg,var(--gold2),var(--gold));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.topnav .logo-text{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--gold2)}
+.topnav-links{display:flex;gap:6px;align-items:center}
+.topnav-links a{color:rgba(255,255,255,.7);font-size:13px;font-weight:600;padding:6px 12px;border-radius:6px;transition:all .15s}
+.topnav-links a:hover{background:rgba(255,255,255,.1);color:#fff;text-decoration:none}
+.topnav-links .cta{background:var(--gold);color:var(--ink) !important;font-weight:700}
+.topnav-links .cta:hover{background:var(--gold2)}
+
+/* Hero */
+.hero{background:linear-gradient(135deg,var(--ink) 0%,#2a1a08 100%);padding:52px 32px 44px;text-align:center}
+.hero-eyebrow{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--gold2);margin-bottom:10px}
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:44px;font-weight:700;color:#fff;margin-bottom:10px;line-height:1.15}
+.hero h1 span{color:var(--gold2)}
+.hero p{font-size:15px;color:rgba(255,255,255,.55);max-width:540px;margin:0 auto}
+
+/* Compliance badges */
+.badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+.badge{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.5px}
+
+/* Layout */
+.wrap{max-width:900px;margin:0 auto;padding:0 28px}
+.page-body{padding:48px 0 80px}
+.layout{display:grid;grid-template-columns:220px 1fr;gap:36px;align-items:start}
+
+/* TOC */
+.toc{position:sticky;top:76px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+.toc-header{padding:14px 16px 8px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--faint);border-bottom:1px solid var(--border)}
+.toc a{display:block;padding:8px 16px;font-size:12.5px;font-weight:500;color:var(--muted);border-left:3px solid transparent;transition:all .12s;text-decoration:none;line-height:1.4}
+.toc a:hover{color:var(--ink);background:var(--bg2);text-decoration:none}
+.toc a.active{color:var(--gold);font-weight:700;border-left-color:var(--gold);background:rgba(196,146,42,.06)}
+
+/* Section cards */
+.section{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px 32px;margin-bottom:16px;box-shadow:var(--shadow);scroll-margin-top:80px}
+.section-num{display:inline-block;background:var(--gold);color:var(--ink);font-size:10px;font-weight:800;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.section h2{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--ink);margin-bottom:12px}
+.section p{color:#3a2e24;font-size:14.5px;line-height:1.75;margin-bottom:10px}
+.section p:last-child{margin-bottom:0}
+.section strong{color:var(--ink)}
+.section ul{margin:10px 0 10px 20px;color:#3a2e24;font-size:14.5px;line-height:1.8}
+.section li{margin-bottom:3px}
+
+/* Callout variants */
+.callout{border-radius:var(--rs);padding:14px 18px;margin-top:14px;font-size:13.5px;line-height:1.7}
+.callout-gold{background:rgba(196,146,42,.07);border:1px solid rgba(196,146,42,.25);color:#5a4020}
+.callout-green{background:rgba(45,110,58,.07);border:1px solid rgba(45,110,58,.25);color:#1e4525}
+.callout-blue{background:rgba(26,79,160,.07);border:1px solid rgba(26,79,160,.25);color:#0d2d60}
+.callout strong{color:var(--ink)}
+
+/* Effective date bar */
+.effective{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:14px 20px;margin-bottom:24px;display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--muted)}
+.effective strong{color:var(--ink)}
+
+/* Data table */
+.data-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+.data-table th{background:var(--bg2);padding:8px 12px;text-align:left;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);border:1px solid var(--border)}
+.data-table td{padding:9px 12px;border:1px solid var(--border);color:#3a2e24;vertical-align:top;line-height:1.5}
+.data-table tr:nth-child(even) td{background:rgba(245,237,224,.4)}
+
+/* Footer */
+footer{background:var(--ink);padding:32px;text-align:center}
+footer .footer-logo{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--gold2);margin-bottom:8px}
+footer p{font-size:12.5px;color:rgba(255,255,255,.4);line-height:1.8}
+footer a{color:rgba(255,255,255,.5)}
+footer a:hover{color:var(--gold2)}
+
+@media(max-width:720px){
+  .layout{grid-template-columns:1fr}
+  .toc{position:static;margin-bottom:24px}
+  .hero h1{font-size:32px}
+  .wrap{padding:0 16px}
+  .section{padding:20px}
+  .badges{margin-top:16px}
+}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="topnav">
+  <a href="https://theatre4u.org" class="logo">
+    <div class="logo-mark">🎭</div>
+    <span class="logo-text">Theatre4u™</span>
+  </a>
+  <div class="topnav-links">
+    <a href="/help.html">Help</a>
+    <a href="/terms.html">Terms</a>
+    <a href="https://theatre4u.org" class="cta">Sign In</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="wrap">
+    <div class="hero-eyebrow">Legal</div>
+    <h1>Privacy <span>Policy</span></h1>
+    <p>We take the privacy of theatre educators and their programs seriously. Here's exactly what we collect and why.</p>
+    <div class="badges">
+      <span class="badge">CCPA Compliant</span>
+      <span class="badge">FERPA Compliant</span>
+      <span class="badge">COPPA Compliant</span>
+      <span class="badge">CalOPPA Compliant</span>
+      <span class="badge">No Student PII</span>
+    </div>
+  </div>
+</div>
+
+<!-- Body -->
+<div class="wrap">
+<div class="page-body">
+
+  <div class="effective">
+    <span>📅</span>
+    <span><strong>Effective date:</strong> March 2026 &nbsp;·&nbsp; Artstracker LLC &nbsp;·&nbsp; <a href="mailto:hello@theatre4u.org">hello@theatre4u.org</a></span>
+  </div>
+
+  <div class="layout">
+
+    <!-- TOC -->
+    <aside class="toc">
+      <div class="toc-header">Contents</div>
+      <a href="#s1">1. Introduction</a>
+      <a href="#s2">2. Who Uses Theatre4u</a>
+      <a href="#s3">3. Information We Collect</a>
+      <a href="#s4">4. How We Use Your Info</a>
+      <a href="#s5">5. Data Sharing</a>
+      <a href="#s6">6. FERPA Compliance</a>
+      <a href="#s7">7. Student Privacy (COPPA)</a>
+      <a href="#s8">8. Data Security</a>
+      <a href="#s9">9. Data Retention</a>
+      <a href="#s10">10. Your Rights (CCPA)</a>
+      <a href="#s11">11. District Data Agreements</a>
+      <a href="#s12">12. Changes &amp; Contact</a>
+    </aside>
+
+    <!-- Sections -->
+    <div class="sections">
+
+      <div class="section" id="s1">
+        <div class="section-num">Section 1</div>
+        <h2>Introduction</h2>
+        <p>Theatre4u™ (theatre4u.org) is a product of Artstracker LLC, a California limited liability company. We are committed to protecting the privacy and security of all users, with special attention to the requirements applicable to educational institutions and school districts.</p>
+        <p>This Privacy Policy complies with the California Consumer Privacy Act (CCPA), CalOPPA, the Family Educational Rights and Privacy Act (FERPA), and the Children's Online Privacy Protection Act (COPPA).</p>
+      </div>
+
+      <div class="section" id="s2">
+        <div class="section-num">Section 2</div>
+        <h2>Who Uses Theatre4u</h2>
+        <p>Theatre4u is designed for use by theatre educators, school drama departments, community theatre organizations, and district administrators. Users must be 18 years or older to create an account.</p>
+        <div class="callout callout-gold">
+          <strong>Important:</strong> Theatre4u is not intended for direct use by students under 18. School administrators and teachers are responsible for ensuring appropriate use within their programs.
+        </div>
+      </div>
+
+      <div class="section" id="s3">
+        <div class="section-num">Section 3</div>
+        <h2>Information We Collect</h2>
+        <table class="data-table">
+          <thead>
+            <tr><th>Type</th><th>What We Collect</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Account Info</strong></td><td>Organization name, email address, password (encrypted — we never see plaintext passwords), and optional profile details including phone, city, and bio.</td></tr>
+            <tr><td><strong>Inventory Data</strong></td><td>Item names, descriptions, photos, locations, and condition notes you add to your account. This data belongs entirely to your organization.</td></tr>
+            <tr><td><strong>Communication Data</strong></td><td>Messages sent between organizations on the Backstage Exchange platform.</td></tr>
+            <tr><td><strong>Usage Data</strong></td><td>Pages visited and features used, collected anonymously to improve the platform.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout callout-green">
+          <strong>We do NOT collect student personally identifiable information (PII).</strong> All data belongs to your organization, not to individual students.
+        </div>
+      </div>
+
+      <div class="section" id="s4">
+        <div class="section-num">Section 4</div>
+        <h2>How We Use Your Information</h2>
+        <ul>
+          <li>To provide and operate the Theatre4u platform</li>
+          <li>To facilitate Backstage Exchange listings and rental/loan requests between theatre programs</li>
+          <li>To send transactional emails (request notifications, account confirmation) via Resend from hello@theatre4u.org</li>
+          <li>To improve the platform based on anonymized usage patterns</li>
+        </ul>
+        <div class="callout callout-green">
+          <strong>We do NOT sell your data.</strong> We do NOT use your data for advertising. We do NOT share your data with third parties except as described in Section 5.
+        </div>
+      </div>
+
+      <div class="section" id="s5">
+        <div class="section-num">Section 5</div>
+        <h2>Data Sharing &amp; Third Parties</h2>
+        <table class="data-table">
+          <thead>
+            <tr><th>Provider</th><th>Purpose</th><th>Data Shared</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Supabase</strong><br><small>supabase.com</small></td><td>Database and authentication</td><td>All organizational data. Hosted in AWS us-east-1. SOC 2 Type II certified. Encrypted at rest and in transit.</td></tr>
+            <tr><td><strong>Resend</strong><br><small>resend.com</small></td><td>Transactional email</td><td>Email addresses only, for delivery of notifications and confirmations.</td></tr>
+            <tr><td><strong>Vercel</strong><br><small>vercel.com</small></td><td>Web hosting and CDN</td><td>No user data stored by Vercel.</td></tr>
+            <tr><td><strong>Stripe</strong><br><small>stripe.com</small></td><td>Payment processing</td><td>Billing information only. Stripe does not receive inventory or student data.</td></tr>
+            <tr><td><strong>Other Theatre Programs</strong></td><td>Backstage Exchange listings</td><td>When you post items, your organization name, location, and listed items are visible to other logged-in Theatre4u members.</td></tr>
+          </tbody>
+        </table>
+        <p>No other sharing occurs without your explicit written consent.</p>
+      </div>
+
+      <div class="section" id="s6">
+        <div class="section-num">Section 6</div>
+        <h2>FERPA Compliance</h2>
+        <div class="callout callout-blue">
+          <strong>Theatre4u does not collect, store, or process student education records as defined by FERPA.</strong>
+        </div>
+        <p style="margin-top:12px">Theatre4u acknowledges its role as a service provider to educational institutions subject to FERPA. All inventory and operational data belongs to the subscribing organization (the school or district), not to individual students.</p>
+        <p>School administrators retain full control over their organizational data and may request complete data deletion at any time. Theatre4u will not disclose organizational data to third parties without the written consent of the institution's authorized representative, except as required by law.</p>
+      </div>
+
+      <div class="section" id="s7">
+        <div class="section-num">Section 7</div>
+        <h2>Student Privacy (COPPA)</h2>
+        <p>Theatre4u accounts are for adults only (18+). Theatre4u does not knowingly collect personal information from children under 13.</p>
+        <div class="callout callout-gold">
+          If you believe a minor has created an account without authorization, contact <a href="mailto:hello@theatre4u.org"><strong>hello@theatre4u.org</strong></a> immediately. We will delete the account and all associated data within 48 hours.
+        </div>
+      </div>
+
+      <div class="section" id="s8">
+        <div class="section-num">Section 8</div>
+        <h2>Data Security</h2>
+        <ul>
+          <li>All data is encrypted in transit via <strong>TLS 1.2+</strong></li>
+          <li>Database data is encrypted at rest via <strong>AES-256</strong> (Supabase/AWS)</li>
+          <li>Passwords are hashed using <strong>bcrypt</strong> — we cannot access your password</li>
+          <li>Authentication tokens expire automatically</li>
+          <li><strong>Row-Level Security (RLS)</strong> is enforced on all database tables — each organization can only access its own data</li>
+          <li>Security headers (HSTS, CSP, X-Frame-Options) are enforced on all pages</li>
+          <li>The anonymous key exposed in the client is restricted by RLS policies and cannot access other organizations' private data</li>
+        </ul>
+      </div>
+
+      <div class="section" id="s9">
+        <div class="section-num">Section 9</div>
+        <h2>Data Retention &amp; Deletion</h2>
+        <p>Your data is retained as long as your account is active. You may request complete deletion of your account and all associated data at any time by emailing <a href="mailto:hello@theatre4u.org">hello@theatre4u.org</a>. We will complete deletion within 30 days.</p>
+        <p>Deleted data is not recoverable. Anonymized aggregate statistics (total item counts, etc.) may be retained. Backup snapshots are retained for 7 days before permanent deletion.</p>
+      </div>
+
+      <div class="section" id="s10">
+        <div class="section-num">Section 10</div>
+        <h2>Your Rights (CCPA)</h2>
+        <p>California residents have the right to:</p>
+        <ul>
+          <li>Know what personal data we collect and how it is used</li>
+          <li>Request deletion of your data</li>
+          <li>Opt out of sale of personal data <strong>(we do not sell data)</strong></li>
+          <li>Non-discrimination for exercising privacy rights</li>
+        </ul>
+        <div class="callout callout-gold">
+          To exercise any right: email <a href="mailto:hello@theatre4u.org"><strong>hello@theatre4u.org</strong></a> with <strong>"Privacy Request"</strong> in the subject line.
+        </div>
+      </div>
+
+      <div class="section" id="s11">
+        <div class="section-num">Section 11</div>
+        <h2>District Data Agreements</h2>
+        <p>For school district subscribers (District plan), Artstracker LLC will execute a <strong>Data Processing Agreement (DPA)</strong> upon request. Contact <a href="mailto:hello@theatre4u.org">hello@theatre4u.org</a>.</p>
+        <p>We will cooperate with district IT security reviews and questionnaires. Theatre4u's infrastructure (Supabase/Vercel) can provide SOC 2 and ISO 27001 documentation upon request for your district's vendor review process.</p>
+      </div>
+
+      <div class="section" id="s12">
+        <div class="section-num">Section 12</div>
+        <h2>Changes &amp; Contact</h2>
+        <p>We will notify users of material changes to this policy with at least 14 days notice via email.</p>
+        <div class="callout callout-gold">
+          Questions, data requests, or security concerns:<br>
+          <a href="mailto:hello@theatre4u.org"><strong>hello@theatre4u.org</strong></a> · theatre4u.org<br>
+          Artstracker LLC · 10525 Carol Ln, Garden Grove, CA 92840<br><br>
+          For security vulnerabilities, email hello@theatre4u.org with <strong>"Security"</strong> in the subject line.
+        </div>
+      </div>
+
+    </div><!-- /sections -->
+  </div><!-- /layout -->
+</div><!-- /page-body -->
+</div><!-- /wrap -->
+
+<footer>
+  <div class="footer-logo">Theatre4u™</div>
+  <p>
+    A product of Artstracker LLC · 10525 Carol Ln, Garden Grove, CA 92840<br>
+    <a href="mailto:hello@theatre4u.org">hello@theatre4u.org</a> ·
+    <a href="https://theatre4u.org">theatre4u.org</a> ·
+    <a href="/privacy.html">Privacy Policy</a> ·
+    <a href="/terms.html">Terms of Service</a> ·
+    <a href="/help.html">Help Center</a>
+  </p>
+</footer>
+
+<script>
+const sections = document.querySelectorAll('.section');
+const tocLinks = document.querySelectorAll('.toc a');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      tocLinks.forEach(l => l.classList.remove('active'));
+      const active = document.querySelector('.toc a[href="#' + entry.target.id + '"]');
+      if (active) active.classList.add('active');
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px' });
+sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
