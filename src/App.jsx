@@ -3734,8 +3734,10 @@ function UpgradePrompt({ reason, onClose }) {
 
 // ── Shared upgrade/pricing component — used in Settings + any upsell modal ────
 const STRIPE_LINKS = {
-  pro:      { monthly:"https://buy.stripe.com/aFadR868xgNRey72ErgA801", annual:"https://buy.stripe.com/9B6dR80Od8hl9dN4MzgA803" },
-  district: { monthly:"https://buy.stripe.com/aFa4gydAZ2X1cpZ6UHgA800", annual:"https://buy.stripe.com/eVqdR88gF1SX9dN0wjgA802" },
+  pro:        { monthly:"https://buy.stripe.com/aFadR868xgNRey72ErgA801", annual:"https://buy.stripe.com/9B6dR80Od8hl9dN4MzgA803" },
+  district:   { monthly:"https://buy.stripe.com/aFa4gydAZ2X1cpZ6UHgA800", annual:"https://buy.stripe.com/eVqdR88gF1SX9dN0wjgA802" },
+  district_m: { monthly:"https://buy.stripe.com/5kQ00ieF3aptahRbaXgA806", annual:"https://buy.stripe.com/6oU7sK68x41575F5QDgA807" },
+  district_l: { monthly:"https://buy.stripe.com/6oU28q2Wl8hlgGfdj5gA804", annual:"https://buy.stripe.com/eVq00ieF37dhahR2ErgA805" },
 };
 function stripeLink(baseUrl, userId, userEmail) {
   if (!baseUrl || baseUrl === "#") return "#";
@@ -3774,7 +3776,9 @@ const ADMIN_EMAIL  = ADMIN_EMAILS[0]; // legacy alias
 //   This is the anchoring district unit. Do not raise school count without
 //   adjusting price — the discount math breaks above ~8 schools at this price.
 //
-// PLANNED FUTURE TIERS (not yet in product — see Obsidian: District-Pricing.md):
+// DISTRICT M + L now in UPGRADE_PLANS UI. Add Stripe products then fill STRIPE_LINKS above.
+// See Obsidian: District-Pricing.md for full pricing rationale.
+// PLANNED FUTURE TIERS still to build in Stripe:
 //   District M: Up to 15 schools → $99/mo | $999/yr  (54% savings)
 //   District L: Up to 30 schools → $179/mo | $1,799/yr (58% savings)
 //   Enterprise: 31+ schools → Custom quote, starting ~$2,500/yr for 50 schools
@@ -3792,8 +3796,12 @@ const UPGRADE_PLANS = [
     feats:["Unlimited inventory","Full Backstage Exchange access","Photo storage 5GB","Analytics dashboard","Email support"] },
   { id:"district", name:"District (up to 6 schools)", monthlyPrice:"$49", annualPrice:"$42",  annualTotal:"$500/yr", per:"/month", annualNote:"save $88", desc:"Multiple schools, one platform.",  hot:false,
     feats:["Multiple organizations","District dashboard","Bulk import","Dedicated support","Everything in Pro"] },
+  { id:"district_m", name:"District M", monthlyPrice:"$99", annualPrice:"$83",  annualTotal:"$999/yr",   per:"/month", annualNote:"save $189", desc:"Up to 15 schools — 54% savings.", hot:false,
+    feats:["Everything in District S","Up to 15 school sites","District dashboard","Priority support","Dedicated onboarding"] },
+  { id:"district_l", name:"District L", monthlyPrice:"$179", annualPrice:"$150", annualTotal:"$1,799/yr", per:"/month", annualNote:"save $349", desc:"Up to 30 schools — 58% savings.", hot:false,
+    feats:["Everything in District M","Up to 30 school sites","District dashboard","Training webinar","Custom reporting"] },
   { id:"enterprise",  name:"Enterprise", monthlyPrice:"Custom", annualPrice:"Custom", per:"", annualNote:null, desc:"Large districts — custom contract.", hot:false,
-    feats:["Everything in District","Unlimited schools","Custom PO/invoicing","Data Processing Agreement","Dedicated support","Custom pricing"] },
+    feats:["Everything in District L","Unlimited schools","Custom PO/invoicing","Data Processing Agreement","Dedicated support","Custom pricing"] },
 ];
 
 
@@ -3928,10 +3936,12 @@ function UpgradePlans({ compact = false, userId = null, userEmail = null }) {
                 ))}
               </ul>
               {isFree
-                ? <button className="btn btn-o btn-full" style={{opacity:.5,cursor:"default"}} disabled>Current Plan</button>
+                ? <button className="btn btn-full" style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",color:"rgba(240,230,211,.6)",cursor:"default",fontWeight:600,fontSize:13}} disabled>✓ Current Free Plan</button>
                 : p.id==="enterprise"
-                  ? <a href="mailto:hello@theatre4u.org?subject=Enterprise District Inquiry" className="btn btn-o btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto"}}>Contact Us →</a>
-                  : <a href={link} target="_blank" rel="noreferrer" className={"btn btn-full "+(p.hot?"btn-g":"")} style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",...(!p.hot?{background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}:{})}}>
+                  ? <a href="mailto:hello@theatre4u.org?subject=Enterprise District Inquiry" className="btn btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",background:"linear-gradient(135deg,#1565c0,#0d47a1)",border:"1px solid rgba(66,133,244,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>Contact Us →</a>
+                  : (!link || link === "undefined" || link.endsWith("undefined"))
+                    ? <a href="mailto:hello@theatre4u.org?subject=District Plan Inquiry" className="btn btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>Contact Us →</a>
+                    : <a href={link} target="_blank" rel="noreferrer" className={"btn btn-full "+(p.hot?"btn-g":"")} style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",...(!p.hot?{background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}:{})}}>
                     {billing==="annual" ? "Get "+p.name+" Annual →" : "Get "+p.name+" →"}
                   </a>
               }
