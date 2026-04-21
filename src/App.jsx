@@ -8427,7 +8427,15 @@ function PublicItemPage({ itemId }) {
           setErr("Item not found.");
           return;
         }
-        setItem(json.item);
+        // Map database column names to the field names used in the UI
+        const raw = json.item;
+        const mapped = {
+          ...raw,
+          quantity:     raw.qty,
+          availability: raw.avail,
+          images:       raw.img ? [raw.img] : [],
+        };
+        setItem(mapped);
         if (json.org) setOrg(json.org);
       } catch(e) {
         console.error("public-item fetch:", e);
