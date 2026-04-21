@@ -7549,6 +7549,95 @@ function TeamSettings({ userId, orgName, plan }) {
 }
 
 
+
+// ── QR Code Privacy Settings ─────────────────────────────────────────────────
+function QRPrivacySettings({ org, setOrg, userId }) {
+  const [saving, setSaving] = useState(false);
+  const [saved,  setSaved]  = useState(false);
+
+  const privacy       = org?.qr_privacy       ?? "contact";
+  const contactFields = org?.qr_contact_fields ?? ["name","email"];
+
+  const togglePrivacy = async (val) => {
+    setSaving(true);
+    const { error } = await SB.from("orgs").update({ qr_privacy: val }).eq("id", userId);
+    if (!error) setOrg(p => ({ ...p, qr_privacy: val }));
+    setSaving(false);
+  };
+
+  const toggleField = async (field) => {
+    const current = Array.isArray(contactFields) ? contactFields : ["name","email"];
+    const next    = current.includes(field) ? current.filter(f => f !== field) : [...current, field];
+    setSaving(true);
+    const { error } = await SB.from("orgs").update({ qr_contact_fields: next }).eq("id", userId);
+    if (!error) { setOrg(p => ({ ...p, qr_contact_fields: next })); setSaved(true); setTimeout(()=>setSaved(false),2000); }
+    setSaving(false);
+  };
+
+  const fields = [
+    { key:"name",     label:"Organization Name",  always: true },
+    { key:"email",    label:"Email Address" },
+    { key:"phone",    label:"Phone Number" },
+    { key:"location", label:"City / Location" },
+    { key:"bio",      label:"About / Bio" },
+  ];
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+      {/* Privacy mode toggle */}
+      <div style={{display:"flex",gap:0,border:"1px solid var(--border)",borderRadius:8,overflow:"hidden",width:"fit-content"}}>
+        {[{v:"contact",label:"🔒 Contact Only",desc:"Show org contact info only"},{v:"public",label:"🌐 Public Details",desc:"Show full item details"}].map(opt=>(
+          <button key={opt.v} onClick={()=>togglePrivacy(opt.v)} style={{
+            background: privacy===opt.v ? "var(--gold)" : "transparent",
+            color:      privacy===opt.v ? "#1a0f00" : "var(--muted)",
+            border:"none", padding:"9px 18px", cursor:"pointer",
+            fontFamily:"inherit", fontSize:13, fontWeight:700, transition:"all .15s"
+          }}>{opt.label}</button>
+        ))}
+      </div>
+      <p style={{fontSize:12.5,color:"var(--muted)",lineHeight:1.6,margin:0}}>
+        {privacy === "contact"
+          ? "When someone scans a QR label they are NOT a team member of, they will see your contact info and a prompt to sign in or request access."
+          : "Full item details are visible to anyone who scans a QR label — no sign-in required."}
+      </p>
+
+      {/* Contact fields (only relevant in contact mode) */}
+      {privacy === "contact" && (
+        <div>
+          <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:10}}>
+            Information shown to scanner
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {fields.map(f => {
+              const checked = f.always || (Array.isArray(contactFields) && contactFields.includes(f.key));
+              return (
+                <label key={f.key} style={{display:"flex",alignItems:"center",gap:10,cursor:f.always?"default":"pointer",opacity:f.always?.6:1}}>
+                  <div onClick={()=>!f.always&&toggleField(f.key)} style={{
+                    width:18, height:18, borderRadius:4,
+                    background: checked ? "var(--gold)" : "transparent",
+                    border: checked ? "2px solid var(--gold)" : "2px solid var(--border)",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    flexShrink:0, cursor:f.always?"default":"pointer", transition:"all .15s"
+                  }}>
+                    {checked && <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2.5" fill="none" stroke="#1a0f00" strokeWidth="1.8" strokeLinecap="round"/></svg>}
+                  </div>
+                  <span style={{fontSize:13.5,color:"var(--text)"}}>{f.label}</span>
+                  {f.always && <span style={{fontSize:11,color:"var(--faint)"}}>always shown</span>}
+                </label>
+              );
+            })}
+          </div>
+          {saved && <div style={{fontSize:12,color:"var(--grn,#4caf50)",marginTop:8,fontWeight:600}}>✓ Saved</div>}
+          <p style={{fontSize:12,color:"var(--faint)",lineHeight:1.6,marginTop:10}}>
+            Only the fields you check above will be visible to someone who scans a QR label. Your email is always the primary way for them to request access.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="free", userEmail="", setPlan, memberRole=null }) {
   const [f,setF]       = useState(org);
   const [saved,setSaved] = useState(false);
@@ -7731,6 +7820,11 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
         )}
 
         <div className="card card-p">
+          <div className="sh"><h2>🔒 QR Code Privacy</h2><p>Control what others see when they scan your item QR labels.</p></div>
+          <QRPrivacySettings org={org} setOrg={setOrg} userId={userId}/>
+        </div>
+
+        <div className="sc">
           <div className="sh"><h2>Data Management</h2><p>Load sample data to explore, or reset everything to start fresh.</p></div>
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
             <button className="btn btn-o" onClick={onSeed}><span style={{width:14,height:14,display:"flex"}}>{Ic.box}</span>Load Sample Data</button>
@@ -8409,17 +8503,24 @@ function AuthScreen({onAuth}){
 
 // ── Public Item Page (no login required) ─────────────────────────────────────
 function PublicItemPage({ itemId }) {
-  const [item,   setItem]   = useState(null);
-  const [org,    setOrg]    = useState(null);
-  const [err,    setErr]    = useState(null);
-  const [legacy, setLegacy] = useState(false);
-  const [lb,     setLb]     = useState(null);
+  const [item,    setItem]    = useState(null);
+  const [org,     setOrg]     = useState(null);
+  const [err,     setErr]     = useState(null);
+  const [legacy,  setLegacy]  = useState(false);
+  const [lb,      setLb]      = useState(null);
+  const [access,  setAccess]  = useState("full");  // "full" | "contact"
+  const [contact, setContact] = useState(null);    // org contact fields
 
   useEffect(()=>{
     (async()=>{
       try {
-        const res = await fetch(
-          "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/public-item?id=" + encodeURIComponent(itemId)
+        // Pass auth token so edge function can check org membership
+        const { data: { session } } = await SB.auth.getSession();
+        const token = session?.access_token;
+        const headers = token ? { "x-t4u-token": token } : {};
+        const res  = await fetch(
+          "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/public-item?id=" + encodeURIComponent(itemId),
+          { headers }
         );
         const json = await res.json();
         if (!res.ok || !json.item) {
@@ -8427,15 +8528,20 @@ function PublicItemPage({ itemId }) {
           setErr("Item not found.");
           return;
         }
-        // Map database column names to the field names used in the UI
+        setAccess(json.access || "full");
+        if (json.contact) setContact(json.contact);
+        if (json.access === "contact") {
+          setItem(json.item); // minimal item (name + display_id only)
+          return;
+        }
+        // Full access: map column names to UI field names
         const raw = json.item;
-        const mapped = {
+        setItem({
           ...raw,
           quantity:     raw.qty,
           availability: raw.avail,
           images:       raw.img ? [raw.img] : [],
-        };
-        setItem(mapped);
+        });
         if (json.org) setOrg(json.org);
       } catch(e) {
         console.error("public-item fetch:", e);
@@ -8501,7 +8607,46 @@ function PublicItemPage({ itemId }) {
           </div>
         )}
 
-        {item && (<>
+        {item && access === "contact" && (
+          <div style={{padding:"28px 0"}}>
+            <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:20,marginBottom:16}}>
+              <div style={{fontSize:13,color:"rgba(255,255,255,.4)",textTransform:"uppercase",letterSpacing:1,fontWeight:700,marginBottom:4}}>Item Scanned</div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:4}}>{item.name}</div>
+              {item.display_id && <div style={{fontSize:12,color:"var(--gold)",fontWeight:700}}>{item.display_id}</div>}
+            </div>
+            <div style={{background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.2)",borderRadius:12,padding:20,marginBottom:16}}>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:17,color:"var(--gold)",marginBottom:12}}>🔒 Private Inventory</div>
+              <p style={{fontSize:13.5,color:"rgba(255,255,255,.65)",lineHeight:1.7,marginBottom:0}}>This item belongs to a private inventory. To view full details you must be a team member of this program, or contact the owner to request access.</p>
+            </div>
+            {contact && Object.keys(contact).length > 0 && (
+              <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:20,marginBottom:16}}>
+                <div style={{fontSize:12,color:"rgba(255,255,255,.4)",textTransform:"uppercase",letterSpacing:1,fontWeight:700,marginBottom:10}}>Program Contact</div>
+                {contact.name     && <div style={{fontSize:16,fontWeight:700,marginBottom:4}}>{contact.name}</div>}
+                {contact.location && <div style={{fontSize:13,color:"rgba(255,255,255,.5)",marginBottom:8}}>📍 {contact.location}</div>}
+                {contact.bio      && <div style={{fontSize:13,color:"rgba(255,255,255,.55)",lineHeight:1.6,marginBottom:10}}>{contact.bio}</div>}
+                {contact.email && (
+                  <a href={"mailto:"+contact.email+"?subject=Item Inquiry: "+encodeURIComponent(item.name||"")+"&body=Hi, I scanned a QR code for the item "+encodeURIComponent(item.name||"")+" (ID: "+(item.display_id||item.id)+") and would like to learn more or request access."}
+                    style={{display:"flex",alignItems:"center",gap:8,background:"var(--gold)",color:"#1a0f00",padding:"10px 16px",borderRadius:8,textDecoration:"none",fontWeight:700,fontSize:14,marginBottom:8}}>
+                    ✉️ Email to Request Access
+                  </a>
+                )}
+                {contact.phone && (
+                  <a href={"tel:"+contact.phone} style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",color:"#fff",padding:"10px 16px",borderRadius:8,textDecoration:"none",fontWeight:600,fontSize:14}}>
+                    📞 {contact.phone}
+                  </a>
+                )}
+              </div>
+            )}
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              <a href="https://theatre4u.org" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.15)",color:"rgba(255,255,255,.8)",padding:"12px 16px",borderRadius:8,textDecoration:"none",fontSize:14,fontWeight:600}}>
+                🎭 Sign In to Theatre4u — Team Members Click Here
+              </a>
+              <p style={{fontSize:11.5,color:"rgba(255,255,255,.3)",textAlign:"center",lineHeight:1.5}}>If you are a Stage Manager, Crew, or House member of this program, sign in to view full item details.</p>
+            </div>
+          </div>
+        )}
+
+        {item && access === "full" && (<>
           {/* Photos */}
           {imgs.length > 0 && (
             <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:20}}>
