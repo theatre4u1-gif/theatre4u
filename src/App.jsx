@@ -8409,10 +8409,11 @@ function AuthScreen({onAuth}){
 
 // ── Public Item Page (no login required) ─────────────────────────────────────
 function PublicItemPage({ itemId }) {
-  const [item, setItem] = useState(null);
-  const [org,  setOrg]  = useState(null);
-  const [err,  setErr]  = useState(null);
-  const [lb,   setLb]   = useState(null);
+  const [item,   setItem]   = useState(null);
+  const [org,    setOrg]    = useState(null);
+  const [err,    setErr]    = useState(null);
+  const [legacy, setLegacy] = useState(false);
+  const [lb,     setLb]     = useState(null);
 
   useEffect(()=>{
     (async()=>{
@@ -8420,9 +8421,12 @@ function PublicItemPage({ itemId }) {
         const res = await fetch(
           "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/public-item?id=" + encodeURIComponent(itemId)
         );
-        if (!res.ok) { setErr("Item not found."); return; }
         const json = await res.json();
-        if (!json.item) { setErr("Item not found."); return; }
+        if (!res.ok || !json.item) {
+          setLegacy(!!json.legacy);
+          setErr("Item not found.");
+          return;
+        }
         setItem(json.item);
         if (json.org) setOrg(json.org);
       } catch(e) {
@@ -8464,16 +8468,28 @@ function PublicItemPage({ itemId }) {
         )}
 
         {err && (
-          <div style={{textAlign:"center",padding:60}}>
+          <div style={{textAlign:"center",padding:"40px 16px"}}>
             <div style={{fontSize:42,marginBottom:12}}>🔍</div>
-            <div style={{fontSize:20,fontFamily:"'Playfair Display',serif",marginBottom:8,color:"var(--gold)"}}>Item Not Found</div>
-            <div style={{color:"rgba(255,255,255,.5)",fontSize:14,lineHeight:1.6}}>
-              This QR code may point to an item that was deleted, or the item ID may not match.<br/>
-              <span style={{fontSize:12,color:"rgba(255,255,255,.35)",marginTop:6,display:"block"}}>
-                If you own this item, make sure it exists in your inventory and try reprinting the QR label.
-              </span>
+            <div style={{fontSize:20,fontFamily:"'Playfair Display',serif",marginBottom:10,color:"var(--gold)"}}>Item Not Found</div>
+            {legacy ? (<>
+              <div style={{color:"rgba(255,255,255,.6)",fontSize:14,lineHeight:1.7,marginBottom:20}}>
+                This QR label was printed with an older format and can no longer be looked up automatically.<br/>
+                <span style={{fontSize:12,color:"rgba(255,255,255,.35)"}}>The item owner needs to reprint the label from their Theatre4u inventory.</span>
+              </div>
+            </>) : (<>
+              <div style={{color:"rgba(255,255,255,.6)",fontSize:14,lineHeight:1.7,marginBottom:20}}>
+                This item may have been deleted or the QR label may be damaged.<br/>
+                <span style={{fontSize:12,color:"rgba(255,255,255,.35)"}}>If you own this item, check your inventory and reprint the label.</span>
+              </div>
+            </>)}
+            <div style={{display:"flex",flexDirection:"column",gap:10,alignItems:"center"}}>
+              <a href="https://theatre4u.org" style={{display:"inline-block",padding:"10px 24px",background:"linear-gradient(135deg,#c4922a,#8b6914)",borderRadius:8,color:"#1a0f00",fontWeight:700,textDecoration:"none",fontSize:14}}>
+                Sign In to Theatre4u →
+              </a>
+              <a href="mailto:hello@theatre4u.org" style={{display:"inline-block",padding:"8px 18px",background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,color:"rgba(255,255,255,.6)",textDecoration:"none",fontSize:13}}>
+                Contact Support
+              </a>
             </div>
-            <a href="https://theatre4u.org" style={{display:"inline-block",marginTop:20,padding:"8px 18px",background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.3)",borderRadius:8,color:"var(--gold)",textDecoration:"none",fontSize:13}}>Go to Theatre4u →</a>
           </div>
         )}
 
@@ -8548,8 +8564,16 @@ function PublicItemPage({ itemId }) {
             </div>
           )}
 
-          <div style={{marginTop:20,textAlign:"center",fontSize:11,color:"rgba(255,255,255,.2)"}}>
-            Item ID: {item.id} · Powered by <a href="https://theatre4u.org" style={{color:"var(--gold)",textDecoration:"none"}}>Theatre4u</a>
+          {/* Sign-in CTA for anyone scanning */}
+          <div style={{marginTop:16,background:"rgba(196,146,42,.08)",border:"1px solid rgba(196,146,42,.2)",borderRadius:10,padding:"14px 16px",textAlign:"center"}}>
+            <div style={{fontSize:13,fontWeight:600,color:"var(--gold)",marginBottom:4}}>Manage your theatre inventory with Theatre4u™</div>
+            <div style={{fontSize:12,color:"rgba(255,255,255,.45)",marginBottom:12,lineHeight:1.5}}>Track costumes, props, sets and more. Print QR labels. Share on the Backstage Exchange.</div>
+            <a href="https://theatre4u.org" style={{display:"inline-block",padding:"9px 22px",background:"linear-gradient(135deg,#c4922a,#8b6914)",borderRadius:8,color:"#1a0f00",fontWeight:700,textDecoration:"none",fontSize:13}}>
+              Sign In or Create Free Account →
+            </a>
+          </div>
+          <div style={{marginTop:16,textAlign:"center",fontSize:11,color:"rgba(255,255,255,.2)"}}>
+            Item ID: {item.display_id||item.id} · Powered by <a href="https://theatre4u.org" style={{color:"var(--gold)",textDecoration:"none"}}>Theatre4u</a>
           </div>
         </>)}
       </div>
