@@ -8416,13 +8416,18 @@ function PublicItemPage({ itemId }) {
 
   useEffect(()=>{
     (async()=>{
-      const { data, error } = await SB.from("items").select("*").eq("id", itemId).single();
-      if (error || !data) { setErr("Item not found."); return; }
-      setItem(data);
-      // Also fetch org name so scanner knows whose item this is
-      if (data.org_id) {
-        const { data: orgData } = await SB.from("orgs").select("name,location,email").eq("id", data.org_id).single();
-        if (orgData) setOrg(orgData);
+      try {
+        const res = await fetch(
+          "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/public-item?id=" + encodeURIComponent(itemId)
+        );
+        if (!res.ok) { setErr("Item not found."); return; }
+        const json = await res.json();
+        if (!json.item) { setErr("Item not found."); return; }
+        setItem(json.item);
+        if (json.org) setOrg(json.org);
+      } catch(e) {
+        console.error("public-item fetch:", e);
+        setErr("Item not found.");
       }
     })();
   }, [itemId]);
@@ -8462,7 +8467,13 @@ function PublicItemPage({ itemId }) {
           <div style={{textAlign:"center",padding:60}}>
             <div style={{fontSize:42,marginBottom:12}}>🔍</div>
             <div style={{fontSize:20,fontFamily:"'Playfair Display',serif",marginBottom:8,color:"var(--gold)"}}>Item Not Found</div>
-            <div style={{color:"rgba(255,255,255,.5)",fontSize:14}}>This QR code may be outdated or the item has been removed.</div>
+            <div style={{color:"rgba(255,255,255,.5)",fontSize:14,lineHeight:1.6}}>
+              This QR code may point to an item that was deleted, or the item ID may not match.<br/>
+              <span style={{fontSize:12,color:"rgba(255,255,255,.35)",marginTop:6,display:"block"}}>
+                If you own this item, make sure it exists in your inventory and try reprinting the QR label.
+              </span>
+            </div>
+            <a href="https://theatre4u.org" style={{display:"inline-block",marginTop:20,padding:"8px 18px",background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.3)",borderRadius:8,color:"var(--gold)",textDecoration:"none",fontSize:13}}>Go to Theatre4u →</a>
           </div>
         )}
 
