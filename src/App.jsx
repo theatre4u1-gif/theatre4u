@@ -8513,13 +8513,15 @@ function PublicItemPage({ itemId }) {
 
   useEffect(()=>{
     (async()=>{
+      const cleanId = (itemId || "").trim();
+      if(!cleanId) return;
       try {
         // Pass auth token so edge function can check org membership
         const { data: { session } } = await SB.auth.getSession();
         const token = session?.access_token;
         const headers = token ? { "x-t4u-token": token } : {};
         const res  = await fetch(
-          "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/public-item?id=" + encodeURIComponent(itemId),
+          "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/public-item?id=" + encodeURIComponent(cleanId),
           { headers }
         );
         const json = await res.json();
@@ -8638,7 +8640,7 @@ function PublicItemPage({ itemId }) {
               </div>
             )}
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              <a href="https://theatre4u.org" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.15)",color:"rgba(255,255,255,.8)",padding:"12px 16px",borderRadius:8,textDecoration:"none",fontSize:14,fontWeight:600}}>
+              <a href={"https://theatre4u.org/#/item/"+itemId} onClick={()=>{ try{ localStorage.setItem("t4u_post_auth_hash","#/item/"+itemId); }catch(e){} }} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.15)",color:"rgba(255,255,255,.8)",padding:"12px 16px",borderRadius:8,textDecoration:"none",fontSize:14,fontWeight:600}}>
                 🎭 Sign In to Theatre4u — Team Members Click Here
               </a>
               <p style={{fontSize:11.5,color:"rgba(255,255,255,.3)",textAlign:"center",lineHeight:1.5}}>If you are a Stage Manager, Crew, or House member of this program, sign in to view full item details.</p>
@@ -9529,7 +9531,18 @@ function AppRoot(){
       if (locationId && !itemId) setPage("inventory");
     };
     window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
+    // Also handle the case where the page loads with an existing hash
+    // (e.g. second scan: browser already at #/item/X, so hashchange doesn't fire)
+    // We handle this by watching document visibility — when user returns from camera
+    const onVisible = () => {
+      const { itemId } = _parseHash(window.location.hash);
+      if(itemId) setPublicItemId(p => p === itemId ? itemId + " " : itemId); // force re-render
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("hashchange", onHash);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
   const [items,setItems]   = useState([]);
   const [org,setOrg]       = useState({name:"",type:"",email:"",phone:"",location:"",bio:""});
@@ -9601,6 +9614,19 @@ function AppRoot(){
     });
     return()=>subscription.unsubscribe();
   },[]);
+
+  // ── After sign-in: redirect to item if user came from a QR scan ─────────────
+  useEffect(()=>{
+    if(!user) return;
+    try {
+      const savedHash = localStorage.getItem("t4u_post_auth_hash");
+      if(savedHash && savedHash.startsWith("#/item/")) {
+        localStorage.removeItem("t4u_post_auth_hash");
+        // Small delay to let auth state settle, then navigate to item
+        setTimeout(()=>{ window.location.hash = savedHash; }, 300);
+      }
+    } catch(e) {}
+  }, [user]);
 
   // ── Load data once logged in ─────────────────────────────────────────────
   useEffect(()=>{
