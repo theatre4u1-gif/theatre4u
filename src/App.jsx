@@ -8599,7 +8599,7 @@ function PublicItemPage({ itemId }) {
               </div>
             </>)}
             <div style={{display:"flex",flexDirection:"column",gap:10,alignItems:"center"}}>
-              <a href="https://theatre4u.org" style={{display:"inline-block",padding:"10px 24px",background:"linear-gradient(135deg,#c4922a,#8b6914)",borderRadius:8,color:"#1a0f00",fontWeight:700,textDecoration:"none",fontSize:14}}>
+              <a href="https://theatre4u.org?signin=1" style={{display:"inline-block",padding:"10px 24px",background:"linear-gradient(135deg,#c4922a,#8b6914)",borderRadius:8,color:"#1a0f00",fontWeight:700,textDecoration:"none",fontSize:14}}>
                 Sign In to Theatre4u →
               </a>
               <a href="mailto:hello@theatre4u.org" style={{display:"inline-block",padding:"8px 18px",background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,color:"rgba(255,255,255,.6)",textDecoration:"none",fontSize:13}}>
@@ -8640,8 +8640,10 @@ function PublicItemPage({ itemId }) {
               </div>
             )}
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              <a href={"https://theatre4u.org/#/item/"+itemId} onClick={()=>{ try{ localStorage.setItem("t4u_post_auth_hash","#/item/"+itemId); }catch(e){} }} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.15)",color:"rgba(255,255,255,.8)",padding:"12px 16px",borderRadius:8,textDecoration:"none",fontSize:14,fontWeight:600}}>
-                🎭 Sign In to Theatre4u — Team Members Click Here
+              <a href={"https://theatre4u.org?signin=1&next="+encodeURIComponent("#/item/"+itemId)}
+                onClick={()=>{ try{ localStorage.setItem("t4u_post_auth_hash","#/item/"+itemId); }catch(e){} }}
+                style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"linear-gradient(135deg,#c4922a,#8b6914)",color:"#1a0f00",padding:"12px 16px",borderRadius:8,textDecoration:"none",fontSize:14,fontWeight:700}}>
+                🎭 Sign In — Team Members Click Here
               </a>
               <p style={{fontSize:11.5,color:"rgba(255,255,255,.3)",textAlign:"center",lineHeight:1.5}}>If you are a Stage Manager, Crew, or House member of this program, sign in to view full item details.</p>
             </div>
@@ -9614,6 +9616,31 @@ function AppRoot(){
     });
     return()=>subscription.unsubscribe();
   },[]);
+
+  // ── On load: if ?signin=1 in URL, open sign-in modal immediately ─────────────
+  useEffect(()=>{
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if(params.get("signin") === "1") {
+        // Remove the param from URL cleanly
+        const nextHash = params.get("next") || "";
+        const cleanUrl = window.location.pathname + (nextHash ? nextHash : "");
+        window.history.replaceState({}, "", cleanUrl);
+        // Store next hash if provided
+        if(nextHash && nextHash.startsWith("#/item/")) {
+          try { localStorage.setItem("t4u_post_auth_hash", nextHash); } catch(e) {}
+        }
+        // Open sign-in — use the global auth trigger registered by the AuthForm component
+        // Delay to allow AuthForm to mount and register window.__t4u_show_auth
+        setTimeout(()=>{
+          if(typeof window.__t4u_show_auth === "function") {
+            window.__t4u_show_auth("login");
+          }
+        }, 400);
+      }
+    } catch(e) {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── After sign-in: redirect to item if user came from a QR scan ─────────────
   useEffect(()=>{
