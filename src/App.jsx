@@ -8782,14 +8782,28 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
         if (geo) latLng = { lat: geo.lat, lng: geo.lng };
       } catch { /* geocoding optional */ }
     }
-    const { data, error } = await SB.from("orgs").update({
+    const updatePayload = {
       name: f.name, type: f.type, email: f.email, phone: f.phone,
-      location: f.location, bio: f.bio, website: f.website,
-      facebook: f.facebook, instagram: f.instagram,
-      logo_url: f.logo_url, founded_year: f.founded_year,
-      student_count: f.student_count, profile_public: f.profile_public,
-      slug, ...latLng,
-    }).eq("id", userId).select().single();
+      location: f.location, bio: f.bio, slug, ...latLng,
+    };
+    // Only include extended fields if they exist on the form
+    if (f.website     !== undefined) updatePayload.website      = f.website;
+    if (f.facebook    !== undefined) updatePayload.facebook     = f.facebook;
+    if (f.instagram   !== undefined) updatePayload.instagram    = f.instagram;
+    if (f.logo_url    !== undefined) updatePayload.logo_url     = f.logo_url;
+    if (f.founded_year!== undefined) updatePayload.founded_year = f.founded_year;
+    if (f.student_count!==undefined) updatePayload.student_count= f.student_count;
+    if (f.profile_public!==undefined)updatePayload.profile_public=f.profile_public;
+
+    const { data, error } = await SB.from("orgs").update(updatePayload)
+      .eq("id", userId).select().single();
+    if (error) {
+      console.error("Profile save error:", error);
+      setMsg("⚠️ Save failed: " + (error.message || "Unknown error"));
+      setTimeout(() => setMsg(""), 4000);
+      setSaving(false);
+      return;
+    }
     if (data) {
       setOrg(o => ({ ...o, ...data }));
       setF(data);
@@ -9798,13 +9812,26 @@ function AppRoot(){
 
   const saveOrg = useCallback(async(o)=>{
     setOrg(o);
-    let update = {...o, id:user.id};
-    // Auto-geocode zipcode when saving profile
+    // Safe field list — only columns that exist on the orgs table
+    const safe = {
+      name:o.name, type:o.type, email:o.email, phone:o.phone,
+      location:o.location, bio:o.bio, zipcode:o.zipcode, state:o.state,
+      website:o.website, facebook:o.facebook, instagram:o.instagram,
+      logo_url:o.logo_url, founded_year:o.founded_year,
+      student_count:o.student_count, slug:o.slug,
+      profile_public:o.profile_public,
+    };
+    // Remove undefined values
+    Object.keys(safe).forEach(k => safe[k] === undefined && delete safe[k]);
+    // Auto-geocode zipcode when changed
     if(o.zipcode && o.zipcode.length===5 && o.zipcode!==org.zipcode){
-      const coords = await zipToCoords(o.zipcode);
-      if(coords){ update.lat=coords.lat; update.lng=coords.lng; update.state=update.state||coords.state; }
+      try {
+        const coords = await zipToCoords(o.zipcode);
+        if(coords){ safe.lat=coords.lat; safe.lng=coords.lng; safe.state=safe.state||coords.state; }
+      } catch(e) {}
     }
-    await SB.from("orgs").upsert(update);
+    const { error } = await SB.from("orgs").update(safe).eq("id", user.id);
+    if(error) console.error("saveOrg error:", error.message);
   },[user,org.zipcode]);
 
   const signOut = async()=>{ await SB.auth.signOut(); };
