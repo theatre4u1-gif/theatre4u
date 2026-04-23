@@ -2472,10 +2472,10 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:3000,
       display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
       onClick={e=>e.target===e.currentTarget&&onClose()}>
-      {/* Pro gate — show upgrade prompt for free accounts */}
+
       {plan==="free" ? (
-        <div style={{background:"var(--bg2,#15121b)",border:"1px solid rgba(212,168,67,.3)",borderRadius:14,
-          padding:32,maxWidth:420,width:"100%",textAlign:"center"}}>
+        <div style={{background:"var(--bg2,#15121b)",border:"1px solid rgba(212,168,67,.3)",
+          borderRadius:14,padding:32,maxWidth:420,width:"100%",textAlign:"center"}}>
           <div style={{fontSize:36,marginBottom:12}}>🔒</div>
           <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,marginBottom:8,color:"var(--gold)"}}>
             Pro Required for Exchange
@@ -2495,164 +2495,169 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
           </p>
         </div>
       ) : (
-      <div style={{width:"100%",maxWidth:500,background:"var(--cream)",border:"1px solid var(--border)",
-        borderRadius:14,overflow:"hidden",boxShadow:"0 12px 48px rgba(0,0,0,.4)",animation:"su .2s ease"}}>
-        {/* Header */}
-        <div style={{padding:"14px 18px",borderBottom:"1px solid var(--border)",
-          background:"var(--parch)",display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
-          <div>
-            <div style={{fontFamily:"'Playfair Display',serif",fontSize:17,fontWeight:700}}>Request Item</div>
-            <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>{item.name}</div>
-          </div>
-          <button onClick={onClose} style={{background:"none",border:"1px solid var(--border)",
-            color:"var(--muted)",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>✕</button>
-        </div>
+        <div style={{width:"100%",maxWidth:500,background:"var(--cream)",border:"1px solid var(--border)",
+          borderRadius:14,overflow:"hidden",boxShadow:"0 12px 48px rgba(0,0,0,.4)",animation:"su .2s ease",maxHeight:"90vh",overflowY:"auto"}}>
 
-        <div style={{padding:18,display:"flex",flexDirection:"column",gap:14}}>
-          {/* Type selector if multiple options */}
-          {isBoth && (
+          {/* Header */}
+          <div style={{padding:"14px 18px",borderBottom:"1px solid var(--border)",
+            background:"var(--parch)",display:"flex",alignItems:"flex-start",justifyContent:"space-between"}}>
             <div>
-              <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:6}}>Request Type</label>
-              <div style={{display:"flex",gap:8}}>
-                {[["rent","🔑 Rent"],["buy","🛒 Buy"]].map(([v,l])=>(
-                  <button key={v} onClick={()=>setType(v)}
-                    style={{flex:1,padding:"8px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",
-                      fontWeight:700,fontSize:13,border:"2px solid",transition:"all .15s",
-                      background:type===v?typeColor[v]:"transparent",
-                      color:type===v?"#fff":"var(--muted)",
-                      borderColor:type===v?typeColor[v]:"var(--border)"}}>
-                    {l}
-                  </button>
-                ))}
-              </div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:17,fontWeight:700}}>Request Item</div>
+              <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>{item.name}</div>
             </div>
-          )}
-
-          {/* Date range — shown for rent and loan */}
-          {needsDates && (
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              <div>
-                <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Start Date</label>
-                <input type="date" value={start} min={today}
-                  onChange={e=>setStart(e.target.value)}
-                  style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--border)",
-                    borderRadius:7,padding:"8px 10px",fontSize:13,fontFamily:"'Raleway',sans-serif",
-                    color:"var(--ink)",outline:"none",boxSizing:"border-box"}}/>
-              </div>
-              <div>
-                <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>End Date</label>
-                <input type="date" value={end} min={start||today}
-                  onChange={e=>setEnd(e.target.value)}
-                  style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--border)",
-                    borderRadius:7,padding:"8px 10px",fontSize:13,fontFamily:"'Raleway',sans-serif",
-                    color:"var(--ink)",outline:"none",boxSizing:"border-box"}}/>
-              </div>
-            </div>
-          )}
-
-          {/* Conflict warning */}
-          {conflict && (
-            <div style={{background:"rgba(194,24,91,.08)",border:"1px solid rgba(194,24,91,.25)",
-              borderRadius:8,padding:"10px 12px",fontSize:12,color:"#c2185b",display:"flex",gap:8}}>
-              <span>⚠️</span>
-              <span>These dates overlap with an existing booking. The owner may not be able to fulfil this request — you can still send it and they will confirm availability.</span>
-            </div>
-          )}
-
-          {/* Quantity */}
-          <div>
-            <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Quantity Needed</label>
-            <input type="number" value={qty} min={1} max={item.qty||99}
-              onChange={e=>setQty(Math.max(1,parseInt(e.target.value)||1))}
-              style={{width:80,background:"var(--parch)",border:"1.5px solid var(--border)",
-                borderRadius:7,padding:"8px 10px",fontSize:13,fontFamily:"'Raleway',sans-serif",
-                color:"var(--ink)",outline:"none"}}/>
-            <span style={{fontSize:12,color:"var(--muted)",marginLeft:8}}>{item.qty} available</span>
+            <button onClick={onClose} style={{background:"none",border:"1px solid var(--border)",
+              color:"var(--muted)",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontFamily:"inherit",
+              fontSize:18,lineHeight:1}}>×</button>
           </div>
 
-          {/* Pricing summary */}
-          {(item.rent>0||item.sale>0||item.deposit>0) && (
-            <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:8,padding:"10px 14px",fontSize:13}}>
-              {type==="rent"&&item.rent>0&&<div>Rental rate: <strong style={{color:"var(--cog)"}}>{fmt$(item.rent)}/week</strong></div>}
-              {type==="buy" &&item.sale>0&&<div>Sale price:  <strong style={{color:"var(--cog)"}}>{fmt$(item.sale)}</strong></div>}
-              {type==="loan"&&<div>Free loan{item.deposit>0?` · Deposit: `+fmt$(item.deposit):""}</div>}
-              {type==="loan"&&item.loan_period&&<div style={{color:"var(--muted)",fontSize:12,marginTop:2}}>Loan period: {item.loan_period} week{item.loan_period!==1?"s":""}</div>}
-            </div>
-          )}
-
-          {/* Credits toggle — only for rent/buy, only if user has credits */}
-          {myCredits > 0 && type !== "loan" && (item.rent > 0 || item.sale > 0) && (
-            <div style={{background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.25)",borderRadius:10,padding:"12px 14px"}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:useCredits?10:0}}>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:20}}>🪙</span>
-                  <div>
-                    <div style={{fontWeight:700,fontSize:13,color:"var(--gold)"}}>Apply Stage Points</div>
-                    <div style={{fontSize:11,color:"var(--muted)"}}>You have {myCredits.toLocaleString()} credits available</div>
-                  </div>
+          <div style={{padding:18,display:"flex",flexDirection:"column",gap:14}}>
+            {/* Type selector */}
+            {isBoth && (
+              <div>
+                <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:6}}>Request Type</label>
+                <div style={{display:"flex",gap:8}}>
+                  {[["rent","🔑 Rent"],["buy","🛒 Buy"]].map(([v,l])=>(
+                    <button key={v} onClick={()=>setType(v)}
+                      style={{flex:1,padding:"8px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",
+                        fontWeight:700,fontSize:13,border:"2px solid",transition:"all .15s",
+                        background:type===v?typeColor[v]:"transparent",
+                        color:type===v?"#fff":"var(--muted)",
+                        borderColor:type===v?typeColor[v]:"var(--border)"}}>
+                      {l}
+                    </button>
+                  ))}
                 </div>
-                <label style={{position:"relative",display:"inline-block",width:42,height:24,cursor:"pointer"}}>
-                  <input type="checkbox" checked={useCredits} onChange={e=>setUseCredits(e.target.checked)}
-                    style={{opacity:0,width:0,height:0}}/>
-                  <span style={{position:"absolute",inset:0,background:useCredits?"var(--green)":"var(--border)",borderRadius:12,transition:".25s"}}>
-                    <span style={{position:"absolute",height:18,width:18,left:useCredits?20:3,bottom:3,background:"#fff",borderRadius:"50%",transition:".25s"}}/>
-                  </span>
-                </label>
               </div>
-              {useCredits && creditAmt > 0 && (
-                <div style={{background:"rgba(0,0,0,.04)",borderRadius:7,padding:"8px 10px",fontSize:13}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                    <span style={{color:"var(--muted)"}}>Original price</span>
-                    <span style={{fontWeight:700}}>${type==="rent"?(item.rent||0).toFixed(2):(item.sale||0).toFixed(2)}{type==="rent"?"/wk":""}</span>
-                  </div>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:3,color:"var(--green)"}}>
-                    <span>Points applied ({creditAmt})</span>
-                    <span style={{fontWeight:700}}>−${creditAmt.toFixed(2)}</span>
-                  </div>
-                  <div style={{display:"flex",justifyContent:"space-between",paddingTop:6,borderTop:"1px solid var(--linen)"}}>
-                    <span style={{fontWeight:800}}>Cash due to owner</span>
-                    <span style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"var(--cog)"}}>${Math.max(0,(type==="rent"?(item.rent||0):(item.sale||0))-creditAmt).toFixed(2)}</span>
-                  </div>
-                  <div style={{fontSize:12,color:"var(--red)",fontWeight:600,marginTop:8,padding:"7px 10px",background:"rgba(139,26,42,.06)",border:"1px solid rgba(139,26,42,.15)",borderRadius:6,lineHeight:1.5}}>
-                    ⚠️ <strong>Payment responsibility:</strong> The cash balance above must be paid <strong>directly to the item owner</strong> outside of Theatre4u (e.g. check, Venmo, invoice). Theatre4u does not collect or transfer cash payments between organizations. By applying credits and submitting this request, you agree to pay this balance to the owner upon delivery or as otherwise arranged.
-                  </div>
+            )}
+
+            {/* Date range */}
+            {needsDates && (
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <div>
+                  <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Start Date</label>
+                  <input type="date" value={start} min={today}
+                    onChange={e=>setStart(e.target.value)}
+                    style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--border)",
+                      borderRadius:7,padding:"8px 10px",fontSize:13,fontFamily:"'Raleway',sans-serif",
+                      color:"var(--ink)",outline:"none",boxSizing:"border-box"}}/>
                 </div>
-              )}
-            </div>
-          )}
-          {/* Message */}
-          <div>
-            <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Message to Owner *</label>
-            <textarea value={msg} onChange={e=>setMsg(e.target.value)} rows={3}
-              placeholder={needsDates
-                ?"Hi! We're interested in this item for our Spring production. Is it available for those dates?"
-                :"Hi! We'd like to purchase this item. Is it still available?"}
-              style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--border)",
-                borderRadius:8,padding:"8px 11px",fontSize:13,fontFamily:"'Raleway',sans-serif",
-                color:"var(--ink)",outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
-          </div>
+                <div>
+                  <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>End Date</label>
+                  <input type="date" value={end} min={start||today}
+                    onChange={e=>setEnd(e.target.value)}
+                    style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--border)",
+                      borderRadius:7,padding:"8px 10px",fontSize:13,fontFamily:"'Raleway',sans-serif",
+                      color:"var(--ink)",outline:"none",boxSizing:"border-box"}}/>
+                </div>
+              </div>
+            )}
 
-          {err && <div style={{color:"var(--red)",fontSize:12,background:"rgba(194,24,91,.06)",
-            border:"1px solid rgba(194,24,91,.2)",borderRadius:6,padding:"8px 11px"}}>{err}</div>}
+            {/* Conflict warning */}
+            {conflict && (
+              <div style={{background:"rgba(194,24,91,.08)",border:"1px solid rgba(194,24,91,.25)",
+                borderRadius:8,padding:"10px 12px",fontSize:12,color:"#c2185b",display:"flex",gap:8}}>
+                <span>⚠️</span>
+                <span>These dates overlap with an existing booking. The owner may not be able to fulfil your request for these exact dates.</span>
+              </div>
+            )}
 
-          {/* Payment disclaimer — shown for all rentals and purchases */}
-          {paymentNote&&(
-            <div style={{fontSize:11.5,color:"var(--muted)",lineHeight:1.6,padding:"8px 11px",background:"var(--parch)",border:"1px solid var(--border)",borderRadius:7}}>
-              💳 <strong style={{color:"var(--ink)"}}>Payment note:</strong> {paymentNote}
+            {/* Quantity */}
+            <div>
+              <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Quantity</label>
+              <input type="number" value={qty} min={1} max={item.qty||99}
+                onChange={e=>setQty(Math.max(1,parseInt(e.target.value)||1))}
+                style={{width:80,background:"var(--parch)",border:"1.5px solid var(--border)",
+                  borderRadius:7,padding:"8px 10px",fontSize:13,fontFamily:"'Raleway',sans-serif",
+                  color:"var(--ink)",outline:"none"}}/>
+              <span style={{fontSize:12,color:"var(--muted)",marginLeft:8}}>{item.qty} available</span>
             </div>
-          )}
-          <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-            <button className="btn btn-o" onClick={onClose}>Cancel</button>
-            <button className="btn btn-g" onClick={submit} disabled={sending||!msg.trim()}>
-              {sending?"Sending…":"Send Request →"}
-            </button>
+
+            {/* Pricing summary */}
+            {(item.rent>0||item.sale>0||item.deposit>0) && (
+              <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:8,padding:"10px 12px",fontSize:13}}>
+                {type==="rent"&&item.rent>0&&<div>Rental rate: <strong style={{color:"var(--cog)"}}>{fmt$(item.rent)}/week</strong></div>}
+                {type==="buy" &&item.sale>0&&<div>Sale price:  <strong style={{color:"var(--cog)"}}>{fmt$(item.sale)}</strong></div>}
+                {type==="loan"&&<div>Free loan{item.deposit>0?` · Deposit: ${fmt$(item.deposit)}`:""}</div>}
+                {type==="loan"&&item.loan_period&&<div style={{color:"var(--muted)",fontSize:12,marginTop:2}}>Loan period: {item.loan_period} days</div>}
+                {platformFee>0&&<div style={{marginTop:4,fontSize:12,color:"var(--muted)"}}>8% platform fee: <strong>{fmt$(platformFee)}</strong> payable to Theatre4u</div>}
+              </div>
+            )}
+
+            {/* Stage Points toggle */}
+            {myCredits > 0 && type !== "loan" && (item.rent > 0 || item.sale > 0) && (
+              <div style={{background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.25)",borderRadius:8,padding:"10px 12px"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:useCredits&&creditAmt>0?10:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:20}}>🪙</span>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:13,color:"var(--gold)"}}>Apply Stage Points</div>
+                      <div style={{fontSize:11,color:"var(--muted)"}}>You have {myCredits.toLocaleString()} points available</div>
+                    </div>
+                  </div>
+                  <label style={{position:"relative",display:"inline-block",width:42,height:24,cursor:"pointer"}}>
+                    <input type="checkbox" checked={useCredits} onChange={e=>setUseCredits(e.target.checked)}
+                      style={{opacity:0,width:0,height:0}}/>
+                    <span style={{position:"absolute",inset:0,background:useCredits?"var(--green)":"var(--border)",borderRadius:12,transition:".25s"}}>
+                      <span style={{position:"absolute",height:18,width:18,left:useCredits?20:3,bottom:3,background:"#fff",borderRadius:"50%",transition:".25s"}}/>
+                    </span>
+                  </label>
+                </div>
+                {useCredits && creditAmt > 0 && (
+                  <div style={{background:"rgba(0,0,0,.04)",borderRadius:7,padding:"8px 10px",fontSize:13}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                      <span style={{color:"var(--muted)"}}>Original price</span>
+                      <span style={{fontWeight:700}}>${type==="rent"?(item.rent||0).toFixed(2):(item.sale||0).toFixed(2)}</span>
+                    </div>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:3,color:"var(--green)"}}>
+                      <span>Points applied ({creditAmt})</span>
+                      <span style={{fontWeight:700}}>−${creditAmt.toFixed(2)}</span>
+                    </div>
+                    <div style={{display:"flex",justifyContent:"space-between",paddingTop:6,borderTop:"1px solid var(--border)"}}>
+                      <span style={{fontWeight:800}}>Cash due to owner</span>
+                      <span style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"var(--cog)",fontWeight:700}}>${Math.max(0,(type==="rent"?item.rent:item.sale)-creditAmt).toFixed(2)}</span>
+                    </div>
+                    <div style={{fontSize:12,color:"var(--red)",fontWeight:600,marginTop:8,padding:"7px 10px",background:"rgba(194,24,91,.06)",borderRadius:6}}>
+                      ⚠️ <strong>Payment responsibility:</strong> The cash balance above must be paid <strong>directly to the item owner</strong> outside of Theatre4u. Artstracker LLC does not process or guarantee payments between organizations.
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Message */}
+            <div>
+              <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Message to Owner *</label>
+              <textarea value={msg} onChange={e=>setMsg(e.target.value)} rows={3}
+                placeholder={needsDates
+                  ?"Hi! We're interested in this item for our Spring production. Is it available for those dates?"
+                  :"Hi! We'd like to purchase this item. Is it still available?"}
+                style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--border)",
+                  borderRadius:8,padding:"8px 11px",fontSize:13,fontFamily:"'Raleway',sans-serif",
+                  color:"var(--ink)",outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+            </div>
+
+            {err && <div style={{color:"var(--red)",fontSize:12,background:"rgba(194,24,91,.06)",
+              border:"1px solid rgba(194,24,91,.2)",borderRadius:6,padding:"8px 11px"}}>{err}</div>}
+
+            {paymentNote && (
+              <div style={{fontSize:11.5,color:"var(--muted)",lineHeight:1.6,padding:"8px 11px",background:"var(--parch)",border:"1px solid var(--border)",borderRadius:7}}>
+                💳 <strong style={{color:"var(--ink)"}}>Payment note:</strong> {paymentNote}
+              </div>
+            )}
+
+            <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+              <button className="btn btn-o" onClick={onClose}>Cancel</button>
+              <button className="btn btn-g" onClick={submit} disabled={sending||!msg.trim()}>
+                {sending?"Sending…":"Send Request →"}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
       )}
+    </div>
   );
 }
+
 
 
 // ══════════════════════════════════════════════════════════════════════════════
