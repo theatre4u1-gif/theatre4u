@@ -163,6 +163,32 @@ const CATS = [
 const CAT   = Object.fromEntries(CATS.map(c=>[c.id,c]));
 const CAT_MAP = CAT; // alias used by PublicItemPage
 const CONDS = ["New","Excellent","Good","Fair","Poor","For Parts"];
+
+// ── Point earn rates by category (mirrors point_earn_rates DB table) ──────────
+const POINT_EARN_RATES = {
+  lighting: 50, sound: 50, sets: 40, costumes: 25, props: 20,
+  furniture: 20, effects: 20, fabrics: 15, makeup: 15,
+  scripts: 10, tools: 10, other: 15,
+};
+// Points: 1 point = $0.01 · 1,500 points = free Pro month · max balance 5,000
+const POINTS_PER_DOLLAR   = 1;       // rental earn rate
+const POINTS_FREE_MONTH   = 1500;    // points needed for a free month
+const POINTS_MAX_BALANCE  = 5000;    // cap per org
+const POINTS_EXPIRE_DAYS  = 365;     // points expire after 12 months
+const PLATFORM_FEE_PCT    = 0.08;    // 8% platform fee on Exchange transactions
+const POINTS_MIN_REDEEM   = 500;     // minimum points to redeem in one go
+
+// Onboarding milestone points (one-time, idempotent via DB function)
+const MILESTONE_POINTS = {
+  welcome_bonus:    { pts: 25,  label: "Welcome Bonus" },
+  profile_complete: { pts: 25,  label: "Profile Completed" },
+  items_10:         { pts: 25,  label: "10 Items Added" },
+  items_25_photos:  { pts: 50,  label: "25 Items with Photos" },
+  first_listing:    { pts: 15,  label: "First Exchange Listing" },
+  first_request:    { pts: 10,  label: "First Exchange Request" },
+  team_invite:      { pts: 15,  label: "Team Member Invited" },
+  referral_earn:    { pts: 50,  label: "Referral Bonus" },
+};
 const SIZES = ["XS","S","M","L","XL","XXL","One Size","N/A"];
 const AVAIL = ["In Stock","In Use","Checked Out","Being Repaired","Lost","Retired"];
 const MKT   = ["Not Listed","For Rent","For Sale","Rent or Sale","For Loan"];
@@ -1805,7 +1831,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
         <span style={{fontSize:13,color:atLimit?"var(--red)":"var(--gold)",fontWeight:600}}>
           {atLimit?"⚠️ Item limit reached — upgrade to add more items.":"⚡ "+items.length+"/50 items used on free plan."}
         </span>
-        <button className="btn btn-g" style={{padding:"5px 14px",fontSize:12}} onClick={()=>setUpgradeReason("Upgrade to Pro for unlimited inventory, Backstage Exchange access, Theatre Credits, and more.")}>Upgrade →</button>
+        <button className="btn btn-g" style={{padding:"5px 14px",fontSize:12}} onClick={()=>setUpgradeReason("Upgrade to Pro for unlimited inventory, Backstage Exchange access, Stage Points, and more.")}>Upgrade →</button>
       </div>
     )}
     <div style={{position:"relative"}}>
@@ -2335,7 +2361,7 @@ async function notifyRequest(type, requestId) {
 }
 
 // ── Request Form Modal ────────────────────────────────────────────────────────
-function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail, onClose, onSuccess }) {
+function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail, onClose, onSuccess, plan="free" }) {
   const today     = new Date().toISOString().slice(0,10);
   const isRent    = item.mkt === "For Rent" || item.mkt === "Rent or Sale";
   const isLoan    = item.mkt === "For Loan";
@@ -2355,7 +2381,7 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
   const [creditAmt, setCreditAmt] = useState(0);
   const needsDates = type !== "buy";
 
-  // Load availability blocks + my credit balance
+  // Load availability blocks + my point balance
   useEffect(()=>{
     SB.from("availability_blocks").select("*").eq("item_id", item.id)
       .then(({data})=>setBlocks(data||[]));
@@ -2388,6 +2414,9 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
     setSending(true); setErr("");
     const basePrice = type==="rent" ? item.rent : type==="loan" ? (item.deposit||0) : item.sale;
     const finalPrice = Math.max(0, basePrice - creditAmt);
+    // Platform fee: 8% on rental and sale only (not loans)
+    const platformFee = (type==="loan") ? 0 : Math.max(0, parseFloat((basePrice * PLATFORM_FEE_PCT).toFixed(2)));
+    const platformFeeCents = Math.round(platformFee * 100);
 
     // Spend credits atomically if using them
     if(creditAmt > 0 && useCredits) {
@@ -2413,11 +2442,20 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
       qty_requested:  qty,
       message:        msg.trim() + (creditAmt>0?`
 
-[${creditAmt} Theatre Credits applied — cash due: $${finalPrice.toFixed(2)}]`:""),
-      agreed_price:   finalPrice,
-      status:         "pending",
+[${creditAmt} Stage Points applied — cash due: $${finalPrice.toFixed(2)}]`:"") + (platformFee>0?`
+
+[8% platform fee: $${platformFee.toFixed(2)} payable to Theatre4u — instructions will follow by email]`:""),
+      agreed_price:        finalPrice,
+      platform_fee_cents:  platformFeeCents,
+      status:              "pending",
     }).select().single();
     if (error) { setErr(EM.requestSend.body); setSending(false); return; }
+    // Award first_request milestone points (one-time, idempotent)
+    SB.rpc("award_milestone_points", {
+      p_org_id: currentUserId, p_type: "first_request",
+      p_amount: MILESTONE_POINTS.first_request.pts,
+      p_desc: "First Exchange request sent"
+    }).catch(()=>{});
     notifyRequest("new_request", data.id);
     onSuccess?.();
     onClose();
@@ -2434,6 +2472,29 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:3000,
       display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
       onClick={e=>e.target===e.currentTarget&&onClose()}>
+      {/* Pro gate — show upgrade prompt for free accounts */}
+      {plan==="free" ? (
+        <div style={{background:"var(--bg2,#15121b)",border:"1px solid rgba(212,168,67,.3)",borderRadius:14,
+          padding:32,maxWidth:420,width:"100%",textAlign:"center"}}>
+          <div style={{fontSize:36,marginBottom:12}}>🔒</div>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,marginBottom:8,color:"var(--gold)"}}>
+            Pro Required for Exchange
+          </div>
+          <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.7,marginBottom:20}}>
+            Sending and receiving Exchange requests requires a Pro or District plan.
+            Upgrade to connect with nearby programs and start sharing resources.
+          </p>
+          <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+            <button className="btn btn-g" onClick={()=>{onClose();setTimeout(()=>window.__t4u_nav_upgrade?.(),100);}}>
+              Upgrade to Pro →
+            </button>
+            <button className="btn btn-o" onClick={onClose}>Maybe Later</button>
+          </div>
+          <p style={{fontSize:11,color:"var(--faint)",marginTop:12}}>
+            Pro: $12/mo · Unlimited inventory · Full Exchange access · Stage Points
+          </p>
+        </div>
+      ) : (<>
       <div style={{width:"100%",maxWidth:500,background:"var(--cream)",border:"1px solid var(--border)",
         borderRadius:14,overflow:"hidden",boxShadow:"0 12px 48px rgba(0,0,0,.4)",animation:"su .2s ease"}}>
         {/* Header */}
@@ -2526,7 +2587,7 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
                   <span style={{fontSize:20}}>🪙</span>
                   <div>
-                    <div style={{fontWeight:700,fontSize:13,color:"var(--gold)"}}>Apply Theatre Credits</div>
+                    <div style={{fontWeight:700,fontSize:13,color:"var(--gold)"}}>Apply Stage Points</div>
                     <div style={{fontSize:11,color:"var(--muted)"}}>You have {myCredits.toLocaleString()} credits available</div>
                   </div>
                 </div>
@@ -2545,7 +2606,7 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
                     <span style={{fontWeight:700}}>${type==="rent"?(item.rent||0).toFixed(2):(item.sale||0).toFixed(2)}{type==="rent"?"/wk":""}</span>
                   </div>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:3,color:"var(--green)"}}>
-                    <span>Credits applied ({creditAmt})</span>
+                    <span>Points applied ({creditAmt})</span>
                     <span style={{fontWeight:700}}>−${creditAmt.toFixed(2)}</span>
                   </div>
                   <div style={{display:"flex",justifyContent:"space-between",paddingTop:6,borderTop:"1px solid var(--linen)"}}>
@@ -2589,6 +2650,7 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
         </div>
       </div>
     </div>
+    </>)}
   );
 }
 
@@ -3477,7 +3539,7 @@ function Requests({ userId, orgName, orgEmail }) {
                               <span style={{fontSize:18}}>⚠️</span>
                               <div style={{flex:1}}>
                                 <div style={{fontWeight:800,fontSize:13,color:"var(--gold)"}}>Return date has passed</div>
-                                <div style={{fontSize:12,color:"var(--muted)"}}>Mark the item returned to release the calendar and earn your Theatre Credits.</div>
+                                <div style={{fontSize:12,color:"var(--muted)"}}>Mark the item returned to release the calendar and earn your Stage Points.</div>
                               </div>
                             </div>
                           )}
@@ -3493,7 +3555,7 @@ function Requests({ userId, orgName, orgEmail }) {
                             {isActive?"Processing…":"📦 Mark Item as Returned → Earn Credits"}
                           </button>
                           <div style={{textAlign:"center",fontSize:11,color:"var(--muted)",marginTop:5}}>
-                            🪙 You'll earn Theatre Credits when you confirm the return
+                            🪙 You'll earn Stage Points when you confirm the return
                           </div>
                         </div>
                       )}
@@ -6990,7 +7052,7 @@ function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool, allSch
             {[
               ["🔍","Browse Nearby","Find costumes, props, lighting and sound from programs in your area."],
               ["💰","Earn Revenue","List items for rent or sale and earn income for your program."],
-              ["🤝","Share Resources","Loan items to other programs and earn Theatre Credits in return."],
+              ["🤝","Share Resources","Loan items to other programs and earn Stage Points in return."],
             ].map(([icon,title,desc])=>(
               <div key={title} style={{padding:"14px",background:"var(--parch)",borderRadius:10,border:"1px solid var(--linen)",textAlign:"center"}}>
                 <div style={{fontSize:28,marginBottom:8}}>{icon}</div>
@@ -7052,7 +7114,7 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
     welcome_bonus:   "Welcome Bonus",    catalog_bonus:   "Catalog Milestone",
     rental_earn:     "Rental Completed", loan_earn:       "Loan Completed",
     early_return_bonus: "Early Return",  referral_earn:   "Referral Bonus",
-    spend_rental:    "Credits Applied",  spend_deposit:   "Deposit Covered",
+    spend_rental:    "Points Applied",  spend_deposit:   "Deposit Covered",
     admin_adjust:    "Admin Adjustment", expire:          "Credits Expired",
   };
 
@@ -7074,8 +7136,8 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
           <img src={usp(BG.dashboard, 1100, 270)} alt="Credits" loading="eager" />
           <div className="hero-fade" />
           <div className="hero-body">
-            <div className="hero-eyebrow">🪙 Theatre Economy</div>
-            <h1 className="hero-title" style={{ fontSize: 44 }}>Theatre Credits</h1>
+            <div className="hero-eyebrow">🪙 Stage Economy</div>
+            <h1 className="hero-title" style={{ fontSize: 44 }}>Stage Points</h1>
             <p className="hero-sub">Earn credits by sharing your inventory. Spend them to borrow what you need for less.</p>
           </div>
           <div className="hero-bar" />
@@ -7091,9 +7153,9 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
               <div style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", marginBottom: 6 }}>Your Balance</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
                 <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 64, color: "var(--gold)", lineHeight: 1 }}>{balance.toLocaleString()}</span>
-                <span style={{ fontSize: 18, color: "var(--muted)", fontWeight: 700 }}>credits</span>
+                <span style={{ fontSize: 18, color: "var(--muted)", fontWeight: 700 }}>points</span>
               </div>
-              <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>≈ ${balance.toFixed(2)} value toward future rentals</div>
+              <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>1 point = $0.01 · 1,500 points = free Pro month</div>
             </div>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               {[
@@ -7114,12 +7176,18 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
         {/* How to earn — always visible */}
         <div className="card card-p" style={{ marginBottom: 22, display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 12 }}>
           {[
-            { icon: "🤝", title: "Complete a Loan", earn: "+30 credits", note: "Lend items free. Item must be used 3+ days." },
-            { icon: "🔑", title: "Complete a Rental", earn: "+$1 = 1 credit", note: "Earn credits equal to the rental price." },
-            { icon: "📸", title: "10 Items w/ Photos", earn: "+50 credits", note: "One-time milestone for a quality catalog." },
-            { icon: "🎉", title: "Welcome Bonus", earn: "+25 credits", note: "Awarded when you join Pro or District." },
-            { icon: "🛒", title: "Spend on Rentals", earn: "Up to 50% off", note: "Apply credits when requesting any item." },
-            { icon: "🔒", title: "Cover a Deposit", earn: "100% deposit", note: "Use credits to cover the full deposit." },
+            { icon: "🎉", title: "Join & Welcome",      earn: "+25 pts",      note: "Awarded automatically on signup." },
+            { icon: "✅", title: "Complete Profile",    earn: "+25 pts",      note: "Add name, location, bio, and email." },
+            { icon: "📦", title: "Add 10 Items",        earn: "+25 pts",      note: "One-time milestone." },
+            { icon: "📸", title: "25 Items + Photos",   earn: "+50 pts",      note: "Quality catalog milestone." },
+            { icon: "🏪", title: "First Exchange Listing",earn: "+15 pts",    note: "List any item on the Exchange." },
+            { icon: "📨", title: "First Exchange Request",earn: "+10 pts",    note: "Send your first request to another program." },
+            { icon: "👥", title: "Invite a Team Member", earn: "+15 pts",     note: "Per member who signs in." },
+            { icon: "👋", title: "Refer a Program",     earn: "+50 pts",      note: "Per program that creates an account." },
+            { icon: "🤝", title: "Loan Completed",       earn: "+10–50 pts",  note: "Varies by item category. Lighting/Sound = 50 pts." },
+            { icon: "🔑", title: "Rental Completed",     earn: "+$1 = 1 pt",  note: "1 point per dollar of rental price." },
+            { icon: "🛒", title: "Exchange Discount", earn: "Up to 50% off", note: "Apply points when requesting any rental or purchase." },
+            { icon: "🎟️", title: "Free Pro Month",    earn: "1,500 pts",   note: "Redeem 1,500 points for one free month of Pro." },
           ].map(s => (
             <div key={s.title} style={{ padding: "12px 14px", background: "var(--parch)", borderRadius: 10, border: "1px solid var(--linen)" }}>
               <div style={{ fontSize: 22, marginBottom: 5 }}>{s.icon}</div>
@@ -7203,7 +7271,7 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
               { title: "Credit Value",
                 body: "1 credit = $1 of discount toward a rental or purchase. Credits have no cash value and cannot be refunded, transferred to another organization, or exchanged for money." },
               { title: "Expiry & Forfeiture",
-                body: "Credits do not expire as long as your Pro subscription is active. If your subscription lapses, credits are frozen and restored when you re-subscribe. Credits are permanently forfeited if your account is closed." },
+                body: "Points expire 12 months after they are earned. Your maximum balance is 5,000 points. Points can be redeemed for Exchange discounts (up to 50% of transaction value) or traded for a free Pro month at 1,500 points. Points have no cash value and cannot be transferred between accounts." },
               { title: "Fair Use",
                 body: "Theatre4u reserves the right to adjust or revoke credits in cases of abuse, fraudulent transactions, or violations of the Terms of Service. The admin_adjust transaction type will appear in your history if a correction is made." },
             ].map(r => (
@@ -7924,7 +7992,7 @@ function LandingPage({onSignIn, onSignUp}){
 
   const plans=[
     {name:"Free",price:"$0",period:"forever",color:"rgba(255,255,255,.15)",textColor:"rgba(255,255,255,.7)",features:["Up to 50 inventory items","QR labels & photos","Productions tracking","Browse Backstage Exchange","Community Board"],cta:"Get Started",primary:false},
-    {name:"Pro",price:"$12",period:"/month",annual:"$120/year",color:"linear-gradient(135deg,var(--gold),var(--goldd))",textColor:"#1a0f00",features:["Unlimited inventory","Full Backstage Exchange access","Theatre Credits","Reports & CSV export","Funding Tracker","Mobile app","Messages & requests"],cta:"Start Pro",primary:true},
+    {name:"Pro",price:"$12",period:"/month",annual:"$120/year",color:"linear-gradient(135deg,var(--gold),var(--goldd))",textColor:"#1a0f00",features:["Unlimited inventory","Full Backstage Exchange access","Stage Points","Reports & CSV export","Funding Tracker","Mobile app","Messages & requests"],cta:"Start Pro",primary:true},
     {name:"District",price:"$49",period:"/month",annual:"$500/year",color:"linear-gradient(135deg,#1565c0,#0d47a1)",textColor:"#fff",features:["Everything in Pro","Up to 6 school sites","District dashboard","Shared Backstage Exchange","District funding rollup","Priority support"],cta:"Start District",primary:false},
   ];
 
@@ -8782,28 +8850,14 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
         if (geo) latLng = { lat: geo.lat, lng: geo.lng };
       } catch { /* geocoding optional */ }
     }
-    const updatePayload = {
+    const { data, error } = await SB.from("orgs").update({
       name: f.name, type: f.type, email: f.email, phone: f.phone,
-      location: f.location, bio: f.bio, slug, ...latLng,
-    };
-    // Only include extended fields if they exist on the form
-    if (f.website     !== undefined) updatePayload.website      = f.website;
-    if (f.facebook    !== undefined) updatePayload.facebook     = f.facebook;
-    if (f.instagram   !== undefined) updatePayload.instagram    = f.instagram;
-    if (f.logo_url    !== undefined) updatePayload.logo_url     = f.logo_url;
-    if (f.founded_year!== undefined) updatePayload.founded_year = f.founded_year;
-    if (f.student_count!==undefined) updatePayload.student_count= f.student_count;
-    if (f.profile_public!==undefined)updatePayload.profile_public=f.profile_public;
-
-    const { data, error } = await SB.from("orgs").update(updatePayload)
-      .eq("id", userId).select().single();
-    if (error) {
-      console.error("Profile save error:", error);
-      setMsg("⚠️ Save failed: " + (error.message || "Unknown error"));
-      setTimeout(() => setMsg(""), 4000);
-      setSaving(false);
-      return;
-    }
+      location: f.location, bio: f.bio, website: f.website,
+      facebook: f.facebook, instagram: f.instagram,
+      logo_url: f.logo_url, founded_year: f.founded_year,
+      student_count: f.student_count, profile_public: f.profile_public,
+      slug, ...latLng,
+    }).eq("id", userId).select().single();
     if (data) {
       setOrg(o => ({ ...o, ...data }));
       setF(data);
@@ -8931,7 +8985,7 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
                 {f.founded_year && <span style={{ padding: "3px 10px", background: "rgba(212,168,67,.1)", color: "var(--gold)", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>Est. {f.founded_year}</span>}
                 {f.student_count && <span style={{ padding: "3px 10px", background: "rgba(82,199,132,.1)", color: "var(--green)", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>{f.student_count.toLocaleString()} students</span>}
                 {listed > 0 && <span style={{ padding: "3px 10px", background: "rgba(66,165,245,.1)", color: "#42a5f5", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>{listed} items listed</span>}
-                {plan !== "free" && <span style={{ padding: "3px 10px", background: "rgba(212,168,67,.15)", color: "var(--gold)", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>🪙 Accepts Theatre Credits</span>}
+                {plan !== "free" && <span style={{ padding: "3px 10px", background: "rgba(212,168,67,.15)", color: "var(--gold)", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>🪙 Accepts Stage Points</span>}
               </div>
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -9708,7 +9762,7 @@ function AppRoot(){
         .eq("owner_id", user.id)
         .eq("status", "pending");
       setPendingReqCount(reqCount || 0);
-      // Theatre Credits balance — loaded on-demand when Credits page is visited
+      // Stage Points balance — loaded on-demand when Credits page is visited
       // (removed from startup to reduce login query count)
     })();
   },[user]);
@@ -9812,26 +9866,13 @@ function AppRoot(){
 
   const saveOrg = useCallback(async(o)=>{
     setOrg(o);
-    // Safe field list — only columns that exist on the orgs table
-    const safe = {
-      name:o.name, type:o.type, email:o.email, phone:o.phone,
-      location:o.location, bio:o.bio, zipcode:o.zipcode, state:o.state,
-      website:o.website, facebook:o.facebook, instagram:o.instagram,
-      logo_url:o.logo_url, founded_year:o.founded_year,
-      student_count:o.student_count, slug:o.slug,
-      profile_public:o.profile_public,
-    };
-    // Remove undefined values
-    Object.keys(safe).forEach(k => safe[k] === undefined && delete safe[k]);
-    // Auto-geocode zipcode when changed
+    let update = {...o, id:user.id};
+    // Auto-geocode zipcode when saving profile
     if(o.zipcode && o.zipcode.length===5 && o.zipcode!==org.zipcode){
-      try {
-        const coords = await zipToCoords(o.zipcode);
-        if(coords){ safe.lat=coords.lat; safe.lng=coords.lng; safe.state=safe.state||coords.state; }
-      } catch(e) {}
+      const coords = await zipToCoords(o.zipcode);
+      if(coords){ update.lat=coords.lat; update.lng=coords.lng; update.state=update.state||coords.state; }
     }
-    const { error } = await SB.from("orgs").update(safe).eq("id", user.id);
-    if(error) console.error("saveOrg error:", error.message);
+    await SB.from("orgs").upsert(update);
   },[user,org.zipcode]);
 
   const signOut = async()=>{ await SB.auth.signOut(); };
@@ -10006,13 +10047,13 @@ function AppRoot(){
       ...(!isMember? [{ id:"funding",     label:"Funding Tracker", ico:"💰"  }] : []),
       // Prop 28 nav hidden — legacy data accessible via Funding Tracker migration banner
       { id:"profile",     label:"My Profile",  ico:"👤"       },
-      // Theatre Credits nav hidden — feature paused pending Exchange validation
+      // Stage Points nav hidden — feature paused pending Exchange validation
       
       ...(!isMember && plan === "district" ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
       ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
     ];
   })();
-  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Backstage Exchange", productions:"Productions", reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:"Theatre Credits", community:"Community Board" };
+  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Backstage Exchange", productions:"Productions", reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:"Stage Points", community:"Community Board" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicItemId) return <PublicItemPage itemId={publicItemId} />;
@@ -10136,7 +10177,7 @@ function AppRoot(){
                     {n.id==="marketplace"&& listed>0       && <span className="sb-badge">{listed}</span>}
                     {n.id==="productions"&& <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--gold)"}}>🎭</span>}
                     
-                    {n.id==="credits"    && creditBalance>0 && <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--gold)"}}>{creditBalance}</span>}
+                    {n.id==="points"    && creditBalance>0 && <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--gold)"}}>{creditBalance}</span>}
                   </div>
                 ))}
               </nav>
@@ -10225,8 +10266,8 @@ function AppRoot(){
               {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} userId={user?.id} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
                   {page==="district"    && plan==="district" && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool}/>}
                   {page==="community"   && <CommunityGate userId={user?.id} org={org} setOrg={setOrg} plan={plan}/>}
-                  {page==="credits"     && (plan!=="free"||isAdmin) && <CreditsPage userId={user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
-                  {page==="credits"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>Theatre Credits is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true}/></div>}
+                  {page==="points"     && (plan!=="free"||isAdmin) && <CreditsPage userId={user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
+                  {page==="points"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>Stage Points is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true}/></div>}
 
 
                   {page==="admin"       && isAdmin && <AdminDashboard currentUser={user}/>}
@@ -10532,7 +10573,7 @@ function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav }) {
               key:  "exchange",
               ico:  "🏪",
               title:"Backstage Exchange",
-              desc: "Browse items other programs are renting, selling, or loaning. List your own items to earn revenue or Theatre Credits. You control exactly which items appear — everything else stays invisible.",
+              desc: "Browse items other programs are renting, selling, or loaning. List your own items to earn revenue or Stage Points. You control exactly which items appear — everything else stays invisible.",
               val:  joinExchange,
               set:  setJoinExchange,
             },
