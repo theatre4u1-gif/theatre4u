@@ -2494,7 +2494,7 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
             Pro: $12/mo · Unlimited inventory · Full Exchange access · Stage Points
           </p>
         </div>
-      ) : (<>
+      ) : (
       <div style={{width:"100%",maxWidth:500,background:"var(--cream)",border:"1px solid var(--border)",
         borderRadius:14,overflow:"hidden",boxShadow:"0 12px 48px rgba(0,0,0,.4)",animation:"su .2s ease"}}>
         {/* Header */}
@@ -2650,7 +2650,7 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
         </div>
       </div>
     </div>
-    </>)}
+      )}
   );
 }
 
