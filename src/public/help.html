@@ -19,6 +19,8 @@ html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.6}
 a{color:var(--gold);text-decoration:none}
 a:hover{text-decoration:underline}
+
+/* ── Top nav ── */
 .topnav{background:var(--ink);padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.3)}
 .topnav .logo{display:flex;align-items:center;gap:10px;text-decoration:none}
 .topnav .logo-mark{width:34px;height:34px;background:linear-gradient(135deg,var(--gold2),var(--gold));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
@@ -29,6 +31,8 @@ a:hover{text-decoration:underline}
 .topnav-links a:hover{background:rgba(255,255,255,.1);color:#fff;text-decoration:none}
 .topnav-links .cta{background:var(--gold);color:var(--ink) !important;font-weight:700}
 .topnav-links .cta:hover{background:var(--gold2)}
+
+/* ── Hero ── */
 .hero{background:linear-gradient(135deg,var(--ink) 0%,#2a1a08 100%);padding:64px 32px 56px;text-align:center;position:relative;overflow:hidden}
 .hero::before{content:"🎭";position:absolute;font-size:300px;opacity:.04;top:-40px;left:50%;transform:translateX(-50%);pointer-events:none}
 .hero-eyebrow{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--gold2);margin-bottom:12px}
@@ -41,26 +45,38 @@ a:hover{text-decoration:underline}
 .hero-search input:focus{border-color:var(--gold2)}
 .hero-search button{background:var(--gold);border:none;border-radius:10px;padding:12px 20px;color:var(--ink);font-weight:700;font-size:15px;cursor:pointer;transition:background .15s;font-family:'DM Sans',sans-serif}
 .hero-search button:hover{background:var(--gold2)}
+
+/* ── Layout ── */
 .wrap{max-width:1200px;margin:0 auto;padding:0 28px}
 .page-body{display:grid;grid-template-columns:260px 1fr;gap:32px;padding:40px 0 80px;align-items:start}
+
+/* ── Sidebar nav ── */
 .help-nav{position:sticky;top:76px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
 .help-nav-section{padding:16px 16px 8px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--faint)}
 .help-nav a{display:flex;align-items:center;gap:8px;padding:9px 16px;font-size:13.5px;font-weight:500;color:var(--muted);border-left:3px solid transparent;transition:all .12s;text-decoration:none}
 .help-nav a:hover{color:var(--ink);background:var(--bg2)}
 .help-nav a.on{color:var(--gold);font-weight:700;border-left-color:var(--gold);background:rgba(196,146,42,.06)}
 .help-nav a .nav-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+
+/* ── Content area ── */
 .content{display:flex;flex-direction:column;gap:0}
 .section{scroll-margin-top:80px;margin-bottom:48px}
+
+/* ── Section headers ── */
 .sec-hero{background:linear-gradient(135deg,var(--ink),#2a1a08);border-radius:14px;padding:28px 28px 24px;margin-bottom:20px;position:relative;overflow:hidden}
 .sec-hero::after{content:attr(data-emoji);position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:64px;opacity:.15;pointer-events:none}
 .sec-hero h2{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:700;color:#fff;margin-bottom:6px}
 .sec-hero p{font-size:14px;color:rgba(255,255,255,.6);line-height:1.6;max-width:500px}
 .sec-hero .sec-badge{display:inline-block;padding:2px 8px;background:rgba(212,168,67,.2);color:var(--gold2);border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+
+/* ── Cards ── */
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);margin-bottom:14px}
 .card-hd{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--bg2)}
 .card-hd h3{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700}
 .card-hd .step-num{width:28px;height:28px;background:var(--gold);color:var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0}
 .card-bd{padding:20px}
+
+/* ── Steps ── */
 .steps{display:flex;flex-direction:column;gap:0}
 .step{display:flex;gap:16px;padding:14px 0;border-bottom:1px solid var(--border)}
 .step:last-child{border-bottom:none}
@@ -69,11 +85,15 @@ a:hover{text-decoration:underline}
 .step-body p{font-size:13.5px;color:var(--muted);line-height:1.6}
 .step-body .tip{margin-top:8px;padding:8px 12px;background:rgba(196,146,42,.08);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;font-size:12.5px;color:var(--amber)}
 .step-body .warn{margin-top:8px;padding:8px 12px;background:rgba(140,26,42,.06);border-left:3px solid var(--red);border-radius:0 6px 6px 0;font-size:12.5px;color:var(--red)}
+
+/* ── Feature grid ── */
 .feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:14px}
 .feat-card{padding:16px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow)}
 .feat-card .fi{font-size:26px;margin-bottom:8px}
 .feat-card h4{font-weight:700;font-size:14px;margin-bottom:4px}
 .feat-card p{font-size:12.5px;color:var(--muted);line-height:1.5}
+
+/* ── FAQ ── */
 .faq{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
 details.faq-item{border-bottom:1px solid var(--border)}
 details.faq-item:last-child{border-bottom:none}
@@ -85,29 +105,40 @@ details.faq-item summary .arr{font-size:18px;color:var(--faint);transition:trans
 details.faq-item[open] summary .arr{transform:rotate(90deg);color:var(--gold)}
 details.faq-item[open] summary{background:var(--bg2)}
 .faq-a{padding:10px 18px 16px;font-size:13.5px;color:var(--muted);line-height:1.7}
+
+/* ── Callout boxes ── */
 .callout{padding:14px 16px;border-radius:var(--rs);margin-bottom:14px;font-size:13.5px;line-height:1.6;display:flex;gap:10px;align-items:flex-start}
 .callout.info{background:rgba(26,79,160,.07);border:1px solid rgba(26,79,160,.2);color:var(--blue)}
 .callout.tip{background:rgba(45,110,58,.07);border:1px solid rgba(45,110,58,.2);color:var(--green)}
 .callout.warn{background:rgba(140,26,42,.06);border:1px solid rgba(140,26,42,.2);color:var(--red)}
 .callout.gold{background:rgba(196,146,42,.08);border:1px solid rgba(196,146,42,.25);color:var(--amber)}
 .callout .ci{font-size:18px;flex-shrink:0;margin-top:1px}
+
+/* ── Plan badges ── */
 .plan-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
 .pb-free{background:rgba(120,110,100,.12);color:var(--muted)}
 .pb-pro{background:rgba(196,146,42,.15);color:var(--amber)}
 .pb-district{background:rgba(26,79,160,.12);color:var(--blue)}
+
+/* ── Quick links grid ── */
 .quick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:32px}
 .quick-card{padding:16px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);text-align:center;cursor:pointer;transition:all .15s;text-decoration:none;display:block;box-shadow:var(--shadow)}
 .quick-card:hover{border-color:var(--gold);transform:translateY(-2px);box-shadow:0 6px 20px rgba(60,30,0,.12);text-decoration:none}
 .quick-card .qi{font-size:30px;margin-bottom:8px}
 .quick-card h4{font-size:13px;font-weight:700;color:var(--ink)}
 .quick-card p{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.4}
+
+/* ── Keyboard shortcut chips ── */
 kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:12px;font-family:monospace;font-weight:700;color:var(--ink)}
+
+/* ── Table ── */
 .tbl{width:100%;border-collapse:collapse;margin:10px 0;font-size:13.5px}
 .tbl th{background:var(--bg2);padding:9px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700;border-bottom:1px solid var(--border)}
 .tbl td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
 .tbl tr:last-child td{border-bottom:none}
 .tbl tr:hover td{background:rgba(196,146,42,.04)}
-.id-chip{display:inline-block;font-family:monospace;font-weight:800;font-size:13px;color:var(--amber);background:rgba(196,146,42,.1);padding:2px 8px;border-radius:4px;letter-spacing:.5px}
+
+/* ── Responsive ── */
 @media(max-width:860px){
   .page-body{grid-template-columns:1fr}
   .help-nav{position:static;display:none}
@@ -115,18 +146,10 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
   .topnav-links .hide-sm{display:none}
 }
 </style>
-  
-  <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K509H4V1KF"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-K509H4V1KF');
-    </script>
 </head>
 <body>
 
+<!-- Top Nav -->
 <nav class="topnav">
   <a href="https://theatre4u.org" class="logo">
     <div class="logo-mark">🎭</div>
@@ -140,151 +163,117 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
   </div>
 </nav>
 
+<!-- Hero -->
 <div class="hero">
   <div class="hero-eyebrow">Documentation & Tutorials</div>
   <h1>How to use <span>Theatre4u™</span></h1>
-  <p>Step-by-step guides for inventory, Backstage Exchange, Community Board, Funding Tracker, QR labels, storage locations, and more.</p>
+  <p>Step-by-step guides for every feature — inventory, Backstage Exchange, community board, Theatre Credits, Funding Tracker, and more.</p>
   <div class="hero-search">
-    <input type="text" id="searchInput" placeholder="Search guides… e.g. 'add item', 'QR code', 'locations'" oninput="doSearch(this.value)"/>
+    <input type="text" id="searchInput" placeholder="Search guides… e.g. 'add item', 'QR code', 'stage points'" oninput="doSearch(this.value)"/>
     <button onclick="doSearch(document.getElementById('searchInput').value)">Search</button>
   </div>
 </div>
 
 <div class="wrap">
+  <!-- Quick links -->
   <div style="padding:32px 0 0">
     <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--faint);margin-bottom:14px">Jump to a topic</div>
     <div class="quick-grid">
       <a href="#getting-started" class="quick-card"><div class="qi">🚀</div><h4>Getting Started</h4><p>Account setup & first steps</p></a>
       <a href="#inventory" class="quick-card"><div class="qi">📦</div><h4>Inventory</h4><p>Adding & managing items</p></a>
-      <a href="#locations" class="quick-card"><div class="qi">🗂️</div><h4>Storage Locations</h4><p>Organize by container or room</p></a>
-      <a href="#qr" class="quick-card"><div class="qi">🔲</div><h4>QR Labels</h4><p>Print & scan item tags</p></a>
       <a href="#marketplace" class="quick-card"><div class="qi">🏪</div><h4>Backstage Exchange</h4><p>Share, rent &amp; borrow items</p></a>
       <a href="#requests" class="quick-card"><div class="qi">📋</div><h4>Requests</h4><p>Borrowing & lending flow</p></a>
-      <a href="#community" class="quick-card"><div class="qi">🎭</div><h4>Community Board</h4><p>Connect with other programs</p></a>
-      <a href="#productions" class="quick-card"><div class="qi">🎬</div><h4>Productions</h4><p>Track shows & props</p></a>
+      <a href="#credits" class="quick-card"><div class="qi">🪙</div><h4>Theatre Credits</h4><p>Earn & spend credits</p></a>
+      <a href="#qr" class="quick-card"><div class="qi">🔲</div><h4>QR Labels</h4><p>Print & scan item tags</p></a>
+      <a href="#productions" class="quick-card"><div class="qi">🎭</div><h4>Productions</h4><p>Track shows & props</p></a>
       <a href="#funding" class="quick-card"><div class="qi">💰</div><h4>Funding Tracker</h4><p>Track grants &amp; expenditures</p></a>
       <a href="#mobile" class="quick-card"><div class="qi">📱</div><h4>Mobile App</h4><p>Install & use on phone</p></a>
       <a href="#district" class="quick-card"><div class="qi">🏢</div><h4>District</h4><p>Multi-school management</p></a>
       <a href="#csv" class="quick-card"><div class="qi">📊</div><h4>CSV Import</h4><p>Bulk upload inventory</p></a>
-      <a href="#team" class="quick-card"><div class="qi">👥</div><h4>Team Sharing</h4><p>Invite students & staff</p></a>
       <a href="#faq" class="quick-card"><div class="qi">❓</div><h4>FAQ</h4><p>Common questions</p></a>
     </div>
   </div>
 
   <div class="page-body">
+    <!-- Sidebar -->
     <aside class="help-nav" id="helpNav">
       <div class="help-nav-section">Basics</div>
       <a href="#getting-started" class="on"><span class="nav-icon">🚀</span>Getting Started</a>
       <a href="#inventory"><span class="nav-icon">📦</span>Inventory</a>
-      <a href="#locations"><span class="nav-icon">🗂️</span>Storage Locations</a>
-      <a href="#qr"><span class="nav-icon">🔲</span>QR Labels</a>
       <a href="#marketplace"><span class="nav-icon">🏪</span>Backstage Exchange</a>
       <a href="#requests"><span class="nav-icon">📋</span>Requests</a>
       <a href="#messages"><span class="nav-icon">💬</span>Messages</a>
       <div class="help-nav-section">Features</div>
-      <a href="#community"><span class="nav-icon">🎭</span>Community Board</a>
-      <a href="#productions"><span class="nav-icon">🎬</span>Productions</a>
+      <a href="#credits"><span class="nav-icon">🪙</span>Stage Points</a>
+      <a href="#qr"><span class="nav-icon">🔲</span>QR Labels</a>
+      <a href="#productions"><span class="nav-icon">🎭</span>Productions</a>
       <a href="#reports"><span class="nav-icon">📊</span>Reports</a>
       <a href="#funding"><span class="nav-icon">💰</span>Funding Tracker</a>
       <div class="help-nav-section">Platform</div>
-      <a href="#team"><span class="nav-icon">👥</span>Team Sharing</a>
       <a href="#mobile"><span class="nav-icon">📱</span>Mobile App</a>
       <a href="#district"><span class="nav-icon">🏢</span>District</a>
-      <a href="#csv"><span class="nav-icon">📂</span>CSV Import</a>
+      <a href="#csv"><span class="nav-icon">📊</span>CSV Import</a>
       <a href="#plans"><span class="nav-icon">⭐</span>Plans & Pricing</a>
       <a href="#faq"><span class="nav-icon">❓</span>FAQ</a>
     </aside>
 
+    <!-- Main content -->
     <main class="content">
 
-      <!-- ═══ GETTING STARTED ═══ -->
+      <!-- ═══════════════ GETTING STARTED ═══════════════ -->
       <section class="section" id="getting-started">
         <div class="sec-hero" data-emoji="🚀">
+          <div class="sec-badge">Start here</div>
           <h2>Getting Started</h2>
-          <p>From zero to a working inventory in under 10 minutes.</p>
+          <p>Set up your account, create your profile, and add your first item — in under 10 minutes.</p>
         </div>
 
-        <div class="callout gold"><div class="ci">🎭</div><div><strong>Leading Player?</strong> If you received a personal invite from Bob, you have a beta access code. Enter it on the signup screen to unlock your Leading Player status — no upgrade required during beta.</div></div>
-
         <div class="card">
-          <div class="card-hd"><h3>Creating Your Account</h3></div>
+          <div class="card-hd"><div class="step-num">1</div><h3>Create Your Account</h3></div>
           <div class="card-bd">
             <div class="steps">
-              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Go to theatre4u.org</h4><p>Click <strong>Get Started Free</strong> or <strong>Create Account</strong>. No credit card required.</p></div></div>
-              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Enter your organization name</h4><p>Use your program's full name — e.g. "Lincoln High Drama Dept." This appears on your listings and community posts.</p></div></div>
-              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Enter your access code (if you have one)</h4><p>If you were invited as a Leading Player beta member, enter your access code — e.g. <kbd>LEADINGPLAYER</kbd>. Leave blank if you don't have one.</p><div class="tip">✓ When a valid code is entered, you'll see a gold confirmation: "Leading Player access"</div></div></div>
-              <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Confirm your email</h4><p>Click the confirmation link sent to your email address. If it doesn't arrive within a few minutes, check your spam folder and ask your IT department to whitelist <strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="264e434a4a4966524e4347525443125308495441">[email&#160;protected]</a></strong>.</p></div></div>
-              <div class="step"><div class="step-n">5</div><div class="step-body"><h4>Complete the onboarding flow</h4><p>A short welcome overlay guides you through three options to get started: add items manually, import from a CSV spreadsheet, or load sample data to explore the platform.</p></div></div>
+              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Go to theatre4u.org</h4><p>Click <strong>Get Started Free</strong> on the landing page. Enter your email address and create a password.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Enter your organization name</h4><p>This is the name other programs will see in Backstage Exchange — use your school or theatre program's full name (e.g. "Lincoln High Drama Dept.").</p></div></div>
+              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Confirm your email</h4><p>Check your inbox for a confirmation email from <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ed8588818182ad9985888c999f88d998c3829f8a">[email&#160;protected]</a>. Click the link to activate your account.</p><div class="tip">💡 Check your spam folder if you don't see it within 2 minutes.</div></div></div>
+              <div class="step"><div class="step-n">4</div><div class="step-body"><h4>You're in!</h4><p>You'll land on the Dashboard. Your account starts on the free plan — you can explore inventory and basic features immediately.</p></div></div>
             </div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-hd"><h3>Setting Up Your Profile</h3></div>
+          <div class="card-hd"><div class="step-num">2</div><h3>Set Up Your Profile</h3></div>
           <div class="card-bd">
-            <p style="font-size:13.5px;color:var(--muted);margin-bottom:14px">Your profile helps other programs find you and makes your Exchange listings more trustworthy. Go to <strong>Profile</strong> in the sidebar to set it up anytime.</p>
-            <div class="feat-grid">
-              <div class="feat-card"><div class="fi">🏫</div><h4>Program Name</h4><p>Your school or organization's full name as it appears to other programs.</p></div>
-              <div class="feat-card"><div class="fi">📍</div><h4>City & State</h4><p>Used for proximity sorting in Community Board and Backstage Exchange.</p></div>
-              <div class="feat-card"><div class="fi">📝</div><h4>About</h4><p>A sentence or two about your program — what you produce, your department's focus.</p></div>
-              <div class="feat-card"><div class="fi">🎭</div><h4>Program Type</h4><p>School, Community Theatre, College, Professional, or District.</p></div>
+            <p style="font-size:14px;color:var(--muted);margin-bottom:14px">Your profile is visible to other programs in Backstage Exchange. A complete profile builds trust and makes collaboration easier.</p>
+            <div class="steps">
+              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Click Profile in the sidebar</h4><p>Find the Profile link at the bottom of the left sidebar navigation.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Fill in your details</h4><p>Add your organization type (School, Community Theatre, College, etc.), city, phone, and a short bio about your program. More information = more trust from other programs.</p></div></div>
+              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Save your changes</h4><p>Click <strong>Save Profile</strong>. Your profile is now live and visible to other Theatre4u™ members.</p></div></div>
             </div>
           </div>
         </div>
+
+        <div class="callout gold"><div class="ci">🪙</div><div>Once you're on a Pro plan, you'll automatically receive <strong>25 welcome credits</strong> — enough to cover half the cost of your first rental from another program.</div></div>
       </section>
 
-      <!-- ═══ INVENTORY ═══ -->
+      <!-- ═══════════════ INVENTORY ═══════════════ -->
       <section class="section" id="inventory">
         <div class="sec-hero" data-emoji="📦">
-          <h2>Inventory Management</h2>
-          <p>Catalog everything — costumes, props, lighting, sound, sets, scripts, and more.</p>
+          <div class="sec-badge">Core feature</div>
+          <h2>Managing Your Inventory</h2>
+          <p>Catalog everything your program owns — costumes, props, lighting, sound, sets, and more.</p>
         </div>
 
         <div class="card">
           <div class="card-hd"><h3>Adding an Item</h3></div>
           <div class="card-bd">
             <div class="steps">
-              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Click "Add Item" in the Inventory toolbar</h4><p>The gold button in the upper right of the Inventory page. Or click the FAB (floating gold button) on mobile.</p></div></div>
-              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Fill in the item details</h4><p>Name, category, condition, size, quantity, and availability are the core fields. Notes are great for production history or care instructions.</p><div class="tip">💡 Item ID is assigned automatically — e.g. <span class="id-chip">COST-001</span> for your first costume. You don't need to enter it.</div></div></div>
-              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Add a photo</h4><p>Tap the photo area to upload from your device. One clear photo is worth a thousand words when you're searching for a specific piece at midnight before opening night.</p></div></div>
-              <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Assign a storage location (optional)</h4><p>If you've set up storage locations, select one from the dropdown — e.g. "Costume Closet A" or "Storage Container 1". This lets you browse all items in a container later.</p></div></div>
-              <div class="step"><div class="step-n">5</div><div class="step-body"><h4>Set Backstage Exchange status (optional)</h4><p>Choose Not Listed, For Rent, For Sale, For Loan, or Rent or Sale. If you haven't joined Backstage Exchange yet, a yellow notice will appear — the item won't be visible to other programs until you join.</p></div></div>
-              <div class="step"><div class="step-n">6</div><div class="step-body"><h4>Save</h4><p>Click "Add Item." The item appears immediately in your inventory with its auto-assigned ID.</p></div></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-hd"><h3>Item IDs — <span class="id-chip">COST-001</span> Format</h3></div>
-          <div class="card-bd">
-            <p style="font-size:13.5px;color:var(--muted);margin-bottom:14px">Every item in Theatre4u gets a human-readable ID automatically assigned when it's added. The prefix tells you the category at a glance.</p>
-            <table class="tbl">
-              <thead><tr><th>Prefix</th><th>Category</th><th>Example</th></tr></thead>
-              <tbody>
-                <tr><td><span class="id-chip">COST</span></td><td>Costumes</td><td>COST-001, COST-047</td></tr>
-                <tr><td><span class="id-chip">PROP</span></td><td>Props</td><td>PROP-003</td></tr>
-                <tr><td><span class="id-chip">SET</span></td><td>Sets & Scenery</td><td>SET-012</td></tr>
-                <tr><td><span class="id-chip">LITE</span></td><td>Lighting</td><td>LITE-008</td></tr>
-                <tr><td><span class="id-chip">SOND</span></td><td>Sound Equipment</td><td>SOND-002</td></tr>
-                <tr><td><span class="id-chip">SCRP</span></td><td>Scripts & Music</td><td>SCRP-005</td></tr>
-                <tr><td><span class="id-chip">MKUP</span></td><td>Makeup & Wigs</td><td>MKUP-001</td></tr>
-                <tr><td><span class="id-chip">FURN</span></td><td>Stage Furniture</td><td>FURN-004</td></tr>
-                <tr><td><span class="id-chip">FABR</span></td><td>Fabrics & Drapes</td><td>FABR-002</td></tr>
-                <tr><td><span class="id-chip">TOOL</span></td><td>Tools & Hardware</td><td>TOOL-006</td></tr>
-                <tr><td><span class="id-chip">EFCT</span></td><td>Special Effects</td><td>EFCT-001</td></tr>
-              </tbody>
-            </table>
-            <div class="callout tip" style="margin-top:8px"><div class="ci">🔍</div><div>You can search by ID prefix — typing <strong>COST</strong> in the search bar finds all costumes. Typing <strong>PROP-0</strong> narrows it to early prop entries.</div></div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-hd"><h3>Inventory Views: Grid, Table, and Locations</h3></div>
-          <div class="card-bd">
-            <div class="feat-grid">
-              <div class="feat-card"><div class="fi">⊞</div><h4>Grid View</h4><p>Photo-forward cards showing item name, ID, condition, quantity, and market status. Best for browsing.</p></div>
-              <div class="feat-card"><div class="fi">☰</div><h4>Table View</h4><p>Compact row format for scanning large inventories quickly. Sortable, with inline edit and delete.</p></div>
-              <div class="feat-card"><div class="fi">📦</div><h4>Locations View</h4><p>Browse by storage location — see everything in Container 1, Costume Closet A, etc. Full details below.</p></div>
+              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Click the + Add Item button</h4><p>Find this in the top-right of the Inventory page, or use the gold button on the Dashboard.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Enter the item name</h4><p>Be specific — instead of "Dress" use "Victorian Ball Gown — Blue, Size M". This makes it searchable by other programs in Backstage Exchange.</p></div></div>
+              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Choose a category</h4><p>Pick from Costumes, Props, Sets & Scenery, Lighting, Sound Equipment, Scripts & Music, Makeup & Wigs, Stage Furniture, Fabrics & Drapes, Tools & Hardware, Special Effects, or Other.</p></div></div>
+              <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Set condition, size, and quantity</h4><p>Condition options: New, Excellent, Good, Fair, Poor, For Parts. Be honest — inaccurate condition leads to disputes when items are exchanged.</p></div></div>
+              <div class="step"><div class="step-n">5</div><div class="step-body"><h4>Add photos (highly recommended)</h4><p>Upload up to 5 photos per item. Items with photos receive significantly more Exchange requests. Drag photos from your computer or tap to browse.</p><div class="tip">📸 After 10 items with photos, you earn <strong>50 Stage Points</strong> automatically.</div></div></div>
+              <div class="step"><div class="step-n">6</div><div class="step-body"><h4>Set availability and location</h4><p>Location is where the item physically lives (e.g. "Costume Closet B", "Scene Shop"). Availability status helps you track what's in use.</p></div></div>
+              <div class="step"><div class="step-n">7</div><div class="step-body"><h4>Set Backstage Exchange status (optional)</h4><p>Choose Not Listed, For Rent, For Sale, Rent or Sale, or For Loan. If listing, enter the price. See the Backstage Exchange section for more detail.</p></div></div>
             </div>
           </div>
         </div>
@@ -292,155 +281,74 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
         <div class="card">
           <div class="card-hd"><h3>Searching & Filtering</h3></div>
           <div class="card-bd">
-            <p style="font-size:13.5px;color:var(--muted);margin-bottom:12px">The search bar matches against item name, notes, location text, tags, and item ID. Filters let you narrow by category, condition, availability, and market status.</p>
-            <div class="callout tip"><div class="ci">💡</div><div>Use tags to group items by production — add a tag like <strong>hamilton</strong> to everything used in Hamilton, then filter by that tag before your next strike.</div></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ═══ STORAGE LOCATIONS ═══ -->
-      <section class="section" id="locations">
-        <div class="sec-hero" data-emoji="🗂️">
-          <h2>Storage Locations</h2>
-          <p>Create named locations — rooms, closets, rolling racks, storage containers — and know exactly where everything lives.</p>
-        </div>
-
-        <div class="card">
-          <div class="card-hd"><h3>Setting Up Locations</h3></div>
-          <div class="card-bd">
-            <div class="steps">
-              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Go to Inventory → 📦 Locations tab</h4><p>Click the Locations button in the view toggle at the top of the Inventory page (alongside Grid and Table).</p></div></div>
-              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Click "Add Location"</h4><p>Give the location a name — e.g. "Storage Container 1", "Costume Closet A", "Prop Room Shelf 3", "Upstage Right Rack".</p></div></div>
-              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Add a short code (optional)</h4><p>A 1–8 character code like <kbd>SC1</kbd> or <kbd>CCA</kbd>. This appears large on the printed QR label for quick visual identification — helpful when you have many bins.</p></div></div>
-              <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Print a QR label for the container</h4><p>Click the <strong>🖨 QR Label</strong> button on any location. Print it and stick it on the bin or door. Scanning it will eventually link to a public view of that container's contents.</p></div></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-hd"><h3>Assigning Items to Locations</h3></div>
-          <div class="card-bd">
-            <p style="font-size:13.5px;color:var(--muted);margin-bottom:14px">When adding or editing any item, a <strong>Assign to Location</strong> dropdown appears if you have locations defined. Selecting a location links the item structurally — not just as a text label.</p>
-            <div class="callout info"><div class="ci">ℹ️</div><div>Items assigned via the dropdown <em>and</em> items whose free-text Location field matches the location name both appear in the location browse view. So existing items with "Costume Closet A" in the location field will automatically appear under a location named "Costume Closet A."</div></div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-hd"><h3>Browsing a Location's Contents</h3></div>
-          <div class="card-bd">
-            <p style="font-size:13.5px;color:var(--muted);margin-bottom:12px">In the Locations tab, each location shows a live item count. Click the count link (e.g. "20 items →") to open a modal listing every item in that location — with its ID, category, condition, and quantity. You can click Edit directly from that view to update any item.</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- ═══ QR LABELS ═══ -->
-      <section class="section" id="qr">
-        <div class="sec-hero" data-emoji="🔲">
-          <h2>QR Code Labels</h2>
-          <p>Every item and storage location gets a scannable QR code. Stick them on bins, racks, and shelves.</p>
-        </div>
-
-        <div class="card">
-          <div class="card-hd"><h3>Printing an Item QR Label</h3></div>
-          <div class="card-bd">
-            <div class="steps">
-              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Open an item's detail view</h4><p>Click any item in Grid or Table view to open its detail panel.</p></div></div>
-              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Find the QR Code Label section</h4><p>Scroll to the QR section. The code is already generated — you'll see the item name and its ID (e.g. <span class="id-chip">COST-047</span>) alongside the scannable code.</p></div></div>
-              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Click Print or Save</h4><p><strong>Print</strong> opens a print-ready page with the item name, ID, and QR code. <strong>Save</strong> downloads the QR image as a PNG you can use in a label maker or Word document.</p><div class="tip">📱 The iPhone Camera app and standard Android camera apps both read Theatre4u QR codes instantly — no special app required.</div></div></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-hd"><h3>What's on the Printed Label</h3></div>
-          <div class="card-bd">
             <div class="feat-grid">
-              <div class="feat-card"><div class="fi">📝</div><h4>Item Name</h4><p>Full item name at the top of the label.</p></div>
-              <div class="feat-card"><div class="fi">🔖</div><h4>Item ID</h4><p>The COST-001 style ID in large amber text — readable at a glance without scanning.</p></div>
-              <div class="feat-card"><div class="fi">🔲</div><h4>QR Code</h4><p>Scans to the item's public detail page — category, condition, location, and photos.</p></div>
-              <div class="feat-card"><div class="fi">📍</div><h4>Location</h4><p>If a location is set, it appears on the label below the category.</p></div>
+              <div class="feat-card"><div class="fi">🔍</div><h4>Search Bar</h4><p>Search by item name, location, notes, or tags. Results update instantly as you type.</p></div>
+              <div class="feat-card"><div class="fi">🏷️</div><h4>Category Filter</h4><p>Filter by any of the 12 categories using the dropdown in the filter bar.</p></div>
+              <div class="feat-card"><div class="fi">📊</div><h4>Availability Filter</h4><p>View only In Stock, Checked Out, In Use, or other availability states.</p></div>
+              <div class="feat-card"><div class="fi">🏪</div><h4>Market Filter</h4><p>Filter to see only items listed for rent, sale, or loan.</p></div>
+              <div class="feat-card"><div class="fi">📋</div><h4>Grid or Table</h4><p>Switch between card grid (visual) and table view (data-dense) using the toggle.</p></div>
+              <div class="feat-card"><div class="fi">🏷️</div><h4>Tags</h4><p>Add custom tags to items (e.g. "period", "combat", "outdoor") and search by them.</p></div>
             </div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-hd"><h3>Location Container Labels</h3></div>
+          <div class="card-hd"><h3>Editing & Deleting Items</h3></div>
           <div class="card-bd">
-            <p style="font-size:13.5px;color:var(--muted);margin-bottom:12px">In the <strong>Locations</strong> tab, each location has its own <strong>🖨 QR Label</strong> button. The container label shows the location name, short code in large type, current item count, and a QR code. Print one for every bin, closet, and rack.</p>
-            <div class="callout tip"><div class="ci">💡</div><div>Use a Brother label printer or any label maker that accepts 4×6" prints. Many teachers print full-sheet labels and laminate them to the outside of plastic totes.</div></div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-hd"><h3>Print All QR Codes at Once</h3></div>
-          <div class="card-bd">
-            <p style="font-size:13.5px;color:var(--muted)">In <strong>Reports</strong>, click <strong>Print All QR</strong> to generate a printable sheet with QR labels for your entire inventory — useful at the start of a season or after a major acquisition.</p>
+            <div class="steps">
+              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Open an item</h4><p>Click any item card to open its detail view.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Click Edit</h4><p>The edit form opens with all current values pre-filled. Make your changes and click Save.</p></div></div>
+              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>To delete</h4><p>Click the Delete button in the item detail view. You'll be asked to confirm. Deletion is permanent.</p><div class="warn">⚠️ Deleting an item also removes it from any Productions it's assigned to.</div></div></div>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- ═══ BACKSTAGE EXCHANGE ═══ -->
+      <!-- ═══════════════ MARKETPLACE ═══════════════ -->
       <section class="section" id="marketplace">
         <div class="sec-hero" data-emoji="🏪">
-          <div class="sec-badge">Pro feature to post</div>
+          <div class="sec-badge">Pro feature</div>
           <h2>Backstage Exchange</h2>
-          <p>Browse items from other programs. List your own for rent, sale, or free loan. Keep the community's resources in circulation.</p>
+          <p>Share your items with other theatre programs — for rent, sale, or free loan.</p>
         </div>
 
-        <div class="callout info"><div class="ci">ℹ️</div><div><strong>Free plan users can browse</strong> the Exchange but cannot post items or send requests. A Pro or District plan is required to list items and initiate contact with other programs.</div></div>
+        <div class="callout info"><div class="ci">ℹ️</div><div>Browsing Backstage Exchange is available to all plans. Posting items and sending requests requires a <span class="plan-badge pb-pro">Pro</span> plan or higher.</div></div>
+        <div class="callout warn"><div class="ci">💳</div><div><strong>Payment Policy:</strong> Theatre4u™ records agreed prices and facilitates communication between programs — but <strong>does not process, collect, or hold cash payments</strong>. All cash payments are made directly between organizations outside of Theatre4u™. Both parties agree to arrange payment independently.</div></div>
 
         <div class="card">
-          <div class="card-hd"><h3>Joining Backstage Exchange</h3></div>
+          <div class="card-hd"><h3>Listing an Item</h3></div>
           <div class="card-bd">
-            <div class="steps">
-              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Click Backstage Exchange in the sidebar</h4><p>Pro and District users see a join screen on their first visit explaining exactly what gets shared and what stays private.</p></div></div>
-              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Review the privacy disclosure</h4><p>Only items you explicitly mark as For Rent, For Sale, For Loan, or Rent or Sale appear in the Exchange. Your other inventory, messages, and financial data are never visible to other programs.</p></div></div>
-              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Click "Join Backstage Exchange"</h4><p>You're in immediately. Your listed items become visible to other Theatre4u programs right away.</p></div></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="callout warn"><div class="ci">⚠️</div><div><strong>Important:</strong> Marking an item "For Rent" in inventory does <em>not</em> automatically make it visible to other programs. You must also join Backstage Exchange. If you see this reminder in the item form, visit the Exchange in the sidebar to join.</div></div>
-
-        <div class="card">
-          <div class="card-hd"><h3>Listing Your Items</h3></div>
-          <div class="card-bd">
-            <p style="font-size:13.5px;color:var(--muted);margin-bottom:12px">Open any item in Inventory and edit it. Under <strong>Backstage Exchange</strong>, change the listing status:</p>
+            <p style="font-size:14px;color:var(--muted);margin-bottom:14px">Any item in your inventory can be posted to Backstage Exchange. Edit the item and change its Exchange Status — you control exactly which items are shared.</p>
             <table class="tbl">
-              <thead><tr><th>Status</th><th>What it means</th></tr></thead>
+              <thead><tr><th>Status</th><th>What it means</th><th>Fields required</th></tr></thead>
               <tbody>
-                <tr><td><strong>Not Listed</strong></td><td>Private — only visible to your organization</td></tr>
-                <tr><td><strong>For Rent</strong></td><td>Available weekly at your set price</td></tr>
-                <tr><td><strong>For Sale</strong></td><td>Available to purchase outright</td></tr>
-                <tr><td><strong>Rent or Sale</strong></td><td>Either arrangement welcome</td></tr>
-                <tr><td><strong>For Loan</strong></td><td>Free loan with optional deposit; set the loan period in weeks</td></tr>
+                <tr><td><strong>Not Listed</strong></td><td>Only visible to you</td><td>None</td></tr>
+                <tr><td><strong>For Rent</strong></td><td>Other programs can request to borrow it for a weekly fee</td><td>Rental price per week</td></tr>
+                <tr><td><strong>For Sale</strong></td><td>You're selling the item outright</td><td>Sale price</td></tr>
+                <tr><td><strong>Rent or Sale</strong></td><td>Requester can choose which they want</td><td>Both prices</td></tr>
+                <tr><td><strong>For Loan</strong></td><td>Free to borrow — no charge</td><td>Optional deposit & loan period</td></tr>
               </tbody>
             </table>
+            <div class="callout gold" style="margin-top:12px"><div class="ci">🪙</div><div>Listing items For Loan is one of the best ways to earn Theatre Credits, even if you never charge cash for your items.</div></div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-hd"><h3>Requesting an Item from Another Program</h3></div>
+          <div class="card-hd"><h3>Browsing & Requesting Items</h3></div>
           <div class="card-bd">
             <div class="steps">
-              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Browse the Exchange and find an item</h4><p>Use search and category filters to find what you need.</p></div></div>
-              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Click "Request"</h4><p>Opens a form showing the item details, rental price or sale price, and a message field.</p></div></div>
-              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Choose dates and add a message</h4><p>Specify the dates you need the item and any relevant details about your production.</p></div></div>
-              <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Submit the request</h4><p>The item owner receives an email notification and can approve or decline from their Requests page.</p></div></div>
-              <div class="step"><div class="step-n">5</div><div class="step-body"><h4>Arrange payment directly with the owner</h4><p>Theatre4u™ records the agreed price — but <strong>cash payment happens directly between your organizations</strong> outside of Theatre4u™. Use a school check, Venmo, invoice, or whatever you both agree on.</p><div class="warn">⚠️ Theatre4u™ does not process, collect, or guarantee payments between organizations. Both parties are responsible for completing payment as agreed.</div></div></div>
+              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Open Backstage Exchange</h4><p>Click Backstage Exchange in the sidebar. You'll see all items posted by other programmes that are In Stock and available.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Filter by category, type, or proximity</h4><p>Use the filter bar to narrow by category or listing type (Rent / Loan / Sale). If you've set your location in Profile, you can filter by distance.</p></div></div>
+              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Click an item to request it</h4><p>Click the item card, then click <strong>Request Item</strong>. Select your dates, quantity, and write a message to the owner explaining your production and needs.</p></div></div>
+              <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Apply Stage Points (optional)</h4><p>If you have Stage Points, a gold toggle appears in the request form — apply up to 50% of the rental cost. The remainder is paid directly to the owner.</p></div></div>
+              <div class="step"><div class="step-n">5</div><div class="step-body"><h4>Wait for approval</h4><p>The owner receives an email notification and approves or declines your request. You'll be notified when they respond.</p></div></div>
+              <div class="step"><div class="step-n">6</div><div class="step-body"><h4>Arrange payment directly with the owner</h4><p>Theatre4u™ records the agreed price and facilitates the agreement — but <strong>cash payment is made directly between your organizations</strong> outside of Theatre4u™. Use a school check, Venmo, invoice, or whatever you both agree on. Coordinate payment details in the Messages thread.</p><div class="warn">⚠️ Theatre4u™ does not process, collect, or guarantee payments between organizations. Both parties are responsible for completing payment as agreed.</div></div></div>
             </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-hd"><h3>Leaving Backstage Exchange</h3></div>
-          <div class="card-bd">
-            <p style="font-size:13.5px;color:var(--muted)">You can leave Backstage Exchange at any time from the Exchange page or from Profile → Settings. Your items will immediately stop appearing to other programs. Your inventory and data are unaffected.</p>
           </div>
         </div>
       </section>
 
-      <!-- ═══ REQUESTS ═══ -->
+      <!-- ═══════════════ REQUESTS ═══════════════ -->
       <section class="section" id="requests">
         <div class="sec-hero" data-emoji="📋">
           <h2>Managing Requests</h2>
@@ -451,126 +359,236 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
           <div class="card-hd"><h3>Handling an Incoming Request (Owner)</h3></div>
           <div class="card-bd">
             <div class="steps">
-              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>You receive an email notification</h4><p>When someone requests one of your items, you get an email from <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="aac2cfc6c6c5eadec2cfcbded8cf9edf84c5d8cd">[email&#160;protected]</a> with the details.</p></div></div>
-              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Open Requests in the sidebar</h4><p>The red badge shows how many pending requests are waiting.</p></div></div>
-              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Review and Approve or Decline</h4><p>Click the request to see full details. Approve to accept — the requester is notified immediately. Decline with an optional reason if you're unavailable.</p></div></div>
-              <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Mark as Returned when done</h4><p>When the item comes back, click <strong>Mark Returned</strong>. This completes the transaction and updates the item's availability calendar.</p></div></div>
+              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>You receive an email notification</h4><p>When someone requests one of your items, you get an email from <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="09616c656566497d616c687d7b6c3d7c27667b6e">[email&#160;protected]</a> with the details.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Open Requests in the sidebar</h4><p>The red badge shows how many pending requests are waiting. Click Requests to see all incoming and outgoing requests.</p></div></div>
+              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Review the request</h4><p>Check the dates, quantity, message from the requester, and agreed price. Click the request to see full details.</p></div></div>
+              <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Approve or Decline</h4><p>Click <strong>Approve</strong> to accept. The requester is notified and the dates are blocked on the item's calendar. Click <strong>Decline</strong> (and optionally provide a reason) to reject it.</p></div></div>
+              <div class="step"><div class="step-n">5</div><div class="step-body"><h4>Mark as Returned when done</h4><p>When the item comes back, click <strong>Mark Returned</strong>. This completes the transaction, updates the item's availability, and triggers Theatre Credit earning for you.</p><div class="tip">🪙 Credits are only awarded after you mark an item as Returned.</div></div></div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- ═══ MESSAGES ═══ -->
+      <!-- ═══════════════ MESSAGES ═══════════════ -->
       <section class="section" id="messages">
         <div class="sec-hero" data-emoji="💬">
           <h2>Messages</h2>
           <p>Real-time chat with other programs about items and transactions.</p>
         </div>
         <div class="card"><div class="card-bd">
-          <p style="font-size:14px;color:var(--muted);margin-bottom:12px">Every approved request opens a conversation thread automatically between your program and the requester. You can also start a conversation directly from any item in Backstage Exchange by clicking <strong>Message</strong>.</p>
+          <p style="font-size:14px;color:var(--muted);margin-bottom:12px">Every time a request is approved, a conversation thread opens automatically between your program and the requester. You can also start a conversation directly from any item in Backstage Exchange by clicking <strong>Message</strong>.</p>
           <div class="feat-grid">
-            <div class="feat-card"><div class="fi">⚡</div><h4>Real-time</h4><p>Messages appear instantly — no need to refresh.</p></div>
-            <div class="feat-card"><div class="fi">🔔</div><h4>Email Notifications</h4><p>You'll receive an email when you get a new message while offline.</p></div>
-            <div class="feat-card"><div class="fi">🔢</div><h4>Unread Badge</h4><p>The sidebar shows a badge with your unread message count.</p></div>
+            <div class="feat-card"><div class="fi">⚡</div><h4>Real-time</h4><p>Messages appear instantly — no need to refresh the page.</p></div>
+            <div class="feat-card"><div class="fi">🔔</div><h4>Email Notifications</h4><p>If you're not online, you'll receive an email when you get a new message.</p></div>
+            <div class="feat-card"><div class="fi">🔢</div><h4>Unread Badge</h4><p>The sidebar shows a red badge with the count of unread messages.</p></div>
           </div>
         </div></div>
       </section>
 
-      <!-- ═══ COMMUNITY BOARD ═══ -->
-      <section class="section" id="community">
-        <div class="sec-hero" data-emoji="🎭">
-          <h2>Community Board</h2>
-          <p>A shared space for theatre programs to connect — post shows, auditions, resource shares, and more.</p>
+      <!-- ═══════════════ CREDITS ═══════════════ -->
+      <section class="section" id="credits">
+        <div class="sec-hero" data-emoji="🪙">
+          <div class="sec-badge">Pro &amp; District feature</div>
+          <h2>Stage Points</h2>
+          <p>Stage Points are Theatre4u's built-in reward system. Earn points by building your inventory, sharing items with other programs, and completing Exchange transactions. Spend them to reduce the cost of rentals — or save up for a free month of Pro.</p>
         </div>
 
-        <div class="callout info"><div class="ci">ℹ️</div><div>The Community Board is opt-in. Visit the Community section and click Join to participate. Your program name and city will appear on posts you make. Your inventory remains completely private.</div></div>
+        <div class="callout gold"><div class="ci">🪙</div><div><strong>Every Pro and District account starts with 25 Stage Points automatically.</strong> 1 point = $0.01 · 1,500 points = one free Pro month · Points expire after 12 months · Maximum 5,000 points per account.</div></div>
 
+        <!-- How to Earn -->
         <div class="card">
-          <div class="card-hd"><h3>Post Types</h3></div>
+          <div class="card-hd"><h3>How to Earn Stage Points</h3></div>
           <div class="card-bd">
-            <table class="tbl">
-              <thead><tr><th>Type</th><th>Use for</th></tr></thead>
+            <h4 style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px">Onboarding Milestones — one-time, awarded automatically</h4>
+            <table class="tbl" style="margin-bottom:20px">
+              <thead><tr><th>Action</th><th>Points</th><th>Notes</th></tr></thead>
               <tbody>
-                <tr><td>🎬 <strong>Upcoming Show</strong></td><td>Share production dates, venue, ticket links</td></tr>
-                <tr><td>🎤 <strong>Audition Notice</strong></td><td>Seeking cast or crew members</td></tr>
-                <tr><td>📸 <strong>Production Photos</strong></td><td>Share photos from recent shows (up to 6 images)</td></tr>
-                <tr><td>🔍 <strong>Item Wanted</strong></td><td>Looking for a specific prop, costume, or piece of equipment</td></tr>
-                <tr><td>🤝 <strong>Resource Share</strong></td><td>Offering resources, tips, templates, or useful materials to other programs</td></tr>
-                <tr><td>📢 <strong>Announcement</strong></td><td>News, updates, or anything else your community should know</td></tr>
+                <tr><td>🎉 Create Pro or District account</td><td><strong>+25</strong></td><td>Welcome bonus, automatic</td></tr>
+                <tr><td>✅ Complete your profile</td><td><strong>+25</strong></td><td>Add name, location, bio, and email</td></tr>
+                <tr><td>📦 Add 10 inventory items</td><td><strong>+25</strong></td><td>One-time catalog milestone</td></tr>
+                <tr><td>📸 Add 25 items with photos</td><td><strong>+50</strong></td><td>Quality catalog milestone</td></tr>
+                <tr><td>🏪 List your first Exchange item</td><td><strong>+15</strong></td><td>Any item listed For Rent, Sale, or Loan</td></tr>
+                <tr><td>📨 Send your first Exchange request</td><td><strong>+10</strong></td><td>Your first request to another program</td></tr>
+                <tr><td>👥 Invite a team member</td><td><strong>+15</strong></td><td>Per team member who signs in</td></tr>
+                <tr><td>👋 Refer another program</td><td><strong>+50</strong></td><td>Per program that creates an account</td></tr>
               </tbody>
             </table>
+
+            <h4 style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px">Exchange Activity — earned per transaction</h4>
+            <table class="tbl">
+              <thead><tr><th>Item Category</th><th>Loan Points Earned</th><th>Rental Points</th></tr></thead>
+              <tbody>
+                <tr><td>💡 Lighting / 🔊 Sound</td><td><strong>+50 pts</strong></td><td rowspan="8" style="vertical-align:middle;text-align:center"><strong>+1 pt per $1</strong><br><span style="font-size:11px;color:var(--muted)">of rental price</span></td></tr>
+                <tr><td>🏛️ Sets &amp; Scenery</td><td><strong>+40 pts</strong></td></tr>
+                <tr><td>👗 Costumes</td><td><strong>+25 pts</strong></td></tr>
+                <tr><td>🎭 Props / 🪑 Furniture / ✨ Effects</td><td><strong>+20 pts</strong></td></tr>
+                <tr><td>🧵 Fabrics / 💄 Makeup &amp; Wigs</td><td><strong>+15 pts</strong></td></tr>
+                <tr><td>📜 Scripts / 🔧 Tools</td><td><strong>+10 pts</strong></td></tr>
+                <tr><td>📦 Other</td><td><strong>+15 pts</strong></td></tr>
+              </tbody>
+            </table>
+            <div class="tip" style="margin-top:10px">🤝 Both the loaning program AND the requesting program earn points when a loan is completed. Lending is always rewarded.</div>
           </div>
         </div>
 
+        <!-- How to Spend -->
         <div class="card">
-          <div class="card-hd"><h3>Making a Post</h3></div>
+          <div class="card-hd"><h3>How to Spend Stage Points</h3></div>
           <div class="card-bd">
-            <div class="steps">
-              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Click Community in the sidebar</h4><p>If you haven't joined yet, you'll see the join screen first.</p></div></div>
-              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Click "+ Share Something"</h4><p>The gold button at the top of the Community Board.</p></div></div>
-              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Choose a post type and fill in the details</h4><p>Add a title, body, and any photos. Your program name and city appear automatically on the post.</p></div></div>
+            <div class="feat-grid" style="margin-bottom:18px">
+              <div class="feat-card">
+                <div class="fi">🛒</div>
+                <h4>Exchange Discount</h4>
+                <p>Apply up to 50% of the rental or purchase price using your points. 1 point = $0.01 off. Toggle appears automatically in the request form when you have points available.</p>
+              </div>
+              <div class="feat-card">
+                <div class="fi">🎟️</div>
+                <h4>Free Pro Month</h4>
+                <p>Redeem 1,500 points for one free month of Pro ($15 value). Navigate to Stage Points in the sidebar to redeem. Points are deducted immediately.</p>
+              </div>
             </div>
-            <div class="callout tip" style="margin-top:12px"><div class="ci">📍</div><div>Make sure your city is set in Profile for proximity sorting to work. Programs near you appear first in the board.</div></div>
+            <div class="steps">
+              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Open a rental or purchase request</h4><p>Go to Backstage Exchange and click on any item listed For Rent or For Sale.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Toggle "Apply Stage Points"</h4><p>A gold toggle appears if you have points. Enable it to see the discount applied — up to 50% of the price.</p></div></div>
+              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Submit your request</h4><p>The remaining cash balance (after points) is paid directly to the item owner. Theatre4u does not handle the cash transaction.</p><div class="tip">💡 Points are deducted when the request is submitted, not when it's accepted.</div></div></div>
+            </div>
+            <div class="callout warn" style="margin-top:14px"><div class="ci">💳</div><div><strong>Payment note:</strong> Stage Points reduce the agreed price on your request. The remaining cash balance is paid directly to the item owner outside of Theatre4u.</div></div>
           </div>
         </div>
 
+        <!-- Loan Economy -->
         <div class="card">
-          <div class="card-hd"><h3>Filtering by Region</h3></div>
+          <div class="card-hd"><h3>The Loan Economy — Give &amp; Receive</h3></div>
           <div class="card-bd">
-            <p style="font-size:13.5px;color:var(--muted)">Use the state/region dropdown at the top of the Community Board to filter posts by geography. "Nearby" shows programs within your proximity. You can also filter by post type to see only Audition Notices, Item Wanted posts, or Resource Shares.</p>
+            <p style="font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:14px">Loaning items is completely free for the requesting program — and <strong>both programs earn points</strong> when the loan is completed. List your items <strong>For Loan</strong> and build a stockpile of points to spend when you need costumes, lighting, or sound gear for your own productions.</p>
+            <div class="callout gold"><div class="ci">🤝</div><div><strong>Example:</strong> You loan a set of LED par cans (Lighting = 50 pts) to a nearby school. When they mark it returned, <em>both your program and theirs earn 50 Stage Points</em>. One loan = up to $1.00 in future discounts for each of you.</div></div>
+            <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-top:10px">Points awarded for loans are based on the item's category, not its value. High-value categories like Lighting and Sound earn the most because they're the hardest to access and most valuable to share.</p>
+          </div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="card">
+          <div class="card-hd"><h3>Frequently Asked Questions</h3></div>
+          <div class="card-bd">
+            <div class="faq-item"><div class="faq-q">Do points expire?</div><div class="faq-a">Yes — points expire 12 months after they are earned. Each batch of points tracks its own expiry date. Your maximum balance is 5,000 points at any time.</div></div>
+            <div class="faq-item"><div class="faq-q">Can I transfer points to another program?</div><div class="faq-a">No. Stage Points are tied to your organization account and cannot be transferred, gifted, or cashed out.</div></div>
+            <div class="faq-item"><div class="faq-q">What happens to my points if I cancel Pro?</div><div class="faq-a">Your points are frozen — not lost — while your subscription is inactive. They are restored when you resubscribe, as long as they haven't expired.</div></div>
+            <div class="faq-item"><div class="faq-q">When exactly are loan points awarded?</div><div class="faq-a">Points are awarded when the item owner marks the request as Returned. Both the loaning program and the borrowing program receive points at that moment.</div></div>
+            <div class="faq-item"><div class="faq-q">Can free-tier accounts earn points?</div><div class="faq-a">Stage Points are a Pro and District feature. Upgrade to Pro to start earning and spending points.</div></div>
           </div>
         </div>
       </section>
 
-      <!-- ═══ PRODUCTIONS ═══ -->
-      <section class="section" id="productions">
-        <div class="sec-hero" data-emoji="🎬">
-          <h2>Productions</h2>
-          <p>Track which items are assigned to which show. Build a production library over time.</p>
+      <!-- ═══════════════ QR LABELS ═══════════════ -->
+      <section class="section" id="qr">
+        <div class="sec-hero" data-emoji="🔲">
+          <h2>QR Labels</h2>
+          <p>Every item gets a unique QR code. Print it, stick it on the item or bin, and scan it instantly from any phone.</p>
         </div>
+
         <div class="card"><div class="card-bd">
-          <div class="feat-grid">
-            <div class="feat-card"><div class="fi">🎭</div><h4>Create a Production</h4><p>Go to Productions and click New Production. Add the show name, dates, and notes.</p></div>
-            <div class="feat-card"><div class="fi">📦</div><h4>Assign Items</h4><p>Link inventory items to a production — build a prop list, costume list, or full equipment manifest for each show.</p></div>
-            <div class="feat-card"><div class="fi">📁</div><h4>Production History</h4><p>Past productions stay in the system. Useful when remounting a show or tracking what you've produced.</p></div>
+          <div class="steps">
+            <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Open any item's detail view</h4><p>Click an item in Inventory. Scroll down to the QR Code section.</p></div></div>
+            <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Print or download the QR label</h4><p>Click <strong>Print</strong> to open a print-ready page, or <strong>Save</strong> to download the PNG image.</p></div></div>
+            <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Attach it to the item or storage bin</h4><p>Print on label paper and stick directly on costume bags, prop boxes, or equipment cases.</p></div></div>
+            <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Scan to look up any item instantly</h4><p>Use the Scan tab in the mobile app, or go to Inventory → QR Lookup (the scan icon). Point your camera at the label and the item opens immediately.</p></div></div>
+          </div>
+          <div class="callout tip" style="margin-top:14px"><div class="ci">✅</div><div>In Reports, click <strong>Print All QR Labels</strong> to generate a single printable page with labels for every item in your inventory — perfect for labeling day.</div></div>
+        </div></div>
+      </section>
+
+      <!-- ═══════════════ PRODUCTIONS ═══════════════ -->
+      <section class="section" id="productions">
+        <div class="sec-hero" data-emoji="🎭">
+          <h2>Backstage Team</h2>
+      <p>You can invite other people to help manage your program's inventory — costume directors, student stage managers, parent volunteers, and more. Each person gets their own login with a role that controls what they can do.</p>
+
+      <h3>Backstage Roles</h3>
+      <table style="width:100%;border-collapse:collapse;margin:12px 0 20px">
+        <tr style="background:#f5f0e8">
+          <th style="padding:8px 12px;text-align:left;border:1px solid #e0d8c8;font-size:13px">Role</th>
+          <th style="padding:8px 12px;text-align:left;border:1px solid #e0d8c8;font-size:13px">What They Can Do</th>
+        </tr>
+        <tr><td style="padding:8px 12px;border:1px solid #e0d8c8">🎬 <strong>Director</strong></td><td style="padding:8px 12px;border:1px solid #e0d8c8">Full access — the account owner</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #e0d8c8">📋 <strong>Stage Manager</strong></td><td style="padding:8px 12px;border:1px solid #e0d8c8">Add, edit, delete items · Funding Tracker · Backstage Exchange · Community</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #e0d8c8">🔧 <strong>Crew</strong></td><td style="padding:8px 12px;border:1px solid #e0d8c8">Add and edit items · Upload photos</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #e0d8c8">🎟 <strong>House</strong></td><td style="padding:8px 12px;border:1px solid #e0d8c8">View and look up items only — read-only</td></tr>
+      </table>
+
+      <h3>Inviting Someone by Email</h3>
+      <ol>
+        <li>Go to <strong>Settings → Your Backstage Team</strong>.</li>
+        <li>Enter their email, choose a role, and click <strong>Send Invite</strong>.</li>
+        <li>Copy the invite link and send it to them.</li>
+        <li>They click the link, create a free account, and are added to your team automatically.</li>
+      </ol>
+
+      <h3>Join Code — For Groups &amp; Students</h3>
+      <p>For larger groups, a join code is faster than individual email invites.</p>
+      <ol>
+        <li>Go to <strong>Settings → Your Backstage Team</strong>.</li>
+        <li>Click <strong>Generate Join Code</strong>. A code like <code>WHS-4K2</code> appears.</li>
+        <li>Share it via group text, write it on the whiteboard, or post the QR code in your space.</li>
+        <li>Students go to <strong>theatre4u.org/join</strong>, enter the code, and are placed in your inventory as Crew.</li>
+      </ol>
+      <p>Join codes expire after 30 days. Generate a new one each semester.</p>
+
+      <h3>Managing Your Team</h3>
+      <p>In <strong>Settings → Your Backstage Team</strong> you can change a member's role with the dropdown, or remove them with the × button. Only the Director can manage team members.</p>
+
+      <h2>Productions</h2>
+          <p>Create a show, assign items from your inventory, and track what's needed for each production.</p>
+        </div>
+
+        <div class="card"><div class="card-bd">
+          <div class="steps">
+            <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Click Productions in the sidebar</h4><p>Then click <strong>New Production</strong>.</p></div></div>
+            <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Enter show details</h4><p>Name your production, enter the show title, opening and closing dates, and choose a color for the calendar.</p></div></div>
+            <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Add items to the production</h4><p>Open the production, then click <strong>Add Item</strong>. Search your inventory and select items, setting how many are needed and their status (Planning, Confirmed, Acquired).</p></div></div>
+            <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Track status through the run</h4><p>Update item statuses as you acquire them. See at a glance what's confirmed and what you still need.</p></div></div>
+            <div class="step"><div class="step-n">5</div><div class="step-body"><h4>Request missing items from Backstage Exchange</h4><p>If you need an item you don't own, browse Backstage Exchange — other programs may have exactly what you need.</p></div></div>
           </div>
         </div></div>
       </section>
 
-      <!-- ═══ REPORTS ═══ -->
+      <!-- ═══════════════ REPORTS ═══════════════ -->
       <section class="section" id="reports">
         <div class="sec-hero" data-emoji="📊">
+          <div class="sec-badge">Pro feature</div>
           <h2>Reports</h2>
-          <p>Analyze your inventory and export data in a format you can actually use.</p>
+          <p>Analyze your inventory data and export it in formats ready for board reports, insurance, and CDE submissions.</p>
         </div>
+
         <div class="card"><div class="card-bd">
           <div class="feat-grid">
-            <div class="feat-card"><div class="fi">📈</div><h4>Category Breakdown</h4><p>Item counts and estimated value by category — good for grant applications and end-of-year reports.</p></div>
-            <div class="feat-card"><div class="fi">📋</div><h4>Condition Report</h4><p>See how much of your inventory is New, Good, Fair, or Poor — helps prioritize purchasing decisions.</p></div>
-            <div class="feat-card"><div class="fi">🏪</div><h4>Market Status</h4><p>How many items are listed, what's for rent vs. sale vs. loan.</p></div>
-            <div class="feat-card"><div class="fi">⬇️</div><h4>Export CSV</h4><p>Download your full inventory as a spreadsheet. Opens in Excel or Google Sheets. Includes all fields: name, category, condition, location, ID, and more.</p></div>
-            <div class="feat-card"><div class="fi">🖨️</div><h4>Print All QR</h4><p>Generates a printable sheet of QR labels for your entire inventory.</p></div>
+            <div class="feat-card"><div class="fi">📋</div><h4>Category Breakdown</h4><p>See how many items and their estimated value across all 12 categories.</p></div>
+            <div class="feat-card"><div class="fi">🔧</div><h4>Condition Report</h4><p>See the distribution of New, Excellent, Good, Fair, Poor items — useful for grant applications.</p></div>
+            <div class="feat-card"><div class="fi">📦</div><h4>Availability Report</h4><p>How many items are In Stock vs. Checked Out, In Use, or Being Repaired.</p></div>
+            <div class="feat-card"><div class="fi">🏪</div><h4>Backstage Exchange Summary</h4><p>How many items are posted for rent, sale, or loan vs. kept private.</p></div>
+            <div class="feat-card"><div class="fi">📥</div><h4>Export CSV</h4><p>Download your entire inventory as a CSV — compatible with Excel, Google Sheets, and CDE templates.</p></div>
+            <div class="feat-card"><div class="fi">🔲</div><h4>Print All QR Labels</h4><p>One click generates a printable page with QR labels for every single item.</p></div>
           </div>
         </div></div>
       </section>
 
-      <!-- ═══ FUNDING TRACKER ═══ -->
+      <!-- ═══════════════ PROP 28 ═══════════════ -->
       <section class="section" id="funding">
         <div class="sec-hero" data-emoji="💰">
-          <div class="sec-badge">Pro feature</div>
+          <div class="sec-badge">Pro</div>
           <h2>Funding Tracker</h2>
-          <p>Track grants, district allocations, booster income, and expenditures — for any funding source, any state.</p>
+          <p>Track every funding source your program receives — grants, district allocations, booster funds, earned income, and donations. Log expenditures against each source and export for your records.</p>
         </div>
 
-        <div class="callout gold"><div class="ci">📋</div><div><strong>Note:</strong> Theatre4u's Funding Tracker helps you organize and report data for your own records. Consult your district's business office for compliance determinations specific to your funding sources.</div></div>
+        <div class="callout info"><div class="ci">ℹ️</div><div>The Funding Tracker is private to your account — nothing is ever shared externally. All data is for your own tracking and reporting purposes.</div></div>
 
         <div class="card">
-          <div class="card-hd"><h3>Setting Up a Funding Source</h3></div>
+          <div class="card-hd"><h3>Adding a Funding Source</h3></div>
           <div class="card-bd">
             <div class="steps">
-              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Go to Funding in the sidebar</h4><p>Available on Pro and District plans.</p></div></div>
-              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Click "Add Funding Source"</h4><p>Choose the type: Grant, District Allocation, Booster/Fundraising, Earned Income, Donation, or Other.</p></div></div>
-              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Enter the funding details</h4><p>Amount awarded, fiscal year, and any notes. The tracker builds a running total of available vs. spent funds as you log purchases.</p></div></div>
+              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Open Funding Tracker in the sidebar</h4><p>Click 💰 Funding Tracker. You'll land on the Funding Sources tab.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Click + Add Funding Source</h4><p>Give the source a name (e.g. "Spring Grant 2025"), choose a type — Grant, District Allocation, Earned Income, Donation, Booster/PTA, or Other.</p></div></div>
+              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Enter the total amount</h4><p>Add the total amount allocated, the funder name, and fiscal year. Start and end dates are optional but helpful for multi-year grants.</p></div></div>
+              <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Save — the source appears in your tracker</h4><p>A progress bar shows spending vs. allocation as you log expenditures against it.</p></div></div>
             </div>
           </div>
         </div>
@@ -578,35 +596,39 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
         <div class="card">
           <div class="card-hd"><h3>Logging Expenditures</h3></div>
           <div class="card-bd">
-            <p style="font-size:13.5px;color:var(--muted);margin-bottom:12px">For each purchase, click <strong>Add Expenditure</strong> on a funding source. Enter the vendor, amount, date, category (Instruction, Equipment, Supplies, etc.), and a description. The tracker updates your remaining balance automatically.</p>
-            <div class="callout tip"><div class="ci">💡</div><div>Log purchases the same day you make them — it takes about 30 seconds and eliminates the year-end scramble to reconstruct spending from receipts.</div></div>
+            <div class="steps">
+              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Go to the Expenditures tab</h4><p>Click + Add Expenditure. You must have at least one active funding source before logging spending.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Select the funding source</h4><p>Choose which source this purchase is charged against.</p></div></div>
+              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Fill in the details</h4><p>Description (required), amount (required), date, category, and vendor. Save — it appears in your log and updates the source's progress bar.</p></div></div>
+            </div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-hd"><h3>Migrating from Prop 28 Tracking</h3></div>
+          <div class="card-hd"><h3>Reports &amp; Export</h3></div>
           <div class="card-bd">
-            <p style="font-size:13.5px;color:var(--muted)">If you previously used Theatre4u's Prop 28 tracking tool, a migration option is available in the Prop 28 section of the sidebar. It moves your existing purchase records into the Funding Tracker as a Grant funding source. Your original data is preserved.</p>
+            <p style="font-size:14px;color:var(--muted);margin-bottom:14px">The <strong>By Source</strong> tab gives a breakdown of spending per funding source — total spent, remaining balance, and a category breakdown. Click <strong>Export CSV</strong> to download a full expenditure report for your records.</p>
+            <div class="callout tip"><div class="ci">💡</div><div>The progress bar on each source turns red when you've spent over 90% of the allocation — an early warning before you go over budget.</div></div>
           </div>
         </div>
       </section>
 
-      <!-- ═══ MOBILE ═══ -->
+      <!-- ═══════════════ MOBILE APP ═══════════════ -->
       <section class="section" id="mobile">
         <div class="sec-hero" data-emoji="📱">
+          <div class="sec-badge">Pro feature</div>
           <h2>Mobile App</h2>
-          <p>Add items by photo, scan QR codes, and check your inventory from anywhere — no App Store required.</p>
+          <p>Full inventory management from your phone — designed for backstage use.</p>
         </div>
 
         <div class="card">
-          <div class="card-hd"><h3>Installing on iPhone</h3></div>
+          <div class="card-hd"><h3>Installing the App on iPhone</h3></div>
           <div class="card-bd">
             <div class="steps">
-              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Open Safari on your iPhone</h4><p>The mobile app requires Safari on iOS — Chrome and other browsers don't support installation on iPhone.</p></div></div>
-              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Go to theatre4u.org/app</h4><p>Make sure you're logged in to your account.</p></div></div>
-              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Tap the Share button</h4><p>The box-with-arrow icon at the bottom of Safari's toolbar.</p></div></div>
-              <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Tap "Add to Home Screen"</h4><p>Scroll down in the share sheet if you don't see it immediately. Tap <strong>Add</strong> to confirm.</p></div></div>
-              <div class="step"><div class="step-n">5</div><div class="step-body"><h4>Open from your home screen</h4><p>The Theatre4u™ icon appears on your home screen. Tap it to open the app in full-screen mode — no browser chrome, no address bar.</p></div></div>
+              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Open Safari on your iPhone</h4><p>The app must be opened in Safari (not Chrome) to install as a home screen app on iPhone. Everything works in Chrome — only the home screen installation requires Safari.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Go to theatre4u.org/app</h4><p>Log in with your same Theatre4u credentials.</p></div></div>
+              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Tap the Share button</h4><p>The Share button is the box with an arrow at the bottom of Safari (⎙).</p></div></div>
+              <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Tap "Add to Home Screen"</h4><p>Scroll down in the share sheet. Name it "Theatre4u" and tap Add. The app icon appears on your home screen and opens full-screen with no browser bar.</p></div></div>
             </div>
           </div>
         </div>
@@ -615,282 +637,215 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
           <div class="card-hd"><h3>Installing on Android</h3></div>
           <div class="card-bd">
             <div class="steps">
-              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Open Chrome on your Android device</h4><p>Go to theatre4u.org/app.</p></div></div>
-              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Tap the three-dot menu</h4><p>Upper right corner of Chrome.</p></div></div>
-              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Tap "Add to Home Screen" or "Install App"</h4><p>Android may show a banner automatically if you visit the page a few times. Either tap the banner or use the menu option.</p></div></div>
+              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Open Chrome on your Android phone</h4></div></div>
+              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Go to theatre4u.org/app and log in</h4></div></div>
+              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Tap ⋮ → Add to Home Screen</h4><p>Chrome may also show an automatic install banner at the bottom of the screen.</p></div></div>
             </div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-hd"><h3>What's in the Mobile App</h3></div>
+          <div class="card-hd"><h3>Mobile App Features</h3></div>
           <div class="card-bd">
             <div class="feat-grid">
-              <div class="feat-card"><div class="fi">🏠</div><h4>Home</h4><p>Recent items, quick stats, and fast access to your most-used actions.</p></div>
-              <div class="feat-card"><div class="fi">📦</div><h4>Items</h4><p>Full inventory list with search. Tap any item to view or edit details.</p></div>
-              <div class="feat-card"><div class="fi">➕</div><h4>Add Item</h4><p>Gold FAB button — tap to add a new item. Snap a photo directly from your phone's camera.</p></div>
-              <div class="feat-card"><div class="fi">💰</div><h4>Funding</h4><p>Log expenditures and check balances on the go — available on Pro plan.</p></div>
+              <div class="feat-card"><div class="fi">📷</div><h4>Photo Capture</h4><p>Take photos with your phone camera and add them to items instantly.</p></div>
+              <div class="feat-card"><div class="fi">🔲</div><h4>QR Labels</h4><p>Every item gets a printable QR label. Use your iPhone Camera app to scan it — tap the notification to open the item instantly.</p></div>
+              <div class="feat-card"><div class="fi">➕</div><h4>Quick Add</h4><p>Add new items in 3 taps — photo first, then name, category, and condition.</p></div>
+              <div class="feat-card"><div class="fi">💰</div><h4>Funding Tracker</h4><p>Log expenditures from anywhere — syncs instantly to your web dashboard.</p></div>
             </div>
-            <div class="callout tip" style="margin-top:4px"><div class="ci">📷</div><div>The iPhone Camera app and standard Android camera read Theatre4u QR codes without any extra app. Scanning an item's label opens its detail page directly in your browser.</div></div>
           </div>
         </div>
       </section>
 
-      <!-- ═══ DISTRICT ═══ -->
+      <!-- ═══════════════ DISTRICT ═══════════════ -->
       <section class="section" id="district">
         <div class="sec-hero" data-emoji="🏢">
           <div class="sec-badge">District plan</div>
-          <h2>District Administration</h2>
-          <p>Manage multiple school theatre programs from one account.</p>
+          <h2>District Management</h2>
+          <p>Manage multiple schools from one account, share inventory across your district, and view all programs from a central dashboard.</p>
         </div>
 
-        <div class="card">
-          <div class="card-hd"><h3>Inviting Schools to Your District</h3></div>
-          <div class="card-bd">
-            <div class="steps">
-              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Go to District in the sidebar</h4><p>Available on the District plan. Shows all linked school accounts.</p></div></div>
-              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Click "Invite School"</h4><p>Enter the teacher's email address. They receive an invite link.</p></div></div>
-              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>School accepts the invite</h4><p>When they click the link, their Theatre4u account is linked to your district. Their inventory and data remain theirs — you gain view access.</p></div></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-hd"><h3>Switching Between Schools</h3></div>
-          <div class="card-bd">
-            <p style="font-size:13.5px;color:var(--muted)">In the District dashboard, click any school name to switch into that school's context. The inventory, reports, and funding views all switch to show that school's data. Click "Back to District" to return to the district overview.</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- ═══ CSV IMPORT ═══ -->
-      <section class="section" id="csv">
-        <div class="sec-hero" data-emoji="📊">
-          <h2>CSV Import</h2>
-          <p>Already have an inventory spreadsheet? Upload it directly.</p>
-        </div>
-
-        <div class="card">
-          <div class="card-hd"><h3>Importing from a Spreadsheet</h3></div>
-          <div class="card-bd">
-            <div class="steps">
-              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Prepare your spreadsheet</h4><p>Export as CSV from Excel or Google Sheets. Column headers don't need to match exactly — the importer will map them for you.</p></div></div>
-              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Go to Inventory and click the import button</h4><p>The CSV import option is in the Inventory toolbar.</p></div></div>
-              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Map your columns</h4><p>The importer detects columns and suggests mappings. Review and confirm before importing. Common columns: Name, Category, Condition, Quantity, Location, Notes.</p></div></div>
-              <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Review and import</h4><p>A preview shows the first few rows. Click Import to load everything. Item IDs are assigned automatically to all imported items.</p><div class="tip">💡 Items imported via CSV also receive COST-001 style IDs automatically — no manual entry needed.</div></div></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-
-      <!-- ═══ TEAM SHARING ═══ -->
-      <section class="section" id="team">
-        <div class="sec-hero" data-emoji="👥">
-          <h2>Team Sharing — Students & Staff</h2>
-          <p>Invite students and staff to help manage inventory. Three role levels give you precise control over what they can do.</p>
-        </div>
-
-        <div class="callout gold"><div class="ci">🎭</div><div><strong>You stay in control.</strong> Team members log in with their own accounts but see your program's inventory. You can change their role or remove them at any time from Profile → Team.</div></div>
-
-        <div class="card">
-          <div class="card-hd"><h3>The Three Roles</h3></div>
-          <div class="card-bd">
-            <table class="tbl">
-              <thead><tr><th>Role</th><th>Who it's for</th><th>What they can do</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td><strong>📋 Stage Manager</strong></td>
-                  <td>Senior students, tech directors, co-directors</td>
-                  <td>Add, edit, and delete items · Upload photos · Access Funding Tracker · View Backstage Exchange and Community Board · View Messages and Requests</td>
-                </tr>
-                <tr>
-                  <td><strong>🔧 Crew</strong></td>
-                  <td>Students helping catalog or move inventory</td>
-                  <td>Add and edit items · Upload photos · QR lookup — <em>cannot delete items or access financial features</em></td>
-                </tr>
-                <tr>
-                  <td><strong>🎟 House</strong></td>
-                  <td>Students who need read-only access, parents, volunteers</td>
-                  <td>View and search inventory · Look up items by QR scan — <em>cannot add, edit, or delete anything</em></td>
-                </tr>
-              </tbody>
-            </table>
-            <div class="callout info" style="margin-top:12px"><div class="ci">ℹ️</div><div>Team members never see financial data (funding tracker, payment details), Reports, District admin, or Settings. Only the director/owner sees those.</div></div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-hd"><h3>Inviting Someone to Your Team</h3></div>
-          <div class="card-bd">
-            <div class="steps">
-              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Go to Profile → Team</h4><p>In the sidebar, click <strong>Profile</strong> then scroll to the <strong>Team</strong> section.</p></div></div>
-              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Choose how to invite</h4><p>Two options: <strong>Email Invite</strong> — enter their email and choose a role, they get a direct link. <strong>Join Code</strong> — generates a short code like <kbd>ABC-123</kbd> you can share via text or post in your drama room.</p><div class="tip">💡 The Join Code is great for inviting a whole group at once — post it on your classroom board or in a group chat. It stays active until you revoke it.</div></div></div>
-              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>They visit theatre4u.org/join</h4><p>They enter the code or click the email link, create a free account, and are immediately added to your team with the role you assigned.</p></div></div>
-              <div class="step"><div class="step-n">4</div><div class="step-body"><h4>They log in to Theatre4u</h4><p>They sign in at theatre4u.org normally. The app automatically shows your program's inventory with their role applied. A banner at the top shows them which program they're managing and what role they have.</p></div></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-hd"><h3>Managing Your Team</h3></div>
-          <div class="card-bd">
-            <div class="feat-grid">
-              <div class="feat-card"><div class="fi">🔄</div><h4>Change Roles</h4><p>Promote a Crew member to Stage Manager (or vice versa) at any time from the Team list. Takes effect on their next page load.</p></div>
-              <div class="feat-card"><div class="fi">❌</div><h4>Remove Members</h4><p>Remove anyone from the team instantly. They lose access immediately — their account still exists but no longer sees your inventory.</p></div>
-              <div class="feat-card"><div class="fi">🔁</div><h4>Reset Join Code</h4><p>If a join code is shared too broadly, generate a new one. Old code stops working immediately.</p></div>
-              <div class="feat-card"><div class="fi">👁</div><h4>See Who's Active</h4><p>The Team list shows all current members, their roles, and when they joined.</p></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-hd"><h3>Suggested Uses by Role</h3></div>
-          <div class="card-bd">
-            <table class="tbl">
-              <thead><tr><th>Task</th><th>Best role</th></tr></thead>
-              <tbody>
-                <tr><td>Photographing and cataloging new items after a show</td><td>📋 Stage Manager or 🔧 Crew</td></tr>
-                <tr><td>Strike inventory — checking items back in</td><td>📋 Stage Manager or 🔧 Crew</td></tr>
-                <tr><td>Printing QR labels and tagging storage bins</td><td>🔧 Crew</td></tr>
-                <tr><td>Looking up whether a costume is in stock</td><td>🎟 House</td></tr>
-                <tr><td>Parent or volunteer checking availability</td><td>🎟 House</td></tr>
-                <tr><td>Managing rentals and Exchange listings</td><td>📋 Stage Manager</td></tr>
-                <tr><td>Co-director or tech director — full inventory management</td><td>📋 Stage Manager</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- ═══ PLANS ═══ -->
-      <section class="section" id="plans">
-        <div class="sec-hero" data-emoji="⭐">
-          <h2>Plans & Pricing</h2>
-          <p>Start free. Upgrade when you're ready.</p>
-        </div>
         <div class="card"><div class="card-bd">
-          <table class="tbl">
-            <thead><tr><th>Feature</th><th><span class="plan-badge pb-free">Free</span></th><th><span class="plan-badge pb-pro">Pro</span></th><th><span class="plan-badge pb-district">District</span></th></tr></thead>
-            <tbody>
-              <tr><td>Inventory items</td><td>Up to 50</td><td>Unlimited</td><td>Unlimited</td></tr>
-              <tr><td>QR labels & photos</td><td>✓</td><td>✓</td><td>✓</td></tr>
-              <tr><td>Storage Locations</td><td>✓</td><td>✓</td><td>✓</td></tr>
-              <tr><td>Item IDs (COST-001)</td><td>✓</td><td>✓</td><td>✓</td></tr>
-              <tr><td>Productions tracking</td><td>✓</td><td>✓</td><td>✓</td></tr>
-              <tr><td>CSV import & export</td><td>✓</td><td>✓</td><td>✓</td></tr>
-              <tr><td>Browse Backstage Exchange</td><td>✓</td><td>✓</td><td>✓</td></tr>
-              <tr><td>Post to Backstage Exchange</td><td>—</td><td>✓</td><td>✓</td></tr>
-              <tr><td>Funding Tracker</td><td>—</td><td>✓</td><td>✓</td></tr>
-              <tr><td>Community Board</td><td>—</td><td>✓</td><td>✓</td></tr>
-              <tr><td>Mobile App</td><td>—</td><td>✓</td><td>✓</td></tr>
-              <tr><td>Multi-school management</td><td>—</td><td>—</td><td>✓</td></tr>
-              <tr><td>District dashboard</td><td>—</td><td>—</td><td>✓</td></tr>
-            </tbody>
-          </table>
-          <p style="margin-top:12px;font-size:13px;color:var(--muted)">Pro is $12/month or $120/year. District is $49/month or $500/year. Leading Players in the beta program have free access for the duration of the beta period.</p>
+          <div class="steps">
+            <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Upgrade to District plan</h4><p>Go to Profile → Upgrade. The District plan covers up to 6 school sites.</p></div></div>
+            <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Click District in the sidebar</h4><p>Your District dashboard shows all schools, their item counts, and status.</p></div></div>
+            <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Invite schools</h4><p>Click <strong>Invite School</strong>, enter the drama director's email and their school name. They receive an invitation email with a link that auto-connects their account to your district.</p></div></div>
+            <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Browse any school's inventory</h4><p>Click any school in the district list to view their full inventory. Use the "← Back to District" button to return.</p></div></div>
+            <div class="step"><div class="step-n">5</div><div class="step-body"><h4>Shared Backstage Exchange</h4><p>All schools in the district can see and request items from each other — no extra setup required.</p></div></div>
+          </div>
         </div></div>
       </section>
 
-      <!-- ═══ FAQ ═══ -->
+      <!-- ═══════════════ CSV IMPORT ═══════════════ -->
+      <section class="section" id="csv">
+        <div class="sec-hero" data-emoji="📊">
+          <h2>CSV Import</h2>
+          <p>Bulk-upload your existing inventory spreadsheet to Theatre4u in minutes.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-hd"><h3>Preparing Your CSV</h3></div>
+          <div class="card-bd">
+            <div class="callout tip"><div class="ci">✅</div><div>The easiest approach is to click <strong>Download Template</strong> in the CSV import screen — it creates a pre-formatted CSV with all the right column headers.</div></div>
+            <p style="font-size:14px;color:var(--muted);margin:12px 0 10px">Required column: <kbd>Name</kbd></p>
+            <p style="font-size:14px;color:var(--muted);margin-bottom:10px">Optional columns:</p>
+            <table class="tbl">
+              <thead><tr><th>Column</th><th>Accepted values</th></tr></thead>
+              <tbody>
+                <tr><td><kbd>Category</kbd></td><td>costumes, props, sets, lighting, sound, scripts, makeup, furniture, fabrics, tools, effects, other</td></tr>
+                <tr><td><kbd>Condition</kbd></td><td>New, Excellent, Good, Fair, Poor, For Parts</td></tr>
+                <tr><td><kbd>Size</kbd></td><td>XS, S, M, L, XL, XXL, One Size, N/A</td></tr>
+                <tr><td><kbd>Qty</kbd></td><td>Any whole number</td></tr>
+                <tr><td><kbd>Location</kbd></td><td>Any text (e.g. "Costume Closet A")</td></tr>
+                <tr><td><kbd>Availability</kbd></td><td>In Stock, In Use, Checked Out, Being Repaired, Lost, Retired</td></tr>
+                <tr><td><kbd>Market</kbd></td><td>Not Listed, For Rent, For Sale, Rent or Sale, For Loan</td></tr>
+                <tr><td><kbd>Rent</kbd></td><td>Dollar amount (e.g. 25.00)</td></tr>
+                <tr><td><kbd>Sale</kbd></td><td>Dollar amount</td></tr>
+                <tr><td><kbd>Tags</kbd></td><td>Comma or semicolon-separated (e.g. "period;formal;blue")</td></tr>
+                <tr><td><kbd>Image URL</kbd></td><td>Public Google Drive or Dropbox share link, or direct image URL</td></tr>
+                <tr><td><kbd>Notes</kbd></td><td>Any text</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hd"><h3>Adding Photos via Google Drive</h3></div>
+          <div class="card-bd">
+            <div class="steps">
+              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Upload photos to Google Drive</h4><p>Create a folder called "Theatre4u Photos" and upload your item photos there.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Set sharing to "Anyone with the link"</h4><p>Right-click the photo → Share → Change to "Anyone with the link" → Copy link.</p><div class="warn">⚠️ Photos that are not set to "Anyone with the link" will not display in Theatre4u.</div></div></div>
+              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Paste the link in the Image URL column</h4><p>Theatre4u™ automatically converts Google Drive share links to the correct embeddable format. Dropbox share links also work.</p></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════ PLANS ═══════════════ -->
+      <section class="section" id="plans">
+        <div class="sec-hero" data-emoji="⭐">
+          <h2>Plans & Pricing</h2>
+          <p>Inventory · Backstage Exchange · Community — choose the plan that fits your program.</p>
+        </div>
+        <div class="card"><div class="card-bd">
+          <table class="tbl">
+            <thead><tr><th>Feature</th><th><span class="plan-badge pb-free">Free</span></th><th><span class="plan-badge pb-pro">Pro — $12/mo</span></th><th><span class="plan-badge pb-district">District — $49/mo</span></th></tr></thead>
+            <tbody>
+              <tr><td>Inventory items</td><td>Up to 50</td><td>Unlimited</td><td>Unlimited</td></tr>
+              <tr><td>Photos per item</td><td>Up to 5</td><td>Up to 5</td><td>Up to 5</td></tr>
+              <tr><td>QR labels</td><td>✓</td><td>✓</td><td>✓</td></tr>
+              <tr><td>Backstage Exchange</td><td>Browse only</td><td>✓ Full access</td><td>✓ Full access</td></tr>
+              <tr><td>Messaging</td><td>—</td><td>✓</td><td>✓</td></tr>
+              <tr><td>Productions tracking</td><td>✓</td><td>✓</td><td>✓</td></tr>
+              <tr><td>Reports & CSV export</td><td>—</td><td>✓</td><td>✓</td></tr>
+              <tr><td>Theatre Credits</td><td>—</td><td>✓</td><td>✓</td></tr>
+              <tr><td>Funding Tracker</td><td>—</td><td>✓</td><td>✓</td></tr>
+              <tr><td>Mobile app</td><td>—</td><td>✓</td><td>✓</td></tr>
+              <tr><td>CSV import</td><td>—</td><td>✓</td><td>✓</td></tr>
+              <tr><td>School sites</td><td>1</td><td>1</td><td>Up to 6</td></tr>
+              <tr><td>District dashboard</td><td>—</td><td>—</td><td>✓</td></tr>
+            </tbody>
+          </table>
+          <div style="text-align:center;margin-top:20px">
+            <a href="https://theatre4u.org" style="display:inline-block;background:var(--gold);color:var(--ink);padding:12px 28px;border-radius:10px;font-weight:700;font-size:15px">Upgrade Your Plan →</a>
+          </div>
+        </div></div>
+      </section>
+
+      <!-- ═══════════════ FAQ ═══════════════ -->
       <section class="section" id="faq">
-        <div style="margin-bottom:20px">
-          <h2 style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700">Frequently Asked Questions</h2>
+        <div class="sec-hero" data-emoji="❓">
+          <h2>Frequently Asked Questions</h2>
         </div>
         <div class="faq">
           <details class="faq-item">
             <summary><span>Can I use Theatre4u without upgrading to Pro?</span><span class="arr">›</span></summary>
-            <div class="faq-a">Yes. The free plan lets you catalog up to 50 items, use storage locations, print QR labels, run reports, and browse Backstage Exchange. To post items to the Exchange, access the Funding Tracker, or use the Community Board, you'll need a Pro plan.</div>
-          </details>
-          <details class="faq-item">
-            <summary><span>What is the COST-001 number on my items?</span><span class="arr">›</span></summary>
-            <div class="faq-a">That's the item's display ID — a human-readable identifier assigned automatically when an item is added. The prefix tells you the category (COST = Costume, PROP = Prop, LITE = Lighting, etc.) and the number is sequential within that category for your organization. It appears on item cards, the detail view, QR labels, and table view, and is searchable. You don't need to manage these — they're assigned automatically.</div>
-          </details>
-          <details class="faq-item">
-            <summary><span>My item is marked For Rent but it's not showing in Backstage Exchange. Why?</span><span class="arr">›</span></summary>
-            <div class="faq-a">Marking an item For Rent in your inventory doesn't automatically post it to Backstage Exchange. You need to join Backstage Exchange separately — click <strong>Backstage Exchange</strong> in the sidebar and click Join. Once you've joined, all your For Rent, For Sale, For Loan, and Rent or Sale items become visible to other programs. If you see a yellow warning when editing an item, that's the reminder.</div>
+            <div class="faq-a">Yes. The free plan lets you catalog up to 50 items, create productions, print QR labels, and browse Backstage Exchange. To post items to Backstage Exchange or send requests to other programs, you'll need a Pro plan.</div>
           </details>
           <details class="faq-item">
             <summary><span>How does payment work between programs?</span><span class="arr">›</span></summary>
-            <div class="faq-a"><strong>Theatre4u™ records and communicates the agreed price — but does not process cash payments between organizations.</strong><br><br>When your request is approved, the agreed amount is logged and visible to both parties. Payment happens <strong>directly between your organizations</strong> outside of Theatre4u — by school check, Venmo, PayPal, invoice, or any method you both agree on. Coordinate in the Messages thread attached to each request.<br><br>Both parties are responsible for completing payment as agreed. Theatre4u is not liable for non-payment between organizations.</div>
+            <div class="faq-a">
+              <strong>Theatre4u™ records and communicates the agreed price — but does not process cash payments between organizations.</strong>
+              <br><br>
+              When your request is approved, the agreed dollar amount is logged in the system and visible to both parties. Payment of that amount happens <strong>directly between your organizations</strong> outside of Theatre4u — by school check, Venmo, PayPal, invoice, or any method you both agree on. Coordinate the specifics in the Messages thread attached to each request.
+              <br><br>
+              <strong>If credits were applied:</strong> The credit portion reduces the agreed price on the request. The remaining cash balance is still paid directly to the item owner. For example: a $100 rental with 50 credits applied = $50 cash owed to the owner, paid outside Theatre4u.
+              <br><br>
+              Both parties are responsible for completing payment as agreed. Theatre4u is not liable for non-payment between organizations.
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary><span>What happens to my credits if I cancel my Pro subscription?</span><span class="arr">›</span></summary>
+            <div class="faq-a">Your credits are frozen — they don't disappear, but you can't earn or spend them while on the free plan. They're restored the moment you re-subscribe. If you close your account entirely, credits are permanently forfeited.</div>
           </details>
           <details class="faq-item">
             <summary><span>Is the mobile app available in the App Store?</span><span class="arr">›</span></summary>
-            <div class="faq-a">Not currently. The mobile experience is a Progressive Web App (PWA) — install it directly from your browser by going to theatre4u.org/app and using "Add to Home Screen" (Safari on iPhone, Chrome on Android). It works like a native app — full screen, home screen icon, no browser chrome. An App Store version is planned for after the beta period.</div>
+            <div class="faq-a">Not currently. The mobile app is a Progressive Web App (PWA) — you install it directly from your browser by going to theatre4u.org/app and using "Add to Home Screen". It functions exactly like a native app with no App Store required.</div>
           </details>
           <details class="faq-item">
             <summary><span>Can I use the Funding Tracker for any type of funding?</span><span class="arr">›</span></summary>
-            <div class="faq-a">Yes — it works for any funding source: grants, district allocations, booster clubs, earned income (ticket sales), donations, or anything else. It's not specific to any state or program type. All data is private to your account. If you have existing Prop 28 data in Theatre4u, a migration tool moves it into the Funding Tracker automatically.</div>
+            <div class="faq-a">Yes — the Funding Tracker works for any funding source: grants, district allocations, booster clubs, earned income, donations, or anything else. It's not specific to any state or program type. All data is private to your account.</div>
           </details>
           <details class="faq-item">
             <summary><span>Can multiple people at my school use the same account?</span><span class="arr">›</span></summary>
-            <div class="faq-a">Yes — you can share login credentials with co-directors or tech directors. Theatre4u also supports team member roles: Stage Manager (add/edit items, access Funding Tracker and Exchange), Crew (add/edit items only), and House (view-only). Invite team members from Profile → Team.</div>
-          </details>
-          <details class="faq-item">
-            <summary><span>How do I set up storage locations for my bins and closets?</span><span class="arr">›</span></summary>
-            <div class="faq-a">Go to Inventory and click the <strong>📦 Locations</strong> tab in the view toggle. Click "Add Location" and give it a name and optional short code (e.g. SC1 for Storage Container 1). Print a QR label for each container and stick it on the bin. When adding items, select a location from the dropdown to link them structurally.</div>
+            <div class="faq-a">Yes — you can share your login credentials with co-directors, tech directors, or costume managers. One account represents one organization. If you need separate logins for each person, that's on our roadmap for a future update.</div>
           </details>
           <details class="faq-item">
             <summary><span>What image formats can I upload for item photos?</span><span class="arr">›</span></summary>
-            <div class="faq-a">JPG, PNG, GIF, and WebP are all supported. Photos are automatically compressed and resized for fast loading.</div>
+            <div class="faq-a">JPG, PNG, GIF, and WebP are all supported. Photos are automatically compressed and resized to ensure fast loading. Maximum 5 photos per item. You can also link to publicly-shared Google Drive or Dropbox images via the Image URL field in CSV import.</div>
           </details>
           <details class="faq-item">
             <summary><span>How do I get my school's IT department to whitelist Theatre4u emails?</span><span class="arr">›</span></summary>
-            <div class="faq-a">Ask your IT administrator to whitelist the domain <strong>theatre4u.org</strong> and the sending address <strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4129242d2d2e013529242035332475346f2e3326">[email&#160;protected]</a></strong>. Emails are sent via Resend using the domain theatre4u.org. If invite emails aren't arriving, this is almost always the cause.</div>
-          </details>
-          <details class="faq-item">
-            <summary><span>Can students use Theatre4u to help with inventory?</span><span class="arr">›</span></summary>
-            <div class="faq-a">Yes — this is one of the most practical uses of Theatre4u. Invite students as Crew to help photograph and catalog items during strike or season prep. Give Stage Managers broader access to add, edit, and delete items. House role works for students or parents who just need view-only access to look things up. All managed from Profile → Team.</div>
-          </details>
-          <details class="faq-item">
-            <summary><span>What's the difference between a Join Code and an Email Invite?</span><span class="arr">›</span></summary>
-            <div class="faq-a">An <strong>Email Invite</strong> sends a direct link to one person at a specific role — best for tech directors or co-directors. A <strong>Join Code</strong> is a short code like ABC-123 that multiple people can use — best for inviting a whole stage crew. Post it in your group chat or on your classroom board. You can revoke it anytime.</div>
-          </details>
-          <details class="faq-item">
-            <summary><span>Can team members see my funding data or billing?</span><span class="arr">›</span></summary>
-            <div class="faq-a">No. Team members (Stage Manager, Crew, House) never see the Funding Tracker, Reports, Settings, billing information, or District admin. Only the account owner — the director — has access to those sections.</div>
+            <div class="faq-a">Ask your IT administrator to whitelist the domain <strong>theatre4u.org</strong> and the sending address <strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c9a1aca5a5a689bda1aca8bdbbacfdbce7a6bbae">[email&#160;protected]</a></strong>. Emails are sent via Resend using the domain theatre4u.org. If invite emails aren't arriving, this is almost always the cause.</div>
           </details>
         </div>
       </section>
 
+      <!-- Contact -->
       <div class="card" style="text-align:center;padding:32px;background:linear-gradient(135deg,var(--ink),#2a1a08);border:none;color:#fff;margin-bottom:40px">
         <div style="font-size:36px;margin-bottom:10px">🎭</div>
         <h3 style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;color:var(--gold2);margin-bottom:8px">Still have questions?</h3>
-        <p style="color:rgba(255,255,255,.6);font-size:14px;margin-bottom:18px">Email us at <strong style="color:var(--gold2)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="0b636e6767644b7f636e6a7f796e3f7e2564796c">[email&#160;protected]</a></strong> and we'll get back to you within one business day.</p>
-        <a href="/cdn-cgi/l/email-protection#9df5f8f1f1f2dde9f5f8fce9eff8a9e8b3f2effa" style="display:inline-block;background:var(--gold);color:var(--ink);padding:11px 24px;border-radius:8px;font-weight:700;font-size:15px">Contact Support</a>
+        <p style="color:rgba(255,255,255,.6);font-size:14px;margin-bottom:18px">Email us at <strong style="color:var(--gold2)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="bbd3ded7d7d4fbcfd3dedacfc9de8fce95d4c9dc">[email&#160;protected]</a></strong> and we'll get back to you within one business day.</p>
+        <a href="/cdn-cgi/l/email-protection#c9a1aca5a5a689bda1aca8bdbbacfdbce7a6bbae" style="display:inline-block;background:var(--gold);color:var(--ink);padding:11px 24px;border-radius:8px;font-weight:700;font-size:15px">Contact Support</a>
       </div>
 
     </main>
-  </div>
-</div>
+  </div><!-- /page-body -->
+</div><!-- /wrap -->
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// ── FAQ toggles ──
+function toggleFaq(el) {
+  el.classList.toggle('open');
+  el.nextElementSibling.classList.toggle('open');
+}
+
+// ── Search ──
 function doSearch(query) {
   const q = query.toLowerCase().trim();
   if (!q) return;
+  const sections = document.querySelectorAll('.section');
+  let found = null;
   const map = {
-    'add item':'#inventory','photo':'#inventory','upload':'#csv','qr':'#qr','scan':'#qr','label':'#qr','print':'#qr',
-    'location':'#locations','container':'#locations','closet':'#locations','bin':'#locations','storage':'#locations',
-    'id':'#inventory','cost-':'#inventory','prop-':'#inventory','display id':'#inventory','item number':'#inventory',
-    'backstage exchange':'#marketplace','exchange':'#marketplace','rent':'#marketplace','loan':'#marketplace','borrow':'#marketplace','sell':'#marketplace','sale':'#marketplace',
+    'add item':'#inventory','photo':'#inventory','upload':'#csv','qr':'#qr','scan':'#qr',
+    'backstage exchange':'#marketplace','exchange':'#marketplace','rent':'#marketplace','loan':'#marketplace','borrow':'#marketplace',
     'request':'#requests','approve':'#requests','decline':'#requests','returned':'#requests',
     'message':'#messages','chat':'#messages',
-    'community':'#community','post':'#community','audition':'#community','announce':'#community','resource share':'#community',
+    'credit':'#credits','earn':'#credits','spend':'#credits','token':'#credits',
     'production':'#productions','show':'#productions','cast':'#productions',
     'report':'#reports','export':'#reports','csv':'#csv','import':'#csv',
-    'funding':'#funding','grant':'#funding','expenditure':'#funding','tracker':'#funding','prop 28':'#funding','allocation':'#funding',
-    'mobile':'#mobile','phone':'#mobile','app':'#mobile','install':'#mobile','safari':'#mobile','chrome':'#mobile','iphone':'#mobile','android':'#mobile',
+    'funding':'#funding','grants':'#funding','expenditure':'#funding','tracker':'#funding',
+    'mobile':'#mobile','phone':'#mobile','app':'#mobile','install':'#mobile','safari':'#mobile','chrome':'#mobile',
     'district':'#district','school':'#district','invite':'#district',
-    'plan':'#plans','price':'#plans','pro':'#plans','upgrade':'#plans','free':'#plans','cost':'#plans',
-    'faq':'#faq','question':'#faq',
-    'team':'#team','student':'#team','crew':'#team','stage manager':'#team','house':'#team','invite':'#team','join code':'#team','role':'#team','share':'#team',
+    'plan':'#plans','price':'#plans','pro':'#plans','upgrade':'#plans','free':'#plans',
+    'faq':'#faq','question':'#faq','help':'#faq',
   };
-  let found = null;
   for (const [keyword, anchor] of Object.entries(map)) {
     if (q.includes(keyword)) { found = anchor; break; }
   }
   if (found) {
     document.querySelector(found)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Flash highlight
     const el = document.querySelector(found);
     if (el) {
       el.style.outline = '2px solid var(--gold)';
@@ -898,8 +853,10 @@ function doSearch(query) {
       setTimeout(() => { el.style.outline = ''; el.style.outlineOffset = ''; }, 2000);
     }
   } else {
-    alert(`No exact match for "${query}". Try browsing the sidebar or topics above.`);
+    // Highlight any text matching query in page
+    alert(`Searching for "${query}"… Try the quick links above or browse the sidebar.`);
   }
 }
-// Active nav on scroll
-const sections = document.querySelec
+
+// ── Active nav highlight on scroll ──
+const sections = document.querySelectorAll('
