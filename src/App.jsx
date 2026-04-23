@@ -1561,7 +1561,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
           <div className="hero-body">
             <div className="hero-eyebrow">📦 Inventory · Productions · Community</div>
             <h1 className="hero-title">{org.name?`Welcome,\n${org.name}`:"Welcome to\nTheatre4u"}</h1>
-            <p className="hero-sub">Every Costume Found. Every Prop Accounted For.</p>
+            <p className="hero-sub">Everything your program owns — cataloged, photographed, and organized. Your theatre's complete inventory, always at your fingertips.</p>
           </div>
           <div className="hero-bar"/>
         </div>
@@ -1761,7 +1761,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
           <img src={usp("photo-1504196606672-aef5c9cefc92",1000,240)} alt="Theatre seats" loading="lazy"/>
           <div className="img-div-fade"/>
           <div className="img-div-text">
-            <h3>Every Seat Filled. Every Prop Accounted For.</h3>
+            <h3>Every Costume Found. Every Prop Accounted For.</h3>
             <p>Theatre4u™ keeps your complete inventory organized — from the costume closet to the lighting rig.</p>
           </div>
         </div>
