@@ -1561,7 +1561,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
           <div className="hero-body">
             <div className="hero-eyebrow">📦 Inventory · Productions · Community</div>
             <h1 className="hero-title">{org.name?`Welcome,\n${org.name}`:"Welcome to\nTheatre4u"}</h1>
-            <p className="hero-sub">Everything your program owns — cataloged, photographed, and organized. Your theatre's complete inventory, always at your fingertips.</p>
+            <p className="hero-sub">Every Costume Found. Every Prop Accounted For.</p>
           </div>
           <div className="hero-bar"/>
         </div>
@@ -2525,7 +2525,7 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
             <button className="btn btn-o" onClick={onClose}>Maybe Later</button>
           </div>
           <p style={{fontSize:11,color:"var(--faint)",marginTop:12}}>
-            Pro: $12/mo · Unlimited inventory · Full Exchange access · Stage Points
+            Pro: $15/mo · Unlimited inventory · Full Exchange access · Stage Points
           </p>
         </div>
       ) : (
@@ -3835,7 +3835,7 @@ function UpgradePrompt({ reason, onClose }) {
 
 // ── Shared upgrade/pricing component — used in Settings + any upsell modal ────
 const STRIPE_LINKS = {
-  pro:        { monthly:"https://buy.stripe.com/aFadR868xgNRey72ErgA801", annual:"https://buy.stripe.com/9B6dR80Od8hl9dN4MzgA803" },
+  pro:        { monthly:"https://buy.stripe.com/fZu4gyeF39lpdu31AngA808", annual:"https://buy.stripe.com/fZu3cu40p2X11Ll5QDgA809" },
   district:   { monthly:"https://buy.stripe.com/aFa4gydAZ2X1cpZ6UHgA800", annual:"https://buy.stripe.com/eVqdR88gF1SX9dN0wjgA802" },
   district_m: { monthly:"https://buy.stripe.com/5kQ00ieF3aptahRbaXgA806", annual:"https://buy.stripe.com/6oU7sK68x41575F5QDgA807" },
   district_l: { monthly:"https://buy.stripe.com/6oU28q2Wl8hlgGfdj5gA804", annual:"https://buy.stripe.com/eVq00ieF37dhahR2ErgA805" },
@@ -3868,7 +3868,7 @@ const ADMIN_EMAIL  = ADMIN_EMAILS[0]; // legacy alias
 // PRICING MODEL — DO NOT CHANGE WITHOUT REVIEWING THIS RATIONALE
 // Last reviewed: April 2026
 //
-// PRO ($12/mo | $120/yr): One theatre program, unlimited inventory.
+// PRO ($15/mo | $150/yr): One theatre program, unlimited inventory.
 //   Basis: Market rate for single-user SaaS tools in education.
 //
 // DISTRICT S ($49/mo | $500/yr): Up to 6 schools.
@@ -3893,7 +3893,7 @@ const ADMIN_EMAIL  = ADMIN_EMAILS[0]; // legacy alias
 const UPGRADE_PLANS = [
   { id:"free",     name:"Free",     monthlyPrice:"$0",  annualPrice:"Free",   per:"/forever", annualNote:null,       desc:"Perfect for getting started.",     hot:false,
     feats:["Up to 50 items","QR code labels","Photo uploads","CSV export"] },
-  { id:"pro",      name:"Pro",      monthlyPrice:"$12", annualPrice:"$10",  annualTotal:"$120/yr", per:"/month", annualNote:"save $24", desc:"For active programs & companies.", hot:true,
+  { id:"pro",      name:"Pro",      monthlyPrice:"$15", annualPrice:"$12.50",  annualTotal:"$150/yr", per:"/month", annualNote:"save $30", desc:"For active programs & companies.", hot:true,
     feats:["Unlimited inventory","Full Backstage Exchange access","Photo storage 5GB","Analytics dashboard","Email support"] },
   { id:"district", name:"District (up to 6 schools)", monthlyPrice:"$49", annualPrice:"$42",  annualTotal:"$500/yr", per:"/month", annualNote:"save $88", desc:"Multiple schools, one platform.",  hot:false,
     feats:["Multiple organizations","District dashboard","Bulk import","Dedicated support","Everything in Pro"] },
@@ -3965,7 +3965,7 @@ function InvoiceRequestForm({ orgName, userEmail }) {
         <div>
           <label style={labelStyle}>Plan</label>
           <select style={{...inputStyle,cursor:"pointer"}} value={form.plan} onChange={e=>upd("plan",e.target.value)}>
-            <option value="pro">Pro — $12/month or $120/year</option>
+            <option value="pro">Pro — $15/month or $150/year</option>
             <option value="district">District — $49/month or $500/year</option>
             <option value="enterprise">Enterprise — Custom (district will contact)</option>
           </select>
@@ -7119,23 +7119,31 @@ function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool, allSch
 // THEATRE CREDITS PAGE
 // ══════════════════════════════════════════════════════════════════════════════
 function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
-  const [ledger,   setLedger]   = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [tab,      setTab]      = useState("overview");
-  const [adminOrg, setAdminOrg] = useState("");
-  const [adminAmt, setAdminAmt] = useState("");
-  const [adminMsg, setAdminMsg] = useState("");
-  const [adminSaving, setAS]    = useState(false);
-  const isAdmin = ADMIN_EMAILS?.includes?.(org?.email);
+  const [ledger,        setLedger]        = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [tab,           setTab]           = useState("overview");
+  const [adminOrg,      setAdminOrg]      = useState("");
+  const [adminAmt,      setAdminAmt]      = useState("");
+  const [adminMsg,      setAdminMsg]      = useState("");
+  const [adminSaving,   setAS]            = useState(false);
+  const [daysUntilElig, setDaysUntilElig] = useState(null);
+  const [redeeming,     setRedeeming]     = useState(false);
+  const [redeemMsg,     setRedeemMsg]     = useState("");
+  const isAdmin   = ADMIN_EMAILS?.includes?.(org?.email);
+  const isAnnual  = org?.plan_interval === "annual";
+  const earnMult  = isAnnual ? 1.5 : 1.0;
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await SB.from("credit_ledger")
-      .select("*").eq("org_id", userId)
-      .order("created_at", { ascending: false }).limit(100);
-    setLedger(data || []);
-    const { data: bal } = await SB.rpc("get_my_credit_balance");
+    const [{ data: ledgerData }, { data: bal }, { data: daysData }] = await Promise.all([
+      SB.from("credit_ledger").select("*").eq("org_id", userId)
+        .order("created_at", { ascending: false }).limit(100),
+      SB.rpc("get_my_credit_balance"),
+      SB.rpc("points_eligible_in_days", { p_org_id: userId }),
+    ]);
+    setLedger(ledgerData || []);
     onBalanceChange?.(bal || 0);
+    setDaysUntilElig(typeof daysData === "number" ? daysData : null);
     setLoading(false);
   }, [userId]);
 
@@ -7145,16 +7153,23 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
   const totalSpent  = Math.abs(ledger.filter(r => r.amount < 0).reduce((s, r) => s + r.amount, 0));
 
   const typeIcon = {
-    welcome_bonus:   "🎉", catalog_bonus: "📸", rental_earn: "🔑",
-    loan_earn:       "🤝", early_return_bonus: "⚡", referral_earn: "👥",
-    spend_rental:    "🛒", spend_deposit: "🔒", admin_adjust: "🔧", expire: "⏰",
+    welcome_bonus:        "🎉", catalog_bonus:         "📸", rental_earn:  "🔑",
+    loan_earn:            "🤝", early_return_bonus:    "⚡", referral_earn: "👥",
+    spend_rental:         "🛒", spend_deposit:         "🔒", admin_adjust: "🔧",
+    expire:               "⏰", annual_bonus:          "⭐", annual_renewal_bonus: "⭐",
+    profile_complete:     "✅", items_10:              "📦", items_25_photos: "📸",
+    first_listing:        "🏪", first_request:         "📨", team_invite:  "👥",
   };
   const typeLabel = {
-    welcome_bonus:   "Welcome Bonus",    catalog_bonus:   "Catalog Milestone",
-    rental_earn:     "Rental Completed", loan_earn:       "Loan Completed",
-    early_return_bonus: "Early Return",  referral_earn:   "Referral Bonus",
-    spend_rental:    "Points Applied",  spend_deposit:   "Deposit Covered",
-    admin_adjust:    "Admin Adjustment", expire:          "Credits Expired",
+    welcome_bonus:        "Welcome Bonus",       catalog_bonus:        "Catalog Milestone",
+    rental_earn:          "Rental Completed",    loan_earn:            "Loan Completed",
+    early_return_bonus:   "Early Return",        referral_earn:        "Referral Bonus",
+    spend_rental:         "Points Applied",      spend_deposit:        "Deposit Covered",
+    admin_adjust:         "Admin Adjustment",    expire:               "Points Expired",
+    annual_bonus:         "Annual Plan Bonus",   annual_renewal_bonus: "Annual Renewal Bonus",
+    profile_complete:     "Profile Completed",   items_10:             "10 Items Added",
+    items_25_photos:      "25 Items + Photos",   first_listing:        "First Exchange Listing",
+    first_request:        "First Exchange Request", team_invite:       "Team Member Invited",
   };
 
   const adminAward = async () => {
@@ -7177,7 +7192,7 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
           <div className="hero-body">
             <div className="hero-eyebrow">🪙 Stage Economy</div>
             <h1 className="hero-title" style={{ fontSize: 44 }}>Stage Points</h1>
-            <p className="hero-sub">Earn credits by sharing your inventory. Spend them to borrow what you need for less.</p>
+            <p className="hero-sub">Earn points by sharing inventory and completing Exchange deals. Spend them for discounts — or save up for a free month.</p>
           </div>
           <div className="hero-bar" />
         </div>
@@ -7195,6 +7210,13 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
                 <span style={{ fontSize: 18, color: "var(--muted)", fontWeight: 700 }}>points</span>
               </div>
               <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>1 point = $0.01 · 1,500 points = free Pro month</div>
+              {isAnnual && (
+                <div style={{ marginTop: 6, display: "inline-flex", alignItems: "center", gap: 6,
+                  background: "rgba(212,168,67,.15)", border: "1px solid rgba(212,168,67,.3)",
+                  borderRadius: 6, padding: "3px 10px", fontSize: 12, color: "var(--gold)", fontWeight: 700 }}>
+                  ⭐ Annual plan — earning at 1.5× rate on loans &amp; rentals
+                </div>
+              )}
             </div>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               {[
@@ -7223,8 +7245,10 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
             { icon: "📨", title: "First Exchange Request",earn: "+10 pts",    note: "Send your first request to another program." },
             { icon: "👥", title: "Invite a Team Member", earn: "+15 pts",     note: "Per member who signs in." },
             { icon: "👋", title: "Refer a Program",     earn: "+50 pts",      note: "Per program that creates an account." },
-            { icon: "🤝", title: "Loan Completed",       earn: "+10–50 pts",  note: "Varies by item category. Lighting/Sound = 50 pts." },
-            { icon: "🔑", title: "Rental Completed",     earn: "+$1 = 1 pt",  note: "1 point per dollar of rental price." },
+            { icon: "🤝", title: "Loan Completed",       earn: isAnnual ? "+15–75 pts ⭐" : "+10–50 pts",
+              note: isAnnual ? "1.5× annual rate. Lighting/Sound = 75 pts." : "Varies by item category. Lighting/Sound = 50 pts." },
+            { icon: "🔑", title: "Rental Completed",     earn: isAnnual ? "+$1 = 1.5 pts ⭐" : "+$1 = 1 pt",
+              note: isAnnual ? "1.5× annual rate — 1.5 pts per dollar of rental price." : "1 point per dollar of rental price." },
             { icon: "🛒", title: "Exchange Discount", earn: "Up to 50% off", note: "Apply points when requesting any rental or purchase." },
             { icon: "🎟️", title: "Free Pro Month",    earn: "1,500 pts",   note: "Redeem 1,500 points for one free month of Pro." },
           ].map(s => (
@@ -7236,6 +7260,83 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
             </div>
           ))}
         </div>
+
+        {/* ── Redeem Free Month ── */}
+        {plan !== "free" && (
+          <div className="card card-p" style={{ marginBottom: 22,
+            border: balance >= POINTS_FREE_MONTH ? "1.5px solid rgba(212,168,67,.5)" : "1px solid var(--border)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+              <div style={{ fontSize: 36 }}>🎟️</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 3 }}>Redeem for a Free Pro Month</div>
+                <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 6 }}>
+                  1,500 points = one free month of Pro ($15 value)
+                </div>
+                {/* Eligibility gate */}
+                {daysUntilElig !== null && daysUntilElig > 0 ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8,
+                    background: "rgba(107,100,120,.15)", border: "1px solid var(--border)",
+                    borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "var(--muted)" }}>
+                    🕐 Free-month redemption available in <strong style={{ color: "var(--text)" }}>&nbsp;{daysUntilElig} days</strong>
+                    &nbsp;· Exchange discounts available now
+                  </div>
+                ) : balance < POINTS_FREE_MONTH ? (
+                  <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                    {(POINTS_FREE_MONTH - balance).toLocaleString()} more points needed
+                    {/* Mini progress bar */}
+                    <div style={{ marginTop: 6, background: "var(--border)", borderRadius: 99, height: 4, overflow: "hidden" }}>
+                      <div style={{ height: "100%", borderRadius: 99, background: "var(--gold)",
+                        width: Math.min(100, balance / POINTS_FREE_MONTH * 100) + "%" }}/>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    {redeemMsg && (
+                      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8,
+                        color: redeemMsg.startsWith("✓") ? "var(--green)" : "var(--red)" }}>
+                        {redeemMsg}
+                      </div>
+                    )}
+                    <button
+                      disabled={redeeming || balance < POINTS_FREE_MONTH}
+                      onClick={async () => {
+                        setRedeeming(true); setRedeemMsg("");
+                        // Check eligibility server-side
+                        const { data: eligible } = await SB.rpc("is_points_eligible", { p_org_id: userId });
+                        if (!eligible) {
+                          setRedeemMsg("⚠️ Not yet eligible — 90 days of Pro required for free-month redemption.");
+                          setRedeeming(false); return;
+                        }
+                        const { data } = await SB.rpc("spend_credits", {
+                          p_org_id: userId, p_amount: POINTS_FREE_MONTH,
+                          p_type: "spend_rental",
+                          p_description: "Redeemed 1,500 pts for free Pro month"
+                        });
+                        if (data?.success) {
+                          setRedeemMsg("✓ 1,500 points redeemed! Your free month credit will be applied. Contact hello@theatre4u.org to confirm.");
+                          load();
+                        } else {
+                          setRedeemMsg("⚠️ " + (data?.error || "Could not redeem — please try again."));
+                        }
+                        setRedeeming(false);
+                      }}
+                      className="btn btn-g" style={{ marginTop: 4 }}>
+                      {redeeming ? "Processing…" : "Redeem 1,500 Points → Free Month"}
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 28,
+                  color: balance >= POINTS_FREE_MONTH ? "var(--gold)" : "var(--muted)",
+                  fontWeight: 700 }}>
+                  {balance.toLocaleString()}
+                </div>
+                <div style={{ fontSize: 11, color: "var(--muted)" }}>/ 1,500 pts</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="tabs" style={{ marginBottom: 18 }}>
@@ -7985,7 +8086,7 @@ const TERMS_CONTENT = [
   ["1. Acceptance of Terms","By accessing or using Theatre4u at theatre4u.org, you agree to be bound by these Terms of Service. If you do not agree, please do not use the Service. Theatre4u™ is a product of Artstracker LLC, a California limited liability company (theatre4u.org)."],
   ["2. Description of Service","Theatre4u™ is a cloud-based inventory management, resource-sharing, and community platform for theatre programs, schools, community theatres, and performing arts organizations. We reserve the right to modify or discontinue the Service at any time with reasonable notice."],
   ["3. Account Registration","You must create an account with accurate information and are responsible for maintaining confidentiality of your credentials. You must be at least 18 years old, or have authorization of a parent, guardian, or school administrator if a minor acting on behalf of an organization."],
-  ["4. Subscription Plans and Payments","Theatre4u offers Free, Pro ($12/month or $120/year), and District ($49/month or $500/year) plans billed via Stripe. Subscriptions auto-renew unless cancelled. We may change pricing with 30 days notice to current subscribers."],
+  ["4. Subscription Plans and Payments","Theatre4u offers Free, Pro ($15/month or $150/year), and District ($49/month or $500/year) plans billed via Stripe. Subscriptions auto-renew unless cancelled. We may change pricing with 30 days notice to current subscribers."],
   ["4a. Cancellation Policy","You may cancel your subscription at any time through Settings → Plans → Manage Billing, or by emailing hello@theatre4u.org. Upon cancellation, your access continues until the end of the current billing period — no partial refunds are issued for unused time. For annual plans, a full refund is available within 30 days of purchase if you have added fewer than 10 items. After 30 days, annual plan fees are non-refundable. Your inventory data is preserved for 90 days after your plan downgrades to Free; you may export a full CSV backup at any time from the Reports page. Leading Players have guaranteed free Pro access through April 9, 2027 and are not affected by this policy."],
   ["5. User Content & License Grant","You retain all ownership of content you upload to Theatre4u™, including text, photos, images, and other materials ('User Content'). By uploading User Content, you grant Theatre4u a worldwide, non-exclusive, royalty-free, perpetual, irrevocable license to store, display, reproduce, and use that content to operate, improve, and promote the Service. This license persists even if you later remove the content or close your account. You represent that you have all necessary rights to grant this license, that your content does not infringe any third-party rights, and that you have obtained appropriate permissions for any photographs or images of identifiable individuals. Theatre4u may remove any content that violates these Terms or applicable law."],
   ["6. Exchange Transactions","Theatre4u™ provides the Backstage Exchange platform for listing items for rent, sale, or loan. We are not a party to any transaction between users. All agreements are solely between listing users and interested parties. We do not handle payments between users."],
@@ -8031,7 +8132,7 @@ function LandingPage({onSignIn, onSignUp}){
 
   const plans=[
     {name:"Free",price:"$0",period:"forever",color:"rgba(255,255,255,.15)",textColor:"rgba(255,255,255,.7)",features:["Up to 50 inventory items","QR labels & photos","Productions tracking","Browse Backstage Exchange","Community Board"],cta:"Get Started",primary:false},
-    {name:"Pro",price:"$12",period:"/month",annual:"$120/year",color:"linear-gradient(135deg,var(--gold),var(--goldd))",textColor:"#1a0f00",features:["Unlimited inventory","Full Backstage Exchange access","Stage Points","Reports & CSV export","Funding Tracker","Mobile app","Messages & requests"],cta:"Start Pro",primary:true},
+    {name:"Pro",price:"$15",period:"/month",annual:"$150/year",color:"linear-gradient(135deg,var(--gold),var(--goldd))",textColor:"#1a0f00",features:["Unlimited inventory","Full Backstage Exchange access","Stage Points","Reports & CSV export","Funding Tracker","Mobile app","Messages & requests"],cta:"Start Pro",primary:true},
     {name:"District",price:"$49",period:"/month",annual:"$500/year",color:"linear-gradient(135deg,#1565c0,#0d47a1)",textColor:"#fff",features:["Everything in Pro","Up to 6 school sites","District dashboard","Shared Backstage Exchange","District funding rollup","Priority support"],cta:"Start District",primary:false},
   ];
 
@@ -8081,7 +8182,7 @@ function LandingPage({onSignIn, onSignUp}){
           </button>
         </div>
         <div style={{marginTop:20,fontSize:12,color:"rgba(255,255,255,.4)"}}>
-          Free plan available · Pro from $12/month · No contracts
+          Free plan available · Pro from $15/month · No contracts
         </div>
       </div>
     </div>
