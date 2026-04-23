@@ -46,22 +46,14 @@ input::placeholder{color:var(--t3)}
 .success-sub{color:var(--t2);text-align:center;font-size:14px;line-height:1.6;margin-bottom:24px}
 .footer{margin-top:20px;text-align:center;font-size:12px;color:var(--t3)}
 .footer a{color:var(--gold);text-decoration:none}
-.role-info{background:rgba(255,255,255,.04);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin:16px 0;font-size:13px}
-.role-info .ri-title{font-weight:700;margin-bottom:6px;color:var(--gold)}
-.role-info ul{list-style:none;display:flex;flex-direction:column;gap:4px}
-.role-info ul li::before{content:"✓ ";color:var(--grn);font-weight:700}
-.role-info ul li.no::before{content:"✗ ";color:var(--t3)}
-.role-info ul li{color:var(--t2);font-size:12.5px}
+.pts-banner{background:linear-gradient(135deg,rgba(212,168,67,.12),rgba(212,168,67,.05));border:1px solid rgba(212,168,67,.28);border-radius:12px;padding:14px 16px;margin:20px 0 0;display:flex;gap:12px;align-items:flex-start}
+.pts-ico{font-size:28px;flex-shrink:0;margin-top:2px}
+.pts-title{font-weight:700;font-size:14px;color:var(--gold);margin-bottom:4px}
+.pts-body{font-size:12px;color:var(--t2);line-height:1.6}
+.pts-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.pts-chip{background:rgba(255,255,255,.05);border:1px solid rgba(212,168,67,.2);border-radius:7px;padding:6px 10px;font-size:11px;color:var(--t2);line-height:1.4}
+.pts-chip strong{display:block;color:var(--gold);font-size:12px;margin-bottom:1px}
 </style>
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K509H4V1KF"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-K509H4V1KF');
-    </script>
 </head>
 <body>
 <div class="wrap">
@@ -76,7 +68,21 @@ input::placeholder{color:var(--t3)}
       <h1>Join a Team</h1>
       <p class="subtitle">You've been invited to join a theatre program's backstage team on Theatre4u.</p>
       <div id="entry-content">
+        <!-- Populated by JS based on URL params -->
         <div style="color:var(--t3);font-size:13px">Loading invite details…</div>
+      </div>
+      <div class="pts-banner">
+        <div class="pts-ico">🪙</div>
+        <div>
+          <div class="pts-title">Earn Stage Points Together</div>
+          <div class="pts-body">Theatre4u's Stage Points reward your program for sharing resources with other theatre programs. Every loan, rental, and milestone earns points — both programs earn when a loan completes.</div>
+          <div class="pts-grid">
+            <div class="pts-chip"><strong>🤝 Loan Items</strong>+10–50 pts per loan<br>(both programs earn)</div>
+            <div class="pts-chip"><strong>🔑 Complete Rentals</strong>+$1 = 1 pt earned<br>by the lending program</div>
+            <div class="pts-chip"><strong>📦 Build Inventory</strong>+25 pts at 10 items<br>+50 pts at 25 w/ photos</div>
+            <div class="pts-chip"><strong>🎟️ Redeem Points</strong>1,500 pts = free Pro month<br>or 50% off Exchange deals</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -102,7 +108,7 @@ input::placeholder{color:var(--t3)}
       <button class="btn btn-gold" id="auth-btn" onclick="submitAuth()">Join Team →</button>
       <div class="divider"><span>or</span></div>
       <p style="text-align:center;color:var(--t2);font-size:13px">
-        Already have an account?
+        Already have an account? 
         <a href="#" onclick="toggleAuthMode()" style="color:var(--gold)" id="toggle-link">Sign in instead</a>
       </p>
     </div>
@@ -112,6 +118,9 @@ input::placeholder{color:var(--t3)}
       <div class="success-ico">🎭</div>
       <div class="success-title" id="success-title">You're on the team!</div>
       <div class="success-sub" id="success-sub">Welcome to the team. You now have access to the inventory.</div>
+      <div style="background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.25);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--t2);text-align:left;line-height:1.6">
+        🪙 <strong style="color:var(--gold)">Your program earns Stage Points</strong> when items are loaned or rented through Backstage Exchange. Ask your director about listing items — the more your program shares, the more points you earn toward free months and Exchange discounts.
+      </div>
       <button class="btn btn-gold" onclick="window.location.href='https://theatre4u.org'">
         Open Theatre4u →
       </button>
@@ -119,9 +128,8 @@ input::placeholder{color:var(--t3)}
   </div>
 
   <div class="footer">
-    <a href="https://theatre4u.org">theatre4u.org</a> ·
-    <a href="https://theatre4u.org/help.html">Help & Tutorials</a>
-    <br><span style="opacity:.5">© 2026 Artstracker LLC</span>
+    <a href="https://theatre4u.org">theatre4u.org</a> · 
+    <a href="https://theatre4u.org/help">Help</a>
   </div>
 </div>
 
@@ -141,12 +149,14 @@ const ROLE_LABELS = {
 };
 
 let currentInvite = null;
-let authMode = "signup";
+let authMode = "signup"; // or "login"
 
+// ── Parse URL params ──────────────────────────────────────────────────────────
 const params = new URLSearchParams(window.location.search);
 const token  = params.get("token");
 const code   = params.get("code");
 
+// ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
   if (token) {
     await loadTokenInvite(token);
@@ -243,45 +253,18 @@ function showManualCodeEntry(msg = "") {
 async function submitCode() {
   const raw = document.getElementById("manual-code")?.value?.trim().toUpperCase();
   if (!raw) return;
+  // Format: ensure ABC-123 format
   const code = raw.length === 7 ? raw : raw.slice(0,3) + "-" + raw.slice(3);
   await loadCodeInvite(code);
 }
 
-const ROLE_INFO = {
-  stage_manager: {
-    can: ["Add, edit, and delete inventory items","Upload photos","View Backstage Exchange & Community","Access Messages and Requests"],
-    cannot: ["Financial data or Funding Tracker","Settings or billing"]
-  },
-  crew: {
-    can: ["Add and edit inventory items","Upload photos and add tags","Look up items by QR code"],
-    cannot: ["Delete items","Financial data or Settings","Messages or Requests"]
-  },
-  house: {
-    can: ["View and search the full inventory","Look up items by QR code"],
-    cannot: ["Add, edit, or delete items","Any financial or settings data"]
-  },
-  director: {
-    can: ["Full access to all features"],
-    cannot: []
-  }
-};
-
 function goToAuth(orgName, prefillEmail, role) {
-  const info = ROLE_INFO[role];
-  const infoHtml = info ? `
-    <div class="role-info">
-      <div class="ri-title">${ROLE_LABELS[role] || role} — What you can do:</div>
-      <ul>
-        ${info.can.map(c=>`<li>${c}</li>`).join("")}
-        ${info.cannot.map(c=>`<li class="no">${c}</li>`).join("")}
-      </ul>
-    </div>` : "";
+  // Set up org banner in auth step
   document.getElementById("org-banner-auth").innerHTML = `
-    <div class="org-banner" style="margin-bottom:16px">
+    <div class="org-banner" style="margin-bottom:20px">
       <div class="org-name">🎭 ${orgName}</div>
       <div class="role-badge">${ROLE_LABELS[role] || role}</div>
     </div>
-    ${infoHtml}
   `;
   if (prefillEmail) {
     document.getElementById("auth-email").value = prefillEmail;
@@ -324,23 +307,32 @@ async function submitAuth() {
     btn.disabled = false; return;
   }
 
-  // Use SECURITY DEFINER RPC — handles org_members insert + marks invite accepted,
-  // bypassing RLS safely with full validation server-side.
-  const inviteKey = currentInvite.token || currentInvite.join_code;
-  const { data: rpcResult, error: rpcErr } = await SB.rpc("accept_team_invite", { p_token: inviteKey });
+  // Add member to org
+  const { error: memberErr } = await SB.from("org_members").insert({
+    org_id:     currentInvite.org_id,
+    user_id:    userId,
+    email:      email,
+    role:       currentInvite.role,
+    invited_by: currentInvite.invited_by,
+  });
 
-  if (rpcErr || rpcResult?.error) {
-    const msg = rpcResult?.error || rpcErr?.message || "Could not join team.";
-    if (msg.includes("Already a member")) {
-      // Already a member is fine — proceed to success
-    } else {
-      showAuthMsg(msg, "err");
-      btn.disabled = false; return;
-    }
+  if (memberErr && !memberErr.message.includes("unique")) {
+    // If it's a unique conflict they're already a member — that's fine
+    showAuthMsg("Could not join team: " + memberErr.message, "err");
+    btn.disabled = false; return;
   }
 
-  const orgName = rpcResult?.org_name || currentInvite.orgs?.name || "the team";
-  const roleLabel = ROLE_LABELS[rpcResult?.role || currentInvite.role] || currentInvite.role;
+  // Mark invite as accepted (for email invites; code invites stay reusable)
+  if (currentInvite.invite_type === "email") {
+    await SB.from("org_invites").update({
+      accepted_at: new Date().toISOString(),
+      accepted_by: userId,
+    }).eq("id", currentInvite.id);
+  }
+
+  // Show success
+  const orgName = currentInvite.orgs?.name || "the team";
+  const roleLabel = ROLE_LABELS[currentInvite.role] || currentInvite.role;
   document.getElementById("success-title").textContent = "You're on the team!";
   document.getElementById("success-sub").innerHTML =
     `Welcome to <strong>${orgName}</strong>. You've joined as <strong>${roleLabel}</strong>.<br><br>
@@ -367,7 +359,7 @@ function showError(msg) {
   document.getElementById("entry-content").innerHTML = `
     <div class="err">${msg}</div>
     <p style="color:var(--t2);font-size:13px;margin-top:12px">
-      Contact your director for a new invite, or
+      Contact your director for a new invite, or 
       <a href="https://theatre4u.org" style="color:var(--gold)">return to Theatre4u</a>.
     </p>
   `;
@@ -382,12 +374,14 @@ function goBack() {
   showStep("step-entry");
 }
 
+// Expose to onclick handlers
 window.submitCode = submitCode;
 window.submitAuth = submitAuth;
 window.toggleAuthMode = toggleAuthMode;
 window.goToAuth = goToAuth;
 window.goBack = goBack;
 
+// Init
 init();
 </script>
 </body>
