@@ -1531,7 +1531,7 @@ function CommunitySpotlight({onViewAll}){
   );
 }
 
-function Dashboard({items,org,goInventory,goMarketplace,goCommunity,goProfile}){
+function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketplace,goCommunity,goProfile,goPoints}){
   const totalQty=items.reduce((s,i)=>s+(i.qty||1),0);
   const listed=items.filter(i=>i.mkt!=="Not Listed").length;
   const withImg=items.filter(i=>i.img).length;
@@ -1606,6 +1606,40 @@ function Dashboard({items,org,goInventory,goMarketplace,goCommunity,goProfile}){
             </div>
           ))}
         </div>
+        {/* ── Stage Points Progress Card ── */}
+        {plan !== "free" && (
+          <div onClick={()=>goPoints&&goPoints()} style={{cursor:"pointer",
+            background:"linear-gradient(135deg,rgba(212,168,67,.1),rgba(212,168,67,.04))",
+            border:"1.5px solid rgba(212,168,67,.25)",borderRadius:14,
+            padding:"16px 20px",marginBottom:24,
+            display:"flex",alignItems:"center",gap:16}}>
+            <div style={{fontSize:36,flexShrink:0}}>🪙</div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:6}}>
+                <div style={{fontWeight:800,fontSize:15,color:"var(--gold)"}}>Stage Points</div>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--gold)",fontWeight:700}}>
+                  {(pointBalance||0).toLocaleString()}
+                  <span style={{fontSize:12,color:"var(--muted)",fontWeight:400}}> pts</span>
+                </div>
+              </div>
+              {/* Progress bar toward free month */}
+              <div style={{background:"rgba(0,0,0,.2)",borderRadius:99,height:6,marginBottom:6,overflow:"hidden"}}>
+                <div style={{height:"100%",borderRadius:99,
+                  background:"linear-gradient(90deg,var(--gold),#c4921a)",
+                  width: Math.min(100,(pointBalance||0)/POINTS_FREE_MONTH*100)+"%",
+                  transition:"width .5s ease"}}/>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"var(--muted)"}}>
+                <span>Earn by sharing inventory &amp; completing Exchange deals</span>
+                <span style={{fontWeight:700,color:(pointBalance||0)>=POINTS_FREE_MONTH?"var(--gold)":"var(--muted)"}}>
+                  {Math.max(0,POINTS_FREE_MONTH-(pointBalance||0)).toLocaleString()} until free month
+                </span>
+              </div>
+            </div>
+            <div style={{color:"var(--gold)",fontSize:18,flexShrink:0}}>→</div>
+          </div>
+        )}
+
         {/* ── Community Spotlight ── */}
         <div className="sh"><h2>🎪 Community Board</h2><p>Upcoming shows, auditions, and announcements from your theatre network.</p></div>
         <CommunitySpotlight onViewAll={goCommunity}/>
@@ -3560,7 +3594,7 @@ function Requests({ userId, orgName, orgEmail }) {
                             {isActive?"Processing…":"📦 Mark Item as Returned → Earn Credits"}
                           </button>
                           <div style={{textAlign:"center",fontSize:11,color:"var(--muted)",marginTop:5}}>
-                            🪙 You'll earn Stage Points when you confirm the return
+                            🪙 You'll earn {POINT_EARN_RATES[req?.item?.category] || 15} Stage Points when you confirm the return
                           </div>
                         </div>
                       )}
@@ -9767,7 +9801,9 @@ function AppRoot(){
         .eq("owner_id", user.id)
         .eq("status", "pending");
       setPendingReqCount(reqCount || 0);
-      // Stage Points balance — loaded on-demand when Credits page is visited
+      // Stage Points balance — loaded at login so it shows in nav/dashboard
+      SB.rpc("get_my_credit_balance").then(({data})=>{ if(data!=null) setCreditBalance(data||0); }).catch(()=>{});
+      // Stage Points balance — also refreshed on Credits page visit
       // (removed from startup to reduce login query count)
     })();
   },[user]);
@@ -10052,13 +10088,12 @@ function AppRoot(){
       ...(!isMember? [{ id:"funding",     label:"Funding Tracker", ico:"💰"  }] : []),
       // Prop 28 nav hidden — legacy data accessible via Funding Tracker migration banner
       { id:"profile",     label:"My Profile",  ico:"👤"       },
-      // Stage Points nav hidden — feature paused pending Exchange validation
-      
+      ...(!isMember ? [{ id:"points", label:"Stage Points", ico:"🪙" }] : []),
       ...(!isMember && plan === "district" ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
       ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
     ];
   })();
-  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Backstage Exchange", productions:"Productions", reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:"Stage Points", community:"Community Board" };
+  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Backstage Exchange", productions:"Productions", reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:"Stage Points", points:"Stage Points", community:"Community Board" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicItemId) return <PublicItemPage itemId={publicItemId} />;
@@ -10248,7 +10283,7 @@ function AppRoot(){
                       setPendingReqCount(count||0);
                     }}/>}
                   {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
-                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")}/>}
+                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} pointBalance={creditBalance} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
                   {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
