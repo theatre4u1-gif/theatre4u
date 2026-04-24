@@ -4602,7 +4602,7 @@ function AdminCloseOrgModal({ org, currentUser, onClose, onClosed, onHardDeleted
 
         <div style={{ padding:"16px 20px",borderBottom:"1px solid var(--border)",
           display:"flex",alignItems:"center",justifyContent:"space-between" }}>
-          <div style={{ fontFamily:"var(--serif)",fontSize:18,fontWeight:700,color:"var(--red)" }}>
+          <div style={{ fontFamily:"var(--serif)",fontSize:18,fontWeight:700,color:"#ff6b6b" }}>
             ⚠️ Close or Delete Account
           </div>
           <button onClick={onClose} style={{ background:"none",border:"1px solid var(--border)",
@@ -4613,10 +4613,10 @@ function AdminCloseOrgModal({ org, currentUser, onClose, onClosed, onHardDeleted
 
           <div style={{ background:"rgba(194,24,91,.06)",border:"1px solid rgba(194,24,91,.2)",
             borderRadius:9,padding:"12px 14px" }}>
-            <div style={{ fontWeight:700,fontSize:14,marginBottom:4 }}>{orgName}</div>
-            <div style={{ fontSize:12,color:"var(--muted)" }}>{org.email} · Plan: {org.plan||"free"}</div>
+            <div style={{ fontWeight:700,fontSize:14,marginBottom:4,color:"#f0ebe0" }}>{orgName}</div>
+            <div style={{ fontSize:12,color:"#b0a8b8" }}>{org.email} · Plan: {org.plan||"free"}</div>
             {org.stripe_subscription_id && (
-              <div style={{ fontSize:12,color:"var(--gold)",marginTop:4 }}>
+              <div style={{ fontSize:12,color:"#e8c46a",marginTop:4 }}>
                 ⚡ Active Stripe subscription — will be canceled automatically
               </div>
             )}
@@ -4631,13 +4631,13 @@ function AdminCloseOrgModal({ org, currentUser, onClose, onClosed, onHardDeleted
           {/* Soft close section */}
           <div style={{ background:"rgba(255,255,255,.03)",border:"1px solid var(--border)",
             borderRadius:10,padding:"14px 16px" }}>
-            <div style={{ fontWeight:700,fontSize:14,marginBottom:4 }}>Option 1 — Soft Close (Recommended)</div>
-            <div style={{ fontSize:12,color:"var(--muted)",marginBottom:10,lineHeight:1.6 }}>
+            <div style={{ fontWeight:700,fontSize:14,marginBottom:4,color:"#f0ebe0" }}>Option 1 — Soft Close (Recommended)</div>
+            <div style={{ fontSize:12,color:"#b0a8b8",marginBottom:10,lineHeight:1.6 }}>
               Cancels their Stripe subscription. Downgrades to Free. Data is preserved for 30 days.
               Owner receives a confirmation email. Recoverable within 30 days.
             </div>
             <div className="fg" style={{ marginBottom:10 }}>
-              <label className="fl">Type <strong style={{color:"var(--red)"}}>{CLOSE_WORD}</strong> to confirm</label>
+              <label className="fl" style={{color:"#c8bfd4"}}>Type <strong style={{color:"#ff6b6b"}}>{CLOSE_WORD}</strong> to confirm</label>
               <input className="fi" value={confirm} onChange={e=>setConfirm(e.target.value.toUpperCase())}
                 placeholder={CLOSE_WORD} style={{ fontFamily:"monospace",letterSpacing:2 }} />
             </div>
@@ -4650,15 +4650,15 @@ function AdminCloseOrgModal({ org, currentUser, onClose, onClosed, onHardDeleted
           {/* Hard delete section */}
           <div style={{ background:"rgba(194,24,91,.04)",border:"1px solid rgba(194,24,91,.3)",
             borderRadius:10,padding:"14px 16px" }}>
-            <div style={{ fontWeight:700,fontSize:14,marginBottom:4,color:"var(--red)" }}>
+            <div style={{ fontWeight:700,fontSize:14,marginBottom:4,color:"#ff6b6b" }}>
               Option 2 — Hard Delete (Irreversible)
             </div>
-            <div style={{ fontSize:12,color:"var(--muted)",marginBottom:10,lineHeight:1.6 }}>
+            <div style={{ fontSize:12,color:"#c8a0a0",marginBottom:10,lineHeight:1.6 }}>
               ⚠️ Permanently deletes ALL data immediately. Cannot be undone.
               Cancels Stripe subscription. Removes auth account. Use only for fraud/abuse or explicit verified request.
             </div>
             <div className="fg" style={{ marginBottom:10 }}>
-              <label className="fl">Type <strong style={{color:"var(--red)"}}>{DELETE_WORD}</strong> to confirm permanent deletion</label>
+              <label className="fl" style={{color:"#c8bfd4"}}>Type <strong style={{color:"#ff6b6b"}}>{DELETE_WORD}</strong> to confirm permanent deletion</label>
               <input className="fi" value={hardConfirm} onChange={e=>setHardConfirm(e.target.value.toUpperCase())}
                 placeholder={DELETE_WORD} style={{ fontFamily:"monospace",letterSpacing:2,borderColor:"rgba(194,24,91,.4)" }} />
             </div>
@@ -4673,8 +4673,8 @@ function AdminCloseOrgModal({ org, currentUser, onClose, onClosed, onHardDeleted
             </button>
           </div>
 
-          {err && <div style={{ color:"var(--red)",fontSize:13,background:"rgba(194,24,91,.06)",
-            border:"1px solid rgba(194,24,91,.2)",borderRadius:7,padding:"8px 12px" }}>{err}</div>}
+          {err && <div style={{ color:"#ff9999",fontSize:13,background:"rgba(194,24,91,.15)",
+            border:"1px solid rgba(194,24,91,.4)",borderRadius:7,padding:"8px 12px" }}>{err}</div>}
         </div>
       </div>
     </div>
