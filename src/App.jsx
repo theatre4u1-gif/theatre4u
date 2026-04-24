@@ -4158,6 +4158,20 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
 
   useEffect(() => { if (plan === "district") load(); }, [load, plan]);
 
+  const [assignMode,   setAssignMode]   = useState("invite"); // "invite" | "existing"
+  const [allOrgs,      setAllOrgs]      = useState([]);
+  const [assignOrgId,  setAssignOrgId]  = useState("");
+  const [assigning,    setAssigning]    = useState(false);
+
+  // Load all unassigned orgs for direct assignment
+  const loadAllOrgs = async () => {
+    const { data } = await SB.from("orgs")
+      .select("id,name,email,plan,district_id")
+      .is("district_id", null)
+      .order("name");
+    setAllOrgs(data || []);
+  };
+
   const sendInvite = async () => {
     if (!invEmail.trim()) return;
     setSending(true); setMsg("");
@@ -4175,7 +4189,7 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
       clearTimeout(timeout);
       const result = await res.json();
       if (result.success) {
-        setMsg("✓ Invite created for " + invEmail + " — check the Invites tab to copy the link if email doesn't arrive.");
+        setMsg("✓ Invite sent to " + invEmail + " — check Invites tab to copy the link if email doesn't arrive.");
         setInvEmail(""); setInvSchool("");
         setShowInvite(false);
         load();
@@ -4187,6 +4201,24 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
     } finally {
       setSending(false);
     }
+  };
+
+  const assignExisting = async () => {
+    if (!assignOrgId || !district?.id) return;
+    setAssigning(true);
+    const { error } = await SB.from("orgs").update({
+      district_id: district.id,
+      role: "school_admin",
+    }).eq("id", assignOrgId);
+    if (!error) {
+      setMsg("✓ School added to district");
+      setAssignOrgId(""); setShowInvite(false);
+      load();
+    } else {
+      setMsg("Error: " + error.message);
+    }
+    setAssigning(false);
+    setTimeout(() => setMsg(""), 4000);
   };
 
   const revokeInvite = async (id) => {
@@ -4398,35 +4430,82 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", zIndex: 1000,
           display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
           onClick={e => e.target === e.currentTarget && setShowInvite(false)}>
-          <div className="card card-p" style={{ width: "100%", maxWidth: 440, animation: "su .2s ease" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-              <h2 style={{ fontFamily: "var(--serif)", fontSize: 20 }}>Invite a School</h2>
+          <div className="card card-p" style={{ width: "100%", maxWidth: 480, animation: "su .2s ease" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0 }}>
+              <h2 style={{ fontFamily: "var(--serif)", fontSize: 20 }}>Add School to District</h2>
               <button className="btn btn-o btn-sm" onClick={() => setShowInvite(false)}>✕</button>
             </div>
-            <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 12 }}>
-              Send an invite link to a school admin. They can accept by signing in to their existing Theatre4u™ account <em>or</em> by creating a new one — their inventory comes with them either way.
-              You have <strong>{slotsTotal - slotsUsed}</strong> school slot{slotsTotal - slotsUsed !== 1 ? "s" : ""} remaining.
-            </p>
-            <div style={{ background: "rgba(212,168,67,.07)", border: "1px solid rgba(212,168,67,.18)", borderRadius: 8, padding: "9px 12px", marginBottom: 16, fontSize: 12, color: "var(--faint)", lineHeight: 1.6 }}>
-              💡 If the school already has a Theatre4u™ account with inventory, send the invite to that account's email. They sign in, click accept, and everything moves over automatically.
+
+            {/* Mode tabs */}
+            <div style={{ display: "flex", gap: 0, borderBottom: "1px solid var(--border)", margin: "12px -18px 0", padding: "0 18px" }}>
+              {[["invite","📨 Send Invite Email"],["existing","🔗 Add Existing Account"]].map(([m, l]) => (
+                <button key={m}
+                  onClick={() => { setAssignMode(m); if(m==="existing") loadAllOrgs(); }}
+                  style={{ padding: "8px 14px", fontFamily: "inherit", fontSize: 13, fontWeight: 700,
+                    cursor: "pointer", background: "none", border: "none",
+                    borderBottom: assignMode === m ? "2px solid var(--gold)" : "2px solid transparent",
+                    color: assignMode === m ? "var(--ink)" : "var(--muted)", marginBottom: -1 }}>
+                  {l}
+                </button>
+              ))}
             </div>
-            <div className="fg" style={{ marginBottom: 12 }}>
-              <label className="fl">School Admin Email *</label>
-              <input className="fi" type="email" value={invEmail} onChange={e => setInvEmail(e.target.value)}
-                placeholder="principal@school.edu" autoFocus
-                onKeyDown={e => e.key === "Enter" && sendInvite()} />
-            </div>
-            <div className="fg" style={{ marginBottom: 20 }}>
-              <label className="fl">School Name (optional)</label>
-              <input className="fi" value={invSchool} onChange={e => setInvSchool(e.target.value)}
-                placeholder="e.g. Ocean View High School" />
-            </div>
-            {msg && <div style={{ color: msg.startsWith("Error") ? "var(--red)" : "var(--green)", marginBottom: 12, fontSize: 13, fontWeight: 600 }}>{msg}</div>}
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button className="btn btn-o" onClick={() => setShowInvite(false)}>Cancel</button>
-              <button className="btn btn-g" onClick={sendInvite} disabled={!invEmail.trim() || sending}>
-                {sending ? "Sending…" : "Send Invite →"}
-              </button>
+
+            <div style={{ marginTop: 16 }}>
+              {assignMode === "invite" ? (<>
+                <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 12, lineHeight: 1.6 }}>
+                  Send an invite link by email. They can accept by signing into their existing Theatre4u™ account
+                  or by creating a new one. You have <strong>{slotsTotal - slotsUsed}</strong> slot{slotsTotal - slotsUsed !== 1 ? "s" : ""} remaining.
+                </p>
+                <div className="fg" style={{ marginBottom: 12 }}>
+                  <label className="fl">School Admin Email *</label>
+                  <input className="fi" type="email" value={invEmail} onChange={e => setInvEmail(e.target.value)}
+                    placeholder="principal@school.edu" autoFocus
+                    onKeyDown={e => e.key === "Enter" && sendInvite()} />
+                </div>
+                <div className="fg" style={{ marginBottom: 16 }}>
+                  <label className="fl">School Name (optional)</label>
+                  <input className="fi" value={invSchool} onChange={e => setInvSchool(e.target.value)}
+                    placeholder="e.g. Ocean View High School" />
+                </div>
+                {msg && <div style={{ color: msg.startsWith("✓") ? "var(--green)" : "var(--red)",
+                  marginBottom: 12, fontSize: 13, fontWeight: 600 }}>{msg}</div>}
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                  <button className="btn btn-o" onClick={() => setShowInvite(false)}>Cancel</button>
+                  <button className="btn btn-g" onClick={sendInvite} disabled={!invEmail.trim() || sending}>
+                    {sending ? "Sending…" : "Send Invite →"}
+                  </button>
+                </div>
+              </>) : (<>
+                <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 12, lineHeight: 1.6 }}>
+                  Add a school that already has a Theatre4u account. Their inventory moves with them immediately —
+                  no email needed.
+                </p>
+                <div className="fg" style={{ marginBottom: 16 }}>
+                  <label className="fl">Select School Account</label>
+                  <select className="fs" value={assignOrgId} onChange={e => setAssignOrgId(e.target.value)}>
+                    <option value="">— Choose an account —</option>
+                    {allOrgs.map(o => (
+                      <option key={o.id} value={o.id}>
+                        {o.name || "Unnamed"} — {o.email} ({o.plan})
+                      </option>
+                    ))}
+                  </select>
+                  {allOrgs.length === 0 && (
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
+                      No unassigned accounts found.
+                    </div>
+                  )}
+                </div>
+                {msg && <div style={{ color: msg.startsWith("✓") ? "var(--green)" : "var(--red)",
+                  marginBottom: 12, fontSize: 13, fontWeight: 600 }}>{msg}</div>}
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                  <button className="btn btn-o" onClick={() => setShowInvite(false)}>Cancel</button>
+                  <button className="btn btn-g" onClick={assignExisting}
+                    disabled={assigning || !assignOrgId} style={{ opacity: !assignOrgId ? .5 : 1 }}>
+                    {assigning ? "Adding…" : "Add to District →"}
+                  </button>
+                </div>
+              </>)}
             </div>
           </div>
         </div>
@@ -4739,6 +4818,195 @@ function AdminAccountsTab({ orgs, onRestore }) {
             </div>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ADMIN: DISTRICT ASSIGNMENT PANEL
+// Lets admin bulk-assign orgs to districts or remove them
+// ══════════════════════════════════════════════════════════════════════════════
+function AdminDistrictAssignPanel({ orgs, onUpdated }) {
+  const [districts,    setDistricts]    = useState([]);
+  const [selDistrict,  setSelDistrict]  = useState("");
+  const [selOrgs,      setSelOrgs]      = useState([]);   // array of org IDs
+  const [saving,       setSaving]       = useState(false);
+  const [msg,          setMsg]          = useState("");
+  const [removeMode,   setRemoveMode]   = useState(false);
+
+  // Load districts once
+  useEffect(() => {
+    SB.from("districts").select("id,name,max_schools,owner_id").order("name")
+      .then(({ data }) => setDistricts(data || []));
+  }, []);
+
+  // How many schools are already in selected district
+  const districtSchoolCount = selDistrict
+    ? orgs.filter(o => o.district_id === selDistrict).length
+    : 0;
+  const selDist = districts.find(d => d.id === selDistrict);
+  const atCapacity = selDist && districtSchoolCount >= selDist.max_schools;
+
+  // Orgs not yet in selected district (for assign mode)
+  const unassignedOrgs = selDistrict
+    ? orgs.filter(o => o.district_id !== selDistrict && o.account_status !== "closed")
+    : [];
+  // Orgs already in district (for remove mode)
+  const assignedOrgs = selDistrict
+    ? orgs.filter(o => o.district_id === selDistrict)
+    : [];
+
+  const toggleOrg = (id) =>
+    setSelOrgs(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
+  const apply = async () => {
+    if (!selDistrict || selOrgs.length === 0) return;
+    setSaving(true); setMsg("");
+    const updates = selOrgs.map(id =>
+      SB.from("orgs").update({
+        district_id: removeMode ? null : selDistrict,
+        role: removeMode ? "school_admin" : "school_admin",
+      }).eq("id", id)
+    );
+    await Promise.all(updates);
+    onUpdated();
+    setMsg(`✓ ${selOrgs.length} school${selOrgs.length !== 1 ? "s" : ""} ${removeMode ? "removed from" : "added to"} ${selDist?.name || "district"}`);
+    setSelOrgs([]);
+    setSaving(false);
+    setTimeout(() => setMsg(""), 4000);
+  };
+
+  const displayOrgs = removeMode ? assignedOrgs : unassignedOrgs;
+
+  return (
+    <div className="card card-p" style={{ marginBottom: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+        marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+        <div>
+          <div style={{ fontFamily: "var(--serif)", fontSize: 18, fontWeight: 700 }}>
+            🏛️ District Assignment
+          </div>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
+            Assign or remove schools from a district in bulk
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => { setRemoveMode(false); setSelOrgs([]); }}
+            style={{ padding: "5px 14px", borderRadius: 7, fontFamily: "inherit",
+              fontSize: 12, fontWeight: 700, cursor: "pointer", border: "1px solid var(--border)",
+              background: !removeMode ? "rgba(76,175,80,.15)" : "transparent",
+              color: !removeMode ? "#4caf50" : "var(--muted)" }}>
+            + Assign to District
+          </button>
+          <button onClick={() => { setRemoveMode(true); setSelOrgs([]); }}
+            style={{ padding: "5px 14px", borderRadius: 7, fontFamily: "inherit",
+              fontSize: 12, fontWeight: 700, cursor: "pointer", border: "1px solid var(--border)",
+              background: removeMode ? "rgba(194,24,91,.12)" : "transparent",
+              color: removeMode ? "var(--red)" : "var(--muted)" }}>
+            − Remove from District
+          </button>
+        </div>
+      </div>
+
+      {/* District selector */}
+      <div style={{ marginBottom: 14 }}>
+        <label style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase",
+          letterSpacing: 1, color: "var(--muted)", display: "block", marginBottom: 6 }}>
+          Select District
+        </label>
+        <select className="fs" value={selDistrict} onChange={e => { setSelDistrict(e.target.value); setSelOrgs([]); }}
+          style={{ maxWidth: 400 }}>
+          <option value="">— Choose a district —</option>
+          {districts.map(d => (
+            <option key={d.id} value={d.id}>
+              {d.name || "Unnamed District"} ({orgs.filter(o => o.district_id === d.id).length}/{d.max_schools} schools)
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {selDistrict && (
+        <>
+          {/* Capacity warning */}
+          {!removeMode && atCapacity && (
+            <div style={{ background: "rgba(212,168,67,.1)", border: "1px solid rgba(212,168,67,.3)",
+              borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "var(--gold)",
+              marginBottom: 12 }}>
+              ⚠️ This district is at capacity ({districtSchoolCount}/{selDist?.max_schools} schools).
+              Upgrade the district plan to add more schools.
+            </div>
+          )}
+
+          {/* School list */}
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase",
+            letterSpacing: 1, color: "var(--muted)", marginBottom: 8 }}>
+            {removeMode ? "Schools Currently in District" : "Schools to Add"}
+            {" — "}<button onClick={() => setSelOrgs(displayOrgs.map(o => o.id))}
+              style={{ background: "none", border: "none", color: "var(--gold)",
+                fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 700 }}>
+              Select All
+            </button>
+            {" · "}
+            <button onClick={() => setSelOrgs([])}
+              style={{ background: "none", border: "none", color: "var(--muted)",
+                fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
+              Clear
+            </button>
+          </div>
+
+          {displayOrgs.length === 0 ? (
+            <div style={{ fontSize: 13, color: "var(--muted)", padding: "12px 0" }}>
+              {removeMode ? "No schools in this district." : "All schools are already in this district."}
+            </div>
+          ) : (
+            <div style={{ border: "1px solid var(--border)", borderRadius: 10,
+              overflow: "hidden", marginBottom: 14 }}>
+              {displayOrgs.map((o, i) => (
+                <label key={o.id} style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  padding: "10px 14px", cursor: "pointer",
+                  borderTop: i > 0 ? "1px solid var(--border)" : "none",
+                  background: selOrgs.includes(o.id)
+                    ? removeMode ? "rgba(194,24,91,.06)" : "rgba(76,175,80,.06)"
+                    : i % 2 === 0 ? "rgba(255,255,255,.01)" : "transparent",
+                }}>
+                  <input type="checkbox" checked={selOrgs.includes(o.id)}
+                    onChange={() => toggleOrg(o.id)}
+                    style={{ width: 16, height: 16, accentColor: removeMode ? "var(--red)" : "#4caf50", cursor: "pointer" }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>{o.name || "Unnamed"}</div>
+                    <div style={{ fontSize: 11, color: "var(--muted)" }}>{o.email}</div>
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "right" }}>
+                    <div style={{ fontWeight: 600 }}>{o.type || "—"}</div>
+                    <div>{o.plan}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          )}
+
+          {/* Apply button */}
+          {selOrgs.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <button onClick={apply} disabled={saving}
+                style={{ padding: "9px 20px", borderRadius: 8, fontFamily: "inherit",
+                  fontWeight: 800, fontSize: 13, cursor: saving ? "not-allowed" : "pointer",
+                  background: removeMode ? "rgba(194,24,91,.8)" : "rgba(76,175,80,.85)",
+                  color: "#fff", border: "none", opacity: saving ? .6 : 1 }}>
+                {saving ? "Saving…"
+                  : removeMode
+                    ? `Remove ${selOrgs.length} school${selOrgs.length !== 1 ? "s" : ""} from district`
+                    : `Add ${selOrgs.length} school${selOrgs.length !== 1 ? "s" : ""} to ${selDist?.name || "district"}`}
+              </button>
+              {msg && <span style={{ fontSize: 13, fontWeight: 700, color: "#4caf50" }}>{msg}</span>}
+            </div>
+          )}
+          {msg && selOrgs.length === 0 && (
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#4caf50" }}>{msg}</span>
+          )}
+        </>
       )}
     </div>
   );
@@ -5337,6 +5605,8 @@ function AdminDashboard({ currentUser }) {
         </div>
 
         {adminTab==="orgs"&&(<>
+        {/* District Assignment Panel */}
+        <AdminDistrictAssignPanel orgs={orgs} onUpdated={load} />
         {/* Stats row */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 12, marginBottom: 24 }}>
           {[
