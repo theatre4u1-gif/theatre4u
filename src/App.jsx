@@ -5257,10 +5257,8 @@ function AdminDashboard({ currentUser }) {
     setFeedback(fbData || []);
     const { data: codesData } = await SB.from("beta_codes").select("*").order("created_at");
     setCodes(codesData || []);
-    // Load item counts per org
-    // Use aggregate count approach — only counts items each org owns
-    // Admin can still see counts via the org ownership chain
-    const { data: itemData } = await SB.from("items").select("org_id").neq("mkt","Not Listed");
+    // Load ALL item counts per org (total inventory, not just listed)
+    const { data: itemData } = await SB.from("items").select("org_id");
     const c = {};
     (itemData || []).forEach(i => { c[i.org_id] = (c[i.org_id] || 0) + 1; });
     setCounts(c);
@@ -5397,8 +5395,19 @@ function AdminDashboard({ currentUser }) {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "rgba(0,0,0,.25)" }}>
-                    {["Organization","Email","Plan","Items","Joined","Change Plan","Actions"].map(h => (
-                      <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>
+                    {[
+                      ["Organization", 200],
+                      ["Email",        180],
+                      ["Type",          90],
+                      ["Plan",          70],
+                      ["Inventory",     80],
+                      ["Joined",        90],
+                      ["Change Plan",  130],
+                      ["Actions",      160],
+                    ].map(([h, w]) => (
+                      <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 10,
+                        textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)",
+                        fontWeight: 700, whiteSpace: "nowrap", minWidth: w }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -5431,34 +5440,32 @@ function AdminDashboard({ currentUser }) {
                             ))}
                           </div>
                         </td>
-                        <td style={{ padding: "10px 14px" }}>
-                          <button
-                            onClick={async () => {
-                              const next = !o.is_leading_player;
-                              await SB.from("orgs").update({ is_leading_player: next }).eq("id", o.id);
-                              setOrgs(prev => prev.map(x => x.id === o.id ? { ...x, is_leading_player: next } : x));
-                              setMsg(next ? o.name + " is now a Leading Player" : o.name + " removed from Leading Players");
-                              setTimeout(() => setMsg(""), 3000);
-                            }}
-                            style={{
-                              background: o.is_leading_player ? "linear-gradient(135deg,var(--gold2),var(--gold))" : "rgba(255,255,255,.06)",
-                              border: "none",
-                              color: o.is_leading_player ? "#1a1000" : "var(--muted)",
-                              padding: "5px 12px",
-                              borderRadius: 20,
-                              fontSize: 11,
-                              fontWeight: 800,
-                              cursor: "pointer",
-                              fontFamily: "inherit",
-                              letterSpacing: .3,
-                              whiteSpace: "nowrap",
-                            }}>
-                            {o.is_leading_player ? "⭐ Leading Player" : "○ Make LP"}
-                          </button>
-                        </td>
-                        {/* ── Actions column ── */}
+                        {/* ── Actions column — LP toggle + Edit/Items/Close ── */}
                         <td style={{ padding: "10px 14px" }}>
                           <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                            {/* Leading Player toggle */}
+                            <button
+                              onClick={async () => {
+                                const next = !o.is_leading_player;
+                                await SB.from("orgs").update({ is_leading_player: next }).eq("id", o.id);
+                                setOrgs(prev => prev.map(x => x.id === o.id ? { ...x, is_leading_player: next } : x));
+                                setMsg(next ? o.name + " is now a Leading Player" : o.name + " removed from Leading Players");
+                                setTimeout(() => setMsg(""), 3000);
+                              }}
+                              style={{
+                                background: o.is_leading_player ? "linear-gradient(135deg,var(--gold2),var(--gold))" : "rgba(255,255,255,.06)",
+                                border: "1px solid var(--border)",
+                                color: o.is_leading_player ? "#1a1000" : "var(--muted)",
+                                padding: "4px 10px",
+                                borderRadius: 6,
+                                fontSize: 11,
+                                fontWeight: 800,
+                                cursor: "pointer",
+                                fontFamily: "inherit",
+                                whiteSpace: "nowrap",
+                              }}>
+                              {o.is_leading_player ? "⭐ LP" : "○ LP"}
+                            </button>
                             {/* Edit Org */}
                             <button onClick={() => setEditingOrg(o)}
                               style={{ padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer",
