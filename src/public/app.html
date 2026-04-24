@@ -615,6 +615,118 @@ function EditSheet({item, onClose, onSaved, userId}) {
 // ── ══════════════════════════════════════════
 // ── ADD ITEM SHEET
 // ── ══════════════════════════════════════════
+// ── LocationPicker ─────────────────────────────────────────────────────────
+// Smart dropdown: shows saved locations + inline "Add New Location" form
+function LocationPicker({value, onChange, userId}) {
+  const [locations, setLocations] = useState([]);
+  const [adding,    setAdding]    = useState(false);
+  const [newName,   setNewName]   = useState("");
+  const [newDesc,   setNewDesc]   = useState("");
+  const [saving,    setSaving]    = useState(false);
+  const [loaded,    setLoaded]    = useState(false);
+
+  // Load saved locations for this org
+  useEffect(() => {
+    if(!userId) return;
+    SB.from("storage_locations")
+      .select("id,name,description")
+      .eq("org_id", userId)
+      .order("name")
+      .then(({data}) => { setLocations(data||[]); setLoaded(true); });
+  }, [userId]);
+
+  const saveNew = async () => {
+    if(!newName.trim()) return;
+    setSaving(true);
+    const {data, error} = await SB.from("storage_locations")
+      .insert({org_id: userId, name: newName.trim(), description: newDesc.trim()||null})
+      .select().single();
+    if(!error && data) {
+      setLocations(prev => [...prev, data].sort((a,b)=>a.name.localeCompare(b.name)));
+      onChange(data.name);
+      setNewName(""); setNewDesc("");
+      setAdding(false);
+    }
+    setSaving(false);
+  };
+
+  return h("div",{className:"fg"},
+    h("label",{className:"fl"},"Location"),
+    // Dropdown of saved locations
+    h("div",{style:{position:"relative"}},
+      h("select",{
+        className:"fs",
+        value: value||"",
+        onChange: e => {
+          if(e.target.value === "__add__") { setAdding(true); }
+          else { onChange(e.target.value); setAdding(false); }
+        }
+      },
+        h("option",{value:""},"— Select location —"),
+        locations.map(l => h("option",{key:l.id, value:l.name}, l.name)),
+        h("option",{value:"__add__"},"+ Add New Location…")
+      )
+    ),
+    // Inline add form — appears when "Add New" selected
+    adding && h("div",{style:{
+      marginTop:10, padding:"12px 14px",
+      background:"rgba(212,168,67,.07)",
+      border:"1px solid rgba(212,168,67,.25)",
+      borderRadius:10
+    }},
+      h("div",{style:{fontSize:12,fontWeight:700,color:"rgba(212,168,67,.9)",
+        textTransform:"uppercase",letterSpacing:.8,marginBottom:10}},
+        "New Storage Location"
+      ),
+      h("input",{
+        className:"fi", placeholder:"Name — e.g. Costume Closet B",
+        value:newName, autoFocus:true,
+        onChange:e=>setNewName(e.target.value),
+        onKeyDown:e=>{ if(e.key==="Enter"){e.preventDefault();saveNew();} },
+        style:{marginBottom:8}
+      }),
+      h("input",{
+        className:"fi", placeholder:"Description (optional) — e.g. Stage left hallway",
+        value:newDesc,
+        onChange:e=>setNewDesc(e.target.value),
+        onKeyDown:e=>{ if(e.key==="Enter"){e.preventDefault();saveNew();} },
+        style:{marginBottom:10}
+      }),
+      h("div",{style:{display:"flex",gap:8}},
+        h("button",{
+          className:"btn btn-gold", style:{flex:2},
+          disabled:saving||!newName.trim(),
+          onClick:saveNew
+        }, saving?"Saving…":"Save Location"),
+        h("button",{
+          className:"btn btn-ghost", style:{flex:1},
+          onClick:()=>{setAdding(false);setNewName("");setNewDesc("");}
+        },"Cancel")
+      )
+    ),
+    // Manual text fallback — shows when value typed directly or mismatched
+    !adding && value && !locations.find(l=>l.name===value) && loaded && h("div",{
+      style:{marginTop:6,fontSize:12,color:"rgba(212,168,67,.8)",
+        display:"flex",alignItems:"center",gap:6}},
+      "✏️ Custom: ",
+      h("span",{style:{color:"var(--text)",fontWeight:600}},value),
+      h("button",{
+        onClick:()=>{
+          // Save this custom value as a new location
+          SB.from("storage_locations")
+            .insert({org_id:userId, name:value})
+            .select().single()
+            .then(({data})=>{
+              if(data) setLocations(prev=>[...prev,data].sort((a,b)=>a.name.localeCompare(b.name)));
+            });
+        },
+        style:{background:"none",border:"none",color:"rgba(212,168,67,.8)",
+          fontSize:11,cursor:"pointer",textDecoration:"underline",padding:0}
+      },"Save this location")
+    )
+  );
+}
+
 function AddSheet({onClose, onAdded, userId}) {
   const [step, setStep] = useState("photo"); // photo | details
   const [f, setF] = useState({name:"",category:"costumes",condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,avail:"In Stock",tags:[],img:null});
@@ -700,10 +812,7 @@ function AddSheet({onClose, onAdded, userId}) {
             CONDS.map(c=>h("button",{key:c,className:`cond-btn${f.condition===c?" on":""}`,onClick:()=>upd("condition",c)},c))
           )
         ),
-        h("div",{className:"fg"},
-          h("label",{className:"fl"},"Location"),
-          h("input",{className:"fi",value:f.location,onChange:e=>upd("location",e.target.value),placeholder:"Costume Closet A"})
-        ),
+        h(LocationPicker,{value:f.location,onChange:v=>upd("location",v),userId}),
         h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
           h("div",{className:"fg"},
             h("label",{className:"fl"},"Quantity"),
@@ -1048,6 +1157,120 @@ function InventoryTab({items, onViewItem, onAddItem}) {
 // ── SCAN TAB
 // ── ══════════════════════════════════════════
 
+// ── StorageLocationsManager ────────────────────────────────────────────────
+// Manage all saved storage locations from Profile tab
+function StorageLocationsManager({userId}) {
+  const [locations, setLocations] = useState([]);
+  const [adding,    setAdding]    = useState(false);
+  const [newName,   setNewName]   = useState("");
+  const [newDesc,   setNewDesc]   = useState("");
+  const [saving,    setSaving]    = useState(false);
+  const [deleting,  setDeleting]  = useState(null);
+
+  const load = () => {
+    if(!userId) return;
+    SB.from("storage_locations").select("*")
+      .eq("org_id", userId).order("name")
+      .then(({data}) => setLocations(data||[]));
+  };
+  useEffect(load, [userId]);
+
+  const saveNew = async () => {
+    if(!newName.trim()) return;
+    setSaving(true);
+    const {data, error} = await SB.from("storage_locations")
+      .insert({org_id:userId, name:newName.trim(), description:newDesc.trim()||null})
+      .select().single();
+    if(!error && data) {
+      setLocations(prev=>[...prev,data].sort((a,b)=>a.name.localeCompare(b.name)));
+      setNewName(""); setNewDesc(""); setAdding(false);
+    }
+    setSaving(false);
+  };
+
+  const del = async (id) => {
+    setDeleting(id);
+    await SB.from("storage_locations").delete().eq("id",id);
+    setLocations(prev=>prev.filter(l=>l.id!==id));
+    setDeleting(null);
+  };
+
+  return h("div",{className:"card card-p",style:{marginBottom:16}},
+    h("div",{style:{
+      display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14
+    }},
+      h("div",{style:{fontSize:12,fontWeight:700,textTransform:"uppercase",
+        letterSpacing:1,color:"var(--muted)"}},"Storage Locations"),
+      h("button",{
+        onClick:()=>setAdding(true),
+        style:{background:"rgba(212,168,67,.12)",border:"1px solid rgba(212,168,67,.25)",
+          color:"rgba(212,168,67,.9)",borderRadius:7,padding:"4px 10px",
+          fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}
+      },"+ Add")
+    ),
+
+    // Saved locations list
+    locations.length === 0 && !adding && h("div",{
+      style:{fontSize:13,color:"var(--muted)",textAlign:"center",padding:"12px 0"}
+    },"No storage locations saved yet. Add one to get started."),
+
+    locations.map(l => h("div",{key:l.id,style:{
+      display:"flex",alignItems:"center",gap:10,
+      padding:"8px 0",borderBottom:"1px solid var(--border)"
+    }},
+      h("div",{style:{fontSize:20}},"📦"),
+      h("div",{style:{flex:1,minWidth:0}},
+        h("div",{style:{fontWeight:600,fontSize:14,
+          whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},l.name),
+        l.description && h("div",{style:{fontSize:11,color:"var(--muted)"}},l.description)
+      ),
+      h("button",{
+        onClick:()=>del(l.id),
+        disabled:deleting===l.id,
+        style:{background:"none",border:"none",color:"rgba(194,24,91,.6)",
+          cursor:"pointer",fontSize:18,padding:"0 4px",flexShrink:0}
+      }, deleting===l.id ? "…" : "×")
+    )),
+
+    // Inline add form
+    adding && h("div",{style:{
+      marginTop:12,padding:"12px 14px",
+      background:"rgba(212,168,67,.07)",
+      border:"1px solid rgba(212,168,67,.25)",
+      borderRadius:10
+    }},
+      h("div",{style:{fontSize:12,fontWeight:700,color:"rgba(212,168,67,.9)",
+        marginBottom:10,textTransform:"uppercase",letterSpacing:.8}},
+        "New Storage Location"
+      ),
+      h("input",{
+        className:"fi", placeholder:"Name — e.g. Costume Closet B",
+        value:newName, autoFocus:true,
+        onChange:e=>setNewName(e.target.value),
+        onKeyDown:e=>{ if(e.key==="Enter"){e.preventDefault();saveNew();} },
+        style:{marginBottom:8}
+      }),
+      h("input",{
+        className:"fi", placeholder:"Description (optional)",
+        value:newDesc,
+        onChange:e=>setNewDesc(e.target.value),
+        onKeyDown:e=>{ if(e.key==="Enter"){e.preventDefault();saveNew();} },
+        style:{marginBottom:10}
+      }),
+      h("div",{style:{display:"flex",gap:8}},
+        h("button",{
+          className:"btn btn-gold",style:{flex:2},
+          disabled:saving||!newName.trim(), onClick:saveNew
+        }, saving?"Saving…":"Save Location"),
+        h("button",{
+          className:"btn btn-ghost",style:{flex:1},
+          onClick:()=>{setAdding(false);setNewName("");setNewDesc("");}
+        },"Cancel")
+      )
+    )
+  );
+}
+
 function ProfileTab({user, org, onSignOut}) {
   const [f, setF]     = useState(org||{});
   const [saved, setSaved] = useState(false);
@@ -1076,6 +1299,8 @@ function ProfileTab({user, org, onSignOut}) {
           saved?"✓ Saved!":"Save Changes"
         )
       ),
+      h(StorageLocationsManager,{userId:user?.id}),
+
       h("div",{className:"card card-p",style:{marginBottom:16}},
         h("div",{style:{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:14}},"Platform"),
         h("a",{href:"https://theatre4u.org",target:"_blank",rel:"noreferrer",style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid var(--border)",textDecoration:"none",color:"var(--text)",fontSize:14}},
