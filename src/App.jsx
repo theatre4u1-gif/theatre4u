@@ -42,6 +42,19 @@ const SB = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA"
 );
 
+// Edge function caller helper
+const callEdgeFn = async (name, body, token) => {
+  const res = await fetch(`https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/${name}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+};
+
 // ══════════════════════════════════════════════════════════════════════════════
 // ERROR MESSAGE LIBRARY — friendly user-facing messages, no raw DB errors
 // Usage: EM.itemSave.title / EM.itemSave.body / EM.itemSave.cta
@@ -4426,6 +4439,537 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
 // ADMIN INVENTORY VIEW — Browse any org's inventory for support/QA
 // All access is logged to audit_log
 // ══════════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════
+// ADMIN: EDIT ORG MODAL
+// ══════════════════════════════════════════════════════════════════════════════
+function AdminEditOrgModal({ org, onClose, onSaved }) {
+  const [f, setF] = useState({
+    name:        org.name        || "",
+    email:       org.email       || "",
+    type:        org.type        || "",
+    location:    org.location    || "",
+    bio:         org.bio         || "",
+    plan:        org.plan        || "free",
+    admin_notes: org.admin_notes || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [err,    setErr]    = useState("");
+  const upd = (k, v) => setF(p => ({ ...p, [k]: v }));
+
+  const save = async () => {
+    setSaving(true); setErr("");
+    const { error } = await SB.from("orgs").update({
+      name:        f.name.trim(),
+      email:       f.email.trim(),
+      type:        f.type,
+      location:    f.location,
+      bio:         f.bio,
+      plan:        f.plan,
+      admin_notes: f.admin_notes,
+    }).eq("id", org.id);
+    if (error) { setErr("Save failed: " + error.message); setSaving(false); return; }
+    onSaved({ ...org, ...f });
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:4000,
+      display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{ background:"var(--bg2,#15121b)",border:"1px solid var(--border)",
+        borderRadius:14,width:"100%",maxWidth:560,maxHeight:"88vh",
+        display:"flex",flexDirection:"column",boxShadow:"0 8px 48px rgba(0,0,0,.5)" }}>
+
+        {/* Header */}
+        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",
+          padding:"16px 20px",borderBottom:"1px solid var(--border)" }}>
+          <div>
+            <div style={{ fontFamily:"var(--serif)",fontSize:18,fontWeight:700 }}>
+              ✏️ Edit Organization
+            </div>
+            <div style={{ fontSize:12,color:"var(--muted)",marginTop:2 }}>
+              {org.name || org.email} · ID: {org.id?.slice(0,8)}…
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background:"none",border:"1px solid var(--border)",
+            color:"var(--muted)",borderRadius:6,padding:"4px 10px",cursor:"pointer",
+            fontFamily:"inherit",fontSize:18 }}>×</button>
+        </div>
+
+        <div style={{ padding:20,overflowY:"auto",display:"flex",flexDirection:"column",gap:14 }}>
+
+          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
+            <div className="fg">
+              <label className="fl">Organization Name</label>
+              <input className="fi" value={f.name} onChange={e=>upd("name",e.target.value)} />
+            </div>
+            <div className="fg">
+              <label className="fl">Email</label>
+              <input className="fi" type="email" value={f.email} onChange={e=>upd("email",e.target.value)} />
+            </div>
+            <div className="fg">
+              <label className="fl">Type</label>
+              <select className="fs" value={f.type} onChange={e=>upd("type",e.target.value)}>
+                {["","school","district","community","college","professional","other"].map(t=>(
+                  <option key={t} value={t}>{t||"— Select —"}</option>
+                ))}
+              </select>
+            </div>
+            <div className="fg">
+              <label className="fl">Plan</label>
+              <select className="fs" value={f.plan} onChange={e=>upd("plan",e.target.value)}>
+                {["free","pro","district","district_m","district_l"].map(p=>(
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+            <div className="fg" style={{ gridColumn:"1/-1" }}>
+              <label className="fl">Location (City, State)</label>
+              <input className="fi" value={f.location} onChange={e=>upd("location",e.target.value)} />
+            </div>
+            <div className="fg" style={{ gridColumn:"1/-1" }}>
+              <label className="fl">Bio / About</label>
+              <textarea className="ft" value={f.bio} onChange={e=>upd("bio",e.target.value)} rows={2} />
+            </div>
+            <div className="fg" style={{ gridColumn:"1/-1" }}>
+              <label className="fl" style={{ color:"var(--red)" }}>Admin Notes (internal only)</label>
+              <textarea className="ft" value={f.admin_notes}
+                onChange={e=>upd("admin_notes",e.target.value)}
+                placeholder="Grandfathered pricing, support history, flags…"
+                rows={2}
+                style={{ borderColor:"rgba(194,24,91,.3)" }} />
+            </div>
+          </div>
+
+          {err && <div style={{ color:"var(--red)",fontSize:13,background:"rgba(194,24,91,.06)",
+            border:"1px solid rgba(194,24,91,.2)",borderRadius:7,padding:"8px 12px" }}>{err}</div>}
+
+          <div style={{ display:"flex",gap:8,justifyContent:"flex-end",
+            paddingTop:12,borderTop:"1px solid var(--border)" }}>
+            <button className="btn btn-o" onClick={onClose}>Cancel</button>
+            <button className="btn btn-g" onClick={save} disabled={saving}>
+              {saving ? "Saving…" : "✓ Save Changes"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ADMIN: CLOSE / DELETE ORG MODAL
+// ══════════════════════════════════════════════════════════════════════════════
+function AdminCloseOrgModal({ org, currentUser, onClose, onClosed, onHardDeleted }) {
+  const [reason,      setReason]      = useState("");
+  const [confirm,     setConfirm]     = useState("");
+  const [hardConfirm, setHardConfirm] = useState("");
+  const [working,     setWorking]     = useState(false);
+  const [err,         setErr]         = useState("");
+  const orgName = org.name || org.email || "this organization";
+  const CLOSE_WORD  = "CLOSE";
+  const DELETE_WORD = "DELETE";
+
+  const softClose = async () => {
+    if (confirm !== CLOSE_WORD) { setErr(`Type ${CLOSE_WORD} to confirm`); return; }
+    setWorking(true); setErr("");
+    const { data: { session } } = await SB.auth.getSession();
+    const result = await callEdgeFn("close-org", {
+      org_id: org.id, reason, action: "close", is_admin_action: true
+    }, session?.access_token);
+    if (result?.success) { onClosed(org.id); }
+    else { setErr(result?.error || "Close failed — check logs"); setWorking(false); }
+  };
+
+  const hardDelete = async () => {
+    if (hardConfirm !== DELETE_WORD) { setErr(`Type ${DELETE_WORD} to confirm hard delete`); return; }
+    setWorking(true); setErr("");
+    const { data: { session } } = await SB.auth.getSession();
+    const result = await callEdgeFn("close-org", {
+      org_id: org.id, reason, action: "hard_delete", is_admin_action: true
+    }, session?.access_token);
+    if (result?.success) { onHardDeleted(org.id); }
+    else { setErr(result?.error || "Delete failed — check logs"); setWorking(false); }
+  };
+
+  return (
+    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:4000,
+      display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{ background:"var(--bg2,#15121b)",border:"1.5px solid rgba(194,24,91,.4)",
+        borderRadius:14,width:"100%",maxWidth:520,maxHeight:"88vh",
+        display:"flex",flexDirection:"column",boxShadow:"0 8px 48px rgba(0,0,0,.6)" }}>
+
+        <div style={{ padding:"16px 20px",borderBottom:"1px solid var(--border)",
+          display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+          <div style={{ fontFamily:"var(--serif)",fontSize:18,fontWeight:700,color:"var(--red)" }}>
+            ⚠️ Close or Delete Account
+          </div>
+          <button onClick={onClose} style={{ background:"none",border:"1px solid var(--border)",
+            color:"var(--muted)",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:18 }}>×</button>
+        </div>
+
+        <div style={{ padding:20,overflowY:"auto",display:"flex",flexDirection:"column",gap:16 }}>
+
+          <div style={{ background:"rgba(194,24,91,.06)",border:"1px solid rgba(194,24,91,.2)",
+            borderRadius:9,padding:"12px 14px" }}>
+            <div style={{ fontWeight:700,fontSize:14,marginBottom:4 }}>{orgName}</div>
+            <div style={{ fontSize:12,color:"var(--muted)" }}>{org.email} · Plan: {org.plan||"free"}</div>
+            {org.stripe_subscription_id && (
+              <div style={{ fontSize:12,color:"var(--gold)",marginTop:4 }}>
+                ⚡ Active Stripe subscription — will be canceled automatically
+              </div>
+            )}
+          </div>
+
+          <div className="fg">
+            <label className="fl">Reason (shown in confirmation email)</label>
+            <textarea className="ft" value={reason} onChange={e=>setReason(e.target.value)}
+              placeholder="Duplicate account, abuse, admin request…" rows={2} />
+          </div>
+
+          {/* Soft close section */}
+          <div style={{ background:"rgba(255,255,255,.03)",border:"1px solid var(--border)",
+            borderRadius:10,padding:"14px 16px" }}>
+            <div style={{ fontWeight:700,fontSize:14,marginBottom:4 }}>Option 1 — Soft Close (Recommended)</div>
+            <div style={{ fontSize:12,color:"var(--muted)",marginBottom:10,lineHeight:1.6 }}>
+              Cancels their Stripe subscription. Downgrades to Free. Data is preserved for 30 days.
+              Owner receives a confirmation email. Recoverable within 30 days.
+            </div>
+            <div className="fg" style={{ marginBottom:10 }}>
+              <label className="fl">Type <strong style={{color:"var(--red)"}}>{CLOSE_WORD}</strong> to confirm</label>
+              <input className="fi" value={confirm} onChange={e=>setConfirm(e.target.value.toUpperCase())}
+                placeholder={CLOSE_WORD} style={{ fontFamily:"monospace",letterSpacing:2 }} />
+            </div>
+            <button className="btn btn-d" onClick={softClose}
+              disabled={working || confirm !== CLOSE_WORD} style={{ width:"100%" }}>
+              {working ? "Processing…" : "🚫 Close Account (30-day window)"}
+            </button>
+          </div>
+
+          {/* Hard delete section */}
+          <div style={{ background:"rgba(194,24,91,.04)",border:"1px solid rgba(194,24,91,.3)",
+            borderRadius:10,padding:"14px 16px" }}>
+            <div style={{ fontWeight:700,fontSize:14,marginBottom:4,color:"var(--red)" }}>
+              Option 2 — Hard Delete (Irreversible)
+            </div>
+            <div style={{ fontSize:12,color:"var(--muted)",marginBottom:10,lineHeight:1.6 }}>
+              ⚠️ Permanently deletes ALL data immediately. Cannot be undone.
+              Cancels Stripe subscription. Removes auth account. Use only for fraud/abuse or explicit verified request.
+            </div>
+            <div className="fg" style={{ marginBottom:10 }}>
+              <label className="fl">Type <strong style={{color:"var(--red)"}}>{DELETE_WORD}</strong> to confirm permanent deletion</label>
+              <input className="fi" value={hardConfirm} onChange={e=>setHardConfirm(e.target.value.toUpperCase())}
+                placeholder={DELETE_WORD} style={{ fontFamily:"monospace",letterSpacing:2,borderColor:"rgba(194,24,91,.4)" }} />
+            </div>
+            <button onClick={hardDelete}
+              disabled={working || hardConfirm !== DELETE_WORD}
+              style={{ width:"100%",padding:"9px",borderRadius:7,fontFamily:"inherit",
+                fontWeight:800,fontSize:13,cursor:working||hardConfirm!==DELETE_WORD?"not-allowed":"pointer",
+                background:hardConfirm===DELETE_WORD?"rgba(194,24,91,.85)":"rgba(194,24,91,.15)",
+                color:hardConfirm===DELETE_WORD?"#fff":"var(--red)",
+                border:"1px solid rgba(194,24,91,.4)",opacity:working?.5:1 }}>
+              {working ? "Deleting…" : "💀 Permanently Delete All Data"}
+            </button>
+          </div>
+
+          {err && <div style={{ color:"var(--red)",fontSize:13,background:"rgba(194,24,91,.06)",
+            border:"1px solid rgba(194,24,91,.2)",borderRadius:7,padding:"8px 12px" }}>{err}</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ADMIN: ACCOUNTS TAB (closed / pending deletion list)
+// ══════════════════════════════════════════════════════════════════════════════
+function AdminAccountsTab({ orgs, onRestore }) {
+  const closed = orgs.filter(o => o.account_status === "closed");
+  const daysLeft = (d) => {
+    if (!d) return "—";
+    const diff = new Date(d) - new Date();
+    return Math.max(0, Math.ceil(diff / 86400000)) + " days";
+  };
+
+  return (
+    <div>
+      <div style={{ marginBottom:16 }}>
+        <h3 style={{ fontFamily:"var(--serif)",fontSize:18,marginBottom:4 }}>⚠️ Closed Accounts</h3>
+        <p style={{ fontSize:13,color:"var(--muted)" }}>
+          {closed.length} closed account{closed.length !== 1 ? "s" : ""} pending permanent deletion.
+          Restore within 30 days of closing to recover data.
+        </p>
+      </div>
+      {closed.length === 0 ? (
+        <div style={{ textAlign:"center",padding:"48px 0",color:"var(--muted)" }}>
+          <div style={{ fontSize:40,marginBottom:12 }}>✅</div>
+          <div>No closed accounts — all organizations are active.</div>
+        </div>
+      ) : (
+        <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+          {closed.map(o => (
+            <div key={o.id} className="card card-p"
+              style={{ borderLeft:"3px solid var(--red)",display:"flex",
+                alignItems:"center",gap:16,flexWrap:"wrap" }}>
+              <div style={{ flex:1,minWidth:200 }}>
+                <div style={{ fontWeight:700,fontSize:14 }}>{o.name || "Unnamed"}</div>
+                <div style={{ fontSize:12,color:"var(--muted)",marginTop:2 }}>{o.email}</div>
+                <div style={{ fontSize:11,color:"var(--muted)",marginTop:4 }}>
+                  Closed: {o.deleted_at ? new Date(o.deleted_at).toLocaleDateString() : "—"}
+                  {" · "}{o.closed_by === "admin" ? "by Admin" : "by Owner"}
+                  {o.cancellation_reason && <span> · "{o.cancellation_reason}"</span>}
+                </div>
+              </div>
+              <div style={{ textAlign:"right",flexShrink:0 }}>
+                <div style={{ fontSize:11,color:"var(--muted)",marginBottom:6 }}>
+                  Hard delete in
+                </div>
+                <div style={{ fontFamily:"var(--serif)",fontSize:22,fontWeight:700,
+                  color: parseInt(daysLeft(o.deletion_scheduled_at)) <= 7 ? "var(--red)" : "var(--gold)" }}>
+                  {daysLeft(o.deletion_scheduled_at)}
+                </div>
+              </div>
+              <button onClick={() => onRestore(o.id)}
+                style={{ padding:"7px 16px",borderRadius:8,fontFamily:"inherit",fontWeight:700,
+                  fontSize:13,cursor:"pointer",background:"rgba(76,175,80,.12)",
+                  border:"1px solid rgba(76,175,80,.3)",color:"#4caf50" }}>
+                ↩ Restore
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ADMIN: ORG INVENTORY EDITOR (admin edits any org's items)
+// ══════════════════════════════════════════════════════════════════════════════
+function AdminOrgInventoryEditor({ org, onBack }) {
+  const [items,   setItems]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search,  setSearch]  = useState("");
+  const [editingItem, setEditingItem] = useState(null);
+  const [msg,     setMsg]     = useState("");
+
+  useEffect(() => {
+    SB.from("items").select("*").eq("org_id", org.id)
+      .order("added", { ascending: false })
+      .then(({ data }) => { setItems(data || []); setLoading(false); });
+  }, [org.id]);
+
+  const filtered = items.filter(i =>
+    !search || i.name?.toLowerCase().includes(search.toLowerCase()) ||
+    (i.location||"").toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div>
+      <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:18 }}>
+        <button onClick={onBack} className="btn btn-o btn-sm">← Back</button>
+        <div>
+          <div style={{ fontFamily:"var(--serif)",fontSize:20,fontWeight:700 }}>
+            📦 {org.name || "Org"} Inventory
+          </div>
+          <div style={{ fontSize:12,color:"var(--muted)" }}>{org.email} · {items.length} items</div>
+        </div>
+      </div>
+
+      <div style={{ display:"flex",gap:10,marginBottom:14,alignItems:"center" }}>
+        <input className="fi" value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="Search items…" style={{ maxWidth:300 }} />
+        {msg && <span style={{ fontSize:13,fontWeight:700,color:"var(--green)" }}>{msg}</span>}
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign:"center",padding:40,color:"var(--muted)" }}>Loading…</div>
+      ) : filtered.length === 0 ? (
+        <div style={{ textAlign:"center",padding:40,color:"var(--muted)" }}>No items found.</div>
+      ) : (
+        <div className="card" style={{ overflow:"hidden" }}>
+          <div style={{ overflowX:"auto" }}>
+            <table style={{ width:"100%",borderCollapse:"collapse" }}>
+              <thead>
+                <tr style={{ background:"rgba(0,0,0,.25)" }}>
+                  {["Item","Category","Condition","Qty","Location","Avail","Market","Edit"].map(h=>(
+                    <th key={h} style={{ padding:"9px 12px",textAlign:"left",fontSize:10,
+                      textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",fontWeight:700,whiteSpace:"nowrap" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((item, i) => (
+                  <tr key={item.id} style={{ borderTop:"1px solid var(--border)",
+                    background: i%2===0?"rgba(255,255,255,.01)":"transparent" }}>
+                    <td style={{ padding:"9px 12px",fontWeight:600,fontSize:13 }}>{item.name}</td>
+                    <td style={{ padding:"9px 12px",fontSize:12,color:"var(--muted)" }}>{item.category}</td>
+                    <td style={{ padding:"9px 12px",fontSize:12,color:"var(--muted)" }}>{item.condition}</td>
+                    <td style={{ padding:"9px 12px",fontSize:13 }}>{item.qty||1}</td>
+                    <td style={{ padding:"9px 12px",fontSize:12,color:"var(--muted)" }}>{item.location||"—"}</td>
+                    <td style={{ padding:"9px 12px",fontSize:12,color:"var(--muted)" }}>{item.avail}</td>
+                    <td style={{ padding:"9px 12px",fontSize:12,color:"var(--muted)" }}>{item.mkt}</td>
+                    <td style={{ padding:"9px 12px" }}>
+                      <button onClick={() => setEditingItem(item)}
+                        style={{ padding:"3px 10px",fontSize:11,fontWeight:700,cursor:"pointer",
+                          borderRadius:6,border:"1px solid var(--border)",background:"rgba(66,165,245,.1)",
+                          color:"#42a5f5",fontFamily:"inherit" }}>
+                        ✏️ Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Inline item edit modal */}
+      {editingItem && (
+        <AdminEditItemModal
+          item={editingItem}
+          onClose={() => setEditingItem(null)}
+          onSaved={(updated) => {
+            setItems(prev => prev.map(i => i.id === updated.id ? { ...i, ...updated } : i));
+            setEditingItem(null);
+            setMsg("✓ " + (updated.name || "Item") + " updated");
+            setTimeout(() => setMsg(""), 3000);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ADMIN: EDIT ITEM MODAL
+// ══════════════════════════════════════════════════════════════════════════════
+function AdminEditItemModal({ item, onClose, onSaved }) {
+  const [f, setF] = useState({
+    name:      item.name      || "",
+    category:  item.category  || "other",
+    condition: item.condition || "Good",
+    location:  item.location  || "",
+    qty:       item.qty       || 1,
+    notes:     item.notes     || "",
+    avail:     item.avail     || "In Stock",
+    mkt:       item.mkt       || "Not Listed",
+  });
+  const [saving, setSaving] = useState(false);
+  const [err,    setErr]    = useState("");
+  const upd = (k, v) => setF(p => ({ ...p, [k]: v }));
+
+  const save = async () => {
+    setSaving(true); setErr("");
+    const { error } = await SB.from("items").update({
+      name:      f.name.trim(),
+      category:  f.category,
+      condition: f.condition,
+      location:  f.location,
+      qty:       parseInt(f.qty) || 1,
+      notes:     f.notes,
+      avail:     f.avail,
+      mkt:       f.mkt,
+    }).eq("id", item.id);
+    if (error) { setErr("Save failed: " + error.message); setSaving(false); return; }
+    onSaved({ ...item, ...f });
+    setSaving(false);
+  };
+
+  const deleteItem = async () => {
+    if (!confirm("Permanently delete this item? Cannot be undone.")) return;
+    setSaving(true);
+    await SB.from("items").delete().eq("id", item.id);
+    onSaved({ ...item, _deleted: true });
+  };
+
+  return (
+    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:5000,
+      display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{ background:"var(--bg2,#15121b)",border:"1px solid var(--border)",
+        borderRadius:14,width:"100%",maxWidth:520,maxHeight:"88vh",
+        display:"flex",flexDirection:"column",boxShadow:"0 8px 48px rgba(0,0,0,.5)" }}>
+
+        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",
+          padding:"15px 20px",borderBottom:"1px solid var(--border)" }}>
+          <div style={{ fontFamily:"var(--serif)",fontSize:17,fontWeight:700 }}>
+            ✏️ Edit Item (Admin)
+          </div>
+          <button onClick={onClose} style={{ background:"none",border:"1px solid var(--border)",
+            color:"var(--muted)",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:18 }}>×</button>
+        </div>
+
+        <div style={{ padding:20,overflowY:"auto",display:"flex",flexDirection:"column",gap:13 }}>
+          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
+            <div className="fg" style={{ gridColumn:"1/-1" }}>
+              <label className="fl">Item Name</label>
+              <input className="fi" value={f.name} onChange={e=>upd("name",e.target.value)} autoFocus />
+            </div>
+            <div className="fg">
+              <label className="fl">Category</label>
+              <select className="fs" value={f.category} onChange={e=>upd("category",e.target.value)}>
+                {CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+              </select>
+            </div>
+            <div className="fg">
+              <label className="fl">Condition</label>
+              <select className="fs" value={f.condition} onChange={e=>upd("condition",e.target.value)}>
+                {CONDS.map(c=><option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="fg">
+              <label className="fl">Availability</label>
+              <select className="fs" value={f.avail} onChange={e=>upd("avail",e.target.value)}>
+                {["In Stock","In Use","Checked Out","Being Repaired","Lost","Retired"].map(a=>(
+                  <option key={a}>{a}</option>
+                ))}
+              </select>
+            </div>
+            <div className="fg">
+              <label className="fl">Qty</label>
+              <input className="fi" type="number" min="0" value={f.qty}
+                onChange={e=>upd("qty",e.target.value)} />
+            </div>
+            <div className="fg" style={{ gridColumn:"1/-1" }}>
+              <label className="fl">Location</label>
+              <input className="fi" value={f.location} onChange={e=>upd("location",e.target.value)} />
+            </div>
+            <div className="fg">
+              <label className="fl">Market Status</label>
+              <select className="fs" value={f.mkt} onChange={e=>upd("mkt",e.target.value)}>
+                {["Not Listed","For Rent","For Sale","Rent or Sale","For Loan"].map(m=>(
+                  <option key={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+            <div className="fg" style={{ gridColumn:"1/-1" }}>
+              <label className="fl">Notes</label>
+              <textarea className="ft" value={f.notes} onChange={e=>upd("notes",e.target.value)} rows={2} />
+            </div>
+          </div>
+
+          {err && <div style={{ color:"var(--red)",fontSize:13,padding:"8px 12px",
+            background:"rgba(194,24,91,.06)",border:"1px solid rgba(194,24,91,.2)",borderRadius:7 }}>{err}</div>}
+
+          <div style={{ display:"flex",gap:8,justifyContent:"space-between",
+            paddingTop:12,borderTop:"1px solid var(--border)" }}>
+            <button onClick={deleteItem} className="btn btn-d btn-sm">🗑 Delete Item</button>
+            <div style={{ display:"flex",gap:8 }}>
+              <button className="btn btn-o" onClick={onClose}>Cancel</button>
+              <button className="btn btn-g" onClick={save} disabled={saving}>
+                {saving ? "Saving…" : "✓ Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AdminInventoryView() {
   const [orgs,        setOrgs]        = useState([]);
   const [selOrg,      setSelOrg]      = useState(null);
@@ -4697,6 +5241,9 @@ function AdminDashboard({ currentUser }) {
   const [feedback,  setFeedback]  = useState([]);
   const [fbLoading, setFbLoading] = useState(false);
   const [codes,     setCodes]     = useState([]);
+  const [editingOrg,          setEditingOrg]          = useState(null);
+  const [editingInventoryOrg, setEditingInventoryOrg] = useState(null);
+  const [closingOrg,          setClosingOrg]          = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -4780,7 +5327,7 @@ function AdminDashboard({ currentUser }) {
 
         {/* Tab nav */}
         <div className="tabs" style={{ marginBottom: 20 }}>
-          {[["orgs","🏛 Organizations"],["inventory","📦 Inventories"],["feedback","💬 Feedback"],["codes","🎟 Beta Codes"]].map(([id,lbl])=>(
+          {[["orgs","🏛 Organizations"],["inventory","📦 Inventories"],["accounts","⚠️ Accounts"],["feedback","💬 Feedback"],["codes","🎟 Beta Codes"]].map(([id,lbl])=>(
             <button key={id} className={`tab ${adminTab===id?"on":""}`} onClick={()=>setAdminTab(id)}>{lbl}
               {id==="feedback"&&feedback.filter(f=>f.status==="new").length>0&&(
                 <span style={{background:"var(--red)",color:"#fff",borderRadius:8,padding:"1px 6px",fontSize:10,fontWeight:800,marginLeft:5}}>
@@ -4850,7 +5397,7 @@ function AdminDashboard({ currentUser }) {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "rgba(0,0,0,.25)" }}>
-                    {["Organization","Email","Type","Plan","Items","Joined","Change Plan"].map(h => (
+                    {["Organization","Email","Plan","Items","Joined","Change Plan","Actions"].map(h => (
                       <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
@@ -4909,6 +5456,50 @@ function AdminDashboard({ currentUser }) {
                             {o.is_leading_player ? "⭐ Leading Player" : "○ Make LP"}
                           </button>
                         </td>
+                        {/* ── Actions column ── */}
+                        <td style={{ padding: "10px 14px" }}>
+                          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                            {/* Edit Org */}
+                            <button onClick={() => setEditingOrg(o)}
+                              style={{ padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                                borderRadius: 6, border: "1px solid var(--border)", background: "rgba(66,165,245,.1)",
+                                color: "#42a5f5", fontFamily: "inherit" }}>
+                              ✏️ Edit
+                            </button>
+                            {/* Edit Inventory */}
+                            <button onClick={() => { setEditingInventoryOrg(o); setAdminTab("inventory"); }}
+                              style={{ padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                                borderRadius: 6, border: "1px solid var(--border)", background: "rgba(76,175,80,.1)",
+                                color: "#4caf50", fontFamily: "inherit" }}>
+                              📦 Items
+                            </button>
+                            {/* Close/Delete — never show for admin accounts */}
+                            {!isAdmin && o.account_status !== "closed" && (
+                              <button onClick={() => setClosingOrg(o)}
+                                style={{ padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                                  borderRadius: 6, border: "1px solid rgba(194,24,91,.3)", background: "rgba(194,24,91,.08)",
+                                  color: "var(--red)", fontFamily: "inherit" }}>
+                                🚫 Close
+                              </button>
+                            )}
+                            {/* Restore closed account */}
+                            {o.account_status === "closed" && (
+                              <button onClick={async () => {
+                                  const { data } = await SB.rpc("restore_org", { p_org_id: o.id });
+                                  if (data?.success) {
+                                    setOrgs(prev => prev.map(x => x.id === o.id ? {...x, account_status:"active", deleted_at:null} : x));
+                                    setMsg("✓ " + o.name + " restored");
+                                    setTimeout(() => setMsg(""), 3000);
+                                  }
+                                }}
+                                style={{ padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                                  borderRadius: 6, border: "1px solid rgba(76,175,80,.3)", background: "rgba(76,175,80,.1)",
+                                  color: "#4caf50", fontFamily: "inherit" }}>
+                                ↩ Restore
+                              </button>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}
@@ -4925,7 +5516,19 @@ function AdminDashboard({ currentUser }) {
 
         {/* ── FEEDBACK TAB ── */}
         {/* ── ADMIN INVENTORY VIEW TAB ── */}
-        {adminTab==="inventory"&&(<AdminInventoryView/>)}
+        {adminTab==="inventory" && (
+          editingInventoryOrg
+            ? <AdminOrgInventoryEditor org={editingInventoryOrg} onBack={()=>setEditingInventoryOrg(null)} />
+            : <AdminInventoryView />
+        )}
+
+        {/* ── ACCOUNTS TAB: closed/pending deletion ── */}
+        {adminTab==="accounts" && <AdminAccountsTab orgs={orgs} onRestore={(id)=>{
+          SB.rpc("restore_org",{p_org_id:id}).then(()=>{
+            setOrgs(prev=>prev.map(o=>o.id===id?{...o,account_status:"active",deleted_at:null,deletion_scheduled_at:null}:o));
+            setMsg("✓ Account restored"); setTimeout(()=>setMsg(""),3000);
+          });
+        }}/>}
 
         {adminTab==="feedback"&&(<>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
@@ -5026,6 +5629,44 @@ function AdminDashboard({ currentUser }) {
         </>)}
 
       </div>
+
+      {/* ── Edit Org Modal ── */}
+      {editingOrg && (
+        <AdminEditOrgModal
+          org={editingOrg}
+          onClose={() => setEditingOrg(null)}
+          onSaved={(updated) => {
+            setOrgs(prev => prev.map(o => o.id === updated.id ? { ...o, ...updated } : o));
+            setEditingOrg(null);
+            setMsg("✓ " + (updated.name || "Org") + " updated");
+            setTimeout(() => setMsg(""), 3000);
+          }}
+        />
+      )}
+
+      {/* ── Close/Delete Org Modal ── */}
+      {closingOrg && (
+        <AdminCloseOrgModal
+          org={closingOrg}
+          currentUser={currentUser}
+          onClose={() => setClosingOrg(null)}
+          onClosed={(orgId) => {
+            setOrgs(prev => prev.map(o => o.id === orgId
+              ? { ...o, account_status: "closed", deleted_at: new Date().toISOString() }
+              : o));
+            setClosingOrg(null);
+            setMsg("✓ Account closed — data deleted in 30 days");
+            setTimeout(() => setMsg(""), 5000);
+          }}
+          onHardDeleted={(orgId) => {
+            setOrgs(prev => prev.filter(o => o.id !== orgId));
+            setClosingOrg(null);
+            setMsg("✓ Account permanently deleted");
+            setTimeout(() => setMsg(""), 5000);
+          }}
+        />
+      )}
+
     </div>
   );
 }
@@ -7846,6 +8487,94 @@ function QRPrivacySettings({ org, setOrg, userId }) {
   );
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// SELF-SERVICE ACCOUNT DELETION (owner-initiated, 30-day soft close)
+// ══════════════════════════════════════════════════════════════════════════════
+function SelfServiceDeleteAccount({ user, org }) {
+  const [open,    setOpen]    = useState(false);
+  const [reason,  setReason]  = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [working, setWorking] = useState(false);
+  const [done,    setDone]    = useState(false);
+  const [err,     setErr]     = useState("");
+  const CONFIRM_WORD = "CLOSE";
+
+  if (done) return (
+    <div style={{ background:"rgba(76,175,80,.08)",border:"1px solid rgba(76,175,80,.25)",
+      borderRadius:9,padding:"14px 16px",fontSize:13,lineHeight:1.7 }}>
+      <div style={{ fontWeight:700,fontSize:15,marginBottom:4 }}>✅ Account Closed</div>
+      <div>Your subscription has been canceled and your account is now closed.
+        A confirmation email has been sent to <strong>{org?.email}</strong>.</div>
+      <div style={{ marginTop:8,color:"var(--muted)" }}>
+        Your data will be permanently deleted in 30 days.
+        To restore your account before then, email <strong>hello@theatre4u.org</strong>.
+      </div>
+    </div>
+  );
+
+  if (!open) return (
+    <button onClick={() => setOpen(true)}
+      style={{ padding:"9px 18px",borderRadius:8,fontFamily:"inherit",fontWeight:700,
+        fontSize:13,cursor:"pointer",background:"rgba(194,24,91,.08)",
+        border:"1px solid rgba(194,24,91,.3)",color:"var(--red)" }}>
+      Close My Account →
+    </button>
+  );
+
+  const submit = async () => {
+    if (confirm !== CONFIRM_WORD) { setErr(`Type ${CONFIRM_WORD} to confirm`); return; }
+    setWorking(true); setErr("");
+    const { data: { session } } = await SB.auth.getSession();
+    const result = await callEdgeFn("close-org", {
+      org_id: user.id, reason: reason || "Owner requested", action: "close", is_admin_action: false
+    }, session?.access_token);
+    if (result?.success) {
+      setDone(true);
+      // Sign out after a short delay
+      setTimeout(() => SB.auth.signOut(), 3500);
+    } else {
+      setErr(result?.error || "Something went wrong. Email hello@theatre4u.org for help.");
+      setWorking(false);
+    }
+  };
+
+  return (
+    <div style={{ background:"rgba(194,24,91,.05)",border:"1px solid rgba(194,24,91,.2)",
+      borderRadius:10,padding:"16px" }}>
+      <div style={{ fontWeight:700,fontSize:14,marginBottom:10,color:"var(--red)" }}>
+        Confirm Account Closure
+      </div>
+      <div className="fg" style={{ marginBottom:12 }}>
+        <label className="fl">Why are you closing your account? (optional)</label>
+        <textarea className="ft" value={reason} onChange={e=>setReason(e.target.value)}
+          placeholder="Switching tools, program ended, budget cuts…" rows={2} />
+      </div>
+      <div className="fg" style={{ marginBottom:12 }}>
+        <label className="fl">
+          Type <strong style={{ color:"var(--red)",fontFamily:"monospace",letterSpacing:2 }}>{CONFIRM_WORD}</strong> to confirm
+        </label>
+        <input className="fi" value={confirm}
+          onChange={e=>setConfirm(e.target.value.toUpperCase())}
+          placeholder={CONFIRM_WORD}
+          style={{ fontFamily:"monospace",letterSpacing:3 }} />
+      </div>
+      {err && <div style={{ color:"var(--red)",fontSize:12,marginBottom:10 }}>{err}</div>}
+      <div style={{ display:"flex",gap:8 }}>
+        <button onClick={()=>{setOpen(false);setConfirm("");setReason("");setErr("");}}
+          className="btn btn-o">Cancel</button>
+        <button onClick={submit} disabled={working || confirm !== CONFIRM_WORD}
+          style={{ padding:"8px 18px",borderRadius:8,fontFamily:"inherit",fontWeight:800,
+            fontSize:13,cursor:working||confirm!==CONFIRM_WORD?"not-allowed":"pointer",
+            background:confirm===CONFIRM_WORD?"rgba(194,24,91,.8)":"rgba(194,24,91,.15)",
+            color:confirm===CONFIRM_WORD?"#fff":"var(--red)",border:"1px solid rgba(194,24,91,.4)",
+            opacity:working?.5:1 }}>
+          {working ? "Closing account…" : "Close My Account"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="free", userEmail="", setPlan, memberRole=null }) {
   const [f,setF]       = useState(org);
   const [saved,setSaved] = useState(false);
@@ -8055,6 +8784,20 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
             }}><span style={{width:14,height:14,display:"flex"}}>{Ic.trash}</span>Delete All Items</button>
           </div>
         </div>
+
+        {/* ── Delete My Account (self-service) ── */}
+        <div className="card card-p" style={{ borderColor:"rgba(194,24,91,.25)",background:"rgba(194,24,91,.02)" }}>
+          <div className="sh">
+            <h2 style={{ color:"var(--red)" }}>⚠️ Close My Account</h2>
+            <p>
+              Permanently close your Theatre4u account. Your Stripe subscription will be canceled immediately.
+              Your data will be preserved for 30 days — email <strong>hello@theatre4u.org</strong> within
+              30 days to restore your account. After 30 days, all data is permanently deleted.
+            </p>
+          </div>
+          <SelfServiceDeleteAccount user={user} org={org} />
+        </div>
+
       </div>
     </div>
   );
