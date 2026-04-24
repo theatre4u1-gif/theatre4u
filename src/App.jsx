@@ -105,9 +105,9 @@ const itemNum = n  => n != null ? "#" + String(n).padStart(4, "0") : "";
 // Page background images — 5 confirmed-working Unsplash IDs only
 const usp=(id,w=900,h=500)=>`https://images.unsplash.com/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=82`;
 const BG = {
-  dashboard:   "photo-p6rNTdAPbuk",               // Kyle Head: three performers silhouette on stage, red theatrical lighting
+  dashboard:   "photo-1503095396549-807759245b35", // grand theatre interior — red drapery (original)
   inventory:   "photo-1489987707025-afc232f7ea0f", // rows of hanging garments on racks
-  marketplace: "photo-p6rNTdAPbuk",               // Kyle Head: three performers silhouette on stage, red theatrical lighting
+  marketplace: "photo-WW1jsInXgwM",               // Rob Laughter: red theater curtain, Durham PAC — theatrical, no singer
   reports:     "photo-evlkOfkQ5rE",               // Felix Mooneeram: atmospheric empty red-seat theatre interior
   settings:    "photo-1497366216548-37526070297c", // organized office / workspace
 };
