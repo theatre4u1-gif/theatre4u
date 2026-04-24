@@ -105,10 +105,10 @@ const itemNum = n  => n != null ? "#" + String(n).padStart(4, "0") : "";
 // Page background images — 5 confirmed-working Unsplash IDs only
 const usp=(id,w=900,h=500)=>`https://images.unsplash.com/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=82`;
 const BG = {
-  dashboard:   "photo-1503095396549-807759245b35", // grand theatre interior — red drapery (original)
+  dashboard:   "photo-1503095396549-807759245b35", // red curtain + silhouettes — main brand image
   inventory:   "photo-1489987707025-afc232f7ea0f", // rows of hanging garments on racks
-  marketplace: "photo-WW1jsInXgwM",               // Rob Laughter: red theater curtain, Durham PAC — theatrical, no singer
-  reports:     "photo-evlkOfkQ5rE",               // Felix Mooneeram: atmospheric empty red-seat theatre interior
+  marketplace: "photo-1503095396549-807759245b35", // red curtain + silhouettes
+  reports:     "photo-1503095396549-807759245b35", // red curtain + silhouettes
   settings:    "photo-1497366216548-37526070297c", // organized office / workspace
 };
 
@@ -1658,7 +1658,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
         <CommunitySpotlight onViewAll={goCommunity}/>
         {/* Divider 1 */}
         <div className="img-div" style={{marginBottom:32}}>
-          <img src={usp("photo-1460723237483-7a6dc9d0b212",1000,240)} alt="Stage" loading="lazy"/>
+          <img src={usp("photo-1503095396549-807759245b35",1000,240)} alt="Stage" loading="lazy"/>
           <div className="img-div-fade"/>
           <div className="img-div-text">
             <h3>Backstage Exchange</h3>
@@ -5382,7 +5382,7 @@ function AdminDashboard({ currentUser }) {
               </button>
             ))}
           </div>
-          <button className="btn btn-o btn-sm" onClick={load}>↻ Refresh</button>
+          <button className="btn btn-g btn-sm" onClick={load} style={{minWidth:90}}>↻ Refresh</button>
           {msg && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>✓ {msg}</span>}
         </div>
 
@@ -6186,7 +6186,7 @@ function Productions({ userId, allItems }) {
       <img src={usp("photo-1503095396549-807759245b35", 1400, 900)} alt="" className="page-bg-img"/>
       <div style={{ padding:"32px 36px 0" }}>
         <div className="hero-wrap" style={{ height:220 }}>
-          <img src={usp("photo-1460723237483-7a6dc9d0b212", 1100, 280)} alt="Productions" loading="eager"/>
+          <img src={usp("photo-1503095396549-807759245b35", 1100, 280)} alt="Productions" loading="eager"/>
           <div className="hero-fade"/>
           <div className="hero-body">
             <div className="hero-eyebrow">🎭 Show Planning</div>
