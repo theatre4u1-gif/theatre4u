@@ -1544,7 +1544,7 @@ function CommunitySpotlight({onViewAll}){
   );
 }
 
-function Dashboard({items,org,plan="free",pointBalance=0,district=null,goInventory,goMarketplace,goCommunity,goProfile,goPoints}){
+function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketplace,goCommunity,goProfile,goPoints}){
   const totalQty=items.reduce((s,i)=>s+(i.qty||1),0);
   const listed=items.filter(i=>i.mkt!=="Not Listed").length;
   const withImg=items.filter(i=>i.img).length;
@@ -3647,7 +3647,7 @@ function Requests({ userId, orgName, orgEmail }) {
   );
 }
 
-function Reports({ items, plan="free" }) {
+function Reports({ items, plan="free", org=null }) {
   const [tab,setTab] = useState("overview");
   const totalQty  = items.reduce((s,i)=>s+(i.qty||1),0);
   const catData   = CATS.map(cat=>{const ci=items.filter(i=>i.category===cat.id);return{...cat,count:ci.length,qty:ci.reduce((s,i)=>s+(i.qty||1),0),val:ci.reduce((s,i)=>s+((i.sale||0)*(i.qty||1)),0)}}).filter(c=>c.count>0);
@@ -3716,7 +3716,7 @@ function Reports({ items, plan="free" }) {
 
       <div style={{padding:"24px 36px 48px",position:"relative",zIndex:1}}>
         <div className="tabs">
-          {[["overview","Overview"],["condition","Condition"],["availability","Availability"],["market","Backstage Exchange"],["location","Locations"]].map(([t,l])=>(
+          {[["overview","Overview"],["condition","Condition"],["availability","Availability"],["market","Backstage Exchange"],["location","Locations"],["usage","📊 Platform Usage"]].map(([t,l])=>(
             <button key={t} className={`tab ${tab===t?"on":""}`} onClick={()=>setTab(t)}>{l}</button>
           ))}
         </div>
@@ -3824,6 +3824,10 @@ function Reports({ items, plan="free" }) {
             }
           </div>
         )}
+        {tab==="usage"&&(
+          <PlatformUsageReport items={items} org={org} plan={plan}/>
+        )}
+
       </div>
     </div>
   );
@@ -4112,125 +4116,113 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
   const [district,   setDistrict]   = useState(null);
   const [schools,    setSchools]    = useState([]);
   const [invites,    setInvites]    = useState([]);
+  const [itemCounts, setItemCounts] = useState({});
   const [loading,    setLoading]    = useState(true);
-  const [tab,        setTab]        = useState("schools");
-  const [msg,        setMsg]        = useState("");
+  const [tab,        setTab]        = useState("schools"); // schools | invites
   const [showInvite, setShowInvite] = useState(false);
   const [invEmail,   setInvEmail]   = useState("");
   const [invSchool,  setInvSchool]  = useState("");
   const [sending,    setSending]    = useState(false);
-  const [assignMode, setAssignMode] = useState("invite");
-  const [allOrgs,    setAllOrgs]    = useState([]);
-  const [assignId,   setAssignId]   = useState("");
-  const [assigning,  setAssigning]  = useState(false);
-  const [absorbingId,setAbsorbingId] = useState(null);
-  const [absorbMsg,  setAbsorbMsg]   = useState("");
-  const [dName,      setDName]      = useState("");
-  const [dEmail,     setDEmail]     = useState("");
-  const [dWebsite,   setDWebsite]   = useState("");
-  const [dNotes,     setDNotes]     = useState("");
-  const [savingSet,  setSavingSet]  = useState(false);
-  const [pSharedInv, setPSharedInv] = useState(false);
-  const [pCrossExch, setPCrossExch] = useState(false);
-  const [pApproval,  setPApproval]  = useState(false);
-  const [savingPerm, setSavingPerm] = useState(false);
-  const [viewSchool, setViewSchool] = useState(null);
+  const [msg,        setMsg]        = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
+    // Load or create district record for this user
     let { data: dist } = await SB.from("districts").select("*").eq("owner_id", user.id).single();
     if (!dist) {
-      const { data: nd } = await SB.from("districts")
-        .insert({ owner_id: user.id, name: "", max_schools: 6 }).select().single();
-      dist = nd;
+      // Auto-create district on first visit
+      const { data: newDist } = await SB.from("districts")
+        .insert({ owner_id: user.id, name: "", max_schools: 6 })
+        .select().single();
+      dist = newDist;
     }
     setDistrict(dist);
-    setDName(dist.name || "");
-    setDEmail(dist.district_contact_email || "");
-    setDWebsite(dist.district_website || "");
-    setDNotes(dist.district_notes || "");
-    setPSharedInv(dist.allow_shared_inventory || false);
-    setPCrossExch(dist.allow_cross_school_exchange || false);
-    setPApproval(dist.require_listing_approval || false);
-    const { data: schoolData } = await SB.from("district_school_summary")
+
+    // Load schools in this district
+    const { data: schoolData } = await SB.from("orgs")
       .select("*").eq("district_id", dist.id).order("name");
     setSchools(schoolData || []);
+
+    // Load item counts per school
+    const ids = (schoolData || []).map(s => s.id);
+    if (ids.length > 0) {
+      const { data: itemData } = await SB.from("items")
+        .select("org_id").in("org_id", ids);
+      const c = {};
+      (itemData || []).forEach(i => { c[i.org_id] = (c[i.org_id] || 0) + 1; });
+      setItemCounts(c);
+    }
+
+    // Load pending invites
     const { data: invData } = await SB.from("district_invites")
       .select("*").eq("district_id", dist.id).order("created_at", { ascending: false });
     setInvites(invData || []);
     setLoading(false);
   }, [user]);
 
-  useEffect(() => {
-    if (["district","district_m","district_l"].includes(plan)) load();
-  }, [load, plan]);
+  useEffect(() => { if (plan === "district") load(); }, [load, plan]);
 
-  const flash = (m, ms=3500) => { setMsg(m); setTimeout(()=>setMsg(""), ms); };
+  const [assignMode,   setAssignMode]   = useState("invite"); // "invite" | "existing"
+  const [allOrgs,      setAllOrgs]      = useState([]);
+  const [assignOrgId,  setAssignOrgId]  = useState("");
+  const [assigning,    setAssigning]    = useState(false);
 
+  // Load all unassigned orgs for direct assignment
   const loadAllOrgs = async () => {
     const { data } = await SB.from("orgs")
-      .select("id,name,email,plan,district_id,stripe_subscription_id,subscription_status")
-      .is("district_id", null).order("name");
+      .select("id,name,email,plan,district_id")
+      .is("district_id", null)
+      .order("name");
     setAllOrgs(data || []);
   };
 
   const sendInvite = async () => {
     if (!invEmail.trim()) return;
-    setSending(true);
+    setSending(true); setMsg("");
     try {
       const { data: { session } } = await SB.auth.getSession();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
       const res = await fetch(
         "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/district-invite",
         { method: "POST",
+          signal: controller.signal,
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
           body: JSON.stringify({ email: invEmail.trim(), school_name: invSchool.trim() }) }
       );
+      clearTimeout(timeout);
       const result = await res.json();
       if (result.success) {
-        flash("✓ Invite sent to " + invEmail);
-        setInvEmail(""); setInvSchool(""); setShowInvite(false); load();
-      } else { flash("Error: " + (result.error || "Could not send")); }
-    } catch(e) { flash("Error: " + e.message); }
-    finally { setSending(false); }
+        setMsg("✓ Invite sent to " + invEmail + " — check Invites tab to copy the link if email doesn't arrive.");
+        setInvEmail(""); setInvSchool("");
+        setShowInvite(false);
+        load();
+      } else {
+        setMsg(EM.sendInvite.body);
+      }
+    } catch (e) {
+      setMsg(e.name === "AbortError" ? "Request timed out — check your connection and try again." : EM.sendInvite.body);
+    } finally {
+      setSending(false);
+    }
   };
 
   const assignExisting = async () => {
-    if (!assignId || !district?.id) return;
+    if (!assignOrgId || !district?.id) return;
     setAssigning(true);
-    const selOrg = allOrgs.find(o => o.id === assignId);
-    if (selOrg?.plan === "pro" && selOrg?.stripe_subscription_id) {
-      await SB.rpc("absorb_org_into_district", { p_org_id: assignId, p_district_id: district.id });
-    } else {
-      await SB.from("orgs").update({
-        district_id: district.id, plan: "district", role: "school_admin",
-        absorbed_into_district: true, absorbed_at: new Date().toISOString(),
-      }).eq("id", assignId);
-    }
-    flash("✓ School added to district");
-    setAssignId(""); setShowInvite(false); setAssigning(false); load();
-  };
-
-  const absorbPro = async (school) => {
-    if (!window.confirm(
-      `Move "${school.name}" under district billing?\n\nTheir individual Pro subscription will be canceled. They continue with full access under your district plan.`
-    )) return;
-    setAbsorbingId(school.id);
-    const { data } = await SB.rpc("absorb_org_into_district", { p_org_id: school.id, p_district_id: district.id });
-    if (data?.success) {
-      setAbsorbMsg("✓ " + school.name + " is now under district billing");
+    const { error } = await SB.from("orgs").update({
+      district_id: district.id,
+      role: "school_admin",
+    }).eq("id", assignOrgId);
+    if (!error) {
+      setMsg("✓ School added to district");
+      setAssignOrgId(""); setShowInvite(false);
       load();
     } else {
-      setAbsorbMsg("Error: " + (data?.error || "Contact support"));
+      setMsg("Error: " + error.message);
     }
-    setAbsorbingId(null);
-    setTimeout(() => setAbsorbMsg(""), 4000);
-  };
-
-  const removeSchool = async (school) => {
-    if (!window.confirm(`Remove "${school.name}" from the district? Their account and inventory remain, but they revert to Free plan.`)) return;
-    const { data } = await SB.rpc("release_org_from_district", { p_org_id: school.id });
-    if (data?.success) { flash("✓ " + school.name + " removed from district"); load(); }
-    else { flash("Error: " + (data?.error || "Could not remove")); }
+    setAssigning(false);
+    setTimeout(() => setMsg(""), 4000);
   };
 
   const revokeInvite = async (id) => {
@@ -4238,600 +4230,290 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
     load();
   };
 
-  const saveSettings = async () => {
-    setSavingSet(true);
-    await SB.from("districts").update({
-      name: dName.trim(), district_contact_email: dEmail.trim(),
-      district_website: dWebsite.trim(), district_notes: dNotes.trim(),
-    }).eq("id", district.id);
-    setDistrict(p => ({ ...p, name: dName.trim() }));
-    setSavingSet(false); flash("✓ Settings saved");
+  const removeSchool = async (schoolId) => {
+    if (!window.confirm("Remove this school from your district? Their account and data will remain, but they will no longer be linked to your district.")) return;
+    await SB.from("orgs").update({ district_id: null, role: "school_admin" }).eq("id", schoolId);
+    load();
   };
 
-  const savePermissions = async () => {
-    setSavingPerm(true);
-    await SB.from("districts").update({
-      allow_shared_inventory:      pSharedInv,
-      allow_cross_school_exchange: pCrossExch,
-      require_listing_approval:    pApproval,
-    }).eq("id", district.id);
-    setSavingPerm(false); flash("✓ Permissions saved");
+  const saveDistrict = async (updates) => {
+    await SB.from("districts").update(updates).eq("id", district.id);
+    setDistrict(p => ({ ...p, ...updates }));
+    setMsg("✓ Saved");
+    setTimeout(() => setMsg(""), 2000);
   };
 
-  if (!["district","district_m","district_l"].includes(plan)) return (
-    <div style={{padding:48,textAlign:"center"}}>
-      <div style={{fontSize:40,marginBottom:12}}>🏢</div>
-      <h2 style={{fontFamily:"var(--serif)",marginBottom:8}}>District Plan Required</h2>
-      <p style={{color:"var(--muted)"}}>Upgrade to a District plan to manage multiple schools from one dashboard.</p>
+  const totalItems = Object.values(itemCounts).reduce((s, c) => s + c, 0);
+  const slotsUsed  = schools.length;
+  const slotsTotal = district?.max_schools || 6;
+
+  if (plan !== "district") return (
+    <div style={{ padding: 48, textAlign: "center" }}>
+      <div style={{ fontSize: 40, marginBottom: 12 }}>🏢</div>
+      <h2 style={{ fontFamily: "var(--serif)", marginBottom: 8 }}>District Plan Required</h2>
+      <p style={{ color: "var(--muted)" }}>Upgrade to District to manage multiple schools from one dashboard.</p>
     </div>
   );
 
-  const slotsUsed   = schools.length;
-  const slotsTotal  = district?.max_schools || 6;
-  const pendingCnt  = invites.filter(i=>i.status==="pending").length;
-  const absorbable  = schools.filter(s=>s.plan==="pro"&&!s.absorbed_into_district);
-  const totalItems  = schools.reduce((s,x)=>s+(x.item_count||0),0);
-
-  if (viewSchool) return (
-    <DistrictSchoolDetail
-      school={viewSchool} district={district}
-      onBack={()=>setViewSchool(null)}
-      onSwitchToInventory={()=>{onSwitchSchool(viewSchool);setViewSchool(null);}}
-      onAbsorb={()=>absorbPro(viewSchool)}
-      onRemove={()=>removeSchool(viewSchool)}
-      absorbingId={absorbingId}
-    />
-  );
-
   return (
-    <div style={{position:"relative"}}>
-      <img src={usp("photo-1503095396549-807759245b35",1400,900)} alt="" className="page-bg-img"/>
-      <div style={{padding:"32px 36px 0"}}>
-        <div className="hero-wrap" style={{height:200}}>
-          <img src={usp("photo-1503095396549-807759245b35",1100,240)} alt="District" loading="eager"/>
-          <div className="hero-fade"/>
+    <div style={{ position: "relative" }}>
+      <img src={usp("photo-1503095396549-807759245b35", 1400, 900)} alt="" className="page-bg-img" />
+      <div style={{ padding: "32px 36px 0" }}>
+        <div className="hero-wrap" style={{ height: 210 }}>
+          <img src={usp("photo-1503095396549-807759245b35", 1100, 260)} alt="District" loading="eager" />
+          <div className="hero-fade" />
           <div className="hero-body">
-            <div className="hero-eyebrow">🏢 District Dashboard</div>
-            <h1 className="hero-title" style={{fontSize:42}}>{district?.name||"Your District"}</h1>
-            <p className="hero-sub">Manage schools, permissions, and district-wide settings.</p>
+            <div className="hero-eyebrow">🏢 District Plan</div>
+            <h1 className="hero-title" style={{ fontSize: 44 }}>
+              {district?.name || "Your District"}
+            </h1>
+            <p className="hero-sub">Manage all your schools from one place.</p>
           </div>
-          <div className="hero-bar"/>
+          <div className="hero-bar" />
         </div>
       </div>
 
-      <div style={{padding:"24px 36px 48px",position:"relative",zIndex:1}}>
-        {msg && (
-          <div style={{position:"fixed",top:20,right:20,zIndex:9999,
-            background:msg.startsWith("✓")?"rgba(76,175,80,.95)":"rgba(194,24,91,.95)",
-            color:"#fff",padding:"10px 18px",borderRadius:10,fontWeight:700,
-            fontSize:14,boxShadow:"0 4px 20px rgba(0,0,0,.3)"}}>
-            {msg}
-          </div>
-        )}
+      <div style={{ padding: "24px 36px 48px", position: "relative", zIndex: 1 }}>
 
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:12,marginBottom:24}}>
+        {/* Stats */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 12, marginBottom: 24 }}>
           {[
-            {icon:"🏫",label:"Schools",val:`${slotsUsed} / ${slotsTotal}`},
-            {icon:"📦",label:"Total Items",val:totalItems.toLocaleString()},
-            {icon:"📨",label:"Pending Invites",val:pendingCnt},
-            {icon:"⚡",label:"Absorb Ready",val:absorbable.length,
-              color:absorbable.length>0?"var(--gold)":undefined},
-          ].map(s=>(
-            <div key={s.label} className="card card-p" style={{textAlign:"center",padding:"14px 10px"}}>
-              <div style={{fontSize:24,marginBottom:4}}>{s.icon}</div>
-              <div style={{fontFamily:"var(--serif)",fontSize:22,fontWeight:700,
-                color:s.color||"var(--linen)"}}>{s.val}</div>
-              <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{s.label}</div>
+            { icon: "🏫", label: "Schools",     val: `${slotsUsed} / ${slotsTotal}` },
+            { icon: "📦", label: "Total Items",  val: totalItems },
+            { icon: "📨", label: "Pending Invites", val: invites.filter(i => i.status === "pending").length },
+            { icon: "🎭", label: "Plan",         val: "District", color: "#42a5f5" },
+          ].map(s => (
+            <div key={s.label} className="card card-p" style={{ textAlign: "center", padding: "14px 10px" }}>
+              <div style={{ fontSize: 24, marginBottom: 4 }}>{s.icon}</div>
+              <div style={{ fontFamily: "var(--serif)", fontSize: 22, fontWeight: 700, color: s.color || "var(--linen)" }}>{s.val}</div>
+              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{s.label}</div>
             </div>
           ))}
         </div>
 
-        {absorbable.length>0&&(
-          <div style={{background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.3)",
-            borderRadius:10,padding:"12px 16px",marginBottom:18,display:"flex",
-            alignItems:"center",gap:12,flexWrap:"wrap"}}>
-            <div style={{fontSize:24}}>⚡</div>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:700,fontSize:14,color:"var(--gold)",marginBottom:2}}>
-                {absorbable.length} school{absorbable.length!==1?"s":""} paying separately for Pro
-              </div>
-              <div style={{fontSize:13,color:"var(--muted)"}}>
-                Consolidate their billing under your district plan. Their Pro subscription cancels and they keep full access.
-              </div>
+        {/* District Name */}
+        <div className="card card-p" style={{ marginBottom: 20 }}>
+          <div className="sh"><h2>District Profile</h2><p>This name appears on all school Exchange listings.</p></div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div className="fg" style={{ flex: 1, minWidth: 200 }}>
+              <label className="fl">District Name</label>
+              <input className="fi" defaultValue={district?.name || ""} id="dist-name-input"
+                placeholder="e.g. Huntington Beach Union High School District" />
             </div>
-            <button onClick={()=>setTab("permissions")} className="btn btn-o btn-sm">View Billing →</button>
-            {absorbMsg&&<div style={{fontSize:13,fontWeight:700,color:"var(--gold)",width:"100%"}}>{absorbMsg}</div>}
+            <div className="fg" style={{ flex: 1, minWidth: 180 }}>
+              <label className="fl">Location</label>
+              <input className="fi" defaultValue={district?.location || ""} id="dist-loc-input"
+                placeholder="Huntington Beach, CA" />
+            </div>
+            <button className="btn btn-g btn-sm" onClick={() => saveDistrict({
+              name: document.getElementById("dist-name-input").value,
+              location: document.getElementById("dist-loc-input").value
+            })}>Save</button>
+            {msg && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>{msg}</span>}
           </div>
-        )}
+        </div>
 
-        <div className="tabs" style={{marginBottom:16}}>
-          {[["schools",`🏫 Schools (${slotsUsed})`],["invites",`📨 Invites (${pendingCnt})`],
-            ["permissions","🔐 Permissions"],["settings","⚙️ Settings"]].map(([t,l])=>(
-            <button key={t} className={`tab ${tab===t?"on":""}`} onClick={()=>setTab(t)}>{l}</button>
+        {/* Tabs */}
+        <div className="tabs" style={{ marginBottom: 16 }}>
+          {["schools", "invites"].map(t => (
+            <button key={t} className={`tab ${tab === t ? "on" : ""}`} onClick={() => setTab(t)}
+              style={{ textTransform: "capitalize" }}>
+              {t === "schools" ? `🏫 Schools (${slotsUsed})` : `📨 Invites (${invites.filter(i=>i.status==="pending").length})`}
+            </button>
           ))}
-          <button className="btn btn-g btn-sm" style={{marginLeft:"auto"}}
-            onClick={()=>setShowInvite(true)} disabled={slotsUsed>=slotsTotal}>
+          <button className="btn btn-g btn-sm" style={{ marginLeft: "auto" }}
+            onClick={() => setShowInvite(true)}
+            disabled={slotsUsed >= slotsTotal}>
             + Add School
           </button>
         </div>
 
-        {loading?(
-          <div style={{textAlign:"center",padding:40,color:"var(--muted)"}}>Loading…</div>
-        ):(
-          <>
-          {tab==="schools"&&(
-            schools.length===0?(
-              <div className="card card-p" style={{textAlign:"center",padding:48}}>
-                <div style={{fontSize:40,marginBottom:12}}>🏫</div>
-                <h3 style={{fontFamily:"var(--serif)",marginBottom:8}}>No Schools Yet</h3>
-                <p style={{color:"var(--muted)",marginBottom:16,maxWidth:420,margin:"0 auto 16px"}}>
-                  Invite schools or add existing Theatre4u accounts. Each school manages their own inventory,
-                  but you can see everything from here.
-                </p>
-                <button className="btn btn-g" onClick={()=>setShowInvite(true)}>+ Invite First School</button>
-              </div>
-            ):(
-              <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                {schools.map(school=>{
-                  const isAbsorbed  = school.absorbed_into_district;
-                  const canAbsorb   = school.plan==="pro"&&!isAbsorbed&&school.stripe_subscription_id;
-                  const isAbsorbing = absorbingId===school.id;
-                  return(
-                    <div key={school.id} className="card card-p"
-                      style={{borderLeft:`3px solid ${isAbsorbed?"var(--gold)":canAbsorb?"#42a5f5":"var(--border)"}`}}>
-                      <div style={{display:"flex",alignItems:"flex-start",gap:14,flexWrap:"wrap"}}>
-                        <div style={{flex:1,minWidth:200}}>
-                          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
-                            <div style={{fontWeight:800,fontSize:15}}>{school.name||"Unnamed"}</div>
-                            {isAbsorbed&&(
-                              <span style={{fontSize:10,fontWeight:700,background:"rgba(212,168,67,.2)",
-                                color:"var(--gold)",padding:"2px 7px",borderRadius:8,
-                                textTransform:"uppercase",letterSpacing:.5}}>District Billing</span>
-                            )}
-                            {canAbsorb&&(
-                              <span style={{fontSize:10,fontWeight:700,background:"rgba(66,165,245,.15)",
-                                color:"#42a5f5",padding:"2px 7px",borderRadius:8,
-                                textTransform:"uppercase",letterSpacing:.5}}>Paying Separately</span>
-                            )}
-                          </div>
-                          <div style={{fontSize:12,color:"var(--muted)"}}>
-                            {school.email}
-                            {school.location&&<span> · {school.location}</span>}
-                          </div>
-                          <div style={{fontSize:12,color:"var(--muted)",marginTop:4,display:"flex",gap:14}}>
-                            <span>📦 {school.item_count} items</span>
-                            <span>🏪 {school.listed_count} listed</span>
-                            {school.absorbed_at&&(
-                              <span>⚡ Absorbed {new Date(school.absorbed_at).toLocaleDateString()}</span>
-                            )}
-                          </div>
-                        </div>
-                        <div style={{display:"flex",gap:7,flexWrap:"wrap",flexShrink:0}}>
-                          <button onClick={()=>setViewSchool(school)}
-                            style={{padding:"5px 12px",borderRadius:7,fontFamily:"inherit",
-                              fontSize:12,fontWeight:700,cursor:"pointer",
-                              background:"rgba(66,165,245,.12)",border:"1px solid rgba(66,165,245,.3)",
-                              color:"#42a5f5"}}>
-                            📦 View Inventory
-                          </button>
-                          <button onClick={()=>onSwitchSchool(school)}
-                            style={{padding:"5px 12px",borderRadius:7,fontFamily:"inherit",
-                              fontSize:12,fontWeight:700,cursor:"pointer",
-                              background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.3)",
-                              color:"var(--gold)"}}>
-                            ↗ Manage
-                          </button>
-                          {canAbsorb&&(
-                            <button onClick={()=>absorbPro(school)} disabled={isAbsorbing}
-                              style={{padding:"5px 12px",borderRadius:7,fontFamily:"inherit",
-                                fontSize:12,fontWeight:700,cursor:"pointer",
-                                background:"rgba(76,175,80,.12)",border:"1px solid rgba(76,175,80,.3)",
-                                color:"#4caf50"}}>
-                              {isAbsorbing?"Absorbing…":"⚡ Consolidate Billing"}
-                            </button>
-                          )}
-                          <button onClick={()=>removeSchool(school)}
-                            style={{padding:"5px 12px",borderRadius:7,fontFamily:"inherit",
-                              fontSize:12,fontWeight:700,cursor:"pointer",
-                              background:"rgba(194,24,91,.08)",border:"1px solid rgba(194,24,91,.25)",
-                              color:"var(--red)"}}>
-                            Remove
-                          </button>
-                        </div>
-                      </div>
+        {loading ? (
+          <div style={{ textAlign: "center", padding: 32, color: "var(--muted)" }}>Loading…</div>
+        ) : tab === "schools" ? (
+          schools.length === 0 ? (
+            <div className="card card-p" style={{ textAlign: "center", padding: 40 }}>
+              <div style={{ fontSize: 36, marginBottom: 10 }}>🏫</div>
+              <h3 style={{ fontFamily: "var(--serif)", marginBottom: 6 }}>No Schools Yet</h3>
+              <p style={{ color: "var(--muted)", marginBottom: 16 }}>
+                Invite up to {slotsTotal} schools to your district. Each school gets their own login and inventory.
+              </p>
+              <button className="btn btn-g" onClick={() => setShowInvite(true)}>+ Invite First School</button>
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 14 }}>
+              {schools.map(school => (
+                <div key={school.id} className="card card-p" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                    <div style={{ width: 40, height: 40, background: "rgba(212,168,67,.15)", borderRadius: 8,
+                      display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>🏫</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.3 }}>{school.name || "Unnamed School"}</div>
+                      <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{school.location || school.email || "—"}</div>
                     </div>
-                  );
-                })}
-              </div>
-            )
-          )}
-
-          {tab==="invites"&&(
-            invites.length===0?(
-              <div className="card card-p" style={{textAlign:"center",padding:40}}>
-                <div style={{fontSize:36,marginBottom:10}}>📨</div>
-                <h3 style={{fontFamily:"var(--serif)",marginBottom:6}}>No Invites Yet</h3>
-                <p style={{color:"var(--muted)"}}>Use "+ Add School" above to invite programs to your district.</p>
-              </div>
-            ):(
-              <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                {invites.map(inv=>{
-                  const inviteUrl=`https://theatre4u.org?invite=${inv.token}&type=district`;
-                  const isPending=inv.status==="pending";
-                  return(
-                    <div key={inv.id} className="card card-p"
-                      style={{borderLeft:`3px solid ${inv.status==="accepted"?"#4caf50":isPending?"var(--gold)":"var(--border)"}`}}>
-                      <div style={{display:"flex",alignItems:"flex-start",gap:14,flexWrap:"wrap"}}>
-                        <div style={{flex:1,minWidth:200}}>
-                          <div style={{fontWeight:700,fontSize:14}}>{inv.email}</div>
-                          <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>
-                            {inv.school_name&&<span>{inv.school_name} · </span>}
-                            Sent {new Date(inv.created_at).toLocaleDateString()}
-                            {inv.accepted_at&&<span> · Accepted {new Date(inv.accepted_at).toLocaleDateString()}</span>}
-                          </div>
-                          {isPending&&(
-                            <div style={{marginTop:8,display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-                              <input readOnly value={inviteUrl}
-                                style={{fontSize:11,background:"var(--parch)",border:"1px solid var(--border)",
-                                  borderRadius:5,padding:"4px 8px",color:"var(--muted)",
-                                  flex:1,minWidth:200,maxWidth:360,fontFamily:"monospace"}}/>
-                              <button onClick={()=>navigator.clipboard.writeText(inviteUrl)}
-                                style={{padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer",
-                                  borderRadius:6,border:"1px solid var(--border)",
-                                  background:"rgba(212,168,67,.12)",color:"var(--gold)",
-                                  fontFamily:"inherit",whiteSpace:"nowrap"}}>
-                                📋 Copy Link
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                          <span style={{fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:8,
-                            background:inv.status==="accepted"?"rgba(76,175,80,.15)":isPending?"rgba(212,168,67,.15)":"rgba(107,100,120,.12)",
-                            color:inv.status==="accepted"?"#4caf50":isPending?"var(--gold)":"var(--muted)"}}>
-                            {inv.status}
-                          </span>
-                          {isPending&&(
-                            <button className="btn btn-o btn-sm" onClick={()=>revokeInvite(inv.id)}>Revoke</button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )
-          )}
-
-          {tab==="permissions"&&(
-            <div style={{display:"flex",flexDirection:"column",gap:16,maxWidth:680}}>
-              <div className="card card-p">
-                <div className="sh">
-                  <h2>🔐 District Permissions</h2>
-                  <p>These settings control what all schools in your district can see and do. Changes take effect immediately.</p>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <span style={{ padding: "2px 8px", background: "rgba(255,255,255,.08)", borderRadius: 8, fontSize: 11, color: "var(--muted)" }}>
+                      📦 {itemCounts[school.id] || 0} items
+                    </span>
+                    <span style={{ padding: "2px 8px", background: "rgba(66,165,245,.12)", color: "#42a5f5", borderRadius: 8, fontSize: 11, fontWeight: 600 }}>
+                      {school.type || "School"}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, marginTop: "auto", paddingTop: 8, borderTop: "1px solid var(--border)" }}>
+                    <button className="btn btn-g btn-sm" style={{ flex: 1 }}
+                      onClick={() => onSwitchSchool(school)}>
+                      Enter School →
+                    </button>
+                    <button className="btn btn-o btn-sm" style={{ color: "rgba(255,100,100,.7)", borderColor: "rgba(255,100,100,.2)" }}
+                      onClick={() => removeSchool(school.id)}>
+                      Remove
+                    </button>
+                  </div>
                 </div>
-                <div style={{display:"flex",flexDirection:"column",gap:18,marginTop:4}}>
-                  {[
-                    {key:"shared",val:pSharedInv,set:setPSharedInv,
-                      icon:"📦",title:"Shared District Inventory",
-                      desc:"All schools can browse the combined inventory of every school in the district. Great for finding items before purchasing or renting externally."},
-                    {key:"exchange",val:pCrossExch,set:setPCrossExch,
-                      icon:"🔄",title:"Cross-School Exchange",
-                      desc:"Schools within the district can send free loan requests to each other. No platform fee applies to intra-district transactions."},
-                    {key:"approval",val:pApproval,set:setPApproval,
-                      icon:"✅",title:"Require District Approval for Public Listings",
-                      desc:"Items must be approved by the district administrator before appearing publicly on Backstage Exchange."},
-                  ].map(p=>(
-                    <div key={p.key} style={{display:"flex",gap:16,padding:"14px 0",
-                      borderBottom:"1px solid var(--border)"}}>
-                      <div style={{fontSize:28,flexShrink:0,paddingTop:2}}>{p.icon}</div>
-                      <div style={{flex:1}}>
-                        <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>{p.title}</div>
-                        <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>{p.desc}</div>
-                      </div>
-                      <label style={{position:"relative",display:"inline-block",width:48,height:26,cursor:"pointer",flexShrink:0}}>
-                        <input type="checkbox" checked={p.val} onChange={e=>p.set(e.target.checked)}
-                          style={{opacity:0,width:0,height:0}}/>
-                        <span style={{position:"absolute",inset:0,background:p.val?"#4caf50":"var(--border)",
-                          borderRadius:13,transition:".25s"}}>
-                          <span style={{position:"absolute",height:20,width:20,
-                            left:p.val?24:3,bottom:3,background:"#fff",borderRadius:"50%",
-                            transition:".25s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
+              ))}
+            </div>
+          )
+        ) : (
+          /* Invites tab */
+          <div className="card" style={{ overflow: "hidden" }}>
+            {invites.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 32, color: "var(--muted)" }}>No invites sent yet.</div>
+            ) : (
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: "rgba(0,0,0,.2)" }}>
+                    {["Email", "School", "Status", "Sent", ""].map(h => (
+                      <th key={h} style={{ padding: "9px 14px", textAlign: "left", fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", fontWeight: 700 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {invites.map(inv => {
+                    const inviteUrl = `https://theatre4u.org?invite=${inv.token}`;
+                    const copyLink = () => {
+                      navigator.clipboard.writeText(inviteUrl);
+                      alert("Invite link copied! Send it to " + inv.email);
+                    };
+                    return (
+                    <tr key={inv.id} style={{ borderTop: "1px solid var(--border)" }}>
+                      <td style={{ padding: "9px 14px", fontSize: 13 }}>{inv.email}</td>
+                      <td style={{ padding: "9px 14px", fontSize: 13, color: "var(--muted)" }}>{inv.school_name || "—"}</td>
+                      <td style={{ padding: "9px 14px" }}>
+                        <span style={{ padding: "2px 8px", borderRadius: 8, fontSize: 11, fontWeight: 700,
+                          background: inv.status === "accepted" ? "rgba(76,175,80,.15)" : inv.status === "pending" ? "rgba(212,168,67,.15)" : "rgba(255,255,255,.07)",
+                          color: inv.status === "accepted" ? "var(--green)" : inv.status === "pending" ? "var(--gold)" : "var(--muted)" }}>
+                          {inv.status}
                         </span>
-                      </label>
-                    </div>
-                  ))}
-                </div>
-                <div style={{marginTop:18}}>
-                  <button className="btn btn-g" onClick={savePermissions} disabled={savingPerm}>
-                    {savingPerm?"Saving…":"✓ Save Permissions"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="card card-p">
-                <div className="sh"><h2>💳 School Billing Status</h2>
-                  <p>Which schools are on district billing vs. paying independently.</p></div>
-                <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  {schools.map(s=>(
-                    <div key={s.id} style={{display:"flex",alignItems:"center",gap:12,
-                      padding:"8px 0",borderBottom:"1px solid var(--border)"}}>
-                      <div style={{flex:1}}>
-                        <div style={{fontWeight:600,fontSize:13}}>{s.name||"Unnamed"}</div>
-                        <div style={{fontSize:11,color:"var(--muted)"}}>{s.email}</div>
-                      </div>
-                      <span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:8,
-                        background:s.absorbed_into_district?"rgba(212,168,67,.15)":s.plan==="pro"?"rgba(66,165,245,.15)":"rgba(107,100,120,.1)",
-                        color:s.absorbed_into_district?"var(--gold)":s.plan==="pro"?"#42a5f5":"var(--muted)"}}>
-                        {s.absorbed_into_district?"⚡ District":s.plan==="pro"?"Paying Separately":"Free"}
-                      </span>
-                      {s.plan==="pro"&&!s.absorbed_into_district&&(
-                        <button onClick={()=>absorbPro(s)} disabled={absorbingId===s.id}
-                          className="btn btn-o btn-sm" style={{fontSize:11}}>
-                          {absorbingId===s.id?"…":"Consolidate →"}
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {tab==="settings"&&(
-            <div style={{maxWidth:600}}>
-              <div className="card card-p">
-                <div className="sh"><h2>⚙️ District Profile</h2>
-                  <p>This information appears on Exchange listings and in district communications.</p></div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-                  <div className="fg" style={{gridColumn:"1/-1"}}>
-                    <label className="fl">District Name</label>
-                    <input className="fi" value={dName} onChange={e=>setDName(e.target.value)}
-                      placeholder="Huntington Beach Union High School District"/>
-                  </div>
-                  <div className="fg">
-                    <label className="fl">Contact Email</label>
-                    <input className="fi" type="email" value={dEmail} onChange={e=>setDEmail(e.target.value)}
-                      placeholder="theatre@district.edu"/>
-                  </div>
-                  <div className="fg">
-                    <label className="fl">District Website</label>
-                    <input className="fi" value={dWebsite} onChange={e=>setDWebsite(e.target.value)}
-                      placeholder="https://www.hbuhsd.edu"/>
-                  </div>
-                  <div className="fg" style={{gridColumn:"1/-1"}}>
-                    <label className="fl">Internal Notes</label>
-                    <textarea className="ft" value={dNotes} onChange={e=>setDNotes(e.target.value)}
-                      placeholder="Vendor approval #, IT contact, DPA status…" rows={3}/>
-                  </div>
-                </div>
-                <div style={{marginTop:14}}>
-                  <button className="btn btn-g" onClick={saveSettings} disabled={savingSet}>
-                    {savingSet?"Saving…":"✓ Save"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="card card-p" style={{marginTop:16}}>
-                <div className="sh"><h2>📊 Plan & Capacity</h2></div>
-                <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  {[["Plan Tier",
-                      plan==="district"?"District S (up to 6 schools)":
-                      plan==="district_m"?"District M (up to 15 schools)":
-                      "District L (up to 30 schools)"],
-                    ["Schools Used",`${slotsUsed} of ${slotsTotal}`],
-                    ["Slots Remaining",`${slotsTotal-slotsUsed}`],
-                  ].map(([l,v])=>(
-                    <div key={l} className="dr">
-                      <span className="drl">{l}</span>
-                      <span className="drv" style={{fontWeight:700}}>{v}</span>
-                    </div>
-                  ))}
-                </div>
-                {slotsTotal-slotsUsed<2&&(
-                  <div style={{marginTop:12,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>
-                    ⚠️ You're near capacity. Contact hello@theatre4u.org to upgrade your district plan tier.
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          </>
-        )}
-
-        {showInvite&&(
-          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:1000,
-            display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
-            onClick={e=>e.target===e.currentTarget&&setShowInvite(false)}>
-            <div className="card card-p" style={{width:"100%",maxWidth:480,animation:"su .2s ease"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <h2 style={{fontFamily:"var(--serif)",fontSize:20}}>Add School to District</h2>
-                <button className="btn btn-o btn-sm" onClick={()=>setShowInvite(false)}>✕</button>
-              </div>
-              <div style={{display:"flex",borderBottom:"1px solid var(--border)",
-                margin:"12px -18px 0",padding:"0 18px"}}>
-                {[["invite","📨 Send Invite"],["existing","🔗 Add Existing Account"]].map(([m,l])=>(
-                  <button key={m} onClick={()=>{setAssignMode(m);if(m==="existing")loadAllOrgs();}}
-                    style={{padding:"8px 14px",fontFamily:"inherit",fontSize:13,fontWeight:700,
-                      cursor:"pointer",background:"none",border:"none",
-                      borderBottom:assignMode===m?"2px solid var(--gold)":"2px solid transparent",
-                      color:assignMode===m?"var(--ink)":"var(--muted)",marginBottom:-1}}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-              <div style={{marginTop:16}}>
-                {assignMode==="invite"?(<>
-                  <p style={{color:"var(--muted)",fontSize:13,marginBottom:12,lineHeight:1.6}}>
-                    Send an invite link. The school can accept with an existing account or create a new one.
-                    You have <strong>{slotsTotal-slotsUsed}</strong> slot{slotsTotal-slotsUsed!==1?"s":""} remaining.
-                  </p>
-                  <div className="fg" style={{marginBottom:12}}>
-                    <label className="fl">School Admin Email *</label>
-                    <input className="fi" type="email" value={invEmail} onChange={e=>setInvEmail(e.target.value)}
-                      placeholder="drama@school.edu" autoFocus onKeyDown={e=>e.key==="Enter"&&sendInvite()}/>
-                  </div>
-                  <div className="fg" style={{marginBottom:16}}>
-                    <label className="fl">School Name (optional)</label>
-                    <input className="fi" value={invSchool} onChange={e=>setInvSchool(e.target.value)}
-                      placeholder="e.g. Ocean View High School"/>
-                  </div>
-                  <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-                    <button className="btn btn-o" onClick={()=>setShowInvite(false)}>Cancel</button>
-                    <button className="btn btn-g" onClick={sendInvite} disabled={!invEmail.trim()||sending}>
-                      {sending?"Sending…":"Send Invite →"}
-                    </button>
-                  </div>
-                </>):(<>
-                  <p style={{color:"var(--muted)",fontSize:13,marginBottom:12,lineHeight:1.6}}>
-                    Add a school that already has a Theatre4u account. If they have an active Pro subscription,
-                    you can consolidate it under district billing after adding.
-                  </p>
-                  <div className="fg" style={{marginBottom:16}}>
-                    <label className="fl">Select School Account</label>
-                    <select className="fs" value={assignId} onChange={e=>setAssignId(e.target.value)}>
-                      <option value="">— Choose an account —</option>
-                      {allOrgs.map(o=>(
-                        <option key={o.id} value={o.id}>
-                          {o.name||"Unnamed"} — {o.email} ({o.plan}
-                          {o.plan==="pro"&&o.stripe_subscription_id?" · paying separately":""})
-                        </option>
-                      ))}
-                    </select>
-                    {allOrgs.length===0&&(
-                      <div style={{fontSize:12,color:"var(--muted)",marginTop:4}}>No unassigned accounts found.</div>
-                    )}
-                  </div>
-                  <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-                    <button className="btn btn-o" onClick={()=>setShowInvite(false)}>Cancel</button>
-                    <button className="btn btn-g" onClick={assignExisting}
-                      disabled={assigning||!assignId} style={{opacity:!assignId?.5:1}}>
-                      {assigning?"Adding…":"Add to District →"}
-                    </button>
-                  </div>
-                </>)}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function DistrictSchoolDetail({school,district,onBack,onSwitchToInventory,onAbsorb,onRemove,absorbingId}){
-  const [items,  setItems]  = useState([]);
-  const [loading,setLoading]= useState(true);
-  const [search, setSearch] = useState("");
-
-  useEffect(()=>{
-    SB.from("items").select("*").eq("org_id",school.id)
-      .order("added",{ascending:false}).limit(200)
-      .then(({data})=>{setItems(data||[]);setLoading(false);});
-  },[school.id]);
-
-  const filtered = items.filter(i=>
-    !search||(i.name||"").toLowerCase().includes(search.toLowerCase())
-      ||(i.location||"").toLowerCase().includes(search.toLowerCase())
-  );
-
-  const canAbsorb = school.plan==="pro"&&!school.absorbed_into_district&&school.stripe_subscription_id;
-
-  return(
-    <div style={{padding:"0 0 48px"}}>
-      <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:24,flexWrap:"wrap"}}>
-        <button onClick={onBack} className="btn btn-o btn-sm">← Back to District</button>
-        <div style={{flex:1}}>
-          <div style={{fontFamily:"var(--serif)",fontSize:24,fontWeight:700}}>
-            🏫 {school.name||"Unnamed School"}
-          </div>
-          <div style={{fontSize:13,color:"var(--muted)",marginTop:2}}>
-            {school.email}
-            {school.location&&<span> · {school.location}</span>}
-            {school.absorbed_into_district&&(
-              <span style={{marginLeft:8,color:"var(--gold)",fontWeight:700}}>⚡ District Billing</span>
+                      </td>
+                      <td style={{ padding: "9px 14px", fontSize: 12, color: "var(--muted)" }}>
+                        {new Date(inv.created_at).toLocaleDateString()}
+                      </td>
+                      <td style={{ padding: "9px 14px" }}>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          {inv.status === "pending" && (<>
+                            <button className="btn btn-o btn-sm" style={{ fontSize: 11 }}
+                              onClick={copyLink}>📋 Copy Link</button>
+                            <button className="btn btn-o btn-sm" style={{ fontSize: 11, color: "var(--red)" }}
+                              onClick={() => revokeInvite(inv.id)}>Revoke</button>
+                          </>)}
+                        </div>
+                      </td>
+                    </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
-        </div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          <button onClick={onSwitchToInventory} className="btn btn-g btn-sm">↗ Manage as This School</button>
-          {canAbsorb&&(
-            <button onClick={onAbsorb} disabled={absorbingId===school.id} className="btn btn-o btn-sm">
-              {absorbingId===school.id?"…":"⚡ Consolidate Billing"}
-            </button>
-          )}
-          <button onClick={onRemove}
-            style={{padding:"5px 12px",borderRadius:7,fontFamily:"inherit",fontSize:12,fontWeight:700,
-              cursor:"pointer",background:"rgba(194,24,91,.08)",border:"1px solid rgba(194,24,91,.25)",
-              color:"var(--red)"}}>
-            Remove from District
-          </button>
-        </div>
-      </div>
-
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:12,marginBottom:20}}>
-        {[
-          {icon:"📦",label:"Total Items",val:items.length},
-          {icon:"🏪",label:"Listed",     val:items.filter(i=>i.mkt!=="Not Listed").length},
-          {icon:"✅",label:"In Stock",   val:items.filter(i=>i.avail==="In Stock").length},
-          {icon:"📋",label:"Plan",       val:school.absorbed_into_district?"District":school.plan},
-        ].map(s=>(
-          <div key={s.label} className="card card-p" style={{textAlign:"center",padding:"12px 8px"}}>
-            <div style={{fontSize:22,marginBottom:3}}>{s.icon}</div>
-            <div style={{fontFamily:"var(--serif)",fontSize:20,fontWeight:700}}>{s.val}</div>
-            <div style={{fontSize:11,color:"var(--muted)"}}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="card" style={{overflow:"hidden"}}>
-        <div style={{padding:"12px 16px",borderBottom:"1px solid var(--border)",
-          display:"flex",gap:12,alignItems:"center"}}>
-          <input className="fi" value={search} onChange={e=>setSearch(e.target.value)}
-            placeholder="Search items…" style={{maxWidth:280}}/>
-          <span style={{fontSize:12,color:"var(--muted)"}}>{filtered.length} items</span>
-        </div>
-        {loading?(
-          <div style={{textAlign:"center",padding:32,color:"var(--muted)"}}>Loading…</div>
-        ):(
-          <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse"}}>
-              <thead>
-                <tr style={{background:"rgba(0,0,0,.2)"}}>
-                  {["Item","Category","Condition","Qty","Location","Status","Market"].map(h=>(
-                    <th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:10,
-                      textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",fontWeight:700}}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.slice(0,100).map((item,i)=>(
-                  <tr key={item.id} style={{borderTop:"1px solid var(--border)",
-                    background:i%2===0?"rgba(255,255,255,.01)":"transparent"}}>
-                    <td style={{padding:"8px 12px",fontWeight:600,fontSize:13}}>{item.name}</td>
-                    <td style={{padding:"8px 12px",fontSize:12,color:"var(--muted)"}}>{item.category}</td>
-                    <td style={{padding:"8px 12px",fontSize:12,color:"var(--muted)"}}>{item.condition}</td>
-                    <td style={{padding:"8px 12px",fontSize:13}}>{item.qty||1}</td>
-                    <td style={{padding:"8px 12px",fontSize:12,color:"var(--muted)"}}>{item.location||"—"}</td>
-                    <td style={{padding:"8px 12px",fontSize:12,color:"var(--muted)"}}>{item.avail}</td>
-                    <td style={{padding:"8px 12px",fontSize:12}}>
-                      {item.mkt!=="Not Listed"&&(
-                        <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:6,
-                          background:"rgba(212,168,67,.15)",color:"var(--gold)"}}>{item.mkt}</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {filtered.length===0&&(
-                  <tr><td colSpan={7} style={{textAlign:"center",padding:32,color:"var(--muted)"}}>
-                    No items found.
-                  </td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
         )}
       </div>
+
+      {/* Invite Modal */}
+      {showInvite && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", zIndex: 1000,
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+          onClick={e => e.target === e.currentTarget && setShowInvite(false)}>
+          <div className="card card-p" style={{ width: "100%", maxWidth: 480, animation: "su .2s ease" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0 }}>
+              <h2 style={{ fontFamily: "var(--serif)", fontSize: 20 }}>Add School to District</h2>
+              <button className="btn btn-o btn-sm" onClick={() => setShowInvite(false)}>✕</button>
+            </div>
+
+            {/* Mode tabs */}
+            <div style={{ display: "flex", gap: 0, borderBottom: "1px solid var(--border)", margin: "12px -18px 0", padding: "0 18px" }}>
+              {[["invite","📨 Send Invite Email"],["existing","🔗 Add Existing Account"]].map(([m, l]) => (
+                <button key={m}
+                  onClick={() => { setAssignMode(m); if(m==="existing") loadAllOrgs(); }}
+                  style={{ padding: "8px 14px", fontFamily: "inherit", fontSize: 13, fontWeight: 700,
+                    cursor: "pointer", background: "none", border: "none",
+                    borderBottom: assignMode === m ? "2px solid var(--gold)" : "2px solid transparent",
+                    color: assignMode === m ? "var(--ink)" : "var(--muted)", marginBottom: -1 }}>
+                  {l}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              {assignMode === "invite" ? (<>
+                <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 12, lineHeight: 1.6 }}>
+                  Send an invite link by email. They can accept by signing into their existing Theatre4u™ account
+                  or by creating a new one. You have <strong>{slotsTotal - slotsUsed}</strong> slot{slotsTotal - slotsUsed !== 1 ? "s" : ""} remaining.
+                </p>
+                <div className="fg" style={{ marginBottom: 12 }}>
+                  <label className="fl">School Admin Email *</label>
+                  <input className="fi" type="email" value={invEmail} onChange={e => setInvEmail(e.target.value)}
+                    placeholder="principal@school.edu" autoFocus
+                    onKeyDown={e => e.key === "Enter" && sendInvite()} />
+                </div>
+                <div className="fg" style={{ marginBottom: 16 }}>
+                  <label className="fl">School Name (optional)</label>
+                  <input className="fi" value={invSchool} onChange={e => setInvSchool(e.target.value)}
+                    placeholder="e.g. Ocean View High School" />
+                </div>
+                {msg && <div style={{ color: msg.startsWith("✓") ? "var(--green)" : "var(--red)",
+                  marginBottom: 12, fontSize: 13, fontWeight: 600 }}>{msg}</div>}
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                  <button className="btn btn-o" onClick={() => setShowInvite(false)}>Cancel</button>
+                  <button className="btn btn-g" onClick={sendInvite} disabled={!invEmail.trim() || sending}>
+                    {sending ? "Sending…" : "Send Invite →"}
+                  </button>
+                </div>
+              </>) : (<>
+                <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 12, lineHeight: 1.6 }}>
+                  Add a school that already has a Theatre4u account. Their inventory moves with them immediately —
+                  no email needed.
+                </p>
+                <div className="fg" style={{ marginBottom: 16 }}>
+                  <label className="fl">Select School Account</label>
+                  <select className="fs" value={assignOrgId} onChange={e => setAssignOrgId(e.target.value)}>
+                    <option value="">— Choose an account —</option>
+                    {allOrgs.map(o => (
+                      <option key={o.id} value={o.id}>
+                        {o.name || "Unnamed"} — {o.email} ({o.plan})
+                      </option>
+                    ))}
+                  </select>
+                  {allOrgs.length === 0 && (
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
+                      No unassigned accounts found.
+                    </div>
+                  )}
+                </div>
+                {msg && <div style={{ color: msg.startsWith("✓") ? "var(--green)" : "var(--red)",
+                  marginBottom: 12, fontSize: 13, fontWeight: 600 }}>{msg}</div>}
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                  <button className="btn btn-o" onClick={() => setShowInvite(false)}>Cancel</button>
+                  <button className="btn btn-g" onClick={assignExisting}
+                    disabled={assigning || !assignOrgId} style={{ opacity: !assignOrgId ? .5 : 1 }}>
+                    {assigning ? "Adding…" : "Add to District →"}
+                  </button>
+                </div>
+              </>)}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -5892,8 +5574,7 @@ function AdminDashboard({ currentUser }) {
   const mrr = (byPlan.pro * 12) + (byPlan.district * 49);
 
   const planColor = { free: "rgba(255,255,255,.2)", pro: "var(--gold)", district: "#42a5f5" };
-  const planLabel = { free: "Free", pro: "Pro", district: "District",
-    district_m: "District M", district_l: "District L" };
+  const planLabel = { free: "Free", pro: "Pro", district: "District" };
 
   return (
     <div style={{ position: "relative" }}>
@@ -11111,8 +10792,7 @@ function AppRoot(){
   const [unreadCount,   setUnreadCount]   = useState(0);
   const [openConvId,    setOpenConvId]    = useState(null);
   const [pendingReqCount, setPendingReqCount] = useState(0);
-  const [creditBalance,   setCreditBalance]   = useState(0);
-  const [districtSettings,setDistrictSettings] = useState(null);
+  const [creditBalance, setCreditBalance] = useState(0);
   const [onboardingStep, setOnboardingStep] = useState(null); // null=loading, 0-4
   const [schoolItems,setSchoolItems]     = useState([]);
   const [schoolLoading,setSchoolLoading] = useState(false);
@@ -11248,11 +10928,6 @@ function AppRoot(){
       setPendingReqCount(reqCount || 0);
       // Stage Points balance — loaded at login so it shows in nav/dashboard
       SB.rpc("get_my_credit_balance").then(({data})=>{ if(data!=null) setCreditBalance(data||0); }).catch(()=>{});
-      // Load district settings if this org belongs to a district
-      if (orgData?.district_id) {
-        SB.from("districts").select("*").eq("id", orgData.district_id).single()
-          .then(({ data: dist }) => { if (dist) setDistrictSettings(dist); }).catch(()=>{});
-      }
       // Stage Points balance — also refreshed on Credits page visit
       // (removed from startup to reduce login query count)
     })();
@@ -11733,7 +11408,7 @@ function AppRoot(){
                       setPendingReqCount(count||0);
                     }}/>}
                   {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
-                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} pointBalance={creditBalance} district={org?.district_id?districtSettings:null} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
+                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} pointBalance={creditBalance} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
                   {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
@@ -11749,7 +11424,7 @@ function AppRoot(){
                   )}
                   {page==="marketplace" && <MarketplaceGate items={items} org={org} setOrg={setOrg} plan={plan} userId={user?.id} activeSchool={activeSchool} allSchoolsMode={plan==="district"} onEdit={edit} onDelete={del}/>}
                   {page==="productions" && <Productions userId={user?.id} allItems={items}/>}
-                  {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan}/>}
+                  {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan} org={org}/>}
                   {page==="funding"     && <FundingPage userId={user?.id} org={org} plan={plan}/>}
                   {page==="prop28"      && <Prop28Page  userId={user?.id} org={org} onNav={nav}/>}
                   {page==="profile"     && <OrgProfilePage userId={user?.id} org={org} setOrg={saveOrg} plan={plan} items={items}/>}
@@ -12696,9 +12371,14 @@ function FundingPage({userId, org, plan}){
             Theatre4u helps you organize and report funding data for your own records. Consult your district’s business office for compliance determinations.
           </p>
         </div>
-        <button onClick={exportCSV} className="btn btn-o" style={{fontSize:12}}>
-          ↓ Export CSV
-        </button>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={exportCSV} className="btn btn-o" style={{fontSize:12}}>
+            ↓ Export CSV
+          </button>
+          <button onClick={()=>setTab("impact")} className="btn btn-g" style={{fontSize:12}}>
+            📋 Impact Report
+          </button>
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -12719,7 +12399,7 @@ function FundingPage({userId, org, plan}){
 
       {/* Tabs */}
       <div style={{display:"flex",gap:2,borderBottom:"1px solid var(--border)",marginBottom:20}}>
-        {[["sources","Funding Sources"],["spending","Expenditures"],["reports","By Source"]].map(([id,lbl])=>(
+        {[["sources","Funding Sources"],["spending","Expenditures"],["reports","By Source"],["impact","📋 Impact Report"]].map(([id,lbl])=>(
           <button key={id} onClick={()=>setTab(id)}
             style={{background:"none",border:"none",padding:"8px 16px",fontSize:13,fontWeight:600,
               color:tab===id?"var(--gold)":"var(--faint)",
@@ -12889,6 +12569,15 @@ function FundingPage({userId, org, plan}){
         </div>
       )}
 
+      {/* ── PROGRAM IMPACT REPORT TAB ──────────────────────────────────── */}
+      {tab==="impact"&&(
+        <ProgramImpactReport
+          sources={sources}
+          exps={exps}
+          org={org}
+        />
+      )}
+
       {/* ── SOURCE MODAL ─────────────────────────────────────────────────── */}
       {(modal==="add-source"||modal==="edit-source")&&(
         <SourceModal
@@ -12913,6 +12602,483 @@ function FundingPage({userId, org, plan}){
   );
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PROGRAM IMPACT REPORT
+// Print-ready report: how funding was used — for principals, boards, districts
+// ══════════════════════════════════════════════════════════════════════════════
+function ProgramImpactReport({ sources, exps, org }) {
+  const [filterYear, setFilterYear] = React.useState("all");
+  const [filterSource, setFilterSource] = React.useState("all");
+
+  const years = [...new Set(sources.map(s => s.fiscal_year).filter(Boolean))].sort().reverse();
+
+  const filteredSources = sources.filter(s => {
+    if (!s.is_active) return false;
+    if (filterYear !== "all" && s.fiscal_year !== filterYear) return false;
+    if (filterSource !== "all" && s.id !== filterSource) return false;
+    return true;
+  });
+
+  const filteredExps = exps.filter(e => {
+    const src = sources.find(s => s.id === e.funding_source_id);
+    if (!src || !src.is_active) return false;
+    if (filterYear !== "all" && src.fiscal_year !== filterYear) return false;
+    if (filterSource !== "all" && e.funding_source_id !== filterSource) return false;
+    return true;
+  });
+
+  const totalAllocated = filteredSources.reduce((a, s) => a + (parseFloat(s.total_amount) || 0), 0);
+  const totalSpent     = filteredExps.reduce((a, e) => a + (parseFloat(e.amount) || 0), 0);
+  const totalRemaining = totalAllocated - totalSpent;
+
+  // Category breakdown across all filtered expenditures
+  const byCat = {};
+  filteredExps.forEach(e => {
+    const c = e.category || "Uncategorized";
+    byCat[c] = (byCat[c] || 0) + (parseFloat(e.amount) || 0);
+  });
+
+  const today = new Date().toLocaleDateString("en-US", { year:"numeric", month:"long", day:"numeric" });
+  const orgName = org?.name || "Theatre Program";
+
+  const printReport = () => {
+    const w = window.open("", "_blank", "width=900,height=700");
+    if (!w) return;
+    const sourcesHTML = filteredSources.map(src => {
+      const srcExps = filteredExps.filter(e => e.funding_source_id === src.id);
+      const srcSpent = srcExps.reduce((a, e) => a + (parseFloat(e.amount) || 0), 0);
+      const srcAlloc = parseFloat(src.total_amount) || 0;
+      const catTotals = {};
+      srcExps.forEach(e => {
+        const c = e.category || "Uncategorized";
+        catTotals[c] = (catTotals[c] || 0) + (parseFloat(e.amount) || 0);
+      });
+      return `
+        <div style="margin-bottom:28px;break-inside:avoid">
+          <table style="width:100%;border-collapse:collapse;margin-bottom:0">
+            <tr style="background:#1a0f00">
+              <th style="padding:10px 14px;text-align:left;color:#d4a843;font-size:14px">${src.name}${src.funder ? " — " + src.funder : ""}${src.fiscal_year ? " · FY " + src.fiscal_year : ""}</th>
+              <th style="padding:10px 14px;text-align:right;color:#d4a843;font-size:14px">$${srcSpent.toLocaleString("en-US",{minimumFractionDigits:2})} of $${srcAlloc.toLocaleString("en-US",{minimumFractionDigits:2})} allocated</th>
+            </tr>
+          </table>
+          ${srcExps.length === 0 ? '<p style="font-size:12px;color:#888;padding:8px 14px;font-style:italic">No expenditures recorded.</p>' : `
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr style="background:#f5f0e8">
+              <th style="padding:7px 14px;text-align:left;border-bottom:1px solid #ddd">Date</th>
+              <th style="padding:7px 14px;text-align:left;border-bottom:1px solid #ddd">Description</th>
+              <th style="padding:7px 14px;text-align:left;border-bottom:1px solid #ddd">Category</th>
+              <th style="padding:7px 14px;text-align:left;border-bottom:1px solid #ddd">Vendor</th>
+              <th style="padding:7px 14px;text-align:right;border-bottom:1px solid #ddd">Amount</th>
+            </tr></thead>
+            <tbody>
+              ${srcExps.map((e, i) => `<tr style="background:${i%2===0?"#fff":"#faf7f2"}">
+                <td style="padding:6px 14px;border-bottom:1px solid #eee">${e.purchase_date ? new Date(e.purchase_date + "T00:00").toLocaleDateString() : "—"}</td>
+                <td style="padding:6px 14px;border-bottom:1px solid #eee">${e.description || "—"}</td>
+                <td style="padding:6px 14px;border-bottom:1px solid #eee">${e.category || "—"}</td>
+                <td style="padding:6px 14px;border-bottom:1px solid #eee">${e.vendor || "—"}</td>
+                <td style="padding:6px 14px;border-bottom:1px solid #eee;text-align:right;font-weight:700">$${parseFloat(e.amount).toLocaleString("en-US",{minimumFractionDigits:2})}</td>
+              </tr>`).join("")}
+              <tr style="background:#f5f0e8;font-weight:700">
+                <td colspan="4" style="padding:8px 14px;border-top:2px solid #d4a843">Source Total</td>
+                <td style="padding:8px 14px;border-top:2px solid #d4a843;text-align:right;color:#1a0f00">$${srcSpent.toLocaleString("en-US",{minimumFractionDigits:2})}</td>
+              </tr>
+            </tbody>
+          </table>`}
+          ${srcAlloc > 0 ? `<div style="font-size:11px;color:#888;padding:4px 14px">Remaining balance: $${Math.max(0, srcAlloc - srcSpent).toLocaleString("en-US",{minimumFractionDigits:2})}</div>` : ""}
+        </div>`;
+    }).join("");
+
+    const catHTML = Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([cat, amt]) =>
+      `<tr><td style="padding:6px 14px">${cat}</td><td style="padding:6px 14px;text-align:right;font-weight:700">$${amt.toLocaleString("en-US",{minimumFractionDigits:2})}</td><td style="padding:6px 14px;text-align:right;color:#888">${totalSpent>0?Math.round(amt/totalSpent*100):0}%</td></tr>`
+    ).join("");
+
+    const html = `<!DOCTYPE html><html><head><title>Programme Impact Report — ${orgName}</title>
+    <style>
+      body{font-family:Arial,sans-serif;color:#1a1200;margin:0;padding:0;font-size:13px}
+      .page{max-width:820px;margin:0 auto;padding:40px}
+      h1{font-family:Georgia,serif;font-size:28px;margin:0 0 4px;color:#1a0f00}
+      h2{font-family:Georgia,serif;font-size:16px;color:#1a0f00;margin:24px 0 10px;border-bottom:2px solid #d4a843;padding-bottom:6px}
+      .meta{font-size:12px;color:#888;margin-bottom:32px}
+      .summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px}
+      .stat-box{background:#f5f0e8;border:1px solid #e0d5c0;border-radius:6px;padding:14px;text-align:center}
+      .stat-val{font-family:Georgia,serif;font-size:24px;font-weight:700;color:#d4a843}
+      .stat-lbl{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+      @media print{body{margin:0}.page{padding:24px}button{display:none!important}}
+    </style></head><body><div class="page">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#d4a843;margin-bottom:6px">🎭 Theatre4u™</div>
+          <h1>Programme Impact Report</h1>
+          <div class="meta">${orgName}${filterYear !== "all" ? " · Fiscal Year " + filterYear : ""} · Generated ${today}</div>
+        </div>
+        <button onclick="window.print()" style="padding:8px 18px;background:#1a0f00;color:#d4a843;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:700">🖨 Print / Save PDF</button>
+      </div>
+
+      <div class="summary-grid">
+        <div class="stat-box"><div class="stat-val">$${totalAllocated.toLocaleString("en-US",{minimumFractionDigits:2})}</div><div class="stat-lbl">Total Allocated</div></div>
+        <div class="stat-box"><div class="stat-val">$${totalSpent.toLocaleString("en-US",{minimumFractionDigits:2})}</div><div class="stat-lbl">Total Spent</div></div>
+        <div class="stat-box"><div class="stat-val" style="color:${totalRemaining >= 0 ? "#2e7d32" : "#c62828"}">$${Math.abs(totalRemaining).toLocaleString("en-US",{minimumFractionDigits:2})}</div><div class="stat-lbl">${totalRemaining >= 0 ? "Remaining" : "Over Budget"}</div></div>
+      </div>
+
+      <h2>Spending by Category</h2>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:32px;font-size:12px">
+        <thead><tr style="background:#f5f0e8"><th style="padding:7px 14px;text-align:left">Category</th><th style="padding:7px 14px;text-align:right">Amount</th><th style="padding:7px 14px;text-align:right">% of Total</th></tr></thead>
+        <tbody>${catHTML}</tbody>
+        <tfoot><tr style="background:#1a0f00;color:#d4a843;font-weight:700"><td style="padding:8px 14px">TOTAL</td><td style="padding:8px 14px;text-align:right">$${totalSpent.toLocaleString("en-US",{minimumFractionDigits:2})}</td><td style="padding:8px 14px;text-align:right">100%</td></tr></tfoot>
+      </table>
+
+      <h2>Expenditures by Funding Source</h2>
+      ${sourcesHTML || '<p style="color:#888;font-style:italic">No sources match your current filters.</p>'}
+
+      <div style="margin-top:40px;padding-top:16px;border-top:1px solid #e0d5c0;font-size:10px;color:#aaa;text-align:center">
+        Theatre4u™ — Artstracker LLC · theatre4u.org · This report is for program records. Consult your district's business office for compliance determinations.
+      </div>
+    </div></body></html>`;
+    w.document.write(html);
+    w.document.close();
+  };
+
+  const card = {background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:16,marginBottom:12};
+
+  return (
+    <div>
+      {/* Controls */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+        marginBottom:20,flexWrap:"wrap",gap:10}}>
+        <div>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,marginBottom:3}}>
+            Programme Impact Report
+          </div>
+          <div style={{fontSize:12,color:"var(--faint)"}}>
+            A funding accountability report for principals, arts directors, and board members.
+          </div>
+        </div>
+        <button onClick={printReport} className="btn btn-g">
+          🖨 Generate &amp; Print Report
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div style={{...card,display:"flex",gap:14,alignItems:"flex-end",flexWrap:"wrap",padding:14,marginBottom:20}}>
+        <div>
+          <label style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1,
+            color:"var(--faint)",display:"block",marginBottom:4}}>Fiscal Year</label>
+          <select value={filterYear} onChange={e=>setFilterYear(e.target.value)}
+            style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,
+              padding:"6px 10px",fontSize:13,color:"var(--text)",fontFamily:"inherit"}}>
+            <option value="all">All Years</option>
+            {years.map(y=><option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1,
+            color:"var(--faint)",display:"block",marginBottom:4}}>Funding Source</label>
+          <select value={filterSource} onChange={e=>setFilterSource(e.target.value)}
+            style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,
+              padding:"6px 10px",fontSize:13,color:"var(--text)",fontFamily:"inherit"}}>
+            <option value="all">All Sources</option>
+            {sources.filter(s=>s.is_active).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+        <div style={{fontSize:12,color:"var(--faint)",paddingBottom:2}}>
+          {filteredExps.length} expenditure{filteredExps.length!==1?"s":" "} ·{" "}
+          ${filteredExps.reduce((a,e)=>a+(parseFloat(e.amount)||0),0)
+            .toLocaleString("en-US",{minimumFractionDigits:2})} total
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12,marginBottom:20}}>
+        {[
+          {label:"Total Allocated",val:"$"+totalAllocated.toLocaleString("en-US",{minimumFractionDigits:2}),color:"var(--gold)"},
+          {label:"Total Spent",    val:"$"+totalSpent.toLocaleString("en-US",{minimumFractionDigits:2}),    color:"var(--blue)"},
+          {label:"Remaining",      val:"$"+totalRemaining.toLocaleString("en-US",{minimumFractionDigits:2}),color:totalRemaining>=0?"var(--green)":"var(--red)"},
+          {label:"Sources",        val:filteredSources.length, color:"var(--text)"},
+          {label:"Expenditures",   val:filteredExps.length,    color:"var(--text)"},
+        ].map(s=>(
+          <div key={s.label} style={{...card,textAlign:"center",marginBottom:0,padding:14}}>
+            <div style={{fontSize:20,fontWeight:800,fontFamily:"'Playfair Display',serif",color:s.color}}>{s.val}</div>
+            <div style={{fontSize:10,color:"var(--faint)",marginTop:3,textTransform:"uppercase",letterSpacing:1}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Category breakdown preview */}
+      {Object.keys(byCat).length > 0 && (
+        <div style={{...card,marginBottom:20}}>
+          <div style={{fontWeight:700,fontSize:13,marginBottom:12}}>Spending by Category</div>
+          {Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>(
+            <div key={cat} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+              <div style={{width:120,fontSize:12,color:"var(--faint)",flexShrink:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{cat}</div>
+              <div style={{flex:1,height:6,background:"var(--white)",borderRadius:3,overflow:"hidden"}}>
+                <div style={{height:"100%",width:(totalSpent>0?amt/totalSpent*100:0)+"%",
+                  background:"var(--gold)",borderRadius:3,transition:"width .4s"}}/>
+              </div>
+              <div style={{fontSize:12,fontWeight:700,width:90,textAlign:"right",flexShrink:0}}>
+                ${amt.toLocaleString("en-US",{minimumFractionDigits:2})}
+              </div>
+              <div style={{fontSize:11,color:"var(--faint)",width:36,textAlign:"right",flexShrink:0}}>
+                {totalSpent>0?Math.round(amt/totalSpent*100):0}%
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Per-source preview */}
+      {filteredSources.length === 0 ? (
+        <div style={{textAlign:"center",padding:40,color:"var(--faint)"}}>
+          <div style={{fontSize:36,marginBottom:10}}>📋</div>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:6}}>No data to report</div>
+          <div style={{fontSize:13}}>Add funding sources and expenditures, then generate a report.</div>
+        </div>
+      ) : filteredSources.map(src => {
+        const srcExps  = filteredExps.filter(e=>e.funding_source_id===src.id);
+        const srcSpent = srcExps.reduce((a,e)=>a+(parseFloat(e.amount)||0),0);
+        const srcAlloc = parseFloat(src.total_amount)||0;
+        const srcCats  = {};
+        srcExps.forEach(e=>{const c=e.category||"Uncategorized";srcCats[c]=(srcCats[c]||0)+(parseFloat(e.amount)||0);});
+        const FUND_TYPE = (window.__FUND_TYPES||[]).find(f=>f.id===src.source_type);
+        return (
+          <div key={src.id} style={card}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",
+              marginBottom:10,flexWrap:"wrap",gap:8}}>
+              <div>
+                <div style={{fontWeight:700,fontSize:14,marginBottom:2}}>
+                  {src.name}{src.funder?<span style={{fontWeight:400,color:"var(--faint)"}}> — {src.funder}</span>:null}
+                </div>
+                <div style={{fontSize:11,color:"var(--faint)"}}>
+                  {src.source_type?.replace("_"," ")?.toUpperCase()}
+                  {src.fiscal_year?" · FY "+src.fiscal_year:""}
+                  {src.start_date?" · "+new Date(src.start_date+"T00:00").toLocaleDateString()+" – "+(src.end_date?new Date(src.end_date+"T00:00").toLocaleDateString():"ongoing"):""}
+                </div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:"var(--gold)"}}>
+                  ${srcSpent.toLocaleString("en-US",{minimumFractionDigits:2})}
+                  {srcAlloc>0&&<span style={{fontSize:12,fontWeight:400,color:"var(--faint)"}}> / ${srcAlloc.toLocaleString("en-US",{minimumFractionDigits:2})}</span>}
+                </div>
+                {srcAlloc>0&&<div style={{fontSize:11,color:srcAlloc-srcSpent<0?"var(--red)":"var(--faint)"}}>
+                  ${Math.max(0,srcAlloc-srcSpent).toLocaleString("en-US",{minimumFractionDigits:2})} remaining
+                </div>}
+              </div>
+            </div>
+            {Object.keys(srcCats).length>0&&(
+              <div style={{borderTop:"1px solid var(--border)",paddingTop:8}}>
+                {Object.entries(srcCats).sort((a,b)=>b[1]-a[1]).map(([c,a])=>(
+                  <div key={c} style={{display:"flex",justifyContent:"space-between",fontSize:12,
+                    color:"var(--faint)",padding:"3px 0",borderBottom:"1px solid rgba(0,0,0,.05)"}}>
+                    <span>{c}</span>
+                    <span style={{fontWeight:600}}>${a.toLocaleString("en-US",{minimumFractionDigits:2})}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {srcExps.length===0&&(
+              <div style={{fontSize:12,color:"var(--faint)",fontStyle:"italic",paddingTop:4}}>No expenditures recorded.</div>
+            )}
+          </div>
+        );
+      })}
+
+      <div style={{fontSize:11,color:"var(--faint)",fontStyle:"italic",marginTop:12,lineHeight:1.5}}>
+        Click "Generate &amp; Print Report" for a print-ready formatted version suitable for principals, arts directors, or board presentations.
+        This report is for program records — consult your district's business office for compliance determinations.
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PLATFORM USAGE REPORT
+// How the program uses Theatre4u — for principals and superintendents
+// ══════════════════════════════════════════════════════════════════════════════
+function PlatformUsageReport({ items, org, plan }) {
+  const today = new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
+  const orgName = org?.name || "Theatre Program";
+
+  // Derive stats from items already loaded
+  const totalItems  = items.length;
+  const totalQty    = items.reduce((s,i)=>s+(i.qty||1),0);
+  const withPhotos  = items.filter(i=>i.img).length;
+  const listed      = items.filter(i=>i.mkt!=="Not Listed").length;
+  const inStock     = items.filter(i=>i.avail==="In Stock").length;
+  const catCounts   = items.reduce((a,i)=>{a[i.category]=(a[i.category]||0)+1;return a},{});
+  const topCats     = Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const totalValue  = items.reduce((s,i)=>s+((parseFloat(i.sale)||0)*(i.qty||1)),0);
+  const memberSince = org?.created_at ? new Date(org.created_at).toLocaleDateString("en-US",{year:"numeric",month:"long"}) : "N/A";
+
+  const CAT_LABELS = {
+    costumes:"Costumes",props:"Props",sets:"Sets & Scenery",lighting:"Lighting",
+    sound:"Sound Equipment",scripts:"Scripts & Music",makeup:"Makeup & Wigs",
+    furniture:"Stage Furniture",fabrics:"Fabrics & Drapes",tools:"Tools & Hardware",
+    effects:"Special Effects",other:"Other"
+  };
+
+  const printReport = () => {
+    const w = window.open("","_blank","width=900,height=700");
+    if(!w) return;
+
+    const catRows = topCats.map(([cat,n])=>
+      `<tr><td style="padding:6px 14px">${CAT_LABELS[cat]||cat}</td><td style="padding:6px 14px;text-align:right;font-weight:700">${n}</td></tr>`
+    ).join("");
+
+    const html = `<!DOCTYPE html><html><head><title>Platform Utilization Report — ${orgName}</title>
+    <style>
+      body{font-family:Arial,sans-serif;color:#1a1200;margin:0;padding:0}
+      .page{max-width:820px;margin:0 auto;padding:40px}
+      h1{font-family:Georgia,serif;font-size:28px;margin:0 0 4px;color:#1a0f00}
+      h2{font-family:Georgia,serif;font-size:16px;color:#1a0f00;margin:24px 0 10px;border-bottom:2px solid #d4a843;padding-bottom:6px}
+      .meta{font-size:12px;color:#888;margin-bottom:32px}
+      .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+      .stat-box{background:#f5f0e8;border:1px solid #e0d5c0;border-radius:6px;padding:14px;text-align:center}
+      .stat-val{font-family:Georgia,serif;font-size:26px;font-weight:700;color:#d4a843}
+      .stat-lbl{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+      .callout{background:#fff8e6;border-left:4px solid #d4a843;padding:14px 18px;margin:20px 0;font-size:13px;line-height:1.6}
+      table{width:100%;border-collapse:collapse}
+      th{background:#f5f0e8;padding:8px 14px;text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:1px}
+      td{padding:6px 14px;border-bottom:1px solid #eee;font-size:13px}
+      @media print{button{display:none!important}}
+    </style></head><body><div class="page">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#d4a843;margin-bottom:6px">🎭 Theatre4u™</div>
+          <h1>Platform Utilization Report</h1>
+          <div class="meta">${orgName} · Generated ${today} · Member since ${memberSince}</div>
+        </div>
+        <button onclick="window.print()" style="padding:8px 18px;background:#1a0f00;color:#d4a843;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:700">🖨 Print / Save PDF</button>
+      </div>
+
+      <div class="callout">
+        <strong>${orgName}</strong> uses Theatre4u™ to manage, catalog, and share their theatre program's physical inventory — costumes, props, lighting, sound equipment, sets, and more. This report summarizes how the platform is being utilized to protect and maximize the value of district arts assets.
+      </div>
+
+      <h2>Inventory Summary</h2>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-val">${totalItems}</div><div class="stat-lbl">Cataloged Items</div></div>
+        <div class="stat-box"><div class="stat-val">${totalQty.toLocaleString()}</div><div class="stat-lbl">Total Inventory Qty</div></div>
+        <div class="stat-box"><div class="stat-val">${totalValue>0?"$"+totalValue.toLocaleString("en-US",{minimumFractionDigits:0}):"—"}</div><div class="stat-lbl">Est. Inventory Value</div></div>
+        <div class="stat-box"><div class="stat-val">${withPhotos}</div><div class="stat-lbl">Items with Photos</div></div>
+        <div class="stat-box"><div class="stat-val">${inStock}</div><div class="stat-lbl">Currently Available</div></div>
+        <div class="stat-box"><div class="stat-val">${listed}</div><div class="stat-lbl">Shared with Other Programs</div></div>
+      </div>
+
+      <h2>Inventory by Category</h2>
+      <table><thead><tr><th>Category</th><th style="text-align:right">Items</th></tr></thead>
+      <tbody>${catRows}</tbody></table>
+
+      <h2>Asset Management</h2>
+      <table><thead><tr><th>Feature</th><th>Status</th></tr></thead><tbody>
+        <tr><td>QR Code Labels</td><td>✅ Enabled — every item gets a scannable label for instant identification</td></tr>
+        <tr><td>Photo Documentation</td><td>${withPhotos > 0 ? `✅ ${withPhotos} items documented with photos` : "○ No photos yet — photos improve identification and reduce loss"}</td></tr>
+        <tr><td>Storage Locations</td><td>✅ Items tracked by physical location within the program</td></tr>
+        <tr><td>Condition Tracking</td><td>✅ Each item's condition recorded for maintenance planning</td></tr>
+        <tr><td>Backstage Exchange</td><td>${listed > 0 ? `✅ ${listed} item${listed!==1?"s":""} shared with neighboring programs — reducing costs for district schools` : "○ No items shared yet"}</td></tr>
+      </tbody></table>
+
+      <h2>Why This Matters</h2>
+      <div style="font-size:13px;line-height:1.8;color:#444">
+        <p>Theatre programs typically manage hundreds of thousands of dollars in physical assets — costumes, lighting equipment, sound systems, and set materials — with no formal inventory system. Items go missing, get double-purchased, or sit unused while neighboring schools pay commercial rental rates for the same gear.</p>
+        <p>Theatre4u™ gives <strong>${orgName}</strong> a permanent, searchable record of every item the program owns. QR labels allow any staff member to instantly look up any item with their phone camera. The Backstage Exchange enables schools within the district to share resources freely — reducing program expenses and maximizing the return on arts investment.</p>
+      </div>
+
+      <div style="margin-top:40px;padding-top:16px;border-top:1px solid #e0d5c0;font-size:10px;color:#aaa;text-align:center">
+        Theatre4u™ — Artstracker LLC · theatre4u.org · Report generated ${today}
+      </div>
+    </div></body></html>`;
+    w.document.write(html);
+    w.document.close();
+  };
+
+  const card = {background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:16,marginBottom:12};
+
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+        marginBottom:20,flexWrap:"wrap",gap:10}}>
+        <div>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,marginBottom:3}}>
+            Platform Utilization Report
+          </div>
+          <div style={{fontSize:12,color:"var(--faint)"}}>
+            A report for principals, arts directors, and board members showing how Theatre4u is being used to protect and maximize arts program assets.
+          </div>
+        </div>
+        <button onClick={printReport} className="btn btn-g">🖨 Generate &amp; Print Report</button>
+      </div>
+
+      {/* Callout */}
+      <div style={{...card,background:"rgba(212,168,67,.06)",borderColor:"rgba(212,168,67,.25)",marginBottom:20}}>
+        <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>What this report shows</div>
+        <div style={{fontSize:13,color:"var(--faint)",lineHeight:1.6}}>
+          This report is designed to hand to a principal or superintendent. It shows the size and value of the program's cataloged inventory,
+          how many items are documented with photos and QR labels, and how many assets are being shared with other programs through the Backstage Exchange.
+          Click "Generate &amp; Print Report" for the formatted, print-ready version.
+        </div>
+      </div>
+
+      {/* Stats grid */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12,marginBottom:20}}>
+        {[
+          {label:"Cataloged Items",val:totalItems,            color:"var(--gold)"},
+          {label:"Total Qty",      val:totalQty.toLocaleString(),color:"var(--text)"},
+          {label:"Est. Value",     val:totalValue>0?"$"+totalValue.toLocaleString("en-US",{maximumFractionDigits:0}):"—",color:"var(--green)"},
+          {label:"With Photos",    val:withPhotos,            color:"var(--text)"},
+          {label:"Shared",         val:listed,                color:"var(--blue)"},
+          {label:"In Stock",       val:inStock,               color:"var(--text)"},
+        ].map(s=>(
+          <div key={s.label} style={{...card,textAlign:"center",marginBottom:0,padding:14}}>
+            <div style={{fontSize:22,fontWeight:800,fontFamily:"'Playfair Display',serif",color:s.color}}>{s.val}</div>
+            <div style={{fontSize:10,color:"var(--faint)",marginTop:3,textTransform:"uppercase",letterSpacing:1}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Top categories */}
+      {topCats.length > 0 && (
+        <div style={card}>
+          <div style={{fontWeight:700,fontSize:13,marginBottom:12}}>Inventory by Category</div>
+          {topCats.map(([cat,n])=>(
+            <div key={cat} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+              <div style={{width:130,fontSize:12,color:"var(--faint)",flexShrink:0}}>{CAT_LABELS[cat]||cat}</div>
+              <div style={{flex:1,height:6,background:"var(--white)",borderRadius:3,overflow:"hidden"}}>
+                <div style={{height:"100%",width:(totalItems>0?n/totalItems*100:0)+"%",
+                  background:"var(--gold)",borderRadius:3,transition:"width .4s"}}/>
+              </div>
+              <div style={{fontSize:12,fontWeight:700,width:30,textAlign:"right",flexShrink:0}}>{n}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Asset management checklist */}
+      <div style={card}>
+        <div style={{fontWeight:700,fontSize:13,marginBottom:12}}>Asset Management Checklist</div>
+        {[
+          {label:"QR Code Labels",  done:true,  note:"Every item gets a scannable label for instant lookup"},
+          {label:"Photo Documentation",done:withPhotos>0,note:`${withPhotos} of ${totalItems} items have photos`},
+          {label:"Location Tracking",done:items.some(i=>i.location), note:"Items tracked by storage location"},
+          {label:"Condition Records",done:true,  note:"Each item's condition documented for maintenance planning"},
+          {label:"Backstage Exchange",done:listed>0,note:listed>0?`${listed} items shared with neighboring programs`:"Enable to share with district schools"},
+        ].map(row=>(
+          <div key={row.label} style={{display:"flex",gap:12,padding:"8px 0",borderBottom:"1px solid var(--border)"}}>
+            <div style={{fontSize:18,flexShrink:0}}>{row.done?"✅":"○"}</div>
+            <div>
+              <div style={{fontWeight:600,fontSize:13}}>{row.label}</div>
+              <div style={{fontSize:11,color:"var(--faint)",marginTop:1}}>{row.note}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{fontSize:11,color:"var(--faint)",fontStyle:"italic",marginTop:12,lineHeight:1.5}}>
+        Click "Generate &amp; Print Report" for a fully formatted print-ready version suitable for principals,
+        arts directors, or board presentations. The report explains the value of the platform in plain language for non-technical decision makers.
+      </div>
+    </div>
+  );
+}
 function SourceModal({initial, saving, onSave, onCancel}){
   const blank = {name:"",source_type:"grant",funder:"",total_amount:"",fiscal_year:"",start_date:"",end_date:"",notes:"",is_active:true};
   const[f,setF] = useState(initial||blank);
