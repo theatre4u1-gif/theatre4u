@@ -662,19 +662,84 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
         <div class="sec-hero" data-emoji="🏢">
           <div class="sec-badge">District plan</div>
           <h2>District Management</h2>
-          <p>Manage multiple schools from one account, share inventory across your district, and view all programs from a central dashboard.</p>
+          <p>Manage multiple schools from one central account. View all school inventories, control what schools can share, consolidate billing, and coordinate resources across your entire district — all from one dashboard.</p>
         </div>
 
-        <div class="card"><div class="card-bd">
-          <div class="steps">
-            <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Upgrade to District plan</h4><p>Go to Profile → Upgrade. The District plan covers up to 6 school sites.</p></div></div>
-            <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Click District in the sidebar</h4><p>Your District dashboard shows all schools, their item counts, and status.</p></div></div>
-            <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Invite schools</h4><p>Click <strong>Invite School</strong>, enter the drama director's email and their school name. They receive an invitation email with a link that auto-connects their account to your district.</p></div></div>
-            <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Browse any school's inventory</h4><p>Click any school in the district list to view their full inventory. Use the "← Back to District" button to return.</p></div></div>
-            <div class="step"><div class="step-n">5</div><div class="step-body"><h4>Shared Backstage Exchange</h4><p>All schools in the district can see and request items from each other — no extra setup required.</p></div></div>
+        <div class="card">
+          <div class="card-hd"><h3>District Plan Tiers</h3></div>
+          <div class="card-bd">
+            <table class="tbl">
+              <thead><tr><th>Plan</th><th>Schools</th><th>Monthly</th><th>Annual</th></tr></thead>
+              <tbody>
+                <tr><td>District S</td><td>Up to 6</td><td>$49/mo</td><td>$500/yr</td></tr>
+                <tr><td>District M</td><td>Up to 15</td><td>$99/mo</td><td>$1,000/yr</td></tr>
+                <tr><td>District L</td><td>Up to 30</td><td>$199/mo</td><td>$2,000/yr</td></tr>
+              </tbody>
+            </table>
+            <div class="tip" style="margin-top:10px">💡 All schools under a district plan get full Pro-level access. You don't need separate Pro subscriptions for each school.</div>
           </div>
-        </div></div>
+        </div>
+
+        <div class="card"><div class="card-hd"><h3>Getting Started as a District Administrator</h3></div>
+          <div class="card-bd">
+            <div class="steps">
+              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Upgrade to a District plan</h4><p>Go to Settings → Upgrade. Choose District S, M, or L based on your district's size.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Open the District Dashboard</h4><p>Click <strong>District</strong> in the left sidebar. You'll see school count, total items across all sites, and pending invites at a glance.</p></div></div>
+              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Add your schools</h4>
+                <p>Click <strong>+ Add School</strong>. Two options:</p>
+                <ul style="margin:8px 0 0 0;padding-left:18px;color:var(--muted);font-size:14px;line-height:1.7">
+                  <li><strong>Send Invite Email</strong> — enter the drama director's email. They accept with their existing Theatre4u account or by creating a new one.</li>
+                  <li><strong>Add Existing Account</strong> — if a school already has Theatre4u, select them directly. No email needed — immediate.</li>
+                </ul>
+              </div></div>
+              <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Configure district permissions</h4><p>Go to the <strong>Permissions</strong> tab to control what schools can see and do across the district.</p></div></div>
+              <div class="step"><div class="step-n">5</div><div class="step-body"><h4>Consolidate billing</h4><p>Schools with active Pro subscriptions can be moved to district billing with one click — canceling their individual subscription and keeping full access.</p></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card"><div class="card-hd"><h3>Consolidating Pro Subscriptions into District Billing</h3></div>
+          <div class="card-bd">
+            <p style="font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:14px">If a school already has an active Pro subscription, you can consolidate their billing under the district account. This cancels their individual Pro subscription — saving them $15/month — and they continue with full access under your district plan.</p>
+            <div class="callout gold"><div class="ci">⚡</div><div><strong>How to consolidate:</strong> In the Schools tab, schools paying separately show a blue "Paying Separately" badge. Click <strong>Consolidate Billing</strong> next to any school. Their data stays intact — only billing changes.</div></div>
+          </div>
+        </div>
+
+        <div class="card"><div class="card-hd"><h3>District Permissions</h3></div>
+          <div class="card-bd">
+            <table class="tbl">
+              <thead><tr><th>Permission</th><th>When ON</th><th>When OFF (default)</th></tr></thead>
+              <tbody>
+                <tr><td>📦 <strong>Shared District Inventory</strong></td><td>All schools can browse every other school's full inventory — great for finding items before purchasing externally.</td><td>Each school's inventory is private. Schools only see their own items.</td></tr>
+                <tr><td>🔄 <strong>Cross-School Exchange</strong></td><td>Schools can send free loan requests to each other. No platform fee on intra-district transactions.</td><td>Exchange requests between district schools follow the standard process.</td></tr>
+                <tr><td>✅ <strong>Require Approval for Public Listings</strong></td><td>Items must be approved by the district admin before appearing on Backstage Exchange.</td><td>Schools can list items publicly without district approval.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card"><div class="card-hd"><h3>District Dashboard Features</h3></div>
+          <div class="card-bd">
+            <div class="feat-grid">
+              <div class="feat-card"><div class="fi">🏫</div><h4>Schools Tab</h4><p>All schools with item counts, billing status, and quick actions. Click "View Inventory" to drill into any school's catalog. Click "↗ Manage" to switch your view to that school entirely.</p></div>
+              <div class="feat-card"><div class="fi">📨</div><h4>Invites Tab</h4><p>Track all invites — pending, accepted, or revoked. Copy invite links directly if the automated email doesn't arrive.</p></div>
+              <div class="feat-card"><div class="fi">🔐</div><h4>Permissions Tab</h4><p>Toggle shared inventory, cross-school Exchange, and listing approval. Also shows billing status for each school.</p></div>
+              <div class="feat-card"><div class="fi">⚙️</div><h4>Settings Tab</h4><p>Set district name, contact email, website, and internal notes. Shows plan tier and slot usage.</p></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card"><div class="card-hd"><h3>Frequently Asked Questions</h3></div>
+          <div class="card-bd">
+            <div class="faq-item"><div class="faq-q">Can a school keep their Pro subscription after joining the district?</div><div class="faq-a">They don't need to. District membership gives them full Pro access. Consolidate their billing to save money, or leave it active if you prefer to manage billing separately.</div></div>
+            <div class="faq-item"><div class="faq-q">What happens to a school's inventory when they join?</div><div class="faq-a">Nothing changes. Their inventory, items, photos, QR labels, and history all stay exactly as-is. Joining a district only adds visibility and management features.</div></div>
+            <div class="faq-item"><div class="faq-q">What if a school already has an active Pro subscription?</div><div class="faq-a">Add them using "Add Existing Account." They'll show a "Paying Separately" badge. Click "Consolidate Billing" to cancel their individual subscription and move them under district billing.</div></div>
+            <div class="faq-item"><div class="faq-q">Can I remove a school from the district?</div><div class="faq-a">Yes. Click "Remove" on any school in the Schools tab. Their account and inventory remain intact, but they revert to Free plan if they were on district billing.</div></div>
+            <div class="faq-item"><div class="faq-q">How many schools can I add?</div><div class="faq-a">District S: up to 6. District M: up to 15. District L: up to 30. Contact hello@theatre4u.org to upgrade your district tier.</div></div>
+          </div>
+        </div>
       </section>
+
 
       <!-- ═══════════════ CSV IMPORT ═══════════════ -->
       <section class="section" id="csv">
