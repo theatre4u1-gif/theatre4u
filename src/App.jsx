@@ -1544,7 +1544,7 @@ function CommunitySpotlight({onViewAll}){
   );
 }
 
-function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketplace,goCommunity,goProfile,goPoints}){
+function Dashboard({items,org,plan="free",pointBalance=0,district=null,goInventory,goMarketplace,goCommunity,goProfile,goPoints}){
   const totalQty=items.reduce((s,i)=>s+(i.qty||1),0);
   const listed=items.filter(i=>i.mkt!=="Not Listed").length;
   const withImg=items.filter(i=>i.img).length;
@@ -4112,113 +4112,125 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
   const [district,   setDistrict]   = useState(null);
   const [schools,    setSchools]    = useState([]);
   const [invites,    setInvites]    = useState([]);
-  const [itemCounts, setItemCounts] = useState({});
   const [loading,    setLoading]    = useState(true);
-  const [tab,        setTab]        = useState("schools"); // schools | invites
+  const [tab,        setTab]        = useState("schools");
+  const [msg,        setMsg]        = useState("");
   const [showInvite, setShowInvite] = useState(false);
   const [invEmail,   setInvEmail]   = useState("");
   const [invSchool,  setInvSchool]  = useState("");
   const [sending,    setSending]    = useState(false);
-  const [msg,        setMsg]        = useState("");
+  const [assignMode, setAssignMode] = useState("invite");
+  const [allOrgs,    setAllOrgs]    = useState([]);
+  const [assignId,   setAssignId]   = useState("");
+  const [assigning,  setAssigning]  = useState(false);
+  const [absorbingId,setAbsorbingId] = useState(null);
+  const [absorbMsg,  setAbsorbMsg]   = useState("");
+  const [dName,      setDName]      = useState("");
+  const [dEmail,     setDEmail]     = useState("");
+  const [dWebsite,   setDWebsite]   = useState("");
+  const [dNotes,     setDNotes]     = useState("");
+  const [savingSet,  setSavingSet]  = useState(false);
+  const [pSharedInv, setPSharedInv] = useState(false);
+  const [pCrossExch, setPCrossExch] = useState(false);
+  const [pApproval,  setPApproval]  = useState(false);
+  const [savingPerm, setSavingPerm] = useState(false);
+  const [viewSchool, setViewSchool] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    // Load or create district record for this user
     let { data: dist } = await SB.from("districts").select("*").eq("owner_id", user.id).single();
     if (!dist) {
-      // Auto-create district on first visit
-      const { data: newDist } = await SB.from("districts")
-        .insert({ owner_id: user.id, name: "", max_schools: 6 })
-        .select().single();
-      dist = newDist;
+      const { data: nd } = await SB.from("districts")
+        .insert({ owner_id: user.id, name: "", max_schools: 6 }).select().single();
+      dist = nd;
     }
     setDistrict(dist);
-
-    // Load schools in this district
-    const { data: schoolData } = await SB.from("orgs")
+    setDName(dist.name || "");
+    setDEmail(dist.district_contact_email || "");
+    setDWebsite(dist.district_website || "");
+    setDNotes(dist.district_notes || "");
+    setPSharedInv(dist.allow_shared_inventory || false);
+    setPCrossExch(dist.allow_cross_school_exchange || false);
+    setPApproval(dist.require_listing_approval || false);
+    const { data: schoolData } = await SB.from("district_school_summary")
       .select("*").eq("district_id", dist.id).order("name");
     setSchools(schoolData || []);
-
-    // Load item counts per school
-    const ids = (schoolData || []).map(s => s.id);
-    if (ids.length > 0) {
-      const { data: itemData } = await SB.from("items")
-        .select("org_id").in("org_id", ids);
-      const c = {};
-      (itemData || []).forEach(i => { c[i.org_id] = (c[i.org_id] || 0) + 1; });
-      setItemCounts(c);
-    }
-
-    // Load pending invites
     const { data: invData } = await SB.from("district_invites")
       .select("*").eq("district_id", dist.id).order("created_at", { ascending: false });
     setInvites(invData || []);
     setLoading(false);
   }, [user]);
 
-  useEffect(() => { if (plan === "district") load(); }, [load, plan]);
+  useEffect(() => {
+    if (["district","district_m","district_l"].includes(plan)) load();
+  }, [load, plan]);
 
-  const [assignMode,   setAssignMode]   = useState("invite"); // "invite" | "existing"
-  const [allOrgs,      setAllOrgs]      = useState([]);
-  const [assignOrgId,  setAssignOrgId]  = useState("");
-  const [assigning,    setAssigning]    = useState(false);
+  const flash = (m, ms=3500) => { setMsg(m); setTimeout(()=>setMsg(""), ms); };
 
-  // Load all unassigned orgs for direct assignment
   const loadAllOrgs = async () => {
     const { data } = await SB.from("orgs")
-      .select("id,name,email,plan,district_id")
-      .is("district_id", null)
-      .order("name");
+      .select("id,name,email,plan,district_id,stripe_subscription_id,subscription_status")
+      .is("district_id", null).order("name");
     setAllOrgs(data || []);
   };
 
   const sendInvite = async () => {
     if (!invEmail.trim()) return;
-    setSending(true); setMsg("");
+    setSending(true);
     try {
       const { data: { session } } = await SB.auth.getSession();
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
       const res = await fetch(
         "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/district-invite",
         { method: "POST",
-          signal: controller.signal,
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
           body: JSON.stringify({ email: invEmail.trim(), school_name: invSchool.trim() }) }
       );
-      clearTimeout(timeout);
       const result = await res.json();
       if (result.success) {
-        setMsg("✓ Invite sent to " + invEmail + " — check Invites tab to copy the link if email doesn't arrive.");
-        setInvEmail(""); setInvSchool("");
-        setShowInvite(false);
-        load();
-      } else {
-        setMsg(EM.sendInvite.body);
-      }
-    } catch (e) {
-      setMsg(e.name === "AbortError" ? "Request timed out — check your connection and try again." : EM.sendInvite.body);
-    } finally {
-      setSending(false);
-    }
+        flash("✓ Invite sent to " + invEmail);
+        setInvEmail(""); setInvSchool(""); setShowInvite(false); load();
+      } else { flash("Error: " + (result.error || "Could not send")); }
+    } catch(e) { flash("Error: " + e.message); }
+    finally { setSending(false); }
   };
 
   const assignExisting = async () => {
-    if (!assignOrgId || !district?.id) return;
+    if (!assignId || !district?.id) return;
     setAssigning(true);
-    const { error } = await SB.from("orgs").update({
-      district_id: district.id,
-      role: "school_admin",
-    }).eq("id", assignOrgId);
-    if (!error) {
-      setMsg("✓ School added to district");
-      setAssignOrgId(""); setShowInvite(false);
+    const selOrg = allOrgs.find(o => o.id === assignId);
+    if (selOrg?.plan === "pro" && selOrg?.stripe_subscription_id) {
+      await SB.rpc("absorb_org_into_district", { p_org_id: assignId, p_district_id: district.id });
+    } else {
+      await SB.from("orgs").update({
+        district_id: district.id, plan: "district", role: "school_admin",
+        absorbed_into_district: true, absorbed_at: new Date().toISOString(),
+      }).eq("id", assignId);
+    }
+    flash("✓ School added to district");
+    setAssignId(""); setShowInvite(false); setAssigning(false); load();
+  };
+
+  const absorbPro = async (school) => {
+    if (!window.confirm(
+      `Move "${school.name}" under district billing?\n\nTheir individual Pro subscription will be canceled. They continue with full access under your district plan.`
+    )) return;
+    setAbsorbingId(school.id);
+    const { data } = await SB.rpc("absorb_org_into_district", { p_org_id: school.id, p_district_id: district.id });
+    if (data?.success) {
+      setAbsorbMsg("✓ " + school.name + " is now under district billing");
       load();
     } else {
-      setMsg("Error: " + error.message);
+      setAbsorbMsg("Error: " + (data?.error || "Contact support"));
     }
-    setAssigning(false);
-    setTimeout(() => setMsg(""), 4000);
+    setAbsorbingId(null);
+    setTimeout(() => setAbsorbMsg(""), 4000);
+  };
+
+  const removeSchool = async (school) => {
+    if (!window.confirm(`Remove "${school.name}" from the district? Their account and inventory remain, but they revert to Free plan.`)) return;
+    const { data } = await SB.rpc("release_org_from_district", { p_org_id: school.id });
+    if (data?.success) { flash("✓ " + school.name + " removed from district"); load(); }
+    else { flash("Error: " + (data?.error || "Could not remove")); }
   };
 
   const revokeInvite = async (id) => {
@@ -4226,290 +4238,600 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
     load();
   };
 
-  const removeSchool = async (schoolId) => {
-    if (!window.confirm("Remove this school from your district? Their account and data will remain, but they will no longer be linked to your district.")) return;
-    await SB.from("orgs").update({ district_id: null, role: "school_admin" }).eq("id", schoolId);
-    load();
+  const saveSettings = async () => {
+    setSavingSet(true);
+    await SB.from("districts").update({
+      name: dName.trim(), district_contact_email: dEmail.trim(),
+      district_website: dWebsite.trim(), district_notes: dNotes.trim(),
+    }).eq("id", district.id);
+    setDistrict(p => ({ ...p, name: dName.trim() }));
+    setSavingSet(false); flash("✓ Settings saved");
   };
 
-  const saveDistrict = async (updates) => {
-    await SB.from("districts").update(updates).eq("id", district.id);
-    setDistrict(p => ({ ...p, ...updates }));
-    setMsg("✓ Saved");
-    setTimeout(() => setMsg(""), 2000);
+  const savePermissions = async () => {
+    setSavingPerm(true);
+    await SB.from("districts").update({
+      allow_shared_inventory:      pSharedInv,
+      allow_cross_school_exchange: pCrossExch,
+      require_listing_approval:    pApproval,
+    }).eq("id", district.id);
+    setSavingPerm(false); flash("✓ Permissions saved");
   };
 
-  const totalItems = Object.values(itemCounts).reduce((s, c) => s + c, 0);
-  const slotsUsed  = schools.length;
-  const slotsTotal = district?.max_schools || 6;
-
-  if (plan !== "district") return (
-    <div style={{ padding: 48, textAlign: "center" }}>
-      <div style={{ fontSize: 40, marginBottom: 12 }}>🏢</div>
-      <h2 style={{ fontFamily: "var(--serif)", marginBottom: 8 }}>District Plan Required</h2>
-      <p style={{ color: "var(--muted)" }}>Upgrade to District to manage multiple schools from one dashboard.</p>
+  if (!["district","district_m","district_l"].includes(plan)) return (
+    <div style={{padding:48,textAlign:"center"}}>
+      <div style={{fontSize:40,marginBottom:12}}>🏢</div>
+      <h2 style={{fontFamily:"var(--serif)",marginBottom:8}}>District Plan Required</h2>
+      <p style={{color:"var(--muted)"}}>Upgrade to a District plan to manage multiple schools from one dashboard.</p>
     </div>
   );
 
+  const slotsUsed   = schools.length;
+  const slotsTotal  = district?.max_schools || 6;
+  const pendingCnt  = invites.filter(i=>i.status==="pending").length;
+  const absorbable  = schools.filter(s=>s.plan==="pro"&&!s.absorbed_into_district);
+  const totalItems  = schools.reduce((s,x)=>s+(x.item_count||0),0);
+
+  if (viewSchool) return (
+    <DistrictSchoolDetail
+      school={viewSchool} district={district}
+      onBack={()=>setViewSchool(null)}
+      onSwitchToInventory={()=>{onSwitchSchool(viewSchool);setViewSchool(null);}}
+      onAbsorb={()=>absorbPro(viewSchool)}
+      onRemove={()=>removeSchool(viewSchool)}
+      absorbingId={absorbingId}
+    />
+  );
+
   return (
-    <div style={{ position: "relative" }}>
-      <img src={usp("photo-1503095396549-807759245b35", 1400, 900)} alt="" className="page-bg-img" />
-      <div style={{ padding: "32px 36px 0" }}>
-        <div className="hero-wrap" style={{ height: 210 }}>
-          <img src={usp("photo-1503095396549-807759245b35", 1100, 260)} alt="District" loading="eager" />
-          <div className="hero-fade" />
+    <div style={{position:"relative"}}>
+      <img src={usp("photo-1503095396549-807759245b35",1400,900)} alt="" className="page-bg-img"/>
+      <div style={{padding:"32px 36px 0"}}>
+        <div className="hero-wrap" style={{height:200}}>
+          <img src={usp("photo-1503095396549-807759245b35",1100,240)} alt="District" loading="eager"/>
+          <div className="hero-fade"/>
           <div className="hero-body">
-            <div className="hero-eyebrow">🏢 District Plan</div>
-            <h1 className="hero-title" style={{ fontSize: 44 }}>
-              {district?.name || "Your District"}
-            </h1>
-            <p className="hero-sub">Manage all your schools from one place.</p>
+            <div className="hero-eyebrow">🏢 District Dashboard</div>
+            <h1 className="hero-title" style={{fontSize:42}}>{district?.name||"Your District"}</h1>
+            <p className="hero-sub">Manage schools, permissions, and district-wide settings.</p>
           </div>
-          <div className="hero-bar" />
+          <div className="hero-bar"/>
         </div>
       </div>
 
-      <div style={{ padding: "24px 36px 48px", position: "relative", zIndex: 1 }}>
-
-        {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 12, marginBottom: 24 }}>
-          {[
-            { icon: "🏫", label: "Schools",     val: `${slotsUsed} / ${slotsTotal}` },
-            { icon: "📦", label: "Total Items",  val: totalItems },
-            { icon: "📨", label: "Pending Invites", val: invites.filter(i => i.status === "pending").length },
-            { icon: "🎭", label: "Plan",         val: "District", color: "#42a5f5" },
-          ].map(s => (
-            <div key={s.label} className="card card-p" style={{ textAlign: "center", padding: "14px 10px" }}>
-              <div style={{ fontSize: 24, marginBottom: 4 }}>{s.icon}</div>
-              <div style={{ fontFamily: "var(--serif)", fontSize: 22, fontWeight: 700, color: s.color || "var(--linen)" }}>{s.val}</div>
-              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* District Name */}
-        <div className="card card-p" style={{ marginBottom: 20 }}>
-          <div className="sh"><h2>District Profile</h2><p>This name appears on all school Exchange listings.</p></div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
-            <div className="fg" style={{ flex: 1, minWidth: 200 }}>
-              <label className="fl">District Name</label>
-              <input className="fi" defaultValue={district?.name || ""} id="dist-name-input"
-                placeholder="e.g. Huntington Beach Union High School District" />
-            </div>
-            <div className="fg" style={{ flex: 1, minWidth: 180 }}>
-              <label className="fl">Location</label>
-              <input className="fi" defaultValue={district?.location || ""} id="dist-loc-input"
-                placeholder="Huntington Beach, CA" />
-            </div>
-            <button className="btn btn-g btn-sm" onClick={() => saveDistrict({
-              name: document.getElementById("dist-name-input").value,
-              location: document.getElementById("dist-loc-input").value
-            })}>Save</button>
-            {msg && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>{msg}</span>}
+      <div style={{padding:"24px 36px 48px",position:"relative",zIndex:1}}>
+        {msg && (
+          <div style={{position:"fixed",top:20,right:20,zIndex:9999,
+            background:msg.startsWith("✓")?"rgba(76,175,80,.95)":"rgba(194,24,91,.95)",
+            color:"#fff",padding:"10px 18px",borderRadius:10,fontWeight:700,
+            fontSize:14,boxShadow:"0 4px 20px rgba(0,0,0,.3)"}}>
+            {msg}
           </div>
+        )}
+
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:12,marginBottom:24}}>
+          {[
+            {icon:"🏫",label:"Schools",val:`${slotsUsed} / ${slotsTotal}`},
+            {icon:"📦",label:"Total Items",val:totalItems.toLocaleString()},
+            {icon:"📨",label:"Pending Invites",val:pendingCnt},
+            {icon:"⚡",label:"Absorb Ready",val:absorbable.length,
+              color:absorbable.length>0?"var(--gold)":undefined},
+          ].map(s=>(
+            <div key={s.label} className="card card-p" style={{textAlign:"center",padding:"14px 10px"}}>
+              <div style={{fontSize:24,marginBottom:4}}>{s.icon}</div>
+              <div style={{fontFamily:"var(--serif)",fontSize:22,fontWeight:700,
+                color:s.color||"var(--linen)"}}>{s.val}</div>
+              <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{s.label}</div>
+            </div>
+          ))}
         </div>
 
-        {/* Tabs */}
-        <div className="tabs" style={{ marginBottom: 16 }}>
-          {["schools", "invites"].map(t => (
-            <button key={t} className={`tab ${tab === t ? "on" : ""}`} onClick={() => setTab(t)}
-              style={{ textTransform: "capitalize" }}>
-              {t === "schools" ? `🏫 Schools (${slotsUsed})` : `📨 Invites (${invites.filter(i=>i.status==="pending").length})`}
-            </button>
+        {absorbable.length>0&&(
+          <div style={{background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.3)",
+            borderRadius:10,padding:"12px 16px",marginBottom:18,display:"flex",
+            alignItems:"center",gap:12,flexWrap:"wrap"}}>
+            <div style={{fontSize:24}}>⚡</div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:14,color:"var(--gold)",marginBottom:2}}>
+                {absorbable.length} school{absorbable.length!==1?"s":""} paying separately for Pro
+              </div>
+              <div style={{fontSize:13,color:"var(--muted)"}}>
+                Consolidate their billing under your district plan. Their Pro subscription cancels and they keep full access.
+              </div>
+            </div>
+            <button onClick={()=>setTab("permissions")} className="btn btn-o btn-sm">View Billing →</button>
+            {absorbMsg&&<div style={{fontSize:13,fontWeight:700,color:"var(--gold)",width:"100%"}}>{absorbMsg}</div>}
+          </div>
+        )}
+
+        <div className="tabs" style={{marginBottom:16}}>
+          {[["schools",`🏫 Schools (${slotsUsed})`],["invites",`📨 Invites (${pendingCnt})`],
+            ["permissions","🔐 Permissions"],["settings","⚙️ Settings"]].map(([t,l])=>(
+            <button key={t} className={`tab ${tab===t?"on":""}`} onClick={()=>setTab(t)}>{l}</button>
           ))}
-          <button className="btn btn-g btn-sm" style={{ marginLeft: "auto" }}
-            onClick={() => setShowInvite(true)}
-            disabled={slotsUsed >= slotsTotal}>
+          <button className="btn btn-g btn-sm" style={{marginLeft:"auto"}}
+            onClick={()=>setShowInvite(true)} disabled={slotsUsed>=slotsTotal}>
             + Add School
           </button>
         </div>
 
-        {loading ? (
-          <div style={{ textAlign: "center", padding: 32, color: "var(--muted)" }}>Loading…</div>
-        ) : tab === "schools" ? (
-          schools.length === 0 ? (
-            <div className="card card-p" style={{ textAlign: "center", padding: 40 }}>
-              <div style={{ fontSize: 36, marginBottom: 10 }}>🏫</div>
-              <h3 style={{ fontFamily: "var(--serif)", marginBottom: 6 }}>No Schools Yet</h3>
-              <p style={{ color: "var(--muted)", marginBottom: 16 }}>
-                Invite up to {slotsTotal} schools to your district. Each school gets their own login and inventory.
-              </p>
-              <button className="btn btn-g" onClick={() => setShowInvite(true)}>+ Invite First School</button>
-            </div>
-          ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 14 }}>
-              {schools.map(school => (
-                <div key={school.id} className="card card-p" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                    <div style={{ width: 40, height: 40, background: "rgba(212,168,67,.15)", borderRadius: 8,
-                      display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>🏫</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.3 }}>{school.name || "Unnamed School"}</div>
-                      <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{school.location || school.email || "—"}</div>
+        {loading?(
+          <div style={{textAlign:"center",padding:40,color:"var(--muted)"}}>Loading…</div>
+        ):(
+          <>
+          {tab==="schools"&&(
+            schools.length===0?(
+              <div className="card card-p" style={{textAlign:"center",padding:48}}>
+                <div style={{fontSize:40,marginBottom:12}}>🏫</div>
+                <h3 style={{fontFamily:"var(--serif)",marginBottom:8}}>No Schools Yet</h3>
+                <p style={{color:"var(--muted)",marginBottom:16,maxWidth:420,margin:"0 auto 16px"}}>
+                  Invite schools or add existing Theatre4u accounts. Each school manages their own inventory,
+                  but you can see everything from here.
+                </p>
+                <button className="btn btn-g" onClick={()=>setShowInvite(true)}>+ Invite First School</button>
+              </div>
+            ):(
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                {schools.map(school=>{
+                  const isAbsorbed  = school.absorbed_into_district;
+                  const canAbsorb   = school.plan==="pro"&&!isAbsorbed&&school.stripe_subscription_id;
+                  const isAbsorbing = absorbingId===school.id;
+                  return(
+                    <div key={school.id} className="card card-p"
+                      style={{borderLeft:`3px solid ${isAbsorbed?"var(--gold)":canAbsorb?"#42a5f5":"var(--border)"}`}}>
+                      <div style={{display:"flex",alignItems:"flex-start",gap:14,flexWrap:"wrap"}}>
+                        <div style={{flex:1,minWidth:200}}>
+                          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
+                            <div style={{fontWeight:800,fontSize:15}}>{school.name||"Unnamed"}</div>
+                            {isAbsorbed&&(
+                              <span style={{fontSize:10,fontWeight:700,background:"rgba(212,168,67,.2)",
+                                color:"var(--gold)",padding:"2px 7px",borderRadius:8,
+                                textTransform:"uppercase",letterSpacing:.5}}>District Billing</span>
+                            )}
+                            {canAbsorb&&(
+                              <span style={{fontSize:10,fontWeight:700,background:"rgba(66,165,245,.15)",
+                                color:"#42a5f5",padding:"2px 7px",borderRadius:8,
+                                textTransform:"uppercase",letterSpacing:.5}}>Paying Separately</span>
+                            )}
+                          </div>
+                          <div style={{fontSize:12,color:"var(--muted)"}}>
+                            {school.email}
+                            {school.location&&<span> · {school.location}</span>}
+                          </div>
+                          <div style={{fontSize:12,color:"var(--muted)",marginTop:4,display:"flex",gap:14}}>
+                            <span>📦 {school.item_count} items</span>
+                            <span>🏪 {school.listed_count} listed</span>
+                            {school.absorbed_at&&(
+                              <span>⚡ Absorbed {new Date(school.absorbed_at).toLocaleDateString()}</span>
+                            )}
+                          </div>
+                        </div>
+                        <div style={{display:"flex",gap:7,flexWrap:"wrap",flexShrink:0}}>
+                          <button onClick={()=>setViewSchool(school)}
+                            style={{padding:"5px 12px",borderRadius:7,fontFamily:"inherit",
+                              fontSize:12,fontWeight:700,cursor:"pointer",
+                              background:"rgba(66,165,245,.12)",border:"1px solid rgba(66,165,245,.3)",
+                              color:"#42a5f5"}}>
+                            📦 View Inventory
+                          </button>
+                          <button onClick={()=>onSwitchSchool(school)}
+                            style={{padding:"5px 12px",borderRadius:7,fontFamily:"inherit",
+                              fontSize:12,fontWeight:700,cursor:"pointer",
+                              background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.3)",
+                              color:"var(--gold)"}}>
+                            ↗ Manage
+                          </button>
+                          {canAbsorb&&(
+                            <button onClick={()=>absorbPro(school)} disabled={isAbsorbing}
+                              style={{padding:"5px 12px",borderRadius:7,fontFamily:"inherit",
+                                fontSize:12,fontWeight:700,cursor:"pointer",
+                                background:"rgba(76,175,80,.12)",border:"1px solid rgba(76,175,80,.3)",
+                                color:"#4caf50"}}>
+                              {isAbsorbing?"Absorbing…":"⚡ Consolidate Billing"}
+                            </button>
+                          )}
+                          <button onClick={()=>removeSchool(school)}
+                            style={{padding:"5px 12px",borderRadius:7,fontFamily:"inherit",
+                              fontSize:12,fontWeight:700,cursor:"pointer",
+                              background:"rgba(194,24,91,.08)",border:"1px solid rgba(194,24,91,.25)",
+                              color:"var(--red)"}}>
+                            Remove
+                          </button>
+                        </div>
+                      </div>
                     </div>
+                  );
+                })}
+              </div>
+            )
+          )}
+
+          {tab==="invites"&&(
+            invites.length===0?(
+              <div className="card card-p" style={{textAlign:"center",padding:40}}>
+                <div style={{fontSize:36,marginBottom:10}}>📨</div>
+                <h3 style={{fontFamily:"var(--serif)",marginBottom:6}}>No Invites Yet</h3>
+                <p style={{color:"var(--muted)"}}>Use "+ Add School" above to invite programs to your district.</p>
+              </div>
+            ):(
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                {invites.map(inv=>{
+                  const inviteUrl=`https://theatre4u.org?invite=${inv.token}&type=district`;
+                  const isPending=inv.status==="pending";
+                  return(
+                    <div key={inv.id} className="card card-p"
+                      style={{borderLeft:`3px solid ${inv.status==="accepted"?"#4caf50":isPending?"var(--gold)":"var(--border)"}`}}>
+                      <div style={{display:"flex",alignItems:"flex-start",gap:14,flexWrap:"wrap"}}>
+                        <div style={{flex:1,minWidth:200}}>
+                          <div style={{fontWeight:700,fontSize:14}}>{inv.email}</div>
+                          <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>
+                            {inv.school_name&&<span>{inv.school_name} · </span>}
+                            Sent {new Date(inv.created_at).toLocaleDateString()}
+                            {inv.accepted_at&&<span> · Accepted {new Date(inv.accepted_at).toLocaleDateString()}</span>}
+                          </div>
+                          {isPending&&(
+                            <div style={{marginTop:8,display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+                              <input readOnly value={inviteUrl}
+                                style={{fontSize:11,background:"var(--parch)",border:"1px solid var(--border)",
+                                  borderRadius:5,padding:"4px 8px",color:"var(--muted)",
+                                  flex:1,minWidth:200,maxWidth:360,fontFamily:"monospace"}}/>
+                              <button onClick={()=>navigator.clipboard.writeText(inviteUrl)}
+                                style={{padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer",
+                                  borderRadius:6,border:"1px solid var(--border)",
+                                  background:"rgba(212,168,67,.12)",color:"var(--gold)",
+                                  fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                                📋 Copy Link
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                          <span style={{fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:8,
+                            background:inv.status==="accepted"?"rgba(76,175,80,.15)":isPending?"rgba(212,168,67,.15)":"rgba(107,100,120,.12)",
+                            color:inv.status==="accepted"?"#4caf50":isPending?"var(--gold)":"var(--muted)"}}>
+                            {inv.status}
+                          </span>
+                          {isPending&&(
+                            <button className="btn btn-o btn-sm" onClick={()=>revokeInvite(inv.id)}>Revoke</button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          )}
+
+          {tab==="permissions"&&(
+            <div style={{display:"flex",flexDirection:"column",gap:16,maxWidth:680}}>
+              <div className="card card-p">
+                <div className="sh">
+                  <h2>🔐 District Permissions</h2>
+                  <p>These settings control what all schools in your district can see and do. Changes take effect immediately.</p>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:18,marginTop:4}}>
+                  {[
+                    {key:"shared",val:pSharedInv,set:setPSharedInv,
+                      icon:"📦",title:"Shared District Inventory",
+                      desc:"All schools can browse the combined inventory of every school in the district. Great for finding items before purchasing or renting externally."},
+                    {key:"exchange",val:pCrossExch,set:setPCrossExch,
+                      icon:"🔄",title:"Cross-School Exchange",
+                      desc:"Schools within the district can send free loan requests to each other. No platform fee applies to intra-district transactions."},
+                    {key:"approval",val:pApproval,set:setPApproval,
+                      icon:"✅",title:"Require District Approval for Public Listings",
+                      desc:"Items must be approved by the district administrator before appearing publicly on Backstage Exchange."},
+                  ].map(p=>(
+                    <div key={p.key} style={{display:"flex",gap:16,padding:"14px 0",
+                      borderBottom:"1px solid var(--border)"}}>
+                      <div style={{fontSize:28,flexShrink:0,paddingTop:2}}>{p.icon}</div>
+                      <div style={{flex:1}}>
+                        <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>{p.title}</div>
+                        <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>{p.desc}</div>
+                      </div>
+                      <label style={{position:"relative",display:"inline-block",width:48,height:26,cursor:"pointer",flexShrink:0}}>
+                        <input type="checkbox" checked={p.val} onChange={e=>p.set(e.target.checked)}
+                          style={{opacity:0,width:0,height:0}}/>
+                        <span style={{position:"absolute",inset:0,background:p.val?"#4caf50":"var(--border)",
+                          borderRadius:13,transition:".25s"}}>
+                          <span style={{position:"absolute",height:20,width:20,
+                            left:p.val?24:3,bottom:3,background:"#fff",borderRadius:"50%",
+                            transition:".25s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
+                        </span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                <div style={{marginTop:18}}>
+                  <button className="btn btn-g" onClick={savePermissions} disabled={savingPerm}>
+                    {savingPerm?"Saving…":"✓ Save Permissions"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="card card-p">
+                <div className="sh"><h2>💳 School Billing Status</h2>
+                  <p>Which schools are on district billing vs. paying independently.</p></div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {schools.map(s=>(
+                    <div key={s.id} style={{display:"flex",alignItems:"center",gap:12,
+                      padding:"8px 0",borderBottom:"1px solid var(--border)"}}>
+                      <div style={{flex:1}}>
+                        <div style={{fontWeight:600,fontSize:13}}>{s.name||"Unnamed"}</div>
+                        <div style={{fontSize:11,color:"var(--muted)"}}>{s.email}</div>
+                      </div>
+                      <span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:8,
+                        background:s.absorbed_into_district?"rgba(212,168,67,.15)":s.plan==="pro"?"rgba(66,165,245,.15)":"rgba(107,100,120,.1)",
+                        color:s.absorbed_into_district?"var(--gold)":s.plan==="pro"?"#42a5f5":"var(--muted)"}}>
+                        {s.absorbed_into_district?"⚡ District":s.plan==="pro"?"Paying Separately":"Free"}
+                      </span>
+                      {s.plan==="pro"&&!s.absorbed_into_district&&(
+                        <button onClick={()=>absorbPro(s)} disabled={absorbingId===s.id}
+                          className="btn btn-o btn-sm" style={{fontSize:11}}>
+                          {absorbingId===s.id?"…":"Consolidate →"}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {tab==="settings"&&(
+            <div style={{maxWidth:600}}>
+              <div className="card card-p">
+                <div className="sh"><h2>⚙️ District Profile</h2>
+                  <p>This information appears on Exchange listings and in district communications.</p></div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+                  <div className="fg" style={{gridColumn:"1/-1"}}>
+                    <label className="fl">District Name</label>
+                    <input className="fi" value={dName} onChange={e=>setDName(e.target.value)}
+                      placeholder="Huntington Beach Union High School District"/>
                   </div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    <span style={{ padding: "2px 8px", background: "rgba(255,255,255,.08)", borderRadius: 8, fontSize: 11, color: "var(--muted)" }}>
-                      📦 {itemCounts[school.id] || 0} items
-                    </span>
-                    <span style={{ padding: "2px 8px", background: "rgba(66,165,245,.12)", color: "#42a5f5", borderRadius: 8, fontSize: 11, fontWeight: 600 }}>
-                      {school.type || "School"}
-                    </span>
+                  <div className="fg">
+                    <label className="fl">Contact Email</label>
+                    <input className="fi" type="email" value={dEmail} onChange={e=>setDEmail(e.target.value)}
+                      placeholder="theatre@district.edu"/>
                   </div>
-                  <div style={{ display: "flex", gap: 6, marginTop: "auto", paddingTop: 8, borderTop: "1px solid var(--border)" }}>
-                    <button className="btn btn-g btn-sm" style={{ flex: 1 }}
-                      onClick={() => onSwitchSchool(school)}>
-                      Enter School →
-                    </button>
-                    <button className="btn btn-o btn-sm" style={{ color: "rgba(255,100,100,.7)", borderColor: "rgba(255,100,100,.2)" }}
-                      onClick={() => removeSchool(school.id)}>
-                      Remove
-                    </button>
+                  <div className="fg">
+                    <label className="fl">District Website</label>
+                    <input className="fi" value={dWebsite} onChange={e=>setDWebsite(e.target.value)}
+                      placeholder="https://www.hbuhsd.edu"/>
+                  </div>
+                  <div className="fg" style={{gridColumn:"1/-1"}}>
+                    <label className="fl">Internal Notes</label>
+                    <textarea className="ft" value={dNotes} onChange={e=>setDNotes(e.target.value)}
+                      placeholder="Vendor approval #, IT contact, DPA status…" rows={3}/>
                   </div>
                 </div>
-              ))}
+                <div style={{marginTop:14}}>
+                  <button className="btn btn-g" onClick={saveSettings} disabled={savingSet}>
+                    {savingSet?"Saving…":"✓ Save"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="card card-p" style={{marginTop:16}}>
+                <div className="sh"><h2>📊 Plan & Capacity</h2></div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {[["Plan Tier",
+                      plan==="district"?"District S (up to 6 schools)":
+                      plan==="district_m"?"District M (up to 15 schools)":
+                      "District L (up to 30 schools)"],
+                    ["Schools Used",`${slotsUsed} of ${slotsTotal}`],
+                    ["Slots Remaining",`${slotsTotal-slotsUsed}`],
+                  ].map(([l,v])=>(
+                    <div key={l} className="dr">
+                      <span className="drl">{l}</span>
+                      <span className="drv" style={{fontWeight:700}}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+                {slotsTotal-slotsUsed<2&&(
+                  <div style={{marginTop:12,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>
+                    ⚠️ You're near capacity. Contact hello@theatre4u.org to upgrade your district plan tier.
+                  </div>
+                )}
+              </div>
             </div>
-          )
-        ) : (
-          /* Invites tab */
-          <div className="card" style={{ overflow: "hidden" }}>
-            {invites.length === 0 ? (
-              <div style={{ textAlign: "center", padding: 32, color: "var(--muted)" }}>No invites sent yet.</div>
-            ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "rgba(0,0,0,.2)" }}>
-                    {["Email", "School", "Status", "Sent", ""].map(h => (
-                      <th key={h} style={{ padding: "9px 14px", textAlign: "left", fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", fontWeight: 700 }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {invites.map(inv => {
-                    const inviteUrl = `https://theatre4u.org?invite=${inv.token}`;
-                    const copyLink = () => {
-                      navigator.clipboard.writeText(inviteUrl);
-                      alert("Invite link copied! Send it to " + inv.email);
-                    };
-                    return (
-                    <tr key={inv.id} style={{ borderTop: "1px solid var(--border)" }}>
-                      <td style={{ padding: "9px 14px", fontSize: 13 }}>{inv.email}</td>
-                      <td style={{ padding: "9px 14px", fontSize: 13, color: "var(--muted)" }}>{inv.school_name || "—"}</td>
-                      <td style={{ padding: "9px 14px" }}>
-                        <span style={{ padding: "2px 8px", borderRadius: 8, fontSize: 11, fontWeight: 700,
-                          background: inv.status === "accepted" ? "rgba(76,175,80,.15)" : inv.status === "pending" ? "rgba(212,168,67,.15)" : "rgba(255,255,255,.07)",
-                          color: inv.status === "accepted" ? "var(--green)" : inv.status === "pending" ? "var(--gold)" : "var(--muted)" }}>
-                          {inv.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: "9px 14px", fontSize: 12, color: "var(--muted)" }}>
-                        {new Date(inv.created_at).toLocaleDateString()}
-                      </td>
-                      <td style={{ padding: "9px 14px" }}>
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                          {inv.status === "pending" && (<>
-                            <button className="btn btn-o btn-sm" style={{ fontSize: 11 }}
-                              onClick={copyLink}>📋 Copy Link</button>
-                            <button className="btn btn-o btn-sm" style={{ fontSize: 11, color: "var(--red)" }}
-                              onClick={() => revokeInvite(inv.id)}>Revoke</button>
-                          </>)}
-                        </div>
-                      </td>
-                    </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
+          )}
+          </>
+        )}
+
+        {showInvite&&(
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:1000,
+            display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
+            onClick={e=>e.target===e.currentTarget&&setShowInvite(false)}>
+            <div className="card card-p" style={{width:"100%",maxWidth:480,animation:"su .2s ease"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <h2 style={{fontFamily:"var(--serif)",fontSize:20}}>Add School to District</h2>
+                <button className="btn btn-o btn-sm" onClick={()=>setShowInvite(false)}>✕</button>
+              </div>
+              <div style={{display:"flex",borderBottom:"1px solid var(--border)",
+                margin:"12px -18px 0",padding:"0 18px"}}>
+                {[["invite","📨 Send Invite"],["existing","🔗 Add Existing Account"]].map(([m,l])=>(
+                  <button key={m} onClick={()=>{setAssignMode(m);if(m==="existing")loadAllOrgs();}}
+                    style={{padding:"8px 14px",fontFamily:"inherit",fontSize:13,fontWeight:700,
+                      cursor:"pointer",background:"none",border:"none",
+                      borderBottom:assignMode===m?"2px solid var(--gold)":"2px solid transparent",
+                      color:assignMode===m?"var(--ink)":"var(--muted)",marginBottom:-1}}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              <div style={{marginTop:16}}>
+                {assignMode==="invite"?(<>
+                  <p style={{color:"var(--muted)",fontSize:13,marginBottom:12,lineHeight:1.6}}>
+                    Send an invite link. The school can accept with an existing account or create a new one.
+                    You have <strong>{slotsTotal-slotsUsed}</strong> slot{slotsTotal-slotsUsed!==1?"s":""} remaining.
+                  </p>
+                  <div className="fg" style={{marginBottom:12}}>
+                    <label className="fl">School Admin Email *</label>
+                    <input className="fi" type="email" value={invEmail} onChange={e=>setInvEmail(e.target.value)}
+                      placeholder="drama@school.edu" autoFocus onKeyDown={e=>e.key==="Enter"&&sendInvite()}/>
+                  </div>
+                  <div className="fg" style={{marginBottom:16}}>
+                    <label className="fl">School Name (optional)</label>
+                    <input className="fi" value={invSchool} onChange={e=>setInvSchool(e.target.value)}
+                      placeholder="e.g. Ocean View High School"/>
+                  </div>
+                  <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                    <button className="btn btn-o" onClick={()=>setShowInvite(false)}>Cancel</button>
+                    <button className="btn btn-g" onClick={sendInvite} disabled={!invEmail.trim()||sending}>
+                      {sending?"Sending…":"Send Invite →"}
+                    </button>
+                  </div>
+                </>):(<>
+                  <p style={{color:"var(--muted)",fontSize:13,marginBottom:12,lineHeight:1.6}}>
+                    Add a school that already has a Theatre4u account. If they have an active Pro subscription,
+                    you can consolidate it under district billing after adding.
+                  </p>
+                  <div className="fg" style={{marginBottom:16}}>
+                    <label className="fl">Select School Account</label>
+                    <select className="fs" value={assignId} onChange={e=>setAssignId(e.target.value)}>
+                      <option value="">— Choose an account —</option>
+                      {allOrgs.map(o=>(
+                        <option key={o.id} value={o.id}>
+                          {o.name||"Unnamed"} — {o.email} ({o.plan}
+                          {o.plan==="pro"&&o.stripe_subscription_id?" · paying separately":""})
+                        </option>
+                      ))}
+                    </select>
+                    {allOrgs.length===0&&(
+                      <div style={{fontSize:12,color:"var(--muted)",marginTop:4}}>No unassigned accounts found.</div>
+                    )}
+                  </div>
+                  <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                    <button className="btn btn-o" onClick={()=>setShowInvite(false)}>Cancel</button>
+                    <button className="btn btn-g" onClick={assignExisting}
+                      disabled={assigning||!assignId} style={{opacity:!assignId?.5:1}}>
+                      {assigning?"Adding…":"Add to District →"}
+                    </button>
+                  </div>
+                </>)}
+              </div>
+            </div>
           </div>
         )}
       </div>
+    </div>
+  );
+}
 
-      {/* Invite Modal */}
-      {showInvite && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", zIndex: 1000,
-          display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
-          onClick={e => e.target === e.currentTarget && setShowInvite(false)}>
-          <div className="card card-p" style={{ width: "100%", maxWidth: 480, animation: "su .2s ease" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0 }}>
-              <h2 style={{ fontFamily: "var(--serif)", fontSize: 20 }}>Add School to District</h2>
-              <button className="btn btn-o btn-sm" onClick={() => setShowInvite(false)}>✕</button>
-            </div>
+function DistrictSchoolDetail({school,district,onBack,onSwitchToInventory,onAbsorb,onRemove,absorbingId}){
+  const [items,  setItems]  = useState([]);
+  const [loading,setLoading]= useState(true);
+  const [search, setSearch] = useState("");
 
-            {/* Mode tabs */}
-            <div style={{ display: "flex", gap: 0, borderBottom: "1px solid var(--border)", margin: "12px -18px 0", padding: "0 18px" }}>
-              {[["invite","📨 Send Invite Email"],["existing","🔗 Add Existing Account"]].map(([m, l]) => (
-                <button key={m}
-                  onClick={() => { setAssignMode(m); if(m==="existing") loadAllOrgs(); }}
-                  style={{ padding: "8px 14px", fontFamily: "inherit", fontSize: 13, fontWeight: 700,
-                    cursor: "pointer", background: "none", border: "none",
-                    borderBottom: assignMode === m ? "2px solid var(--gold)" : "2px solid transparent",
-                    color: assignMode === m ? "var(--ink)" : "var(--muted)", marginBottom: -1 }}>
-                  {l}
-                </button>
-              ))}
-            </div>
+  useEffect(()=>{
+    SB.from("items").select("*").eq("org_id",school.id)
+      .order("added",{ascending:false}).limit(200)
+      .then(({data})=>{setItems(data||[]);setLoading(false);});
+  },[school.id]);
 
-            <div style={{ marginTop: 16 }}>
-              {assignMode === "invite" ? (<>
-                <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 12, lineHeight: 1.6 }}>
-                  Send an invite link by email. They can accept by signing into their existing Theatre4u™ account
-                  or by creating a new one. You have <strong>{slotsTotal - slotsUsed}</strong> slot{slotsTotal - slotsUsed !== 1 ? "s" : ""} remaining.
-                </p>
-                <div className="fg" style={{ marginBottom: 12 }}>
-                  <label className="fl">School Admin Email *</label>
-                  <input className="fi" type="email" value={invEmail} onChange={e => setInvEmail(e.target.value)}
-                    placeholder="principal@school.edu" autoFocus
-                    onKeyDown={e => e.key === "Enter" && sendInvite()} />
-                </div>
-                <div className="fg" style={{ marginBottom: 16 }}>
-                  <label className="fl">School Name (optional)</label>
-                  <input className="fi" value={invSchool} onChange={e => setInvSchool(e.target.value)}
-                    placeholder="e.g. Ocean View High School" />
-                </div>
-                {msg && <div style={{ color: msg.startsWith("✓") ? "var(--green)" : "var(--red)",
-                  marginBottom: 12, fontSize: 13, fontWeight: 600 }}>{msg}</div>}
-                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                  <button className="btn btn-o" onClick={() => setShowInvite(false)}>Cancel</button>
-                  <button className="btn btn-g" onClick={sendInvite} disabled={!invEmail.trim() || sending}>
-                    {sending ? "Sending…" : "Send Invite →"}
-                  </button>
-                </div>
-              </>) : (<>
-                <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 12, lineHeight: 1.6 }}>
-                  Add a school that already has a Theatre4u account. Their inventory moves with them immediately —
-                  no email needed.
-                </p>
-                <div className="fg" style={{ marginBottom: 16 }}>
-                  <label className="fl">Select School Account</label>
-                  <select className="fs" value={assignOrgId} onChange={e => setAssignOrgId(e.target.value)}>
-                    <option value="">— Choose an account —</option>
-                    {allOrgs.map(o => (
-                      <option key={o.id} value={o.id}>
-                        {o.name || "Unnamed"} — {o.email} ({o.plan})
-                      </option>
-                    ))}
-                  </select>
-                  {allOrgs.length === 0 && (
-                    <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
-                      No unassigned accounts found.
-                    </div>
-                  )}
-                </div>
-                {msg && <div style={{ color: msg.startsWith("✓") ? "var(--green)" : "var(--red)",
-                  marginBottom: 12, fontSize: 13, fontWeight: 600 }}>{msg}</div>}
-                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                  <button className="btn btn-o" onClick={() => setShowInvite(false)}>Cancel</button>
-                  <button className="btn btn-g" onClick={assignExisting}
-                    disabled={assigning || !assignOrgId} style={{ opacity: !assignOrgId ? .5 : 1 }}>
-                    {assigning ? "Adding…" : "Add to District →"}
-                  </button>
-                </div>
-              </>)}
-            </div>
+  const filtered = items.filter(i=>
+    !search||(i.name||"").toLowerCase().includes(search.toLowerCase())
+      ||(i.location||"").toLowerCase().includes(search.toLowerCase())
+  );
+
+  const canAbsorb = school.plan==="pro"&&!school.absorbed_into_district&&school.stripe_subscription_id;
+
+  return(
+    <div style={{padding:"0 0 48px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:24,flexWrap:"wrap"}}>
+        <button onClick={onBack} className="btn btn-o btn-sm">← Back to District</button>
+        <div style={{flex:1}}>
+          <div style={{fontFamily:"var(--serif)",fontSize:24,fontWeight:700}}>
+            🏫 {school.name||"Unnamed School"}
+          </div>
+          <div style={{fontSize:13,color:"var(--muted)",marginTop:2}}>
+            {school.email}
+            {school.location&&<span> · {school.location}</span>}
+            {school.absorbed_into_district&&(
+              <span style={{marginLeft:8,color:"var(--gold)",fontWeight:700}}>⚡ District Billing</span>
+            )}
           </div>
         </div>
-      )}
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <button onClick={onSwitchToInventory} className="btn btn-g btn-sm">↗ Manage as This School</button>
+          {canAbsorb&&(
+            <button onClick={onAbsorb} disabled={absorbingId===school.id} className="btn btn-o btn-sm">
+              {absorbingId===school.id?"…":"⚡ Consolidate Billing"}
+            </button>
+          )}
+          <button onClick={onRemove}
+            style={{padding:"5px 12px",borderRadius:7,fontFamily:"inherit",fontSize:12,fontWeight:700,
+              cursor:"pointer",background:"rgba(194,24,91,.08)",border:"1px solid rgba(194,24,91,.25)",
+              color:"var(--red)"}}>
+            Remove from District
+          </button>
+        </div>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:12,marginBottom:20}}>
+        {[
+          {icon:"📦",label:"Total Items",val:items.length},
+          {icon:"🏪",label:"Listed",     val:items.filter(i=>i.mkt!=="Not Listed").length},
+          {icon:"✅",label:"In Stock",   val:items.filter(i=>i.avail==="In Stock").length},
+          {icon:"📋",label:"Plan",       val:school.absorbed_into_district?"District":school.plan},
+        ].map(s=>(
+          <div key={s.label} className="card card-p" style={{textAlign:"center",padding:"12px 8px"}}>
+            <div style={{fontSize:22,marginBottom:3}}>{s.icon}</div>
+            <div style={{fontFamily:"var(--serif)",fontSize:20,fontWeight:700}}>{s.val}</div>
+            <div style={{fontSize:11,color:"var(--muted)"}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="card" style={{overflow:"hidden"}}>
+        <div style={{padding:"12px 16px",borderBottom:"1px solid var(--border)",
+          display:"flex",gap:12,alignItems:"center"}}>
+          <input className="fi" value={search} onChange={e=>setSearch(e.target.value)}
+            placeholder="Search items…" style={{maxWidth:280}}/>
+          <span style={{fontSize:12,color:"var(--muted)"}}>{filtered.length} items</span>
+        </div>
+        {loading?(
+          <div style={{textAlign:"center",padding:32,color:"var(--muted)"}}>Loading…</div>
+        ):(
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse"}}>
+              <thead>
+                <tr style={{background:"rgba(0,0,0,.2)"}}>
+                  {["Item","Category","Condition","Qty","Location","Status","Market"].map(h=>(
+                    <th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:10,
+                      textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",fontWeight:700}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.slice(0,100).map((item,i)=>(
+                  <tr key={item.id} style={{borderTop:"1px solid var(--border)",
+                    background:i%2===0?"rgba(255,255,255,.01)":"transparent"}}>
+                    <td style={{padding:"8px 12px",fontWeight:600,fontSize:13}}>{item.name}</td>
+                    <td style={{padding:"8px 12px",fontSize:12,color:"var(--muted)"}}>{item.category}</td>
+                    <td style={{padding:"8px 12px",fontSize:12,color:"var(--muted)"}}>{item.condition}</td>
+                    <td style={{padding:"8px 12px",fontSize:13}}>{item.qty||1}</td>
+                    <td style={{padding:"8px 12px",fontSize:12,color:"var(--muted)"}}>{item.location||"—"}</td>
+                    <td style={{padding:"8px 12px",fontSize:12,color:"var(--muted)"}}>{item.avail}</td>
+                    <td style={{padding:"8px 12px",fontSize:12}}>
+                      {item.mkt!=="Not Listed"&&(
+                        <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:6,
+                          background:"rgba(212,168,67,.15)",color:"var(--gold)"}}>{item.mkt}</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length===0&&(
+                  <tr><td colSpan={7} style={{textAlign:"center",padding:32,color:"var(--muted)"}}>
+                    No items found.
+                  </td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -5570,7 +5892,8 @@ function AdminDashboard({ currentUser }) {
   const mrr = (byPlan.pro * 12) + (byPlan.district * 49);
 
   const planColor = { free: "rgba(255,255,255,.2)", pro: "var(--gold)", district: "#42a5f5" };
-  const planLabel = { free: "Free", pro: "Pro", district: "District" };
+  const planLabel = { free: "Free", pro: "Pro", district: "District",
+    district_m: "District M", district_l: "District L" };
 
   return (
     <div style={{ position: "relative" }}>
@@ -10788,7 +11111,8 @@ function AppRoot(){
   const [unreadCount,   setUnreadCount]   = useState(0);
   const [openConvId,    setOpenConvId]    = useState(null);
   const [pendingReqCount, setPendingReqCount] = useState(0);
-  const [creditBalance, setCreditBalance] = useState(0);
+  const [creditBalance,   setCreditBalance]   = useState(0);
+  const [districtSettings,setDistrictSettings] = useState(null);
   const [onboardingStep, setOnboardingStep] = useState(null); // null=loading, 0-4
   const [schoolItems,setSchoolItems]     = useState([]);
   const [schoolLoading,setSchoolLoading] = useState(false);
@@ -10924,6 +11248,11 @@ function AppRoot(){
       setPendingReqCount(reqCount || 0);
       // Stage Points balance — loaded at login so it shows in nav/dashboard
       SB.rpc("get_my_credit_balance").then(({data})=>{ if(data!=null) setCreditBalance(data||0); }).catch(()=>{});
+      // Load district settings if this org belongs to a district
+      if (orgData?.district_id) {
+        SB.from("districts").select("*").eq("id", orgData.district_id).single()
+          .then(({ data: dist }) => { if (dist) setDistrictSettings(dist); }).catch(()=>{});
+      }
       // Stage Points balance — also refreshed on Credits page visit
       // (removed from startup to reduce login query count)
     })();
@@ -11404,7 +11733,7 @@ function AppRoot(){
                       setPendingReqCount(count||0);
                     }}/>}
                   {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
-                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} pointBalance={creditBalance} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
+                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} pointBalance={creditBalance} district={org?.district_id?districtSettings:null} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
                   {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
