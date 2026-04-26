@@ -3647,7 +3647,7 @@ function Requests({ userId, orgName, orgEmail }) {
   );
 }
 
-function Reports({ items, plan="free" }) {
+function Reports({ items, plan="free", org=null }) {
   const [tab,setTab] = useState("overview");
   const totalQty  = items.reduce((s,i)=>s+(i.qty||1),0);
   const catData   = CATS.map(cat=>{const ci=items.filter(i=>i.category===cat.id);return{...cat,count:ci.length,qty:ci.reduce((s,i)=>s+(i.qty||1),0),val:ci.reduce((s,i)=>s+((i.sale||0)*(i.qty||1)),0)}}).filter(c=>c.count>0);
@@ -3716,7 +3716,7 @@ function Reports({ items, plan="free" }) {
 
       <div style={{padding:"24px 36px 48px",position:"relative",zIndex:1}}>
         <div className="tabs">
-          {[["overview","Overview"],["condition","Condition"],["availability","Availability"],["market","Backstage Exchange"],["location","Locations"]].map(([t,l])=>(
+          {[["overview","Overview"],["condition","Condition"],["availability","Availability"],["market","Backstage Exchange"],["location","Locations"],["usage","📊 Platform Usage"]].map(([t,l])=>(
             <button key={t} className={`tab ${tab===t?"on":""}`} onClick={()=>setTab(t)}>{l}</button>
           ))}
         </div>
@@ -3824,6 +3824,10 @@ function Reports({ items, plan="free" }) {
             }
           </div>
         )}
+        {tab==="usage"&&(
+          <PlatformUsageReport items={items} org={org} plan={plan}/>
+        )}
+
       </div>
     </div>
   );
@@ -11420,7 +11424,7 @@ function AppRoot(){
                   )}
                   {page==="marketplace" && <MarketplaceGate items={items} org={org} setOrg={setOrg} plan={plan} userId={user?.id} activeSchool={activeSchool} allSchoolsMode={plan==="district"} onEdit={edit} onDelete={del}/>}
                   {page==="productions" && <Productions userId={user?.id} allItems={items}/>}
-                  {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan}/>}
+                  {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan} org={org}/>}
                   {page==="funding"     && <FundingPage userId={user?.id} org={org} plan={plan}/>}
                   {page==="prop28"      && <Prop28Page  userId={user?.id} org={org} onNav={nav}/>}
                   {page==="profile"     && <OrgProfilePage userId={user?.id} org={org} setOrg={saveOrg} plan={plan} items={items}/>}
@@ -12367,9 +12371,14 @@ function FundingPage({userId, org, plan}){
             Theatre4u helps you organize and report funding data for your own records. Consult your district’s business office for compliance determinations.
           </p>
         </div>
-        <button onClick={exportCSV} className="btn btn-o" style={{fontSize:12}}>
-          ↓ Export CSV
-        </button>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={exportCSV} className="btn btn-o" style={{fontSize:12}}>
+            ↓ Export CSV
+          </button>
+          <button onClick={()=>setTab("impact")} className="btn btn-g" style={{fontSize:12}}>
+            📋 Impact Report
+          </button>
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -12390,7 +12399,7 @@ function FundingPage({userId, org, plan}){
 
       {/* Tabs */}
       <div style={{display:"flex",gap:2,borderBottom:"1px solid var(--border)",marginBottom:20}}>
-        {[["sources","Funding Sources"],["spending","Expenditures"],["reports","By Source"]].map(([id,lbl])=>(
+        {[["sources","Funding Sources"],["spending","Expenditures"],["reports","By Source"],["impact","📋 Impact Report"]].map(([id,lbl])=>(
           <button key={id} onClick={()=>setTab(id)}
             style={{background:"none",border:"none",padding:"8px 16px",fontSize:13,fontWeight:600,
               color:tab===id?"var(--gold)":"var(--faint)",
@@ -12560,6 +12569,11 @@ function FundingPage({userId, org, plan}){
         </div>
       )}
 
+      {/* ── PROGRAM IMPACT REPORT TAB ──────────────────────────────────── */}
+      {tab==="impact"&&(
+        <ProgramImpactReport sources={sources} exps={exps} org={org}/>
+      )}
+
       {/* ── SOURCE MODAL ─────────────────────────────────────────────────── */}
       {(modal==="add-source"||modal==="edit-source")&&(
         <SourceModal
@@ -12584,6 +12598,419 @@ function FundingPage({userId, org, plan}){
   );
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PROGRAM IMPACT REPORT
+// Print-ready: how funding was used — for principals, boards, districts
+// ══════════════════════════════════════════════════════════════════════════════
+function ProgramImpactReport({ sources, exps, org }) {
+  const [filterYear,   setFilterYear]   = React.useState("all");
+  const [filterSource, setFilterSource] = React.useState("all");
+
+  const years = [...new Set(sources.map(s=>s.fiscal_year).filter(Boolean))].sort().reverse();
+
+  const filteredSources = sources.filter(s => {
+    if (!s.is_active) return false;
+    if (filterYear !== "all" && s.fiscal_year !== filterYear) return false;
+    if (filterSource !== "all" && s.id !== filterSource) return false;
+    return true;
+  });
+  const filteredExps = exps.filter(e => {
+    const src = sources.find(s=>s.id===e.funding_source_id);
+    if (!src || !src.is_active) return false;
+    if (filterYear !== "all" && src.fiscal_year !== filterYear) return false;
+    if (filterSource !== "all" && e.funding_source_id !== filterSource) return false;
+    return true;
+  });
+
+  const totalAllocated = filteredSources.reduce((a,s)=>a+(parseFloat(s.total_amount)||0),0);
+  const totalSpent     = filteredExps.reduce((a,e)=>a+(parseFloat(e.amount)||0),0);
+  const totalRemaining = totalAllocated - totalSpent;
+
+  const byCat = {};
+  filteredExps.forEach(e=>{
+    const c = e.category||"Uncategorized";
+    byCat[c] = (byCat[c]||0) + (parseFloat(e.amount)||0);
+  });
+
+  const today   = new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
+  const orgName = org?.name || "Theatre Program";
+  const fmt$    = n => "$"+n.toLocaleString("en-US",{minimumFractionDigits:2});
+
+  const printReport = () => {
+    const w = window.open("","_blank","width=900,height=700");
+    if(!w) return;
+    const sourcesHTML = filteredSources.map(src=>{
+      const srcExps  = filteredExps.filter(e=>e.funding_source_id===src.id);
+      const srcSpent = srcExps.reduce((a,e)=>a+(parseFloat(e.amount)||0),0);
+      const srcAlloc = parseFloat(src.total_amount)||0;
+      return `
+        <div style="margin-bottom:28px;break-inside:avoid">
+          <table style="width:100%;border-collapse:collapse">
+            <tr style="background:#1a0f00">
+              <th style="padding:10px 14px;text-align:left;color:#d4a843;font-size:14px">${src.name}${src.funder?" — "+src.funder:""}${src.fiscal_year?" · FY "+src.fiscal_year:""}</th>
+              <th style="padding:10px 14px;text-align:right;color:#d4a843;font-size:14px">${fmt$(srcSpent)} of ${fmt$(srcAlloc)} allocated</th>
+            </tr>
+          </table>
+          ${srcExps.length===0?'<p style="font-size:12px;color:#888;padding:8px 14px;font-style:italic">No expenditures recorded.</p>':`
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr style="background:#f5f0e8">
+              <th style="padding:7px 14px;text-align:left;border-bottom:1px solid #ddd">Date</th>
+              <th style="padding:7px 14px;text-align:left;border-bottom:1px solid #ddd">Description</th>
+              <th style="padding:7px 14px;text-align:left;border-bottom:1px solid #ddd">Category</th>
+              <th style="padding:7px 14px;text-align:left;border-bottom:1px solid #ddd">Vendor</th>
+              <th style="padding:7px 14px;text-align:right;border-bottom:1px solid #ddd">Amount</th>
+            </tr></thead>
+            <tbody>
+              ${srcExps.map((e,i)=>`<tr style="background:${i%2===0?"#fff":"#faf7f2"}">
+                <td style="padding:6px 14px;border-bottom:1px solid #eee">${e.purchase_date?new Date(e.purchase_date+"T00:00").toLocaleDateString():"—"}</td>
+                <td style="padding:6px 14px;border-bottom:1px solid #eee">${e.description||"—"}</td>
+                <td style="padding:6px 14px;border-bottom:1px solid #eee">${e.category||"—"}</td>
+                <td style="padding:6px 14px;border-bottom:1px solid #eee">${e.vendor||"—"}</td>
+                <td style="padding:6px 14px;border-bottom:1px solid #eee;text-align:right;font-weight:700">${fmt$(parseFloat(e.amount)||0)}</td>
+              </tr>`).join("")}
+              <tr style="background:#f5f0e8;font-weight:700">
+                <td colspan="4" style="padding:8px 14px;border-top:2px solid #d4a843">Source Total</td>
+                <td style="padding:8px 14px;border-top:2px solid #d4a843;text-align:right;color:#1a0f00">${fmt$(srcSpent)}</td>
+              </tr>
+            </tbody>
+          </table>`}
+          ${srcAlloc>0?`<div style="font-size:11px;color:#888;padding:4px 14px">Remaining balance: ${fmt$(Math.max(0,srcAlloc-srcSpent))}</div>`:""}
+        </div>`;
+    }).join("");
+
+    const catRows = Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>
+      `<tr><td style="padding:6px 14px">${cat}</td>
+       <td style="padding:6px 14px;text-align:right;font-weight:700">${fmt$(amt)}</td>
+       <td style="padding:6px 14px;text-align:right;color:#888">${totalSpent>0?Math.round(amt/totalSpent*100):0}%</td></tr>`
+    ).join("");
+
+    const html=`<!DOCTYPE html><html><head><title>Program Impact Report — ${orgName}</title>
+    <style>
+      body{font-family:Arial,sans-serif;color:#1a1200;margin:0;padding:0;font-size:13px}
+      .page{max-width:820px;margin:0 auto;padding:40px}
+      h1{font-family:Georgia,serif;font-size:28px;margin:0 0 4px;color:#1a0f00}
+      h2{font-family:Georgia,serif;font-size:16px;color:#1a0f00;margin:24px 0 10px;border-bottom:2px solid #d4a843;padding-bottom:6px}
+      .meta{font-size:12px;color:#888;margin-bottom:32px}
+      .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px}
+      .stat-box{background:#f5f0e8;border:1px solid #e0d5c0;border-radius:6px;padding:14px;text-align:center}
+      .stat-val{font-family:Georgia,serif;font-size:24px;font-weight:700;color:#d4a843}
+      .stat-lbl{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+      @media print{button{display:none!important}.page{padding:24px}}
+    </style></head><body><div class="page">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#d4a843;margin-bottom:6px">🎭 Theatre4u™</div>
+          <h1>Program Impact Report</h1>
+          <div class="meta">${orgName}${filterYear!=="all"?" · Fiscal Year "+filterYear:""} · Generated ${today}</div>
+        </div>
+        <button onclick="window.print()" style="padding:8px 18px;background:#1a0f00;color:#d4a843;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:700">🖨 Print / Save PDF</button>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-val">${fmt$(totalAllocated)}</div><div class="stat-lbl">Total Allocated</div></div>
+        <div class="stat-box"><div class="stat-val">${fmt$(totalSpent)}</div><div class="stat-lbl">Total Spent</div></div>
+        <div class="stat-box"><div class="stat-val" style="color:${totalRemaining>=0?"#2e7d32":"#c62828"}">${fmt$(Math.abs(totalRemaining))}</div><div class="stat-lbl">${totalRemaining>=0?"Remaining":"Over Budget"}</div></div>
+      </div>
+      <h2>Spending by Category</h2>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:32px;font-size:12px">
+        <thead><tr style="background:#f5f0e8">
+          <th style="padding:7px 14px;text-align:left">Category</th>
+          <th style="padding:7px 14px;text-align:right">Amount</th>
+          <th style="padding:7px 14px;text-align:right">% of Total</th>
+        </tr></thead>
+        <tbody>${catRows}</tbody>
+        <tfoot><tr style="background:#1a0f00;color:#d4a843;font-weight:700">
+          <td style="padding:8px 14px">TOTAL</td>
+          <td style="padding:8px 14px;text-align:right">${fmt$(totalSpent)}</td>
+          <td style="padding:8px 14px;text-align:right">100%</td>
+        </tr></tfoot>
+      </table>
+      <h2>Expenditures by Funding Source</h2>
+      ${sourcesHTML||'<p style="color:#888;font-style:italic">No sources match your current filters.</p>'}
+      <div style="margin-top:40px;padding-top:16px;border-top:1px solid #e0d5c0;font-size:10px;color:#aaa;text-align:center">
+        Theatre4u™ — Artstracker LLC · theatre4u.org · For program records — consult your district's business office for compliance determinations.
+      </div>
+    </div></body></html>`;
+    w.document.write(html);
+    w.document.close();
+  };
+
+  const card={background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:16,marginBottom:12};
+  const fmt=n=>"$"+n.toLocaleString("en-US",{minimumFractionDigits:2});
+
+  return(
+    <div>
+      {/* Header */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:10}}>
+        <div>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,marginBottom:3}}>Program Impact Report</div>
+          <div style={{fontSize:12,color:"var(--faint)"}}>A funding accountability report for principals, arts directors, and board members.</div>
+        </div>
+        <button onClick={printReport} className="btn btn-g">🖨 Generate &amp; Print Report</button>
+      </div>
+
+      {/* Filters */}
+      <div style={{...card,display:"flex",gap:14,alignItems:"flex-end",flexWrap:"wrap",padding:14,marginBottom:20}}>
+        <div>
+          <label style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--faint)",display:"block",marginBottom:4}}>Fiscal Year</label>
+          <select value={filterYear} onChange={e=>setFilterYear(e.target.value)}
+            style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,padding:"6px 10px",fontSize:13,color:"var(--text)",fontFamily:"inherit"}}>
+            <option value="all">All Years</option>
+            {years.map(y=><option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--faint)",display:"block",marginBottom:4}}>Funding Source</label>
+          <select value={filterSource} onChange={e=>setFilterSource(e.target.value)}
+            style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,padding:"6px 10px",fontSize:13,color:"var(--text)",fontFamily:"inherit"}}>
+            <option value="all">All Sources</option>
+            {sources.filter(s=>s.is_active).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+        <div style={{fontSize:12,color:"var(--faint)",paddingBottom:2}}>
+          {filteredExps.length} expenditure{filteredExps.length!==1?"s":""} · {fmt(filteredExps.reduce((a,e)=>a+(parseFloat(e.amount)||0),0))} total
+        </div>
+      </div>
+
+      {/* Summary tiles */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12,marginBottom:20}}>
+        {[
+          {label:"Total Allocated",val:fmt(totalAllocated),          color:"var(--gold)"},
+          {label:"Total Spent",    val:fmt(totalSpent),              color:"var(--blue)"},
+          {label:"Remaining",      val:fmt(totalRemaining),           color:totalRemaining>=0?"var(--green)":"var(--red)"},
+          {label:"Sources",        val:filteredSources.length,        color:"var(--text)"},
+          {label:"Expenditures",   val:filteredExps.length,           color:"var(--text)"},
+        ].map(s=>(
+          <div key={s.label} style={{...card,textAlign:"center",marginBottom:0,padding:14}}>
+            <div style={{fontSize:20,fontWeight:800,fontFamily:"'Playfair Display',serif",color:s.color}}>{s.val}</div>
+            <div style={{fontSize:10,color:"var(--faint)",marginTop:3,textTransform:"uppercase",letterSpacing:1}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Category breakdown */}
+      {Object.keys(byCat).length>0&&(
+        <div style={{...card,marginBottom:20}}>
+          <div style={{fontWeight:700,fontSize:13,marginBottom:12}}>Spending by Category</div>
+          {Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>(
+            <div key={cat} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+              <div style={{width:130,fontSize:12,color:"var(--faint)",flexShrink:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{cat}</div>
+              <div style={{flex:1,height:6,background:"var(--white)",borderRadius:3,overflow:"hidden"}}>
+                <div style={{height:"100%",width:(totalSpent>0?amt/totalSpent*100:0)+"%",background:"var(--gold)",borderRadius:3,transition:"width .4s"}}/>
+              </div>
+              <div style={{fontSize:12,fontWeight:700,width:90,textAlign:"right",flexShrink:0}}>{fmt(amt)}</div>
+              <div style={{fontSize:11,color:"var(--faint)",width:36,textAlign:"right",flexShrink:0}}>{totalSpent>0?Math.round(amt/totalSpent*100):0}%</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Per-source breakdown */}
+      {filteredSources.length===0?(
+        <div style={{textAlign:"center",padding:40,color:"var(--faint)"}}>
+          <div style={{fontSize:36,marginBottom:10}}>📋</div>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:6}}>No data to report</div>
+          <div style={{fontSize:13}}>Add funding sources and expenditures, then generate a report.</div>
+        </div>
+      ):filteredSources.map(src=>{
+        const srcExps  = filteredExps.filter(e=>e.funding_source_id===src.id);
+        const srcSpent = srcExps.reduce((a,e)=>a+(parseFloat(e.amount)||0),0);
+        const srcAlloc = parseFloat(src.total_amount)||0;
+        const srcCats  = {};
+        srcExps.forEach(e=>{const c=e.category||"Uncategorized";srcCats[c]=(srcCats[c]||0)+(parseFloat(e.amount)||0);});
+        return(
+          <div key={src.id} style={card}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10,flexWrap:"wrap",gap:8}}>
+              <div>
+                <div style={{fontWeight:700,fontSize:14,marginBottom:2}}>
+                  {src.name}{src.funder&&<span style={{fontWeight:400,color:"var(--faint)"}}> — {src.funder}</span>}
+                </div>
+                <div style={{fontSize:11,color:"var(--faint)"}}>
+                  {src.source_type?.replace("_"," ")?.toUpperCase()}
+                  {src.fiscal_year?" · FY "+src.fiscal_year:""}
+                  {src.start_date?" · "+new Date(src.start_date+"T00:00").toLocaleDateString()+(src.end_date?" – "+new Date(src.end_date+"T00:00").toLocaleDateString():" – ongoing"):""}
+                </div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:"var(--gold)"}}>
+                  {fmt(srcSpent)}{srcAlloc>0&&<span style={{fontSize:12,fontWeight:400,color:"var(--faint)"}}> / {fmt(srcAlloc)}</span>}
+                </div>
+                {srcAlloc>0&&<div style={{fontSize:11,color:srcAlloc-srcSpent<0?"var(--red)":"var(--faint)"}}>{fmt(Math.max(0,srcAlloc-srcSpent))} remaining</div>}
+              </div>
+            </div>
+            {Object.keys(srcCats).length>0&&(
+              <div style={{borderTop:"1px solid var(--border)",paddingTop:8}}>
+                {Object.entries(srcCats).sort((a,b)=>b[1]-a[1]).map(([c,a])=>(
+                  <div key={c} style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"var(--faint)",padding:"3px 0",borderBottom:"1px solid rgba(0,0,0,.04)"}}>
+                    <span>{c}</span><span style={{fontWeight:600}}>{fmt(a)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {srcExps.length===0&&<div style={{fontSize:12,color:"var(--faint)",fontStyle:"italic",paddingTop:4}}>No expenditures recorded.</div>}
+          </div>
+        );
+      })}
+
+      <div style={{fontSize:11,color:"var(--faint)",fontStyle:"italic",marginTop:12,lineHeight:1.5}}>
+        Click "Generate &amp; Print Report" for a print-ready formatted version suitable for principals, arts directors, or board presentations.
+        For program records only — consult your district's business office for compliance determinations.
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PLATFORM USAGE REPORT
+// How the program uses Theatre4u — for principals and superintendents
+// ══════════════════════════════════════════════════════════════════════════════
+function PlatformUsageReport({ items, org, plan }) {
+  const today      = new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
+  const orgName    = org?.name || "Theatre Program";
+  const totalItems = items.length;
+  const totalQty   = items.reduce((s,i)=>s+(i.qty||1),0);
+  const withPhotos = items.filter(i=>i.img).length;
+  const listed     = items.filter(i=>i.mkt!=="Not Listed").length;
+  const inStock    = items.filter(i=>i.avail==="In Stock").length;
+  const totalValue = items.reduce((s,i)=>s+((parseFloat(i.sale)||0)*(i.qty||1)),0);
+  const memberSince= org?.created_at?new Date(org.created_at).toLocaleDateString("en-US",{year:"numeric",month:"long"}):"N/A";
+
+  const catCounts = items.reduce((a,i)=>{a[i.category]=(a[i.category]||0)+1;return a},{});
+  const topCats   = Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const CAT_LABELS = {costumes:"Costumes",props:"Props",sets:"Sets & Scenery",lighting:"Lighting",sound:"Sound Equipment",scripts:"Scripts & Music",makeup:"Makeup & Wigs",furniture:"Stage Furniture",fabrics:"Fabrics & Drapes",tools:"Tools & Hardware",effects:"Special Effects",other:"Other"};
+
+  const printReport = () => {
+    const w = window.open("","_blank","width=900,height=700");
+    if(!w) return;
+    const catRows = topCats.map(([cat,n])=>`<tr><td style="padding:6px 14px">${CAT_LABELS[cat]||cat}</td><td style="padding:6px 14px;text-align:right;font-weight:700">${n}</td></tr>`).join("");
+    const html=`<!DOCTYPE html><html><head><title>Platform Utilization Report — ${orgName}</title>
+    <style>
+      body{font-family:Arial,sans-serif;color:#1a1200;margin:0;padding:0}
+      .page{max-width:820px;margin:0 auto;padding:40px}
+      h1{font-family:Georgia,serif;font-size:28px;margin:0 0 4px;color:#1a0f00}
+      h2{font-family:Georgia,serif;font-size:16px;color:#1a0f00;margin:24px 0 10px;border-bottom:2px solid #d4a843;padding-bottom:6px}
+      .meta{font-size:12px;color:#888;margin-bottom:32px}
+      .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+      .stat-box{background:#f5f0e8;border:1px solid #e0d5c0;border-radius:6px;padding:14px;text-align:center}
+      .stat-val{font-family:Georgia,serif;font-size:26px;font-weight:700;color:#d4a843}
+      .stat-lbl{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+      .callout{background:#fff8e6;border-left:4px solid #d4a843;padding:14px 18px;margin:20px 0;font-size:13px;line-height:1.6}
+      table{width:100%;border-collapse:collapse}
+      th{background:#f5f0e8;padding:8px 14px;text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:1px}
+      td{padding:6px 14px;border-bottom:1px solid #eee;font-size:13px}
+      @media print{button{display:none!important}}
+    </style></head><body><div class="page">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#d4a843;margin-bottom:6px">🎭 Theatre4u™</div>
+          <h1>Platform Utilization Report</h1>
+          <div class="meta">${orgName} · Generated ${today} · Member since ${memberSince}</div>
+        </div>
+        <button onclick="window.print()" style="padding:8px 18px;background:#1a0f00;color:#d4a843;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:700">🖨 Print / Save PDF</button>
+      </div>
+      <div class="callout"><strong>${orgName}</strong> uses Theatre4u™ to manage, catalog, and share their theatre program's physical inventory — costumes, props, lighting, sound equipment, sets, and more. This report summarizes how the platform is being utilized to protect and maximize the value of district arts assets.</div>
+      <h2>Inventory Summary</h2>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-val">${totalItems}</div><div class="stat-lbl">Cataloged Items</div></div>
+        <div class="stat-box"><div class="stat-val">${totalQty.toLocaleString()}</div><div class="stat-lbl">Total Inventory Qty</div></div>
+        <div class="stat-box"><div class="stat-val">${totalValue>0?"$"+totalValue.toLocaleString("en-US",{maximumFractionDigits:0}):"—"}</div><div class="stat-lbl">Est. Inventory Value</div></div>
+        <div class="stat-box"><div class="stat-val">${withPhotos}</div><div class="stat-lbl">Items with Photos</div></div>
+        <div class="stat-box"><div class="stat-val">${inStock}</div><div class="stat-lbl">Currently Available</div></div>
+        <div class="stat-box"><div class="stat-val">${listed}</div><div class="stat-lbl">Shared with Other Programs</div></div>
+      </div>
+      <h2>Inventory by Category</h2>
+      <table><thead><tr><th>Category</th><th style="text-align:right">Items</th></tr></thead><tbody>${catRows}</tbody></table>
+      <h2>Asset Management</h2>
+      <table><thead><tr><th>Feature</th><th>Status</th></tr></thead><tbody>
+        <tr><td>QR Code Labels</td><td>✅ Every item gets a scannable label for instant identification</td></tr>
+        <tr><td>Photo Documentation</td><td>${withPhotos>0?`✅ ${withPhotos} items documented with photos`:"○ No photos yet — recommended for high-value items"}</td></tr>
+        <tr><td>Storage Location Tracking</td><td>✅ Items tracked by physical location within the program</td></tr>
+        <tr><td>Condition Tracking</td><td>✅ Each item's condition recorded for maintenance planning</td></tr>
+        <tr><td>Backstage Exchange</td><td>${listed>0?`✅ ${listed} item${listed!==1?"s":""} shared with neighboring programs — reducing costs for district schools`:"○ No items shared yet"}</td></tr>
+      </tbody></table>
+      <h2>Why This Matters</h2>
+      <p style="font-size:13px;line-height:1.8;color:#444">Theatre programs typically manage hundreds of thousands of dollars in physical assets — costumes, lighting equipment, sound systems, and set materials — with no formal inventory system. Items go missing, get double-purchased, or sit unused while neighboring schools pay commercial rental rates for the same gear.</p>
+      <p style="font-size:13px;line-height:1.8;color:#444">Theatre4u™ gives <strong>${orgName}</strong> a permanent, searchable record of every item the program owns. QR labels allow any staff member to instantly look up any item with their phone camera. The Backstage Exchange enables schools within the district to share resources freely — reducing program expenses and maximizing the return on arts investment.</p>
+      <div style="margin-top:40px;padding-top:16px;border-top:1px solid #e0d5c0;font-size:10px;color:#aaa;text-align:center">Theatre4u™ — Artstracker LLC · theatre4u.org · Report generated ${today}</div>
+    </div></body></html>`;
+    w.document.write(html);
+    w.document.close();
+  };
+
+  const card={background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:16,marginBottom:12};
+  const fmt=n=>"$"+n.toLocaleString("en-US",{minimumFractionDigits:2});
+
+  return(
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:10}}>
+        <div>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,marginBottom:3}}>Platform Utilization Report</div>
+          <div style={{fontSize:12,color:"var(--faint)"}}>A report for principals, arts directors, and board members showing how Theatre4u is being used to protect and maximize arts program assets.</div>
+        </div>
+        <button onClick={printReport} className="btn btn-g">🖨 Generate &amp; Print Report</button>
+      </div>
+
+      <div style={{...card,background:"rgba(212,168,67,.06)",borderColor:"rgba(212,168,67,.25)",marginBottom:20}}>
+        <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>What this report shows</div>
+        <div style={{fontSize:13,color:"var(--faint)",lineHeight:1.6}}>This report is designed to hand to a principal or superintendent. It shows the size and value of the program's cataloged inventory, how many items are documented with photos and QR labels, and how many assets are being shared with other programs through Backstage Exchange. Click "Generate &amp; Print Report" for the formatted, print-ready version.</div>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12,marginBottom:20}}>
+        {[
+          {label:"Cataloged Items",val:totalItems,                        color:"var(--gold)"},
+          {label:"Total Qty",      val:totalQty.toLocaleString(),          color:"var(--text)"},
+          {label:"Est. Value",     val:totalValue>0?"$"+totalValue.toLocaleString("en-US",{maximumFractionDigits:0}):"—",color:"var(--green)"},
+          {label:"With Photos",   val:withPhotos,                          color:"var(--text)"},
+          {label:"Shared",         val:listed,                            color:"var(--blue)"},
+          {label:"In Stock",       val:inStock,                           color:"var(--text)"},
+        ].map(s=>(
+          <div key={s.label} style={{...card,textAlign:"center",marginBottom:0,padding:14}}>
+            <div style={{fontSize:22,fontWeight:800,fontFamily:"'Playfair Display',serif",color:s.color}}>{s.val}</div>
+            <div style={{fontSize:10,color:"var(--faint)",marginTop:3,textTransform:"uppercase",letterSpacing:1}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {topCats.length>0&&(
+        <div style={card}>
+          <div style={{fontWeight:700,fontSize:13,marginBottom:12}}>Inventory by Category</div>
+          {topCats.map(([cat,n])=>(
+            <div key={cat} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+              <div style={{width:130,fontSize:12,color:"var(--faint)",flexShrink:0}}>{CAT_LABELS[cat]||cat}</div>
+              <div style={{flex:1,height:6,background:"var(--white)",borderRadius:3,overflow:"hidden"}}>
+                <div style={{height:"100%",width:(totalItems>0?n/totalItems*100:0)+"%",background:"var(--gold)",borderRadius:3,transition:"width .4s"}}/>
+              </div>
+              <div style={{fontSize:12,fontWeight:700,width:30,textAlign:"right",flexShrink:0}}>{n}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={card}>
+        <div style={{fontWeight:700,fontSize:13,marginBottom:12}}>Asset Management Checklist</div>
+        {[
+          {label:"QR Code Labels",       done:true,         note:"Every item gets a scannable label for instant lookup"},
+          {label:"Photo Documentation",  done:withPhotos>0, note:`${withPhotos} of ${totalItems} items have photos`},
+          {label:"Location Tracking",    done:items.some(i=>i.location), note:"Items tracked by storage location"},
+          {label:"Condition Records",    done:true,         note:"Each item's condition documented for maintenance planning"},
+          {label:"Backstage Exchange",   done:listed>0,     note:listed>0?`${listed} items shared with neighboring programs`:"Enable to share with district schools"},
+        ].map(row=>(
+          <div key={row.label} style={{display:"flex",gap:12,padding:"8px 0",borderBottom:"1px solid var(--border)"}}>
+            <div style={{fontSize:18,flexShrink:0}}>{row.done?"✅":"○"}</div>
+            <div>
+              <div style={{fontWeight:600,fontSize:13}}>{row.label}</div>
+              <div style={{fontSize:11,color:"var(--faint)",marginTop:1}}>{row.note}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{fontSize:11,color:"var(--faint)",fontStyle:"italic",marginTop:12,lineHeight:1.5}}>
+        Click "Generate &amp; Print Report" for a fully formatted print-ready version suitable for principals, arts directors, or board presentations.
+      </div>
+    </div>
+  );
+}
 function SourceModal({initial, saving, onSave, onCancel}){
   const blank = {name:"",source_type:"grant",funder:"",total_amount:"",fiscal_year:"",start_date:"",end_date:"",notes:"",is_active:true};
   const[f,setF] = useState(initial||blank);
