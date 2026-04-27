@@ -11211,6 +11211,10 @@ function AppRoot(){
   const [mob,setMob]       = useState(false);
   const [loaded,setLoaded] = useState(false);
   const [authChk,setAuthChk] = useState(false);
+  // Preview mode -- ?preview=1 in URL shows the platform with sample data (no login required)
+  const [previewMode, setPreviewMode] = useState(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview") === "1"
+  );
   // District: activeSchool = null means "own account", otherwise = school org object
   const [activeSchool,setActiveSchool]   = useState(null);
   const [memberRole,  setMemberRole]    = useState(null); // null=owner/director, or stage_manager/crew/house
@@ -11658,10 +11662,6 @@ function AppRoot(){
     </div>
   );
 
-  // Preview mode -- ?preview=1 shows the platform with sample data before signing up
-  const [previewMode, setPreviewMode] = React.useState(() =>
-    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview") === "1"
-  );
   if(!user && previewMode) return <PreviewMode onSignUp={()=>{ setPreviewMode(false); window.__t4u_show_auth&&window.__t4u_show_auth("signup"); }}/>;
 
   if(!user) return(
