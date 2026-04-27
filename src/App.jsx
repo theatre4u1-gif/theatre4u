@@ -10978,6 +10978,8 @@ function AppRoot(){
   const [mob,setMob]       = useState(false);
   const [loaded,setLoaded] = useState(false);
   const [authChk,setAuthChk] = useState(false);
+  // Track page visit — must be here at top with all hooks, never after a return
+  useEffect(() => { trackVisit("landing"); }, []);
   // District: activeSchool = null means "own account", otherwise = school org object
   const [activeSchool,setActiveSchool]   = useState(null);
   const [memberRole,  setMemberRole]    = useState(null); // null=owner/director, or stage_manager/crew/house
@@ -11424,11 +11426,6 @@ function AppRoot(){
       <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
     </div>
   );
-
-  // Track landing page view once per session
-  React.useEffect(() => {
-    if (!user) trackVisit(previewMode ? "preview" : "landing");
-  }, []); // eslint-disable-line
 
   if(!user) return(
     <>
