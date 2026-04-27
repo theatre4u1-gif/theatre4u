@@ -10919,6 +10919,513 @@ function AIHelpBubble({ user }) {
   );
 }
 
+// ── PREVIEW MODE — sample data for guest exploration ─────────────────────────
+const PREVIEW_ITEMS = [
+  { id:"p1",  name:"Victorian Ball Gown — Blue",      category:"costumes",  condition:"Good",      qty:1,  location:"Costume Closet A",  notes:"Used in A Christmas Carol 2024", mkt:"For Rent",    avail:"In Stock", sale:0,  rent:25 },
+  { id:"p2",  name:"Pirate Hat Collection (6pc)",     category:"costumes",  condition:"Fair",      qty:6,  location:"Costume Closet B",  notes:"Assorted styles",               mkt:"Not Listed",  avail:"In Stock", sale:0,  rent:0  },
+  { id:"p3",  name:"Wireless Handheld Mic — Shure",  category:"sound",     condition:"Excellent", qty:4,  location:"Sound Booth",       notes:"SM58 compatible, 4 channels",   mkt:"For Rent",    avail:"In Stock", sale:0,  rent:15 },
+  { id:"p4",  name:"LED Par Can RGBW 54x3W",          category:"lighting",  condition:"New",       qty:12, location:"Lighting Storage",  notes:"DMX controllable",              mkt:"Rent or Sale",avail:"In Stock", sale:85, rent:10 },
+  { id:"p5",  name:"Wooden Throne Chair",             category:"furniture", condition:"Good",      qty:1,  location:"Scene Shop",        notes:"Gold painted, red velvet",      mkt:"For Rent",    avail:"In Stock", sale:0,  rent:30 },
+  { id:"p6",  name:"Fog Machine 1000W",               category:"effects",   condition:"Good",      qty:2,  location:"Effects Cage",      notes:"Includes remote",               mkt:"For Rent",    avail:"In Stock", sale:0,  rent:20 },
+  { id:"p7",  name:"Romeo and Juliet Scripts (30)",   category:"scripts",   condition:"Fair",      qty:30, location:"Library",           notes:"Director annotated",            mkt:"For Sale",    avail:"In Stock", sale:5,  rent:0  },
+  { id:"p8",  name:"Ben Nye Master Makeup Kit",       category:"makeup",    condition:"Good",      qty:3,  location:"Dressing Room 1",   notes:"Full spectrum",                 mkt:"Not Listed",  avail:"In Stock", sale:0,  rent:0  },
+  { id:"p9",  name:"Forest Backdrop Flat 8x12ft",     category:"sets",      condition:"Good",      qty:2,  location:"Scene Shop",        notes:"Painted muslin on frame",       mkt:"For Rent",    avail:"In Stock", sale:0,  rent:40 },
+  { id:"p10", name:"DeWalt Cordless Drill 20V",       category:"tools",     condition:"Good",      qty:2,  location:"Tool Cabinet",      notes:"With charger and bits",         mkt:"Not Listed",  avail:"In Stock", sale:0,  rent:0  },
+  { id:"p11", name:"Foam Rubber Swords (8pc)",        category:"props",     condition:"Fair",      qty:8,  location:"Props Table",       notes:"Safe for stage combat",         mkt:"For Sale",    avail:"In Stock", sale:12, rent:0  },
+  { id:"p12", name:"Black Velvet Main Drape 20x40",   category:"fabrics",   condition:"Excellent", qty:1,  location:"Fly Loft",          notes:"Flame retardant",               mkt:"Not Listed",  avail:"In Use",   sale:0,  rent:0  },
+];
+const PREVIEW_CATS = {
+  costumes:"🥻", props:"🎭", sets:"🏗️", lighting:"💡", sound:"🔊",
+  scripts:"📜", makeup:"💄", furniture:"🪑", fabrics:"🧵", tools:"🔧", effects:"✨", other:"📦"
+};
+
+function PreviewMode({ onSignUp }) {
+  const [tab,     setTab]     = React.useState("inventory");
+  const [search,  setSearch]  = React.useState("");
+  const [catF,    setCatF]    = React.useState("all");
+  const [detail,  setDetail]  = React.useState(null);
+  const [showCTA, setShowCTA] = React.useState(false);
+
+  React.useEffect(() => { const t = setTimeout(() => setShowCTA(true), 20000); return () => clearTimeout(t); }, []);
+
+  const filtered = PREVIEW_ITEMS.filter(i => {
+    if (catF !== "all" && i.category !== catF) return false;
+    if (search && !i.name.toLowerCase().includes(search.toLowerCase()) && !(i.location||"").toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const totalItems = PREVIEW_ITEMS.length;
+  const listed     = PREVIEW_ITEMS.filter(i => i.mkt !== "Not Listed").length;
+  const totalQty   = PREVIEW_ITEMS.reduce((s, i) => s + i.qty, 0);
+  const estValue   = PREVIEW_ITEMS.reduce((s, i) => s + (i.sale * i.qty), 0);
+
+  const gold = "#d4a843", dark = "#1a0f00", bg = "#0d0b11", bg2 = "#15121b", bd = "#282333", t1 = "#ede8df", t2 = "#9b93a8", t3 = "#685f76";
+
+  const navs = [
+    { id:"dashboard",   label:"Dashboard",         icon:"⌂"  },
+    { id:"inventory",   label:"Inventory",          icon:"📦" },
+    { id:"marketplace", label:"Backstage Exchange", icon:"🏪" },
+    { id:"community",   label:"Community Board",    icon:"🎪" },
+    { id:"messages",    label:"Messages",           icon:"💬" },
+    { id:"requests",    label:"Requests",           icon:"📋" },
+    { id:"productions", label:"Productions",        icon:"🎭" },
+    { id:"reports",     label:"Reports",            icon:"📊" },
+    { id:"funding",     label:"Funding Tracker",    icon:"💰" },
+  ];
+
+  const GoldBtn = ({ label, onClick, style = {} }) => (
+    <button onClick={onClick} style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6,
+      padding:"9px 20px", borderRadius:8, fontFamily:"'DM Sans',sans-serif", fontSize:14, fontWeight:700,
+      cursor:"pointer", border:"none", background:`linear-gradient(135deg,${gold},#a37f2c)`, color:dark, ...style }}>{label}</button>
+  );
+
+  const mktColor = mkt => mkt === "Not Listed" ? "rgba(107,100,120,.5)" : mkt.includes("Rent") ? "rgba(66,165,245,.8)" : "rgba(76,175,80,.8)";
+
+  return (
+    <div style={{ display:"flex", height:"100vh", overflow:"hidden", background:bg, color:t1, fontFamily:"'DM Sans',sans-serif", fontSize:14 }}>
+
+      {/* Gold preview banner */}
+      <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:9999,
+        background:"linear-gradient(135deg,rgba(212,168,67,.97),rgba(163,127,44,.97))",
+        padding:"9px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap",
+        boxShadow:"0 2px 12px rgba(0,0,0,.4)" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <span style={{ fontSize:18 }}>🎭</span>
+          <span style={{ fontWeight:800, color:dark, fontSize:14 }}>Preview Mode</span>
+          <span style={{ color:"rgba(26,15,0,.65)", fontSize:12 }}>— Explore Theatre4u with sample data. No account needed.</span>
+        </div>
+        <div style={{ display:"flex", gap:8 }}>
+          <button onClick={() => window.location.href = "https://theatre4u.org"}
+            style={{ padding:"6px 14px", borderRadius:6, fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:600,
+              cursor:"pointer", background:"rgba(0,0,0,.15)", border:"1px solid rgba(0,0,0,.2)", color:dark }}>Sign In</button>
+          <GoldBtn label="Start Free Account →" onClick={onSignUp} style={{ padding:"6px 18px", fontSize:13 }}/>
+        </div>
+      </div>
+
+      {/* Sidebar */}
+      <aside style={{ width:224, minWidth:224, background:bg2, borderRight:`1px solid ${bd}`, display:"flex",
+        flexDirection:"column", paddingTop:48, overflowY:"auto", zIndex:100 }}>
+        <div style={{ padding:"18px 14px", borderBottom:`1px solid ${bd}`, display:"flex", alignItems:"center", gap:10 }}>
+          <div style={{ width:38, height:38, borderRadius:8, fontSize:20, background:`linear-gradient(135deg,${gold},#a37f2c)`,
+            display:"flex", alignItems:"center", justifyContent:"center" }}>🎭</div>
+          <div>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700, color:gold }}>Theatre4u™</div>
+            <div style={{ fontSize:9, color:t3, textTransform:"uppercase", letterSpacing:2 }}>Ocean View Drama</div>
+          </div>
+        </div>
+        <nav style={{ padding:"12px 8px", flex:1 }}>
+          <div style={{ fontSize:9, textTransform:"uppercase", letterSpacing:2, color:t3, padding:"8px 10px 4px" }}>Main</div>
+          {navs.map(n => (
+            <div key={n.id} onClick={() => setTab(n.id)} style={{ display:"flex", alignItems:"center", gap:8,
+              padding:"8px 10px", borderRadius:6, cursor:"pointer", fontSize:13, fontWeight:500, marginBottom:1,
+              color: tab === n.id ? gold : t2,
+              background: tab === n.id ? "linear-gradient(135deg,rgba(212,168,67,.12),rgba(212,168,67,.04))" : "transparent",
+              border: `1px solid ${tab === n.id ? "rgba(212,168,67,.2)" : "transparent"}` }}>
+              <span style={{ fontSize:15 }}>{n.icon}</span>
+              {n.label}
+              {n.id === "inventory" && <span style={{ marginLeft:"auto", background:bg, padding:"1px 6px", borderRadius:9, fontSize:10, color:t3 }}>{totalItems}</span>}
+            </div>
+          ))}
+        </nav>
+        <div style={{ padding:12, borderTop:`1px solid ${bd}` }}>
+          <div style={{ background:"rgba(212,168,67,.08)", border:"1px solid rgba(212,168,67,.2)", borderRadius:10, padding:12 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:gold, marginBottom:4 }}>🎟 Join for Free</div>
+            <div style={{ fontSize:11, color:t2, lineHeight:1.5, marginBottom:8 }}>Create your program's inventory, earn Stage Points, and share with nearby schools.</div>
+            <GoldBtn label="Start Free →" onClick={onSignUp} style={{ width:"100%", fontSize:12, padding:"8px 12px" }}/>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <main style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", paddingTop:42 }}>
+        <div style={{ padding:"12px 24px", borderBottom:`1px solid ${bd}`, background:bg2,
+          display:"flex", alignItems:"center", gap:12 }}>
+          <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700 }}>
+            {navs.find(n => n.id === tab)?.label}
+          </h1>
+          <span style={{ marginLeft:"auto", fontSize:11, color:gold, fontWeight:600,
+            background:"rgba(212,168,67,.1)", border:"1px solid rgba(212,168,67,.2)", padding:"3px 10px", borderRadius:12 }}>
+            👁 Preview — sample data only
+          </span>
+        </div>
+
+        <div style={{ flex:1, overflowY:"auto", padding:"20px 24px" }}>
+
+          {/* DASHBOARD */}
+          {tab === "dashboard" && (
+            <div>
+              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>Welcome to Ocean View Drama</h2>
+              <p style={{ color:t2, fontSize:13, marginBottom:20 }}>Your theatre inventory at a glance. (Sample data)</p>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))", gap:12, marginBottom:20 }}>
+                {[{icon:"📦",label:"Cataloged Items",val:totalItems},{icon:"🔢",label:"Total Quantity",val:totalQty},
+                  {icon:"🏪",label:"Listed / Shared",val:listed},{icon:"💰",label:"Est. Sale Value",val:"$"+estValue.toLocaleString()}].map(s => (
+                  <div key={s.label} style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:16, textAlign:"center" }}>
+                    <div style={{ fontSize:24, marginBottom:4 }}>{s.icon}</div>
+                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:gold }}>{s.val}</div>
+                    <div style={{ fontSize:11, color:t3, marginTop:2 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:16, marginBottom:20 }}>
+                <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:16, marginBottom:12 }}>What Theatre4u™ Does</h3>
+                {[["📦","Inventory Management","Catalog every costume, prop, light, and piece of gear with photos, QR labels, and condition tracking."],
+                  ["🔲","QR Code Labels","Print scannable labels for any item. Any phone camera looks it up instantly — no app download needed."],
+                  ["🏪","Backstage Exchange","Share items with other theatre programs near you — rent, loan, or sell gear."],
+                  ["🪙","Stage Points","Earn points for cataloging and sharing inventory. Redeem for free months or Exchange discounts."],
+                  ["💰","Funding Tracker","Track grants, Prop 28 funds, and spending. Generate accountability reports for boards."]].map(([icon,title,desc]) => (
+                  <div key={title} style={{ display:"flex", gap:12, padding:"10px 0", borderBottom:`1px solid rgba(255,255,255,.05)` }}>
+                    <span style={{ fontSize:20, flexShrink:0 }}>{icon}</span>
+                    <div><div style={{ fontWeight:700, fontSize:13, marginBottom:2 }}>{title}</div>
+                      <div style={{ fontSize:12, color:t2, lineHeight:1.5 }}>{desc}</div></div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ textAlign:"center", padding:"16px 0" }}>
+                <GoldBtn label="🎟 Create Your Free Account →" onClick={onSignUp} style={{ fontSize:15, padding:"12px 32px" }}/>
+                <div style={{ fontSize:12, color:t3, marginTop:8 }}>No credit card required · Free forever for basic use</div>
+              </div>
+            </div>
+          )}
+
+          {/* INVENTORY */}
+          {tab === "inventory" && (
+            <div>
+              <div style={{ display:"flex", gap:10, marginBottom:14, flexWrap:"wrap", alignItems:"center" }}>
+                <div style={{ position:"relative" }}>
+                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search items…"
+                    style={{ background:"#110f18", border:`1px solid ${bd}`, borderRadius:8, padding:"7px 10px 7px 32px",
+                      color:t1, fontSize:13, width:220, outline:"none" }}/>
+                  <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", fontSize:14, color:t3 }}>🔍</span>
+                </div>
+                <select value={catF} onChange={e => setCatF(e.target.value)}
+                  style={{ background:"#110f18", border:`1px solid ${bd}`, borderRadius:8, padding:"7px 10px", color:t1, fontSize:13, outline:"none" }}>
+                  <option value="all">All Categories</option>
+                  {Object.keys(PREVIEW_CATS).map(c => <option key={c} value={c}>{PREVIEW_CATS[c]} {c[0].toUpperCase()+c.slice(1)}</option>)}
+                </select>
+                <span style={{ fontSize:12, color:t3 }}>{filtered.length} items</span>
+                <button onClick={() => setShowCTA(true)} style={{ marginLeft:"auto", padding:"7px 14px", borderRadius:8,
+                  fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:700, cursor:"pointer",
+                  background:"rgba(212,168,67,.12)", border:"1px solid rgba(212,168,67,.25)", color:gold }}>
+                  + Add Item (sign up first)
+                </button>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:12 }}>
+                {filtered.map(item => (
+                  <div key={item.id} onClick={() => setDetail(item)}
+                    style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:14, cursor:"pointer", transition:"border-color .2s" }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(212,168,67,.4)"}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = bd}>
+                    <div style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:8 }}>
+                      <div style={{ fontSize:24, flexShrink:0 }}>{PREVIEW_CATS[item.category]||"📦"}</div>
+                      <div><div style={{ fontWeight:700, fontSize:14, lineHeight:1.3 }}>{item.name}</div>
+                        <div style={{ fontSize:11, color:t3, marginTop:2 }}>{item.location}</div></div>
+                    </div>
+                    <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:8 }}>
+                      {[item.condition, `x${item.qty}`, item.avail].map(tag => (
+                        <span key={tag} style={{ fontSize:10, padding:"2px 7px", background:"rgba(255,255,255,.05)", borderRadius:4, color:t2 }}>{tag}</span>
+                      ))}
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                      <span style={{ fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:10,
+                        background: mktColor(item.mkt)+"22", color: mktColor(item.mkt) }}>{item.mkt}</span>
+                      {(item.rent > 0 || item.sale > 0) && (
+                        <span style={{ fontSize:12, fontWeight:700, color:gold }}>
+                          {item.rent>0?`$${item.rent}/wk`:""}
+                          {item.rent>0&&item.sale>0?" · ":""}
+                          {item.sale>0?`$${item.sale}`:""}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {detail && (
+                <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", zIndex:3000,
+                  display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
+                  onClick={e => e.target === e.currentTarget && setDetail(null)}>
+                  <div style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:14, width:"100%", maxWidth:520,
+                    padding:24, boxShadow:"0 8px 48px rgba(0,0,0,.5)" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16 }}>
+                      <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                        <div style={{ fontSize:32 }}>{PREVIEW_CATS[detail.category]||"📦"}</div>
+                        <div><div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700 }}>{detail.name}</div>
+                          <div style={{ fontSize:12, color:t3, marginTop:2 }}>{detail.category} · {detail.condition}</div></div>
+                      </div>
+                      <button onClick={() => setDetail(null)} style={{ background:"none", border:`1px solid ${bd}`, color:t2,
+                        borderRadius:6, width:28, height:28, cursor:"pointer", fontSize:16,
+                        display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+                    </div>
+                    {[["Location",detail.location||"—"],["Quantity",detail.qty],["Availability",detail.avail],["Market Status",detail.mkt],
+                      ...(detail.rent>0?[["Rental Price",`$${detail.rent}/week`]]:[]),
+                      ...(detail.sale>0?[["Sale Price",`$${detail.sale}`]]:[]),
+                      ...(detail.notes?[["Notes",detail.notes]]:[])
+                    ].map(([l,v]) => (
+                      <div key={l} style={{ display:"flex", padding:"7px 0", borderBottom:"1px solid rgba(255,255,255,.05)" }}>
+                        <span style={{ width:130, color:t3, fontSize:12, flexShrink:0 }}>{l}</span>
+                        <span style={{ fontSize:13 }}>{v}</span>
+                      </div>
+                    ))}
+                    <div style={{ marginTop:16, padding:12, background:"rgba(212,168,67,.06)", border:"1px solid rgba(212,168,67,.15)", borderRadius:9, textAlign:"center" }}>
+                      <div style={{ fontSize:12, color:t2, marginBottom:8 }}>Sign up to manage your own inventory, add photos, and print QR labels.</div>
+                      <GoldBtn label="🎟 Start Free Account →" onClick={onSignUp} style={{ width:"100%" }}/>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* BACKSTAGE EXCHANGE */}
+          {tab === "marketplace" && (
+            <div>
+              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>Backstage Exchange</h2>
+              <p style={{ color:t2, fontSize:13, marginBottom:20 }}>Browse and request gear from theatre programs nearby. (Sample listings)</p>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:14, marginBottom:24 }}>
+                {[{title:"LED Par Cans (set of 8)",prog:"Edison Arts Academy",type:"For Rent",price:"$80/wk",icon:"💡"},
+                  {title:"Victorian Costume Collection (12pc)",prog:"Lakewood Drama",type:"For Loan",price:"Free loan",icon:"🥻"},
+                  {title:"Fog Machine + Fluid (2gal)",prog:"Valley Performing Arts",type:"For Rent",price:"$20/wk",icon:"🌫️"},
+                  {title:"Romeo & Juliet Script Sets (25)",prog:"Ocean View Drama",type:"For Sale",price:"$5 each",icon:"📜"},
+                  {title:"Wireless Mic Pack (4ch)",prog:"Sunset High Theatre",type:"For Rent",price:"$45/wk",icon:"🎤"},
+                  {title:"12ft Forest Backdrop Flat",prog:"Riverside High Drama",type:"For Rent",price:"$40/wk",icon:"🌲"},
+                ].map((item, i) => (
+                  <div key={i} style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:16 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
+                      <div style={{ fontSize:28 }}>{item.icon}</div>
+                      <span style={{ fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:10,
+                        background: item.type.includes("Loan")?"rgba(76,175,80,.15)":item.type.includes("Sale")?"rgba(156,39,176,.15)":"rgba(66,165,245,.15)",
+                        color: item.type.includes("Loan")?"#81c784":item.type.includes("Sale")?"#ce93d8":"#64b5f6" }}>{item.type}</span>
+                    </div>
+                    <div style={{ fontWeight:700, fontSize:14, marginBottom:3 }}>{item.title}</div>
+                    <div style={{ fontSize:12, color:t3, marginBottom:8 }}>{item.prog}</div>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <span style={{ fontWeight:700, color:gold, fontSize:13 }}>{item.price}</span>
+                      <button onClick={() => setShowCTA(true)} style={{ padding:"5px 12px", borderRadius:6,
+                        fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:700, cursor:"pointer",
+                        background:"rgba(212,168,67,.12)", border:"1px solid rgba(212,168,67,.25)", color:gold }}>Request →</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ textAlign:"center" }}>
+                <GoldBtn label="🎟 Join to Browse All Listings →" onClick={onSignUp} style={{ fontSize:14 }}/>
+                <div style={{ fontSize:12, color:t3, marginTop:8 }}>Free loans between district schools · No platform fee on intra-district transactions</div>
+              </div>
+            </div>
+          )}
+
+          {/* COMMUNITY BOARD */}
+          {tab === "community" && (
+            <div>
+              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>Community Board</h2>
+              <p style={{ color:t2, fontSize:13, marginBottom:20 }}>Announcements, auditions, and show postings from your theatre network. (Sample posts)</p>
+              <div style={{ display:"flex", flexDirection:"column", gap:12, marginBottom:24 }}>
+                {[{type:"🎭 Show Announcement",author:"Ocean View Drama",time:"2 hours ago",title:"Opening Night — The Wizard of Oz",body:"Join us May 17–19 at the Ocean View PAC. Tickets $8 students / $12 general. Featuring a cast of 42 students and a live pit orchestra."},
+                  {type:"🎤 Auditions",author:"Lakewood Drama",time:"Yesterday",title:"Fall Musical Auditions Open — Mamma Mia!",body:"Auditions June 3–4 at Lakewood High. All students welcome. No experience required. Callbacks June 6."},
+                  {type:"📢 Wanted",author:"Edison Arts Academy",time:"3 days ago",title:"Seeking: Fog machine rental for 2 weeks in June",body:"We're looking to rent a 1000W fog machine for our June production. Happy to trade — we have LED par cans available for loan."},
+                  {type:"📦 Free Items",author:"Valley Performing Arts",time:"Last week",title:"Free to good home: 30 assorted costume pieces",body:"Clearing space — 30+ costume pieces available for pickup. Period, contemporary, and fantasy. First come first served."},
+                ].map((post, i) => (
+                  <div key={i} style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:16 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                      <span style={{ fontSize:10, fontWeight:700, color:gold, textTransform:"uppercase", letterSpacing:1 }}>{post.type}</span>
+                      <span style={{ fontSize:11, color:t3 }}>{post.time}</span>
+                    </div>
+                    <div style={{ fontWeight:700, fontSize:15, marginBottom:4 }}>{post.title}</div>
+                    <div style={{ fontSize:12, color:t3, marginBottom:6 }}>Posted by {post.author}</div>
+                    <div style={{ fontSize:13, color:t2, lineHeight:1.6 }}>{post.body}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ textAlign:"center" }}>
+                <GoldBtn label="🎟 Join to Post & Comment →" onClick={onSignUp} style={{ fontSize:14 }}/>
+              </div>
+            </div>
+          )}
+
+          {/* MESSAGES */}
+          {tab === "messages" && (
+            <div>
+              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>Messages</h2>
+              <p style={{ color:t2, fontSize:13, marginBottom:20 }}>Direct conversations with other theatre programs. (Sample)</p>
+              <div style={{ display:"flex", flexDirection:"column", gap:8, maxWidth:600, marginBottom:24 }}>
+                {[{from:"Lakewood Drama",preview:"Hi! We saw your LED par cans listed — are they available the week of June 10?",time:"10:24 AM",unread:true},
+                  {from:"Edison Arts Academy",preview:"Thanks for the quick turnaround on the costumes. Our cast loved them!",time:"Yesterday",unread:false},
+                  {from:"Sunset High Theatre",preview:"We have fog machines available if you still need them for your spring show.",time:"Mon",unread:false},
+                ].map((msg, i) => (
+                  <div key={i} onClick={() => setShowCTA(true)} style={{ background:msg.unread?"rgba(212,168,67,.06)":bg2,
+                    border:`1px solid ${msg.unread?"rgba(212,168,67,.25)":bd}`, borderRadius:10, padding:"12px 14px",
+                    cursor:"pointer", display:"flex", gap:12, alignItems:"center" }}>
+                    <div style={{ width:40, height:40, borderRadius:"50%", flexShrink:0, fontSize:18,
+                      background:`linear-gradient(135deg,${gold},#a37f2c)`, display:"flex", alignItems:"center", justifyContent:"center" }}>🎭</div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:2 }}>
+                        <span style={{ fontWeight:msg.unread?800:600, fontSize:14 }}>{msg.from}</span>
+                        <span style={{ fontSize:11, color:t3 }}>{msg.time}</span>
+                      </div>
+                      <div style={{ fontSize:12, color:t2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{msg.preview}</div>
+                    </div>
+                    {msg.unread && <div style={{ width:8, height:8, borderRadius:"50%", background:gold, flexShrink:0 }}/>}
+                  </div>
+                ))}
+              </div>
+              <div style={{ textAlign:"center" }}>
+                <GoldBtn label="🎟 Join to Send Messages →" onClick={onSignUp} style={{ fontSize:14 }}/>
+              </div>
+            </div>
+          )}
+
+          {/* REQUESTS */}
+          {tab === "requests" && (
+            <div>
+              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>Requests</h2>
+              <p style={{ color:t2, fontSize:13, marginBottom:20 }}>Manage incoming and outgoing Exchange requests. (Sample)</p>
+              <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
+                {[{item:"Victorian Ball Gown — Blue",from:"Lakewood Drama",type:"Rental",status:"pending",price:"$25/wk",date:"Requested Apr 22"},
+                  {item:"LED Par Can RGBW (4 units)",from:"Edison Arts Academy",type:"Loan",status:"accepted",price:"Free",date:"Accepted Apr 20"},
+                ].map((req, i) => (
+                  <div key={i} style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:16 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
+                      <div>
+                        <div style={{ fontWeight:700, fontSize:14, marginBottom:3 }}>{req.item}</div>
+                        <div style={{ fontSize:12, color:t3 }}>from {req.from} · {req.type} · {req.date}</div>
+                      </div>
+                      <div style={{ textAlign:"right", flexShrink:0 }}>
+                        <span style={{ fontSize:11, fontWeight:700, padding:"3px 8px", borderRadius:8,
+                          background:req.status==="accepted"?"rgba(76,175,80,.15)":"rgba(212,168,67,.15)",
+                          color:req.status==="accepted"?"#81c784":gold }}>{req.status}</span>
+                        <div style={{ fontSize:12, fontWeight:700, color:gold, marginTop:4 }}>{req.price}</div>
+                      </div>
+                    </div>
+                    <div style={{ display:"flex", gap:8, marginTop:12 }}>
+                      {["Accept","Decline","Message"].map(a => (
+                        <button key={a} onClick={() => setShowCTA(true)} style={{ padding:"6px 14px", borderRadius:6,
+                          fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:700, cursor:"pointer",
+                          background:"rgba(107,100,120,.1)", border:`1px solid ${bd}`, color:t2 }}>{a}</button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ textAlign:"center" }}>
+                <GoldBtn label="🎟 Join to Manage Requests →" onClick={onSignUp} style={{ fontSize:14 }}/>
+              </div>
+            </div>
+          )}
+
+          {/* PRODUCTIONS */}
+          {tab === "productions" && (
+            <div>
+              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>Productions</h2>
+              <p style={{ color:t2, fontSize:13, marginBottom:20 }}>Track items assigned to each show. (Sample productions)</p>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:14, marginBottom:24 }}>
+                {[{title:"The Wizard of Oz",date:"May 17–19, 2026",status:"In Production",items:34,icon:"🌈"},
+                  {title:"Mamma Mia!",date:"Fall 2026",status:"Planning",items:8,icon:"🎵"},
+                  {title:"A Christmas Carol",date:"Dec 2025",status:"Archived",items:67,icon:"🎄"},
+                ].map((prod, i) => (
+                  <div key={i} style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:18 }}>
+                    <div style={{ fontSize:32, marginBottom:10 }}>{prod.icon}</div>
+                    <div style={{ fontWeight:800, fontSize:16, marginBottom:3 }}>{prod.title}</div>
+                    <div style={{ fontSize:12, color:t3, marginBottom:10 }}>{prod.date}</div>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <span style={{ fontSize:11, fontWeight:700, padding:"3px 9px", borderRadius:8,
+                        background:prod.status==="In Production"?"rgba(212,168,67,.2)":prod.status==="Planning"?"rgba(66,165,245,.15)":"rgba(107,100,120,.15)",
+                        color:prod.status==="In Production"?gold:prod.status==="Planning"?"#64b5f6":t3 }}>{prod.status}</span>
+                      <span style={{ fontSize:12, color:t2 }}>📦 {prod.items} items</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ textAlign:"center" }}>
+                <GoldBtn label="🎟 Join to Track Productions →" onClick={onSignUp} style={{ fontSize:14 }}/>
+              </div>
+            </div>
+          )}
+
+          {/* REPORTS */}
+          {tab === "reports" && (
+            <div>
+              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>Reports & Analytics</h2>
+              <p style={{ color:t2, fontSize:13, marginBottom:20 }}>Inventory breakdowns and reports for administrators. (Sample data)</p>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:12, marginBottom:20 }}>
+                {[{icon:"📦",label:"Total Items",val:"12"},{icon:"💰",label:"Est. Value",val:"$1,240"},
+                  {icon:"🏪",label:"Items Shared",val:"7"},{icon:"📊",label:"Categories",val:"9"}].map(s => (
+                  <div key={s.label} style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:16, textAlign:"center" }}>
+                    <div style={{ fontSize:24, marginBottom:4 }}>{s.icon}</div>
+                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:24, fontWeight:800, color:gold }}>{s.val}</div>
+                    <div style={{ fontSize:12, fontWeight:700, marginTop:2 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:16, marginBottom:16 }}>
+                <div style={{ fontWeight:700, fontSize:13, marginBottom:12 }}>Inventory by Category</div>
+                {[["Costumes",3],["Lighting",12],["Sound",4],["Props",8],["Sets",2]].map(([cat,n]) => (
+                  <div key={cat} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
+                    <div style={{ width:100, fontSize:12, color:t2, flexShrink:0 }}>{cat}</div>
+                    <div style={{ flex:1, height:6, background:"rgba(255,255,255,.05)", borderRadius:3, overflow:"hidden" }}>
+                      <div style={{ height:"100%", width:(n/12*100)+"%", background:gold, borderRadius:3 }}/>
+                    </div>
+                    <div style={{ fontSize:12, fontWeight:700, width:24, textAlign:"right" }}>{n}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ textAlign:"center" }}>
+                <GoldBtn label="🎟 Join for Full Reports →" onClick={onSignUp} style={{ fontSize:14 }}/>
+              </div>
+            </div>
+          )}
+
+          {/* FUNDING TRACKER */}
+          {tab === "funding" && (
+            <div>
+              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>Funding Tracker</h2>
+              <p style={{ color:t2, fontSize:13, marginBottom:20 }}>Track grants, Prop 28, and program spending. (Sample data)</p>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))", gap:12, marginBottom:20 }}>
+                {[{label:"Total Allocated",val:"$18,400",color:gold},{label:"Total Spent",val:"$11,250",color:"#64b5f6"},
+                  {label:"Remaining",val:"$7,150",color:"#81c784"},{label:"Sources",val:"3",color:t1}].map(s => (
+                  <div key={s.label} style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:14, textAlign:"center" }}>
+                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:800, color:s.color }}>{s.val}</div>
+                    <div style={{ fontSize:10, color:t3, marginTop:3, textTransform:"uppercase", letterSpacing:1 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, overflow:"hidden", marginBottom:20 }}>
+                {[{name:"Prop 28 — Arts",alloc:"$12,000",spent:"$8,400",bal:"$3,600"},
+                  {name:"Booster Donations",alloc:"$4,400",spent:"$2,850",bal:"$1,550"},
+                  {name:"Drama Dept Budget",alloc:"$2,000",spent:"$0",bal:"$2,000"}].map((r,i) => (
+                  <div key={i} style={{ padding:"10px 14px", display:"grid", gridTemplateColumns:"1fr 80px 80px 80px", gap:8,
+                    borderTop:i===0?"none":`1px solid ${bd}`, background:i%2===0?"rgba(255,255,255,.01)":"transparent" }}>
+                    <div style={{ fontWeight:600, fontSize:13 }}>{r.name}</div>
+                    <div style={{ fontSize:13, color:gold, fontWeight:700 }}>{r.alloc}</div>
+                    <div style={{ fontSize:13 }}>{r.spent}</div>
+                    <div style={{ fontSize:13, color:"#81c784", fontWeight:700 }}>{r.bal}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ textAlign:"center" }}>
+                <GoldBtn label="🎟 Join to Track Your Funding →" onClick={onSignUp} style={{ fontSize:14 }}/>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </main>
+
+      {/* Floating CTA after 20s */}
+      {showCTA && (
+        <div style={{ position:"fixed", bottom:20, right:20, zIndex:9998, background:bg2,
+          border:"1px solid rgba(212,168,67,.4)", borderRadius:14, padding:"16px 18px", maxWidth:280,
+          boxShadow:"0 8px 32px rgba(0,0,0,.5)" }}>
+          <button onClick={() => setShowCTA(false)} style={{ position:"absolute", top:8, right:10,
+            background:"none", border:"none", color:t3, cursor:"pointer", fontSize:16 }}>×</button>
+          <div style={{ fontSize:24, marginBottom:8 }}>🎟</div>
+          <div style={{ fontWeight:800, fontSize:14, marginBottom:4, color:t1 }}>Ready to try it for your program?</div>
+          <div style={{ fontSize:12, color:t2, lineHeight:1.5, marginBottom:12 }}>Free to start. No credit card. Your inventory, QR labels, and Backstage Exchange in under 5 minutes.</div>
+          <GoldBtn label="Start Free Account →" onClick={onSignUp} style={{ width:"100%", fontSize:13 }}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Visit tracking helper ────────────────────────────────────────────────────
 const TRACK_URL = "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/track-visit";
 function getSessionId() {
