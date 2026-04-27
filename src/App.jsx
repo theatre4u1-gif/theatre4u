@@ -9304,7 +9304,7 @@ const PRIVACY_CONTENT = [
   ["12. Changes & Contact", "We will notify users of material changes to this policy with at least 14 days notice via email. Questions, data requests, or security concerns: hello@theatre4u.org | theatre4u.org | Artstracker LLC, California, USA. For security vulnerabilities, please email hello@theatre4u.org with 'Security' in the subject line."],
 ];
 // ── Landing Page ──────────────────────────────────────────────────────────────
-function LandingPage({onSignIn, onSignUp}){
+function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
   const[scrolled,setScrolled]=useState(false);
   useEffect(()=>{
     const h=()=>setScrolled(window.scrollY>60);
@@ -9371,6 +9371,11 @@ function LandingPage({onSignIn, onSignUp}){
           <button onClick={onSignIn} style={{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.2)",color:"#fff",padding:"14px 24px",borderRadius:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:15,fontWeight:600}}>
             Sign In
           </button>
+          {onTakeTour && (
+            <button onClick={onTakeTour} style={{background:"transparent",border:"1px solid rgba(212,168,67,.5)",color:"rgba(212,168,67,.9)",padding:"14px 24px",borderRadius:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:15,fontWeight:600,transition:"all .2s"}}>
+              👁 Preview the Platform
+            </button>
+          )}
         </div>
         <div style={{marginTop:20,fontSize:12,color:"rgba(255,255,255,.4)"}}>
           Free plan available · Pro from $15/month · No contracts
@@ -10978,6 +10983,10 @@ function AppRoot(){
   const [mob,setMob]       = useState(false);
   const [loaded,setLoaded] = useState(false);
   const [authChk,setAuthChk] = useState(false);
+  // Preview mode -- ?preview=1 lets anyone explore with sample data before signing up
+  const [previewMode, setPreviewMode] = useState(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview") === "1"
+  );
   // Track page visit — must be here at top with all hooks, never after a return
   useEffect(() => { trackVisit("landing"); }, []);
   // District: activeSchool = null means "own account", otherwise = school org object
@@ -11427,6 +11436,11 @@ function AppRoot(){
     </div>
   );
 
+  // Show preview mode if ?preview=1 and not logged in
+  if (!user && previewMode) return (
+    <PreviewMode onSignUp={() => { setPreviewMode(false); window.__t4u_show_auth && window.__t4u_show_auth("signup"); }}/>
+  );
+
   if(!user) return(
     <>
       <style>{CSS}</style>
@@ -11441,6 +11455,7 @@ function AppRoot(){
         onSignUp={()=>{
           window.__t4u_show_auth&&window.__t4u_show_auth("signup");
         }}
+        onTakeTour={()=>{ window.location.href = window.location.href.split("?")[0] + "?preview=1"; }}
       />
       <AuthOverlay onAuth={u=>{
         setUser(u);
