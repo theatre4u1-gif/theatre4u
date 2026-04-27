@@ -1860,7 +1860,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
   const atLimit   = plan==="free" && items.length >= 50;
 
   return(<>
-    {upgradeReason&&<UpgradePrompt reason={upgradeReason} onClose={()=>setUpgradeReason(null)}/>}
+    {upgradeReason&&<UpgradePrompt reason={upgradeReason} onClose={()=>setUpgradeReason(null)} userId={user?.id} userEmail={user?.email}/>}
     {locFilter!=="all"&&locFilterName&&(
       <div style={{display:"flex",alignItems:"center",gap:10,background:"rgba(232,184,93,.1)",border:"1px solid rgba(232,184,93,.3)",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
         <span style={{fontSize:20}}>📦</span>
@@ -3834,7 +3834,7 @@ function Reports({ items, plan="free", org=null }) {
 }
 
 // ── Upgrade prompt modal ─────────────────────────────────────────────────────
-function UpgradePrompt({ reason, onClose }) {
+function UpgradePrompt({ reason, onClose, userId=null, userEmail=null }) {
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div style={{background:"#fdf6ec",border:"1px solid var(--gold)",borderRadius:14,width:"100%",maxWidth:520,padding:28,boxShadow:"0 8px 48px rgba(0,0,0,.4)"}}>
@@ -3843,7 +3843,7 @@ function UpgradePrompt({ reason, onClose }) {
           <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:22,marginBottom:8}}>Upgrade to Continue</h2>
           <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.6}}>{reason}</p>
         </div>
-        <UpgradePlans compact={true}/>
+        <UpgradePlans compact={true} userId={userId} userEmail={userEmail}/>
         <button onClick={onClose} style={{display:"block",margin:"16px auto 0",background:"none",border:"none",color:"var(--faint)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Maybe later</button>
       </div>
     </div>
@@ -3983,8 +3983,10 @@ function InvoiceRequestForm({ orgName, userEmail }) {
           <label style={labelStyle}>Plan</label>
           <select style={{...inputStyle,cursor:"pointer"}} value={form.plan} onChange={e=>upd("plan",e.target.value)}>
             <option value="pro">Pro — $15/month or $150/year</option>
-            <option value="district">District — $49/month or $500/year</option>
-            <option value="enterprise">Enterprise — Custom (district will contact)</option>
+            <option value="district">District S — $49/month or $500/year (up to 6 schools)</option>
+            <option value="district_m">District M — $99/month or $1,000/year (up to 15 schools)</option>
+            <option value="district_l">District L — $199/month or $2,000/year (up to 30 schools)</option>
+            <option value="enterprise">Enterprise — Custom pricing (contact us)</option>
           </select>
         </div>
         <div>
@@ -3993,6 +3995,14 @@ function InvoiceRequestForm({ orgName, userEmail }) {
             <option value="annual">Annual (best value)</option>
             <option value="monthly">Monthly</option>
           </select>
+        </div>
+        <div style={{gridColumn:"1/-1"}}>
+          <label style={labelStyle}>Accounts Payable Mailing Address (for PO)</label>
+          <input style={inputStyle} value={form.address||""} onChange={e=>upd("address",e.target.value)} placeholder="123 School Blvd, City, CA 90000 (leave blank if paying by check)"/>
+        </div>
+        <div style={{gridColumn:"1/-1"}}>
+          <label style={labelStyle}>Notes / Special Instructions</label>
+          <input style={inputStyle} value={form.notes||""} onChange={e=>upd("notes",e.target.value)} placeholder="Required vendor forms, W-9 request, payment terms, etc."/>
         </div>
       </div>
       {err && <div style={{fontSize:12.5,color:"#e57373",padding:"8px 10px",background:"rgba(194,24,91,.08)",borderRadius:6,border:"1px solid rgba(194,24,91,.2)"}}>{err}</div>}
@@ -4057,18 +4067,23 @@ function UpgradePlans({ compact = false, userId = null, userEmail = null }) {
                 ? <button className="btn btn-full" style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",color:"rgba(240,230,211,.6)",cursor:"default",fontWeight:600,fontSize:13}} disabled>✓ Current Free Plan</button>
                 : p.id==="enterprise"
                   ? <a href="mailto:hello@theatre4u.org?subject=Enterprise District Inquiry" className="btn btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",background:"linear-gradient(135deg,#1565c0,#0d47a1)",border:"1px solid rgba(66,133,244,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>Contact Us →</a>
-                  : (!link || link === "undefined" || link.endsWith("undefined"))
-                    ? <a href="mailto:hello@theatre4u.org?subject=District Plan Inquiry" className="btn btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>Contact Us →</a>
-                    : <a href={link} target="_blank" rel="noreferrer" className={"btn btn-full "+(p.hot?"btn-g":"")} style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",...(!p.hot?{background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}:{})}}>
-                    {billing==="annual" ? "Get "+p.name+" Annual →" : "Get "+p.name+" →"}
-                  </a>
+                  : billing === "invoice"
+                    ? <button className="btn btn-full" onClick={()=>document.getElementById("t4u-invoice-form")?.scrollIntoView({behavior:"smooth",block:"start"})}
+                        style={{background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                        🏛️ Request Invoice →
+                      </button>
+                    : (!link || link === "undefined" || link.endsWith("undefined"))
+                      ? <a href="mailto:hello@theatre4u.org?subject=District Plan Inquiry" className="btn btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>Contact Us →</a>
+                      : <a href={link} target="_blank" rel="noreferrer" className={"btn btn-full "+(p.hot?"btn-g":"")} style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",...(!p.hot?{background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}:{})}}>
+                        {billing==="annual" ? "Get "+p.name+" Annual →" : "Get "+p.name+" →"}
+                      </a>
               }
             </div>
           );
         })}
       </div>
       {billing === "invoice" ? (
-        <div style={{marginTop:16,background:"rgba(212,168,67,.06)",border:"1.5px solid rgba(212,168,67,.25)",borderRadius:12,padding:20}}>
+        <div id="t4u-invoice-form" style={{marginTop:16,background:"rgba(212,168,67,.06)",border:"1.5px solid rgba(212,168,67,.25)",borderRadius:12,padding:20,scrollMarginTop:20}}>
           <div style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:17,fontWeight:700,color:"var(--gold)",marginBottom:6}}>🏛️ Pay by Check or Purchase Order</div>
           <p style={{fontSize:13,color:"var(--text)",lineHeight:1.7,marginBottom:14}}>
             School districts and organizations that cannot pay by credit card can subscribe via check or purchase order.
@@ -9137,7 +9152,7 @@ const PRIVACY_CONTENT = [
   ["12. Changes & Contact", "We will notify users of material changes to this policy with at least 14 days notice via email. Questions, data requests, or security concerns: hello@theatre4u.org | theatre4u.org | Artstracker LLC, California, USA. For security vulnerabilities, please email hello@theatre4u.org with 'Security' in the subject line."],
 ];
 // ── Landing Page ──────────────────────────────────────────────────────────────
-function LandingPage({onSignIn, onSignUp}){
+function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
   const[scrolled,setScrolled]=useState(false);
   useEffect(()=>{
     const h=()=>setScrolled(window.scrollY>60);
@@ -9204,6 +9219,11 @@ function LandingPage({onSignIn, onSignUp}){
           <button onClick={onSignIn} style={{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.2)",color:"#fff",padding:"14px 24px",borderRadius:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:15,fontWeight:600}}>
             Sign In
           </button>
+          {onTakeTour && (
+            <button onClick={onTakeTour} style={{background:"transparent",border:"1px solid rgba(212,168,67,.5)",color:"rgba(212,168,67,.9)",padding:"14px 24px",borderRadius:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:15,fontWeight:600}}>
+              👁 Preview the Platform
+            </button>
+          )}
         </div>
         <div style={{marginTop:20,fontSize:12,color:"rgba(255,255,255,.4)"}}>
           Free plan available · Pro from $15/month · No contracts
@@ -10747,6 +10767,411 @@ function AIHelpBubble({ user }) {
   );
 }
 
+
+// PREVIEW MODE -- guest exploration before sign-up
+// Accessed via theatre4u.org?preview=1 or the "Take a Tour" button
+// Shows sample inventory, demo UI, and a persistent sign-up prompt
+const PREVIEW_ITEMS = [
+  { id:"p1",  name:"Victorian Ball Gown — Blue",      category:"costumes",  condition:"Good",      size:"M",       qty:1,  location:"Costume Closet A",  notes:"Used in A Christmas Carol 2024", mkt:"For Rent",    avail:"In Stock", sale:0,  rent:25, tags:["period","formal"] },
+  { id:"p2",  name:"Pirate Hat Collection (6pc)",     category:"costumes",  condition:"Fair",      size:"One Size",qty:6,  location:"Costume Closet B",  notes:"Assorted styles",               mkt:"Not Listed",  avail:"In Stock", sale:0,  rent:0,  tags:["adventure"] },
+  { id:"p3",  name:"Wireless Handheld Mic — Shure",  category:"sound",     condition:"Excellent", size:"N/A",     qty:4,  location:"Sound Booth",       notes:"SM58 compatible, 4 channels",   mkt:"For Rent",    avail:"In Stock", sale:0,  rent:15, tags:["audio"] },
+  { id:"p4",  name:"LED Par Can RGBW 54x3W",          category:"lighting",  condition:"New",       size:"N/A",     qty:12, location:"Lighting Storage",  notes:"DMX controllable",              mkt:"Rent or Sale",avail:"In Stock", sale:85, rent:10, tags:["dmx","led"] },
+  { id:"p5",  name:"Wooden Throne Chair",             category:"furniture", condition:"Good",      size:"N/A",     qty:1,  location:"Scene Shop",        notes:"Gold painted, red velvet",      mkt:"For Rent",    avail:"In Stock", sale:0,  rent:30, tags:["royalty"] },
+  { id:"p6",  name:"Fog Machine 1000W",              category:"effects",   condition:"Good",      size:"N/A",     qty:2,  location:"Effects Cage",      notes:"Includes remote",               mkt:"For Rent",    avail:"In Stock", sale:0,  rent:20, tags:["atmosphere"] },
+  { id:"p7",  name:"Romeo and Juliet Scripts (30)",   category:"scripts",   condition:"Fair",      size:"N/A",     qty:30, location:"Library",           notes:"Director annotated",            mkt:"For Sale",    avail:"In Stock", sale:5,  rent:0,  tags:["shakespeare"] },
+  { id:"p8",  name:"Ben Nye Master Makeup Kit",       category:"makeup",    condition:"Good",      size:"N/A",     qty:3,  location:"Dressing Room 1",   notes:"Full spectrum",                 mkt:"Not Listed",  avail:"In Stock", sale:0,  rent:0,  tags:["professional"] },
+  { id:"p9",  name:"Forest Backdrop Flat 8x12ft",     category:"sets",      condition:"Good",      size:"N/A",     qty:2,  location:"Scene Shop",        notes:"Painted muslin on frame",       mkt:"For Rent",    avail:"In Stock", sale:0,  rent:40, tags:["outdoor"] },
+  { id:"p10", name:"DeWalt Cordless Drill 20V",       category:"tools",     condition:"Good",      size:"N/A",     qty:2,  location:"Tool Cabinet",      notes:"With charger and bits",         mkt:"Not Listed",  avail:"In Stock", sale:0,  rent:0,  tags:["power tool"] },
+  { id:"p11", name:"Foam Rubber Swords (8pc)",        category:"props",     condition:"Fair",      size:"N/A",     qty:8,  location:"Props Table",       notes:"Safe for stage combat",         mkt:"For Sale",    avail:"In Stock", sale:12, rent:0,  tags:["combat"] },
+  { id:"p12", name:"Black Velvet Main Drape 20x40",   category:"fabrics",   condition:"Excellent", size:"N/A",     qty:1,  location:"Fly Loft",          notes:"Flame retardant",               mkt:"Not Listed",  avail:"In Use",   sale:0,  rent:0,  tags:["main stage"] },
+];
+
+const PREVIEW_CATS = {
+  costumes:"🥻",props:"🎭",sets:"🏗️",lighting:"💡",sound:"🔊",
+  scripts:"📜",makeup:"💄",furniture:"🪑",fabrics:"🧵",tools:"🔧",effects:"✨",other:"📦"
+};
+
+function PreviewMode({ onSignUp }) {
+  const [tab,     setTab]     = React.useState("inventory");
+  const [search,  setSearch]  = React.useState("");
+  const [catF,    setCatF]    = React.useState("all");
+  const [detail,  setDetail]  = React.useState(null);
+  const [showCTA, setShowCTA] = React.useState(false);
+
+  React.useEffect(() => {
+    const t = setTimeout(() => setShowCTA(true), 20000);
+    return () => clearTimeout(t);
+  }, []);
+
+  const filtered = PREVIEW_ITEMS.filter(i => {
+    if (catF !== "all" && i.category !== catF) return false;
+    if (search && !i.name.toLowerCase().includes(search.toLowerCase())
+        && !i.location.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const totalItems = PREVIEW_ITEMS.length;
+  const listed     = PREVIEW_ITEMS.filter(i => i.mkt !== "Not Listed").length;
+  const totalQty   = PREVIEW_ITEMS.reduce((s, i) => s + i.qty, 0);
+  const estValue   = PREVIEW_ITEMS.reduce((s, i) => s + (i.sale * i.qty), 0);
+
+  const gold = "#d4a843", dark = "#1a0f00", bg = "#0d0b11", bg2 = "#15121b";
+  const bd = "#282333", t1 = "#ede8df", t2 = "#9b93a8", t3 = "#685f76";
+
+  const navs = [
+    { id:"dashboard",  label:"Dashboard",         icon:"⌂" },
+    { id:"inventory",  label:"Inventory",          icon:"📦" },
+    { id:"marketplace",label:"Backstage Exchange", icon:"🏪" },
+    { id:"reports",    label:"Reports",            icon:"📊" },
+    { id:"funding",    label:"Funding Tracker",    icon:"💰" },
+  ];
+
+  const GoldBtn = ({ label, onClick, style = {} }) => (
+    <button onClick={onClick} style={{
+      display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6,
+      padding:"9px 20px", borderRadius:8, fontFamily:"'DM Sans',sans-serif",
+      fontSize:14, fontWeight:700, cursor:"pointer", border:"none",
+      background:`linear-gradient(135deg,${gold},#a37f2c)`, color:dark,
+      transition:"all .2s", ...style
+    }}>{label}</button>
+  );
+
+  const mktColor = (mkt) =>
+    mkt === "Not Listed" ? "rgba(107,100,120,.5)"
+    : mkt.includes("Rent") ? "rgba(66,165,245,.8)"
+    : "rgba(76,175,80,.8)";
+
+  return (
+    <div style={{ display:"flex", height:"100vh", overflow:"hidden",
+      background:bg, color:t1, fontFamily:"'DM Sans',sans-serif", fontSize:14 }}>
+
+      {/* Preview banner */}
+      <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:9999,
+        background:"linear-gradient(135deg,rgba(212,168,67,.97),rgba(163,127,44,.97))",
+        padding:"9px 20px", display:"flex", alignItems:"center",
+        justifyContent:"space-between", gap:12, flexWrap:"wrap",
+        boxShadow:"0 2px 12px rgba(0,0,0,.4)" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <span style={{ fontSize:18 }}>🎭</span>
+          <span style={{ fontWeight:800, color:dark, fontSize:14 }}>Preview Mode</span>
+          <span style={{ color:"rgba(26,15,0,.65)", fontSize:12 }}>
+            — Explore Theatre4u with sample data. No account needed.
+          </span>
+        </div>
+        <div style={{ display:"flex", gap:8 }}>
+          <button onClick={() => window.location.href = "https://theatre4u.org"}
+            style={{ padding:"6px 14px", borderRadius:6, fontFamily:"'DM Sans',sans-serif",
+              fontSize:12, fontWeight:600, cursor:"pointer",
+              background:"rgba(0,0,0,.15)", border:"1px solid rgba(0,0,0,.2)", color:dark }}>
+            Sign In
+          </button>
+          <GoldBtn label="Start Free Account →" onClick={onSignUp}
+            style={{ padding:"6px 18px", fontSize:13 }}/>
+        </div>
+      </div>
+
+      {/* Sidebar */}
+      <aside style={{ width:224, minWidth:224, background:bg2,
+        borderRight:`1px solid ${bd}`, display:"flex", flexDirection:"column",
+        paddingTop:48, overflowY:"auto", zIndex:100 }}>
+        <div style={{ padding:"18px 14px", borderBottom:`1px solid ${bd}`,
+          display:"flex", alignItems:"center", gap:10 }}>
+          <div style={{ width:38, height:38, borderRadius:8, fontSize:20,
+            background:`linear-gradient(135deg,${gold},#a37f2c)`,
+            display:"flex", alignItems:"center", justifyContent:"center" }}>🎭</div>
+          <div>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16,
+              fontWeight:700, color:gold }}>Theatre4u™</div>
+            <div style={{ fontSize:9, color:t3, textTransform:"uppercase", letterSpacing:2 }}>
+              Ocean View Drama
+            </div>
+          </div>
+        </div>
+
+        <nav style={{ padding:"12px 8px", flex:1 }}>
+          <div style={{ fontSize:9, textTransform:"uppercase", letterSpacing:2,
+            color:t3, padding:"8px 10px 4px" }}>Main</div>
+          {navs.map(n => (
+            <div key={n.id} onClick={() => setTab(n.id)}
+              style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px",
+                borderRadius:6, cursor:"pointer", fontSize:13, fontWeight:500, marginBottom:1,
+                color: tab === n.id ? gold : t2,
+                background: tab === n.id
+                  ? "linear-gradient(135deg,rgba(212,168,67,.12),rgba(212,168,67,.04))"
+                  : "transparent",
+                border: `1px solid ${tab === n.id ? "rgba(212,168,67,.2)" : "transparent"}` }}>
+              <span style={{ fontSize:15 }}>{n.icon}</span>
+              {n.label}
+              {n.id === "inventory" && (
+                <span style={{ marginLeft:"auto", background:bg, padding:"1px 6px",
+                  borderRadius:9, fontSize:10, color:t3 }}>{totalItems}</span>
+              )}
+            </div>
+          ))}
+        </nav>
+
+        <div style={{ padding:12, borderTop:`1px solid ${bd}` }}>
+          <div style={{ background:"rgba(212,168,67,.08)", border:"1px solid rgba(212,168,67,.2)",
+            borderRadius:10, padding:12 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:gold, marginBottom:4 }}>
+              🎟 Join for Free
+            </div>
+            <div style={{ fontSize:11, color:t2, lineHeight:1.5, marginBottom:8 }}>
+              Create your program's inventory, earn Stage Points, and share with nearby schools.
+            </div>
+            <GoldBtn label="Start Free →" onClick={onSignUp}
+              style={{ width:"100%", fontSize:12, padding:"8px 12px" }}/>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <main style={{ flex:1, display:"flex", flexDirection:"column",
+        overflow:"hidden", paddingTop:42 }}>
+        <div style={{ padding:"12px 24px", borderBottom:`1px solid ${bd}`,
+          background:bg2, display:"flex", alignItems:"center", gap:12 }}>
+          <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700 }}>
+            {navs.find(n => n.id === tab)?.label}
+          </h1>
+          <span style={{ marginLeft:"auto", fontSize:11, color:gold, fontWeight:600,
+            background:"rgba(212,168,67,.1)", border:"1px solid rgba(212,168,67,.2)",
+            padding:"3px 10px", borderRadius:12 }}>
+            👁 Preview — sample data only
+          </span>
+        </div>
+
+        <div style={{ flex:1, overflowY:"auto", padding:"20px 24px" }}>
+
+          {/* DASHBOARD */}
+          {tab === "dashboard" && (
+            <div>
+              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>
+                Welcome to Ocean View Drama
+              </h2>
+              <p style={{ color:t2, fontSize:13, marginBottom:20 }}>
+                Your theatre inventory at a glance. (Sample data)
+              </p>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",
+                gap:12, marginBottom:20 }}>
+                {[
+                  { icon:"📦", label:"Cataloged Items",  val:totalItems },
+                  { icon:"🔢", label:"Total Quantity",    val:totalQty },
+                  { icon:"🏪", label:"Listed / Shared",   val:listed },
+                  { icon:"💰", label:"Est. Sale Value",   val:"$"+estValue.toLocaleString() },
+                ].map(s => (
+                  <div key={s.label} style={{ background:bg2, border:`1px solid ${bd}`,
+                    borderRadius:10, padding:16, textAlign:"center" }}>
+                    <div style={{ fontSize:24, marginBottom:4 }}>{s.icon}</div>
+                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22,
+                      fontWeight:700, color:gold }}>{s.val}</div>
+                    <div style={{ fontSize:11, color:t3, marginTop:2 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:16, marginBottom:20 }}>
+                <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:16, marginBottom:12 }}>
+                  What Theatre4u™ Does
+                </h3>
+                {[
+                  ["📦","Inventory Management","Catalog every costume, prop, light, and piece of gear with photos, QR labels, and condition tracking."],
+                  ["🔲","QR Code Labels","Print scannable labels for any item. Any phone camera looks it up instantly."],
+                  ["🏪","Backstage Exchange","Share items with other theatre programs near you — rent, loan, or sell gear to your neighbours."],
+                  ["🪙","Stage Points","Earn points for cataloging and sharing inventory. Redeem for free months or Exchange discounts."],
+                  ["💰","Funding Tracker","Track grants, Prop 28 funds, and spending. Generate accountability reports for principals and boards."],
+                ].map(([icon, title, desc]) => (
+                  <div key={title} style={{ display:"flex", gap:12, padding:"10px 0",
+                    borderBottom:`1px solid rgba(255,255,255,.05)` }}>
+                    <span style={{ fontSize:20, flexShrink:0 }}>{icon}</span>
+                    <div>
+                      <div style={{ fontWeight:700, fontSize:13, marginBottom:2 }}>{title}</div>
+                      <div style={{ fontSize:12, color:t2, lineHeight:1.5 }}>{desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ textAlign:"center", padding:"16px 0" }}>
+                <GoldBtn label="🎟 Create Your Free Account →" onClick={onSignUp}
+                  style={{ fontSize:15, padding:"12px 32px" }}/>
+                <div style={{ fontSize:12, color:t3, marginTop:8 }}>
+                  No credit card required · Free forever for basic use
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* INVENTORY */}
+          {tab === "inventory" && (
+            <div>
+              <div style={{ display:"flex", gap:10, marginBottom:14, flexWrap:"wrap", alignItems:"center" }}>
+                <div style={{ position:"relative" }}>
+                  <input value={search} onChange={e => setSearch(e.target.value)}
+                    placeholder="Search items…"
+                    style={{ background:"#110f18", border:`1px solid ${bd}`, borderRadius:8,
+                      padding:"7px 10px 7px 32px", color:t1, fontSize:13, width:220, outline:"none" }}/>
+                  <span style={{ position:"absolute", left:10, top:"50%",
+                    transform:"translateY(-50%)", fontSize:14, color:t3 }}>🔍</span>
+                </div>
+                <select value={catF} onChange={e => setCatF(e.target.value)}
+                  style={{ background:"#110f18", border:`1px solid ${bd}`, borderRadius:8,
+                    padding:"7px 10px", color:t1, fontSize:13, outline:"none" }}>
+                  <option value="all">All Categories</option>
+                  {Object.keys(PREVIEW_CATS).map(c => (
+                    <option key={c} value={c}>
+                      {PREVIEW_CATS[c]} {c[0].toUpperCase() + c.slice(1)}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ fontSize:12, color:t3 }}>{filtered.length} items</span>
+                <button onClick={() => setShowCTA(true)}
+                  style={{ marginLeft:"auto", padding:"7px 14px", borderRadius:8,
+                    fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:700,
+                    cursor:"pointer", background:"rgba(212,168,67,.12)",
+                    border:"1px solid rgba(212,168,67,.25)", color:gold }}>
+                  + Add Item (sign up first)
+                </button>
+              </div>
+
+              <div style={{ display:"grid",
+                gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:12 }}>
+                {filtered.map(item => (
+                  <div key={item.id} onClick={() => setDetail(item)}
+                    style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10,
+                      padding:14, cursor:"pointer", transition:"border-color .2s" }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(212,168,67,.4)"}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = bd}>
+                    <div style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:8 }}>
+                      <div style={{ fontSize:24, flexShrink:0 }}>{PREVIEW_CATS[item.category] || "📦"}</div>
+                      <div>
+                        <div style={{ fontWeight:700, fontSize:14, lineHeight:1.3 }}>{item.name}</div>
+                        <div style={{ fontSize:11, color:t3, marginTop:2 }}>{item.location}</div>
+                      </div>
+                    </div>
+                    <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:8 }}>
+                      {[item.condition, `x${item.qty}`, item.avail].map(tag => (
+                        <span key={tag} style={{ fontSize:10, padding:"2px 7px",
+                          background:"rgba(255,255,255,.05)", borderRadius:4, color:t2 }}>{tag}</span>
+                      ))}
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                      <span style={{ fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:10,
+                        background: mktColor(item.mkt) + "22", color: mktColor(item.mkt) }}>
+                        {item.mkt}
+                      </span>
+                      {(item.rent > 0 || item.sale > 0) && (
+                        <span style={{ fontSize:12, fontWeight:700, color:gold }}>
+                          {item.rent > 0 ? `$${item.rent}/wk` : ""}
+                          {item.rent > 0 && item.sale > 0 ? " · " : ""}
+                          {item.sale > 0 ? `$${item.sale}` : ""}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {detail && (
+                <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)",
+                  zIndex:3000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
+                  onClick={e => e.target === e.currentTarget && setDetail(null)}>
+                  <div style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:14,
+                    width:"100%", maxWidth:520, padding:24, boxShadow:"0 8px 48px rgba(0,0,0,.5)" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between",
+                      alignItems:"flex-start", marginBottom:16 }}>
+                      <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                        <div style={{ fontSize:32 }}>{PREVIEW_CATS[detail.category] || "📦"}</div>
+                        <div>
+                          <div style={{ fontFamily:"'Playfair Display',serif",
+                            fontSize:18, fontWeight:700 }}>{detail.name}</div>
+                          <div style={{ fontSize:12, color:t3, marginTop:2 }}>
+                            {detail.category} · {detail.condition}
+                          </div>
+                        </div>
+                      </div>
+                      <button onClick={() => setDetail(null)}
+                        style={{ background:"none", border:`1px solid ${bd}`, color:t2,
+                          borderRadius:6, width:28, height:28, cursor:"pointer", fontSize:16,
+                          display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+                    </div>
+                    {[
+                      ["Location",      detail.location || "—"],
+                      ["Quantity",      detail.qty],
+                      ["Availability",  detail.avail],
+                      ["Market Status", detail.mkt],
+                      ...(detail.rent > 0 ? [["Rental Price", `$${detail.rent}/week`]] : []),
+                      ...(detail.sale > 0 ? [["Sale Price",   `$${detail.sale}`]]      : []),
+                      ...(detail.notes    ? [["Notes",        detail.notes]]            : []),
+                    ].map(([l, v]) => (
+                      <div key={l} style={{ display:"flex", padding:"7px 0",
+                        borderBottom:"1px solid rgba(255,255,255,.05)" }}>
+                        <span style={{ width:130, color:t3, fontSize:12, flexShrink:0 }}>{l}</span>
+                        <span style={{ fontSize:13 }}>{v}</span>
+                      </div>
+                    ))}
+                    <div style={{ marginTop:16, padding:12, background:"rgba(212,168,67,.06)",
+                      border:"1px solid rgba(212,168,67,.15)", borderRadius:9, textAlign:"center" }}>
+                      <div style={{ fontSize:12, color:t2, marginBottom:8 }}>
+                        Sign up to manage your own inventory, add photos, and print QR labels.
+                      </div>
+                      <GoldBtn label="🎟 Start Free Account →" onClick={onSignUp}
+                        style={{ width:"100%" }}/>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* OTHER TABS — teaser */}
+          {(tab === "marketplace" || tab === "reports" || tab === "funding") && (
+            <div style={{ textAlign:"center", padding:"60px 20px" }}>
+              <div style={{ fontSize:56, marginBottom:16 }}>
+                {tab === "marketplace" ? "🏪" : tab === "reports" ? "📊" : "💰"}
+              </div>
+              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:26,
+                fontWeight:700, marginBottom:10 }}>
+                {tab === "marketplace" ? "Backstage Exchange"
+                  : tab === "reports"    ? "Reports & Analytics"
+                  : "Funding Tracker"}
+              </div>
+              <div style={{ color:t2, fontSize:14, maxWidth:480, margin:"0 auto 28px", lineHeight:1.8 }}>
+                {tab === "marketplace" && "Browse and request items from theatre programs near you — or list your own inventory to share with the community. Free loans between district schools, rentals, and sales."}
+                {tab === "reports"    && "Category breakdowns, condition reports, platform utilization reports for principals, and CSV export. The Platform Usage Report is designed to hand to an administrator showing how Theatre4u protects program assets."}
+                {tab === "funding"    && "Track grants, Prop 28 funds, and all program spending. Generate accountability reports for principals, arts directors, and boards — formatted and print-ready in one click."}
+              </div>
+              <GoldBtn label="🎟 Create Free Account to Access →" onClick={onSignUp}
+                style={{ fontSize:14, padding:"12px 32px" }}/>
+              <div style={{ fontSize:12, color:t3, marginTop:10 }}>
+                Full platform access · No credit card required
+              </div>
+            </div>
+          )}
+
+        </div>
+      </main>
+
+      {/* Floating CTA (appears after 20s) */}
+      {showCTA && (
+        <div style={{ position:"fixed", bottom:20, right:20, zIndex:9998,
+          background:bg2, border:"1px solid rgba(212,168,67,.4)", borderRadius:14,
+          padding:"16px 18px", maxWidth:280, boxShadow:"0 8px 32px rgba(0,0,0,.5)" }}>
+          <button onClick={() => setShowCTA(false)}
+            style={{ position:"absolute", top:8, right:10, background:"none",
+              border:"none", color:t3, cursor:"pointer", fontSize:16 }}>×</button>
+          <div style={{ fontSize:24, marginBottom:8 }}>🎟</div>
+          <div style={{ fontWeight:800, fontSize:14, marginBottom:4, color:t1 }}>
+            Ready to try it for your program?
+          </div>
+          <div style={{ fontSize:12, color:t2, lineHeight:1.5, marginBottom:12 }}>
+            Free to start. No credit card. Your inventory, QR labels, and Backstage Exchange access in under 5 minutes.
+          </div>
+          <GoldBtn label="Start Free Account →" onClick={onSignUp}
+            style={{ width:"100%", fontSize:13 }}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AppRoot(){
   const [user,setUser]     = useState(null);
   // ── Hash routing — handles #/item/:id for public QR scans ─────────────────
@@ -11233,6 +11658,12 @@ function AppRoot(){
     </div>
   );
 
+  // Preview mode -- ?preview=1 shows the platform with sample data before signing up
+  const [previewMode, setPreviewMode] = React.useState(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview") === "1"
+  );
+  if(!user && previewMode) return <PreviewMode onSignUp={()=>{ setPreviewMode(false); window.__t4u_show_auth&&window.__t4u_show_auth("signup"); }}/>;
+
   if(!user) return(
     <>
       <style>{CSS}</style>
@@ -11247,6 +11678,7 @@ function AppRoot(){
         onSignUp={()=>{
           window.__t4u_show_auth&&window.__t4u_show_auth("signup");
         }}
+        onTakeTour={()=>{ window.location.href = window.location.href.split("?")[0] + "?preview=1"; }}
       />
       <AuthOverlay onAuth={u=>{setUser(u);}} pendingInvite={pendingInvite} inviteInfo={inviteInfo}/>
       {user && <FeedbackWidget userId={user.id} orgName={org?.name||""} isLeadingPlayer={org?.is_leading_player||false}/>}
