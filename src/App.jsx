@@ -3952,13 +3952,14 @@ function InvoiceRequestForm({ orgName, userEmail }) {
   if(done) return (
     <div style={{marginTop:16,padding:16,background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.3)",borderRadius:10,textAlign:"center"}}>
       <div style={{fontSize:28,marginBottom:8}}>✅</div>
-      <div style={{fontWeight:700,fontSize:15,color:"var(--text)",marginBottom:4}}>Invoice request sent!</div>
-      <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Check your inbox — we sent a copy to <strong>{form.email}</strong> and will follow up within one business day. Questions? Email <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)"}}>hello@theatre4u.org</a>.</div>
+      <div style={{fontWeight:700,fontSize:15,color:"#ede8df",marginBottom:4}}>Invoice request sent!</div>
+      <div style={{fontSize:13,color:"#b0a8c0",lineHeight:1.6}}>Check your inbox — we sent a copy to <strong>{form.email}</strong> and will follow up within one business day. Questions? Email <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)"}}>hello@theatre4u.org</a>.</div>
     </div>
   );
 
-  const inputStyle = { width:"100%", background:"var(--bgi,#110f18)", border:"1px solid var(--border,#282333)", borderRadius:6, padding:"8px 10px", color:"var(--text,#ede8df)", fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:"none", boxSizing:"border-box" };
-  const labelStyle = { fontSize:11, fontWeight:600, color:"var(--muted)", textTransform:"uppercase", letterSpacing:1, display:"block", marginBottom:3 };
+  const inputStyle = { width:"100%", background:"#110f18", border:"1px solid #3a3050", borderRadius:6, padding:"9px 11px", color:"#ede8df", fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:"none", boxSizing:"border-box" };
+  const labelStyle = { fontSize:10.5, fontWeight:700, color:"#b0a8c0", textTransform:"uppercase", letterSpacing:1, display:"block", marginBottom:4 };
+  // labelStyle defined above with inputStyle
 
   return (
     <div style={{marginTop:16,display:"flex",flexDirection:"column",gap:10}}>
@@ -4083,34 +4084,34 @@ function UpgradePlans({ compact = false, userId = null, userEmail = null }) {
         })}
       </div>
       {billing === "invoice" ? (
-        <div id="t4u-invoice-form" style={{marginTop:16,background:"rgba(212,168,67,.06)",border:"1.5px solid rgba(212,168,67,.25)",borderRadius:12,padding:20,scrollMarginTop:20}}>
+        <div id="t4u-invoice-form" style={{marginTop:16,background:"rgba(15,10,25,.85)",border:"1.5px solid rgba(212,168,67,.3)",borderRadius:12,padding:20,scrollMarginTop:20}}>
           <div style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:17,fontWeight:700,color:"var(--gold)",marginBottom:6}}>🏛️ Pay by Check or Purchase Order</div>
-          <p style={{fontSize:13,color:"var(--text)",lineHeight:1.7,marginBottom:14}}>
+          <p style={{fontSize:13,color:"#c8bfd0",lineHeight:1.7,marginBottom:14}}>
             School districts and organizations that cannot pay by credit card can subscribe via check or purchase order.
             We will issue a formal invoice and accept payment by school check, district PO, or ACH transfer.
           </p>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
-            <div style={{background:"rgba(0,0,0,.2)",borderRadius:8,padding:12}}>
+            <div style={{background:"#1e1208",border:"1px solid rgba(212,168,67,.3)",borderRadius:8,padding:14}}>
               <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--gold)",marginBottom:6}}>Pro Plan</div>
-              <div style={{fontSize:20,fontWeight:800,color:"#f0e6d3",marginBottom:2}}>$12<span style={{fontSize:12,color:"rgba(240,230,211,.5)"}}>/month</span></div>
-              <div style={{fontSize:11,color:"rgba(240,230,211,.5)",marginBottom:8}}>or $120/year (billed annually)</div>
-              <div style={{fontSize:12,color:"rgba(240,230,211,.7)"}}>Unlimited inventory · Backstage Exchange · Funding Tracker · Team sharing</div>
+              <div style={{fontSize:22,fontWeight:800,color:"#f0e6d3",marginBottom:2}}>$15<span style={{fontSize:12,color:"rgba(240,230,211,.6)"}}>/month</span></div>
+              <div style={{fontSize:11,color:"rgba(240,230,211,.65)",marginBottom:8}}>or $150/year (billed annually)</div>
+              <div style={{fontSize:12,color:"rgba(240,230,211,.8)",lineHeight:1.5}}>Unlimited inventory · Backstage Exchange · Funding Tracker · Team sharing</div>
             </div>
-            <div style={{background:"rgba(0,0,0,.2)",borderRadius:8,padding:12}}>
+            <div style={{background:"#1e1208",border:"1px solid rgba(212,168,67,.3)",borderRadius:8,padding:14}}>
               <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--gold)",marginBottom:6}}>District Plan</div>
-              <div style={{fontSize:20,fontWeight:800,color:"#f0e6d3",marginBottom:2}}>$49<span style={{fontSize:12,color:"rgba(240,230,211,.5)"}}>/month</span></div>
-              <div style={{fontSize:11,color:"rgba(240,230,211,.5)",marginBottom:8}}>or $500/year (billed annually)</div>
-              <div style={{fontSize:12,color:"rgba(240,230,211,.7)"}}>All Pro features · Multiple schools · District dashboard</div>
+              <div style={{fontSize:22,fontWeight:800,color:"#f0e6d3",marginBottom:2}}>$49<span style={{fontSize:12,color:"rgba(240,230,211,.6)"}}>/month</span></div>
+              <div style={{fontSize:11,color:"rgba(240,230,211,.65)",marginBottom:8}}>or $500/year (billed annually)</div>
+              <div style={{fontSize:12,color:"rgba(240,230,211,.8)",lineHeight:1.5}}>All Pro features · Multiple schools · District dashboard</div>
             </div>
           </div>
-          <div style={{fontSize:12.5,color:"var(--muted)",lineHeight:1.7,marginBottom:14}}>
-            <strong style={{color:"var(--text)"}}>To get started:</strong> Email us at{" "}
+          <div style={{fontSize:12.5,color:"#b0a8c0",lineHeight:1.7,marginBottom:14}}>
+            <strong style={{color:"#ede8df"}}>To get started:</strong> Email us at{" "}
             <a href="mailto:hello@theatre4u.org?subject=Check/PO Subscription Request&body=Hi, I would like to subscribe to Theatre4u via check/purchase order.%0A%0AOrganization name:%0APlan requested (Pro / District):%0ABilling period (monthly / annual):%0AContact name:%0APO number (if applicable):%0AAccounts payable email:" style={{color:"var(--gold)"}}>hello@theatre4u.org</a>
             {" "}with your organization name, plan, and billing period. We will send a formal invoice within one business day.
           </div>
           <InvoiceRequestForm orgName={userId||""} userEmail={userEmail||""} />
-          <div style={{marginTop:12,fontSize:11,color:"var(--faint)",lineHeight:1.6}}>
-            Payment by check should be made payable to <strong style={{color:"var(--text)"}}>Artstracker LLC</strong>.
+          <div style={{marginTop:12,fontSize:11,color:"#9890a8",lineHeight:1.6}}>
+            Payment by check should be made payable to <strong style={{color:"#d4c8e0"}}>Artstracker LLC</strong>.
             Purchase orders are accepted from accredited educational institutions.
             Net-30 terms available for district accounts. Questions? Call or email — we respond personally.
           </div>
