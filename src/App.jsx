@@ -9800,7 +9800,7 @@ function AuthScreen({onAuth}){
           }
           if(data.session){
             // Email confirmation is OFF — user is already logged in
-            if(typeof onAuth==="function") onAuth(data.user);
+            if(typeof onAuth==="function") onAuth(data.user, true); // true = new signup
           } else {
             setDone(true);
           }
@@ -11964,15 +11964,16 @@ function AppRoot(){
         }}
         onTakeTour={()=>{ window.location.href = window.location.href.split("?")[0] + "?preview=1"; }}
       />
-      <AuthOverlay onAuth={u=>{
+      <AuthOverlay onAuth={(u, isNew=false)=>{
         setUser(u);
-        // Track the app visit
         trackVisit("app", { org_id: u.id });
-        // Fire signup notification (edge function deduplicates)
-        fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/signup-notify", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ org_id: u.id })
-        }).catch(() => {});
+        // Only fire signup notification on actual new account creation
+        if (isNew) {
+          fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/signup-notify", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ org_id: u.id })
+          }).catch(() => {});
+        }
       }} pendingInvite={pendingInvite} inviteInfo={inviteInfo}/>
       {user && <FeedbackWidget userId={user.id} orgName={org?.name||""} isLeadingPlayer={org?.is_leading_player||false}/>}
       {user && <AIHelpBubble user={user} />}
