@@ -12160,18 +12160,17 @@ function AppRoot(){
 
               <div className="sb-foot">
                 <div style={{display:"flex",gap:5,flexDirection:"column"}}>
-                  {(plan==="pro"||plan==="district"||isAdmin)&&(
-                    <a href="/app.html" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
-                      style={{color:"var(--gold)",borderColor:"rgba(212,168,67,.3)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
-                      📱 Mobile App
-                    </a>
-                  )}
-                  {(plan==="pro"||plan==="district"||isAdmin)&&(
-                    <a href="/help.html" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
-                      style={{color:"rgba(255,255,255,.6)",borderColor:"rgba(255,255,255,.12)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
-                      ❓ Help & Tutorials
-                    </a>
-                  )}
+                  {/* Mobile App — all plans */}
+                  <a href="/app.html" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
+                    style={{color:"var(--gold)",borderColor:"rgba(212,168,67,.3)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                    📱 Mobile App
+                  </a>
+                  {/* Help & Tutorials — all plans */}
+                  <a href="/help.html" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
+                    style={{color:"rgba(255,255,255,.6)",borderColor:"rgba(255,255,255,.12)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                    ❓ Help & Tutorials
+                  </a>
+                  {/* Upgrade prompt — free plan only */}
                   {plan==="free"&&!isAdmin&&(
                     <button className="btn btn-sm btn-full" style={{background:"linear-gradient(135deg,var(--gold),var(--amber))",border:"none",color:"#1a0f00",fontSize:13,fontWeight:800,padding:"9px 12px",letterSpacing:.2}} onClick={()=>nav("settings")}>
                       ⭐ Upgrade Plan
