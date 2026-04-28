@@ -3912,7 +3912,7 @@ const UPGRADE_PLANS = [
     feats:["Up to 50 items","QR code labels","Photo uploads","CSV export"] },
   { id:"pro",      name:"Pro",      monthlyPrice:"$15", annualPrice:"$12.50",  annualTotal:"$150/yr", per:"/month", annualNote:"save $30", desc:"For active programs & companies.", hot:true,
     feats:["Unlimited inventory","Full Backstage Exchange access","Photo storage 5GB","Analytics dashboard","Email support"] },
-  { id:"district", name:"District (up to 6 schools)", monthlyPrice:"$49", annualPrice:"$42",  annualTotal:"$500/yr", per:"/month", annualNote:"save $88", desc:"Multiple schools, one platform.",  hot:false,
+  { id:"district", name:"District S", monthlyPrice:"$49", annualPrice:"$42",  annualTotal:"$500/yr", per:"/month", annualNote:"save $88", desc:"Up to 6 schools — all Pro features.", hot:false,
     feats:["Multiple organizations","District dashboard","Bulk import","Dedicated support","Everything in Pro"] },
   { id:"district_m", name:"District M", monthlyPrice:"$99", annualPrice:"$83",  annualTotal:"$999/yr",   per:"/month", annualNote:"save $189", desc:"Up to 15 schools — 54% savings.", hot:false,
     feats:["Everything in District S","Up to 15 school sites","District dashboard","Priority support","Dedicated onboarding"] },
@@ -4263,7 +4263,7 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
           <img src={usp("photo-1503095396549-807759245b35", 1100, 260)} alt="District" loading="eager" />
           <div className="hero-fade" />
           <div className="hero-body">
-            <div className="hero-eyebrow">🏢 District Plan</div>
+            <div className="hero-eyebrow">🏢 District S Plan</div>
             <h1 className="hero-title" style={{ fontSize: 44 }}>
               {district?.name || "Your District"}
             </h1>
@@ -5715,7 +5715,7 @@ function AdminDashboard({ currentUser }) {
   const mrr = (byPlan.pro * 12) + (byPlan.district * 49);
 
   const planColor = { free: "rgba(255,255,255,.2)", pro: "var(--gold)", district: "#42a5f5" };
-  const planLabel = { free: "Free", pro: "Pro", district: "District" };
+  const planLabel = { free: "Free", pro: "Pro", district: "District S", district_m: "District M", district_l: "District L" };
 
   return (
     <div style={{ position: "relative" }}>
@@ -10772,9 +10772,12 @@ export default AppWithBoundary;
 // ══════════════════════════════════════════════════════════════════════════════
 // ── AI Help Bubble ────────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════════════
-function AIHelpBubble({ user }) {
+function AIHelpBubble({ user = null }) {
   const [open, setOpen]       = useState(false);
-  const [msgs, setMsgs]       = useState([]);
+  const greeting = user
+    ? "Hi! Ask me anything about Theatre4u — inventory, QR labels, Exchange, Funding Tracker, or any feature!"
+    : "Hi! Ask me anything about Theatre4u, or visit theatre4u.org/help.html for our full Help Center.";
+  const [msgs, setMsgs]       = useState([{role:"assistant",content:greeting}]);
   const [input, setInput]     = useState("");
   const [loading, setLoading] = useState(false);
   const [unread, setUnread]   = useState(false);
@@ -11422,6 +11425,7 @@ function PreviewMode({ onSignUp }) {
           <GoldBtn label="Start Free Account →" onClick={onSignUp} style={{ width:"100%", fontSize:13 }}/>
         </div>
       )}
+      <AIHelpBubble user={null} />
     </div>
   );
 }
@@ -11974,7 +11978,7 @@ function AppRoot(){
         }).catch(() => {});
       }} pendingInvite={pendingInvite} inviteInfo={inviteInfo}/>
       {user && <FeedbackWidget userId={user.id} orgName={org?.name||""} isLeadingPlayer={org?.is_leading_player||false}/>}
-      {user && <AIHelpBubble user={user} />}
+      <AIHelpBubble user={user} />
     </>
   );
 
