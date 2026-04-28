@@ -11967,13 +11967,11 @@ function AppRoot(){
       <AuthOverlay onAuth={(u, isNew=false)=>{
         setUser(u);
         trackVisit("app", { org_id: u.id });
-        // Only fire signup notification on actual new account creation
-        if (isNew) {
-          fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/signup-notify", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ org_id: u.id })
-          }).catch(() => {});
-        }
+        // Always call signup-notify — server deduplicates, only emails once per org
+        fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/signup-notify", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ org_id: u.id })
+        }).catch(() => {});
       }} pendingInvite={pendingInvite} inviteInfo={inviteInfo}/>
       {user && <FeedbackWidget userId={user.id} orgName={org?.name||""} isLeadingPlayer={org?.is_leading_player||false}/>}
       {user && <AIHelpBubble user={user} />}
