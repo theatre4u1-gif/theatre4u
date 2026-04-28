@@ -8931,59 +8931,40 @@ function TeamSettings({ userId, orgName, plan }) {
 
             {/* Action buttons */}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-              {/* QR Poster button */}
-              <button className="btn btn-g btn-sm" onClick={() => {
-                const joinUrl = `https://theatre4u.org/join.html?code=${joinCode}`;
-                const orgName = org?.name || "Our Theatre Program";
-                const w = window.open("", "_blank", "width=700,height=900");
-                if (!w) return;
-                const html = `<!DOCTYPE html><html><head><title>Team QR — ${orgName}</title>
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
-                <style>
-                  body{margin:0;padding:0;background:#fdf6ec;font-family:'Helvetica Neue',Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}
-                  .poster{width:520px;background:#fff;border:2px solid #d4a843;border-radius:16px;padding:40px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.12)}
-                  .logo{font-family:Georgia,serif;font-size:28px;font-weight:700;color:#d4a843;margin-bottom:4px}
-                  .badge{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#888;margin-bottom:28px}
-                  h1{font-family:Georgia,serif;font-size:26px;color:#1a0f00;margin:0 0 6px}
-                  .sub{font-size:14px;color:#666;margin-bottom:28px;line-height:1.5}
-                  #qr{display:flex;justify-content:center;margin-bottom:24px}
-                  .code-box{background:#1a0f00;border-radius:10px;padding:14px 28px;display:inline-block;margin-bottom:20px}
-                  .code{font-family:monospace;font-size:32px;font-weight:900;letter-spacing:6px;color:#d4a843}
-                  .url{font-size:12px;color:#999;margin-bottom:28px;word-break:break-all}
-                  .steps{text-align:left;background:#f5f0e8;border-radius:10px;padding:18px 20px;margin-bottom:24px}
-                  .step{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;font-size:13px;color:#444}
-                  .step:last-child{margin-bottom:0}
-                  .step-n{background:#d4a843;color:#1a0f00;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;margin-top:1px}
-                  .footer{font-size:11px;color:#aaa;border-top:1px solid #e8e0d0;padding-top:14px}
-                  @media print{body{background:#fff}.poster{box-shadow:none;border:2px solid #d4a843}button{display:none!important}}
-                </style></head><body>
-                <div class="poster">
-                  <div class="logo">Theatre4u&#x2122;</div>
-                  <div class="badge">Crew Access</div>
-                  <h1>Join ${orgName}</h1>
-                  <p class="sub">Scan the QR code below to join our theatre team.<br/>You'll create a free account — takes under a minute.</p>
-                  <div id="qr"></div>
-                  <div class="code-box"><div class="code">${joinCode}</div></div>
-                  <div class="url">theatre4u.org/join.html?code=${joinCode}</div>
-                  <div class="steps">
-                    <div class="step"><div class="step-n">1</div><div>Scan the QR code with your phone camera</div></div>
-                    <div class="step"><div class="step-n">2</div><div>Create your free Theatre4u account (name, email, password)</div></div>
-                    <div class="step"><div class="step-n">3</div><div>You're in! You can now scan item QR codes and access our inventory</div></div>
-                  </div>
-                  <button onclick="window.print()" style="background:#1a0f00;color:#d4a843;border:none;border-radius:8px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:16px">&#x1F5A8; Print This Poster</button>
-                  <div class="footer">Theatre4u&#x2122; &mdash; theatre4u.org &mdash; Free inventory management for theatre programs</div>
-                </div>
-                <script>
-                  new QRCode(document.getElementById("qr"), {
-                    text: "${joinUrl}",
-                    width: 200, height: 200,
-                    colorDark: "#1a0f00", colorLight: "#fff",
-                    correctLevel: QRCode.CorrectLevel.H
-                  });
-                <\/script>
-                </body></html>`;
-                w.document.write(html);
-                w.document.close();
+              {/* QR Poster button — generates QR as data URL first, then opens print window */}
+              <button className="btn btn-g btn-sm" onClick={async () => {
+                const joinUrl  = `https://theatre4u.org/join.html?code=${joinCode}`;
+                const orgName  = org?.name || "Our Theatre Program";
+                // Generate QR code as data URL using the app's existing QR helper
+                const qrSrc = await QR.toDataURL(joinUrl, 260);
+                if (!qrSrc) { flash("❌ Could not generate QR code — try again"); return; }
+                const css = [
+                  "body{margin:0;padding:32px 16px;background:#fdf6ec;font-family:'Helvetica Neue',Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}",
+                  ".poster{width:480px;background:#fff;border:2px solid #d4a843;border-radius:16px;padding:36px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.12)}",
+                  ".logo{font-family:Georgia,serif;font-size:26px;font-weight:700;color:#d4a843;margin-bottom:4px}",
+                  ".badge{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#888;margin-bottom:24px}",
+                  "h1{font-family:Georgia,serif;font-size:24px;color:#1a0f00;margin:0 0 6px}",
+                  ".sub{font-size:13px;color:#666;margin-bottom:22px;line-height:1.5}",
+                  ".qr{display:flex;justify-content:center;margin-bottom:20px}",
+                  ".qr img{border:4px solid #1a0f00;border-radius:10px}",
+                  ".code-box{background:#1a0f00;border-radius:10px;padding:12px 24px;display:inline-block;margin-bottom:14px}",
+                  ".code{font-family:monospace;font-size:30px;font-weight:900;letter-spacing:6px;color:#d4a843}",
+                  ".url{font-size:11px;color:#999;margin-bottom:22px;word-break:break-all}",
+                  ".steps{text-align:left;background:#f5f0e8;border-radius:10px;padding:16px 18px;margin-bottom:20px}",
+                  ".step{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;font-size:13px;color:#444}",
+                  ".step:last-child{margin-bottom:0}",
+                  ".sn{background:#d4a843;color:#1a0f00;border-radius:50%;width:22px;height:22px;min-width:22px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;margin-top:1px}",
+                  ".prbtn{background:#1a0f00;color:#d4a843;border:none;border-radius:8px;padding:11px 26px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:14px}",
+                  ".foot{font-size:10px;color:#aaa;border-top:1px solid #e8e0d0;padding-top:12px}",
+                  "@media print{body{background:#fff;padding:0}.poster{box-shadow:none}.prbtn{display:none!important}}"
+                ].join("");
+                const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Team QR \u2014 ${orgName}</title><style>${css}</style></head><body><div class="poster"><div class="logo">Theatre4u\u2122</div><div class="badge">Crew Access</div><h1>Join ${orgName}</h1><p class="sub">Scan the QR code below to join our theatre team.<br>You\u2019ll create a free account \u2014 takes under a minute.</p><div class="qr"><img src="${qrSrc}" width="220" height="220" alt="QR Code"/></div><div class="code-box"><div class="code">${joinCode}</div></div><div class="url">theatre4u.org/join.html?code=${joinCode}</div><div class="steps"><div class="step"><div class="sn">1</div><div>Scan the QR code with your phone camera</div></div><div class="step"><div class="sn">2</div><div>Create your free Theatre4u account (name, email, password)</div></div><div class="step"><div class="sn">3</div><div>You\u2019re in! You can now scan item QR codes and access our inventory</div></div></div><button class="prbtn" onclick="window.print()">\uD83D\uDDA8 Print This Poster</button><div class="foot">Theatre4u\u2122 \u2014 theatre4u.org \u2014 Free inventory management for theatre programs</div></div></body></html>`;
+                const blob = new Blob([html], {type:"text/html"});
+                const url  = URL.createObjectURL(blob);
+                const a    = document.createElement("a");
+                a.href = url; a.target = "_blank";
+                document.body.appendChild(a); a.click();
+                setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
               }}>
                 📄 Print QR Poster
               </button>
