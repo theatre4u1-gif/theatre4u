@@ -2178,11 +2178,58 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
   useEffect(()=>setPg(1),[search,catF,typeF,radius,userCoords,mktTab]);
 
   if(plan==="free") return(
-    <div style={{padding:"40px 20px",textAlign:"center"}}>
-      <div style={{fontSize:44,marginBottom:14}}>🏪</div>
-      <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:22,marginBottom:10}}>Backstage Exchange is a Pro Feature</h2>
-      <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Share selected items with other programs — rent, sell, or loan. Upgrade to Pro to join Backstage Exchange.</p>
-      <UpgradePlans compact={true}/>
+    <div style={{position:"relative",minHeight:"80vh",overflow:"hidden"}}>
+      {/* Blurred background preview of the Exchange */}
+      <div style={{filter:"blur(3px)",opacity:.45,pointerEvents:"none",userSelect:"none"}}>
+        <img src={usp(BG.marketplace,1400,900)} alt="" className="page-bg-img"/>
+        <div style={{padding:"32px 36px 0"}}>
+          <div className="hero-wrap" style={{height:280}}>
+            <img src={usp(BG.marketplace,1100,340)} alt="Backstage Exchange" loading="eager"/>
+            <div className="hero-fade"/>
+            <div className="hero-body">
+              <div className="hero-eyebrow">🏪 Backstage Exchange</div>
+              <h1 className="hero-title" style={{fontSize:46}}>Backstage Exchange</h1>
+              <p className="hero-sub">Rent, buy, or loan theatre assets from programs near you.</p>
+            </div>
+            <div className="hero-bar"/>
+          </div>
+        </div>
+        <div style={{padding:"24px 36px",display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}}>
+          {["Victorian Ball Gown — Blue","LED Par Can RGBW 54×3W","Fog Machine 1000W","Wireless Mic Pack","Forest Backdrop 8×12ft","Foam Rubber Swords (8pc)"].map(n=>(
+            <div key={n} className="card card-p" style={{opacity:.8}}>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>{n}</div>
+              <div style={{fontSize:12,color:"var(--muted)"}}>Ocean View Drama · For Rent</div>
+              <div style={{fontSize:13,fontWeight:700,color:"var(--gold)",marginTop:8}}>$20–45/wk</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Upgrade overlay */}
+      <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",
+        background:"rgba(10,7,18,.55)",backdropFilter:"blur(2px)",zIndex:10,padding:"20px"}}>
+        <div className="card card-p" style={{maxWidth:540,width:"100%",textAlign:"center",
+          background:"linear-gradient(135deg,#1e1208,#150f1f)",
+          border:"1.5px solid rgba(212,168,67,.4)",boxShadow:"0 16px 64px rgba(0,0,0,.6)"}}>
+          <div style={{fontSize:48,marginBottom:12}}>🏪</div>
+          <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:26,marginBottom:10,color:"var(--linen)"}}>
+            Backstage Exchange
+          </h2>
+          <p style={{color:"var(--muted)",fontSize:14,maxWidth:400,margin:"0 auto 20px",lineHeight:1.7}}>
+            Browse and request props, costumes, lighting, and sound equipment from theatre programs near you.
+            Rent, loan, or buy — and list your own items to earn Stage Points.
+          </p>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:22,textAlign:"left"}}>
+            {[["🔍","Browse nearby programs' inventory"],["📦","Request items for rent or loan"],["🪙","Earn Stage Points for sharing"],["🎭","Free loans between district schools"]].map(([icon,text])=>(
+              <div key={text} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"8px 10px",
+                background:"rgba(255,255,255,.04)",borderRadius:8,border:"1px solid rgba(255,255,255,.06)"}}>
+                <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
+                <span style={{fontSize:12,color:"var(--muted)",lineHeight:1.4}}>{text}</span>
+              </div>
+            ))}
+          </div>
+          <UpgradePlans compact={true}/>
+        </div>
+      </div>
     </div>
   );
 
@@ -8078,6 +8125,62 @@ function CommunityGate({userId, org, setOrg, plan}) {
     // no need to setJoining(false) — component will re-render as CommunityPage
   };
 
+  // Free plan — show page blurred with upgrade overlay
+  if (plan === "free" && !org?.community_enabled) {
+    return (
+      <div style={{position:"relative",minHeight:"80vh",overflow:"hidden"}}>
+        {/* Blurred background preview */}
+        <div style={{filter:"blur(3px)",opacity:.45,pointerEvents:"none",userSelect:"none"}}>
+          <img src={usp("photo-1503095396549-807759245b35",1400,900)} alt="" className="page-bg-img"/>
+          <div style={{padding:"32px 36px 0"}}>
+            <div className="hero-wrap" style={{height:230}}>
+              <img src={usp("photo-1503095396549-807759245b35",1100,290)} alt="Community" loading="eager"/>
+              <div className="hero-fade"/>
+              <div className="hero-body">
+                <div className="hero-eyebrow">🎪 Theatre Community</div>
+                <h1 className="hero-title" style={{fontSize:44}}>Community Board</h1>
+              </div>
+              <div className="hero-bar"/>
+            </div>
+          </div>
+          <div style={{padding:"24px 36px",display:"flex",flexDirection:"column",gap:12}}>
+            {["Opening Night — The Wizard of Oz · Ocean View Drama","Fall Musical Auditions Open — Lakewood Drama","Seeking: Fog machine for June · Edison Arts","Free to good home: 30 costume pieces · Valley PAC"].map(p=>(
+              <div key={p} className="card card-p" style={{opacity:.8}}>
+                <div style={{fontSize:13,fontWeight:600}}>{p}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Upgrade overlay */}
+        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",
+          background:"rgba(10,7,18,.55)",backdropFilter:"blur(2px)",zIndex:10,padding:"20px"}}>
+          <div className="card card-p" style={{maxWidth:540,width:"100%",textAlign:"center",
+            background:"linear-gradient(135deg,#1e1208,#150f1f)",
+            border:"1.5px solid rgba(212,168,67,.4)",boxShadow:"0 16px 64px rgba(0,0,0,.6)"}}>
+            <div style={{fontSize:48,marginBottom:12}}>🎪</div>
+            <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:26,marginBottom:10,color:"var(--linen)"}}>
+              Community Board
+            </h2>
+            <p style={{color:"var(--muted)",fontSize:14,maxWidth:400,margin:"0 auto 20px",lineHeight:1.7}}>
+              Connect with theatre programs in your area. Post show announcements, audition notices,
+              wanted items, and production photos. See what's happening in your theatre community.
+            </p>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:22,textAlign:"left"}}>
+              {[["🎭","Post show announcements"],["🎤","Share audition notices"],["📸","Share production photos"],["🔍","Post wanted items"]].map(([icon,text])=>(
+                <div key={text} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"8px 10px",
+                  background:"rgba(255,255,255,.04)",borderRadius:8,border:"1px solid rgba(255,255,255,.06)"}}>
+                  <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
+                  <span style={{fontSize:12,color:"var(--muted)",lineHeight:1.4}}>{text}</span>
+                </div>
+              ))}
+            </div>
+            <UpgradePlans compact={true}/>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (org?.community_enabled) {
     return <CommunityPage userId={userId} org={org} plan={plan}/>;
   }
@@ -11865,8 +11968,9 @@ function AppRoot(){
   // Redirect to dashboard if current page's flag gets turned off
 
   useEffect(()=>{
-    if(page==="community"  && !org?.community_enabled)   setPage("dashboard");
-    if(page==="marketplace"&& !org?.marketplace_enabled) setPage("dashboard");
+    // Free plan users CAN navigate to community/marketplace — they see the upgrade overlay
+    if(page==="community"  && !org?.community_enabled && plan !== "free")   setPage("dashboard");
+    if(page==="marketplace"&& !org?.marketplace_enabled && plan !== "free") setPage("dashboard");
   },[org?.community_enabled, org?.marketplace_enabled, page]);
   // Expose for cross-component navigation
   useEffect(()=>{
