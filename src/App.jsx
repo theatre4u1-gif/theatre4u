@@ -8590,6 +8590,8 @@ function TeamSettings({ userId, orgName, plan }) {
       org_id: userId,
       role: "crew",
       invite_type: "code",
+      is_permanent: true,
+      expires_at: new Date(Date.now() + 365 * 864e5).toISOString(),
     });
     if (error) { flash("❌ Could not generate join code. Try again."); return; }
     // Re-fetch the newly created code invite (RLS: org_id = auth.uid())
@@ -8801,9 +8803,11 @@ function TeamSettings({ userId, orgName, plan }) {
             🔑 Generate Join Code
           </button>
         ) : (
-          <div style={{ background: "var(--parch)", border: "1px solid var(--bd)", borderRadius: 12,
+          <div style={{ background: "var(--parch)", border: "1px solid var(--border)", borderRadius: 12,
             padding: "16px 20px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+
+            {/* Code + link row */}
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", marginBottom: 14 }}>
               <div>
                 <div style={{ fontSize: 11, color: "var(--faint)", marginBottom: 4 }}>Share this code</div>
                 <div style={{ fontFamily: "monospace", fontSize: 28, fontWeight: 900,
@@ -8817,14 +8821,93 @@ function TeamSettings({ userId, orgName, plan }) {
               </div>
               <button className="btn bs bsm" onClick={() => {
                 navigator.clipboard?.writeText(`https://theatre4u.org/join.html?code=${joinCode}`)
-                  .then(() => flash("✓ Link copied to clipboard!"))
-                  .catch(() => flash("✓ Link: https://theatre4u.org/join.html?code=" + joinCode));
-                flash("✓ Link copied!");
+                  .then(() => flash("✓ Link copied!"))
+                  .catch(() => flash("Link: https://theatre4u.org/join.html?code=" + joinCode));
               }}>Copy Link</button>
             </div>
-            <div style={{ fontSize: 11, color: "var(--faint)", marginTop: 12, lineHeight: 1.5 }}>
-              Anyone with this code joins as <strong>Crew</strong> — they can add and edit items.
-              Post it in your costume room or send it to your team. Expires in 30 days.
+
+            {/* Action buttons */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+              {/* QR Poster button */}
+              <button className="btn btn-g btn-sm" onClick={() => {
+                const joinUrl = `https://theatre4u.org/join.html?code=${joinCode}`;
+                const orgName = org?.name || "Our Theatre Program";
+                const w = window.open("", "_blank", "width=700,height=900");
+                if (!w) return;
+                const html = `<!DOCTYPE html><html><head><title>Team QR — ${orgName}</title>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+                <style>
+                  body{margin:0;padding:0;background:#fdf6ec;font-family:'Helvetica Neue',Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}
+                  .poster{width:520px;background:#fff;border:2px solid #d4a843;border-radius:16px;padding:40px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.12)}
+                  .logo{font-family:Georgia,serif;font-size:28px;font-weight:700;color:#d4a843;margin-bottom:4px}
+                  .badge{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#888;margin-bottom:28px}
+                  h1{font-family:Georgia,serif;font-size:26px;color:#1a0f00;margin:0 0 6px}
+                  .sub{font-size:14px;color:#666;margin-bottom:28px;line-height:1.5}
+                  #qr{display:flex;justify-content:center;margin-bottom:24px}
+                  .code-box{background:#1a0f00;border-radius:10px;padding:14px 28px;display:inline-block;margin-bottom:20px}
+                  .code{font-family:monospace;font-size:32px;font-weight:900;letter-spacing:6px;color:#d4a843}
+                  .url{font-size:12px;color:#999;margin-bottom:28px;word-break:break-all}
+                  .steps{text-align:left;background:#f5f0e8;border-radius:10px;padding:18px 20px;margin-bottom:24px}
+                  .step{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;font-size:13px;color:#444}
+                  .step:last-child{margin-bottom:0}
+                  .step-n{background:#d4a843;color:#1a0f00;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;margin-top:1px}
+                  .footer{font-size:11px;color:#aaa;border-top:1px solid #e8e0d0;padding-top:14px}
+                  @media print{body{background:#fff}.poster{box-shadow:none;border:2px solid #d4a843}button{display:none!important}}
+                </style></head><body>
+                <div class="poster">
+                  <div class="logo">Theatre4u&#x2122;</div>
+                  <div class="badge">Crew Access</div>
+                  <h1>Join ${orgName}</h1>
+                  <p class="sub">Scan the QR code below to join our theatre team.<br/>You'll create a free account — takes under a minute.</p>
+                  <div id="qr"></div>
+                  <div class="code-box"><div class="code">${joinCode}</div></div>
+                  <div class="url">theatre4u.org/join.html?code=${joinCode}</div>
+                  <div class="steps">
+                    <div class="step"><div class="step-n">1</div><div>Scan the QR code with your phone camera</div></div>
+                    <div class="step"><div class="step-n">2</div><div>Create your free Theatre4u account (name, email, password)</div></div>
+                    <div class="step"><div class="step-n">3</div><div>You're in! You can now scan item QR codes and access our inventory</div></div>
+                  </div>
+                  <button onclick="window.print()" style="background:#1a0f00;color:#d4a843;border:none;border-radius:8px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:16px">&#x1F5A8; Print This Poster</button>
+                  <div class="footer">Theatre4u&#x2122; &mdash; theatre4u.org &mdash; Free inventory management for theatre programs</div>
+                </div>
+                <script>
+                  new QRCode(document.getElementById("qr"), {
+                    text: "${joinUrl}",
+                    width: 200, height: 200,
+                    colorDark: "#1a0f00", colorLight: "#fff",
+                    correctLevel: QRCode.CorrectLevel.H
+                  });
+                <\/script>
+                </body></html>`;
+                w.document.write(html);
+                w.document.close();
+              }}>
+                📄 Print QR Poster
+              </button>
+
+              {/* Copy link */}
+              <button className="btn bs bsm" onClick={() => {
+                navigator.clipboard?.writeText(`https://theatre4u.org/join.html?code=${joinCode}`)
+                  .then(() => flash("✓ Link copied!"))
+                  .catch(() => flash("Link: https://theatre4u.org/join.html?code=" + joinCode));
+              }}>📋 Copy Link</button>
+
+              {/* Share via text/email on mobile */}
+              <button className="btn bs bsm" onClick={() => {
+                const url = `https://theatre4u.org/join.html?code=${joinCode}`;
+                const text = `Join ${org?.name||"our"} team on Theatre4u: ${url}`;
+                if (navigator.share) {
+                  navigator.share({ title: "Join our Theatre4u team", text, url }).catch(()=>{});
+                } else {
+                  navigator.clipboard?.writeText(text).then(()=>flash("✓ Copied!"));
+                }
+              }}>📤 Share</button>
+            </div>
+
+            <div style={{ fontSize: 11, color: "var(--faint)", lineHeight: 1.6 }}>
+              Anyone with this code or link joins as <strong>Crew</strong> — view and scan inventory.
+              Post the QR poster in your green room, costume closet, or scene shop.
+              This code never expires — revoke it from this page if needed.
             </div>
           </div>
         )}
