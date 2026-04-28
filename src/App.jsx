@@ -2205,25 +2205,26 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
         </div>
       </div>
       {/* Upgrade overlay */}
-      <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",
-        background:"rgba(10,7,18,.55)",backdropFilter:"blur(2px)",zIndex:10,padding:"20px"}}>
-        <div className="card card-p" style={{maxWidth:540,width:"100%",textAlign:"center",
+      <div style={{position:"absolute",inset:0,display:"flex",alignItems:"flex-start",justifyContent:"center",
+        background:"rgba(10,7,18,.65)",backdropFilter:"blur(2px)",zIndex:10,
+        padding:"clamp(12px,4vw,40px)",overflowY:"auto"}}>
+        <div className="card card-p" style={{maxWidth:420,width:"100%",textAlign:"center",
           background:"linear-gradient(135deg,#1e1208,#150f1f)",
-          border:"1.5px solid rgba(212,168,67,.4)",boxShadow:"0 16px 64px rgba(0,0,0,.6)"}}>
-          <div style={{fontSize:48,marginBottom:12}}>🏪</div>
-          <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:26,marginBottom:10,color:"var(--linen)"}}>
+          border:"1.5px solid rgba(212,168,67,.4)",boxShadow:"0 12px 48px rgba(0,0,0,.6)",
+          margin:"auto"}}>
+          <div style={{fontSize:36,marginBottom:8}}>🏪</div>
+          <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:8,color:"var(--linen)"}}>
             Backstage Exchange
           </h2>
-          <p style={{color:"var(--muted)",fontSize:14,maxWidth:400,margin:"0 auto 20px",lineHeight:1.7}}>
-            Browse and request props, costumes, lighting, and sound equipment from theatre programs near you.
-            Rent, loan, or buy — and list your own items to earn Stage Points.
+          <p style={{color:"var(--muted)",fontSize:13,margin:"0 auto 16px",lineHeight:1.6}}>
+            Browse props, costumes, lighting, and sound equipment from nearby programs. Rent, loan, or buy — and list your own items to earn Stage Points.
           </p>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:22,textAlign:"left"}}>
-            {[["🔍","Browse nearby programs' inventory"],["📦","Request items for rent or loan"],["🪙","Earn Stage Points for sharing"],["🎭","Free loans between district schools"]].map(([icon,text])=>(
-              <div key={text} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"8px 10px",
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:18,textAlign:"left"}}>
+            {[["🔍","Browse nearby inventory"],["📦","Request rent or loan"],["🪙","Earn Stage Points"],["🎭","Free district loans"]].map(([icon,text])=>(
+              <div key={text} style={{display:"flex",gap:6,alignItems:"flex-start",padding:"7px 9px",
                 background:"rgba(255,255,255,.04)",borderRadius:8,border:"1px solid rgba(255,255,255,.06)"}}>
-                <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
-                <span style={{fontSize:12,color:"var(--muted)",lineHeight:1.4}}>{text}</span>
+                <span style={{fontSize:15,flexShrink:0}}>{icon}</span>
+                <span style={{fontSize:11,color:"var(--muted)",lineHeight:1.4}}>{text}</span>
               </div>
             ))}
           </div>
@@ -3110,6 +3111,7 @@ function printDocument(doc, req) {
         border-radius:0 8px 8px 0;margin:14px 0;font-size:13px;line-height:1.8;color:#444}
       .sig-row{display:flex;gap:20px;margin-top:32px}
       @media print{body{padding:20px}.no-print{display:none}}
+      @media print{.shell,.lpn,.overlay-backdrop{display:none!important}#t4u-qr-poster-inner{display:block!important}}
     </style>
   </head><body>
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
@@ -8152,25 +8154,26 @@ function CommunityGate({userId, org, setOrg, plan}) {
           </div>
         </div>
         {/* Upgrade overlay */}
-        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",
-          background:"rgba(10,7,18,.55)",backdropFilter:"blur(2px)",zIndex:10,padding:"20px"}}>
-          <div className="card card-p" style={{maxWidth:540,width:"100%",textAlign:"center",
+        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"flex-start",justifyContent:"center",
+          background:"rgba(10,7,18,.65)",backdropFilter:"blur(2px)",zIndex:10,
+          padding:"clamp(12px,4vw,40px)",overflowY:"auto"}}>
+          <div className="card card-p" style={{maxWidth:420,width:"100%",textAlign:"center",
             background:"linear-gradient(135deg,#1e1208,#150f1f)",
-            border:"1.5px solid rgba(212,168,67,.4)",boxShadow:"0 16px 64px rgba(0,0,0,.6)"}}>
-            <div style={{fontSize:48,marginBottom:12}}>🎪</div>
-            <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:26,marginBottom:10,color:"var(--linen)"}}>
+            border:"1.5px solid rgba(212,168,67,.4)",boxShadow:"0 12px 48px rgba(0,0,0,.6)",
+            margin:"auto"}}>
+            <div style={{fontSize:36,marginBottom:8}}>🎪</div>
+            <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:8,color:"var(--linen)"}}>
               Community Board
             </h2>
-            <p style={{color:"var(--muted)",fontSize:14,maxWidth:400,margin:"0 auto 20px",lineHeight:1.7}}>
-              Connect with theatre programs in your area. Post show announcements, audition notices,
-              wanted items, and production photos. See what's happening in your theatre community.
+            <p style={{color:"var(--muted)",fontSize:13,margin:"0 auto 16px",lineHeight:1.6}}>
+              Connect with theatre programs in your area. Post show announcements, audition notices, wanted items, and production photos.
             </p>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:22,textAlign:"left"}}>
-              {[["🎭","Post show announcements"],["🎤","Share audition notices"],["📸","Share production photos"],["🔍","Post wanted items"]].map(([icon,text])=>(
-                <div key={text} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"8px 10px",
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:18,textAlign:"left"}}>
+              {[["🎭","Show announcements"],["🎤","Audition notices"],["📸","Production photos"],["🔍","Wanted items"]].map(([icon,text])=>(
+                <div key={text} style={{display:"flex",gap:6,alignItems:"flex-start",padding:"7px 9px",
                   background:"rgba(255,255,255,.04)",borderRadius:8,border:"1px solid rgba(255,255,255,.06)"}}>
-                  <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
-                  <span style={{fontSize:12,color:"var(--muted)",lineHeight:1.4}}>{text}</span>
+                  <span style={{fontSize:15,flexShrink:0}}>{icon}</span>
+                  <span style={{fontSize:11,color:"var(--muted)",lineHeight:1.4}}>{text}</span>
                 </div>
               ))}
             </div>
@@ -8656,7 +8659,8 @@ const ROLE_MAP = Object.fromEntries(ROLES.map(r => [r.id, r]));
 function TeamSettings({ userId, orgName, plan }) {
   const [members,  setMembers]  = useState([]);
   const [invites,  setInvites]  = useState([]);
-  const [joinCode, setJoinCode] = useState(null);
+  const [joinCode,  setJoinCode]  = useState(null);
+  const [qrPoster,  setQrPoster]  = useState(null);
   const [loading,  setLoading]  = useState(true);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole,  setInviteRole]  = useState("crew");
@@ -8931,40 +8935,13 @@ function TeamSettings({ userId, orgName, plan }) {
 
             {/* Action buttons */}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-              {/* QR Poster button — generates QR as data URL first, then opens print window */}
+              {/* QR Poster button — renders in-app modal then triggers browser print */}
               <button className="btn btn-g btn-sm" onClick={async () => {
-                const joinUrl  = `https://theatre4u.org/join.html?code=${joinCode}`;
-                const orgName  = org?.name || "Our Theatre Program";
-                // Generate QR code as data URL using the app's existing QR helper
-                const qrSrc = await QR.toDataURL(joinUrl, 260);
-                if (!qrSrc) { flash("❌ Could not generate QR code — try again"); return; }
-                const css = [
-                  "body{margin:0;padding:32px 16px;background:#fdf6ec;font-family:'Helvetica Neue',Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}",
-                  ".poster{width:480px;background:#fff;border:2px solid #d4a843;border-radius:16px;padding:36px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.12)}",
-                  ".logo{font-family:Georgia,serif;font-size:26px;font-weight:700;color:#d4a843;margin-bottom:4px}",
-                  ".badge{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#888;margin-bottom:24px}",
-                  "h1{font-family:Georgia,serif;font-size:24px;color:#1a0f00;margin:0 0 6px}",
-                  ".sub{font-size:13px;color:#666;margin-bottom:22px;line-height:1.5}",
-                  ".qr{display:flex;justify-content:center;margin-bottom:20px}",
-                  ".qr img{border:4px solid #1a0f00;border-radius:10px}",
-                  ".code-box{background:#1a0f00;border-radius:10px;padding:12px 24px;display:inline-block;margin-bottom:14px}",
-                  ".code{font-family:monospace;font-size:30px;font-weight:900;letter-spacing:6px;color:#d4a843}",
-                  ".url{font-size:11px;color:#999;margin-bottom:22px;word-break:break-all}",
-                  ".steps{text-align:left;background:#f5f0e8;border-radius:10px;padding:16px 18px;margin-bottom:20px}",
-                  ".step{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;font-size:13px;color:#444}",
-                  ".step:last-child{margin-bottom:0}",
-                  ".sn{background:#d4a843;color:#1a0f00;border-radius:50%;width:22px;height:22px;min-width:22px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;margin-top:1px}",
-                  ".prbtn{background:#1a0f00;color:#d4a843;border:none;border-radius:8px;padding:11px 26px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:14px}",
-                  ".foot{font-size:10px;color:#aaa;border-top:1px solid #e8e0d0;padding-top:12px}",
-                  "@media print{body{background:#fff;padding:0}.poster{box-shadow:none}.prbtn{display:none!important}}"
-                ].join("");
-                const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Team QR \u2014 ${orgName}</title><style>${css}</style></head><body><div class="poster"><div class="logo">Theatre4u\u2122</div><div class="badge">Crew Access</div><h1>Join ${orgName}</h1><p class="sub">Scan the QR code below to join our theatre team.<br>You\u2019ll create a free account \u2014 takes under a minute.</p><div class="qr"><img src="${qrSrc}" width="220" height="220" alt="QR Code"/></div><div class="code-box"><div class="code">${joinCode}</div></div><div class="url">theatre4u.org/join.html?code=${joinCode}</div><div class="steps"><div class="step"><div class="sn">1</div><div>Scan the QR code with your phone camera</div></div><div class="step"><div class="sn">2</div><div>Create your free Theatre4u account (name, email, password)</div></div><div class="step"><div class="sn">3</div><div>You\u2019re in! You can now scan item QR codes and access our inventory</div></div></div><button class="prbtn" onclick="window.print()">\uD83D\uDDA8 Print This Poster</button><div class="foot">Theatre4u\u2122 \u2014 theatre4u.org \u2014 Free inventory management for theatre programs</div></div></body></html>`;
-                const blob = new Blob([html], {type:"text/html"});
-                const url  = URL.createObjectURL(blob);
-                const a    = document.createElement("a");
-                a.href = url; a.target = "_blank";
-                document.body.appendChild(a); a.click();
-                setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+                const joinUrl = `https://theatre4u.org/join.html?code=${joinCode}`;
+                const orgName = org?.name || "Our Theatre Program";
+                const qrSrc  = await QR.toDataURL(joinUrl, 240);
+                if (!qrSrc) { flash("❌ Could not generate QR — try again"); return; }
+                setQrPoster({ joinUrl, orgName, qrSrc, joinCode });
               }}>
                 📄 Print QR Poster
               </button>
@@ -9006,6 +8983,86 @@ function TeamSettings({ userId, orgName, plan }) {
           whiteSpace: "nowrap", pointerEvents: "none",
         }}>
           {msg}
+        </div>
+      )}
+
+      {/* QR Poster modal — renders in-app, uses window.print() */}
+      {qrPoster && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:9000,
+          display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
+          onClick={e=>e.target===e.currentTarget&&setQrPoster(null)}>
+          <div style={{background:"#fdf6ec",borderRadius:16,padding:32,
+            width:"min(480px,95vw)",textAlign:"center",
+            boxShadow:"0 12px 60px rgba(0,0,0,.5)",position:"relative"}}>
+            {/* Close */}
+            <button onClick={()=>setQrPoster(null)}
+              style={{position:"absolute",top:12,right:14,background:"none",border:"none",
+                fontSize:22,cursor:"pointer",color:"#888",lineHeight:1}}>×</button>
+            {/* Poster content */}
+            <div id="t4u-qr-poster-inner">
+              <div style={{fontFamily:"Georgia,serif",fontSize:22,fontWeight:700,
+                color:"#d4a843",marginBottom:2}}>Theatre4u™</div>
+              <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:2,
+                color:"#888",marginBottom:18}}>Crew Access</div>
+              <h2 style={{fontFamily:"Georgia,serif",fontSize:20,color:"#1a0f00",
+                margin:"0 0 8px"}}>Join {qrPoster.orgName}</h2>
+              <p style={{fontSize:12,color:"#666",marginBottom:18,lineHeight:1.5}}>
+                Scan the QR code to join our theatre team.<br/>
+                Create a free account — takes under a minute.
+              </p>
+              {/* QR image */}
+              <div style={{display:"flex",justifyContent:"center",marginBottom:16}}>
+                <img src={qrPoster.qrSrc} width={200} height={200} alt="QR Code"
+                  style={{border:"4px solid #1a0f00",borderRadius:10}}/>
+              </div>
+              {/* Code */}
+              <div style={{background:"#1a0f00",borderRadius:10,padding:"10px 22px",
+                display:"inline-block",marginBottom:12}}>
+                <div style={{fontFamily:"monospace",fontSize:28,fontWeight:900,
+                  letterSpacing:6,color:"#d4a843"}}>{qrPoster.joinCode}</div>
+              </div>
+              <div style={{fontSize:11,color:"#999",marginBottom:18,wordBreak:"break-all"}}>
+                theatre4u.org/join.html?code={qrPoster.joinCode}
+              </div>
+              {/* Steps */}
+              <div style={{textAlign:"left",background:"#f5f0e8",borderRadius:10,
+                padding:"14px 16px",marginBottom:18}}>
+                {[
+                  "Scan the QR code with your phone camera",
+                  "Create your free Theatre4u account (name, email, password)",
+                  "You're in! Scan item QR codes and access our inventory",
+                ].map((step,i)=>(
+                  <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",
+                    marginBottom:i<2?8:0,fontSize:12,color:"#444"}}>
+                    <div style={{background:"#d4a843",color:"#1a0f00",borderRadius:"50%",
+                      width:20,height:20,minWidth:20,display:"flex",alignItems:"center",
+                      justifyContent:"center",fontWeight:800,fontSize:10,marginTop:1}}>
+                      {i+1}
+                    </div>
+                    <div>{step}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Print + close buttons */}
+            <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
+              <button onClick={()=>window.print()}
+                style={{background:"#1a0f00",color:"#d4a843",border:"none",
+                  borderRadius:8,padding:"10px 24px",fontSize:14,fontWeight:700,
+                  cursor:"pointer",fontFamily:"inherit"}}>
+                🖨 Print Poster
+              </button>
+              <button onClick={()=>setQrPoster(null)}
+                style={{background:"transparent",color:"#888",border:"1px solid #ddd",
+                  borderRadius:8,padding:"10px 20px",fontSize:14,cursor:"pointer",
+                  fontFamily:"inherit"}}>
+                Close
+              </button>
+            </div>
+            <div style={{fontSize:10,color:"#bbb",marginTop:12}}>
+              Theatre4u™ · theatre4u.org
+            </div>
+          </div>
         </div>
       )}
     </div>
