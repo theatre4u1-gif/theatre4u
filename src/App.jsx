@@ -8943,12 +8943,55 @@ function TeamSettings({ userId, orgName, plan }) {
 
             {/* Action buttons */}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-              {/* QR Poster button — fully synchronous using pre-generated QR */}
-              <button className="btn btn-g btn-sm" onClick={() => {
+              {/* QR Poster — exact same pattern as item printQR which works reliably */}
+              <button className="btn btn-g btn-sm" onClick={async () => {
                 const joinUrl = `https://theatre4u.org/join.html?code=${joinCode}`;
                 const orgName = org?.name || "Our Theatre Program";
-                if (!qrDataUrl) { flash("⏳ QR generating — try again in a moment"); return; }
-                setQrPoster({ joinUrl, orgName, qrSrc: qrDataUrl, joinCode });
+                // Open window FIRST before any await — preserves browser user-gesture context
+                const w = window.open("", "_blank", "width=520,height=720");
+                if (!w) { flash("❌ Popup blocked — allow popups for theatre4u.org"); return; }
+                // Show loading state in window immediately
+                w.document.write("<html><body style='font-family:sans-serif;text-align:center;padding:40px;color:#888'>Generating QR code...</body></html>");
+                // Now safely await the QR generation
+                const qrSrc = qrDataUrl || await QR.toDataURL(joinUrl, 220);
+                if (!qrSrc) { w.close(); flash("❌ Could not generate QR"); return; }
+                // Write the full poster into the already-open window
+                w.document.open();
+                w.document.write(`<html><head><title>Team QR — ${orgName}</title>
+<style>
+body{font-family:'Helvetica Neue',Arial,sans-serif;text-align:center;padding:32px;background:#fdf6ec;margin:0}
+.logo{font-family:Georgia,serif;font-size:22px;font-weight:700;color:#d4a843;margin-bottom:2px}
+.badge{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#888;margin-bottom:18px}
+h1{font-family:Georgia,serif;font-size:20px;color:#1a0f00;margin:0 0 6px}
+.sub{font-size:13px;color:#666;margin-bottom:18px;line-height:1.5}
+img{border:4px solid #1a0f00;border-radius:10px;display:block;margin:0 auto 16px}
+.code-box{background:#1a0f00;border-radius:10px;padding:10px 22px;display:inline-block;margin-bottom:10px}
+.code{font-family:monospace;font-size:26px;font-weight:900;letter-spacing:6px;color:#d4a843}
+.url{font-size:11px;color:#999;margin-bottom:16px;word-break:break-all}
+.steps{text-align:left;background:#f5f0e8;border-radius:10px;padding:14px 16px;margin:0 auto 16px;max-width:380px}
+.step{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;font-size:13px;color:#444}
+.step:last-child{margin-bottom:0}
+.sn{background:#d4a843;color:#1a0f00;border-radius:50%;width:22px;height:22px;min-width:22px;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0;margin-top:1px}
+.foot{font-size:10px;color:#aaa;border-top:1px solid #e8e0d0;padding-top:10px;margin-top:4px}
+@media print{body{background:#fff}}
+</style></head><body>
+<div class="logo">Theatre4u™</div>
+<div class="badge">Crew Access</div>
+<h1>Join ${orgName}</h1>
+<p class="sub">Scan the QR code to join our theatre team.<br>Create a free account — takes under a minute.</p>
+<img src="${qrSrc}" width="200" height="200" alt="QR Code"/>
+<div class="code-box"><div class="code">${joinCode}</div></div>
+<div class="url">theatre4u.org/join.html?code=${joinCode}</div>
+<div class="steps">
+<div class="step"><div class="sn">1</div><div>Scan the QR code with your phone camera</div></div>
+<div class="step"><div class="sn">2</div><div>Create your free Theatre4u account (name, email, password)</div></div>
+<div class="step"><div class="sn">3</div><div>You’re in! Scan item QR codes and view our inventory</div></div>
+</div>
+<div class="foot">Theatre4u™ &mdash; theatre4u.org &mdash; Free for all theatre programs</div>
+<script>setTimeout(function(){window.print()},400)<\/script>
+</body></html>`);
+                w.document.close();
               }}>
                 📄 Print QR Poster
               </button>
