@@ -8661,6 +8661,7 @@ function TeamSettings({ userId, orgName, plan }) {
   const [invites,  setInvites]  = useState([]);
   const [joinCode,  setJoinCode]  = useState(null);
   const [qrPoster,  setQrPoster]  = useState(null);
+  const [qrDataUrl,  setQrDataUrl]  = useState(null);
   const [loading,  setLoading]  = useState(true);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole,  setInviteRole]  = useState("crew");
@@ -8682,7 +8683,12 @@ function TeamSettings({ userId, orgName, plan }) {
     setMembers(mData || []);
     // Find existing join code invite
     const code = (iData || []).find(i => i.invite_type === "code");
-    setJoinCode(code?.join_code || null);
+    const loadedCode = code?.join_code || null;
+    setJoinCode(loadedCode);
+    if (loadedCode) {
+      QR.toDataURL(`https://theatre4u.org/join.html?code=${loadedCode}`, 240)
+        .then(url => { if (url) setQrDataUrl(url); }).catch(()=>{});
+    }
     setInvites((iData || []).filter(i => i.invite_type === "email"));
     setLoading(false);
   }, [userId]);
@@ -8713,6 +8719,8 @@ function TeamSettings({ userId, orgName, plan }) {
     if (fetched?.join_code) {
       setJoinCode(fetched.join_code);
       setShowCode(true);
+      QR.toDataURL(`https://theatre4u.org/join.html?code=${fetched.join_code}`, 240)
+        .then(url => { if (url) setQrDataUrl(url); }).catch(()=>{});
     } else {
       flash("❌ Code generated but couldn't load — try refreshing.");
     }
@@ -8935,13 +8943,12 @@ function TeamSettings({ userId, orgName, plan }) {
 
             {/* Action buttons */}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-              {/* QR Poster button — renders in-app modal then triggers browser print */}
-              <button className="btn btn-g btn-sm" onClick={async () => {
+              {/* QR Poster button — fully synchronous using pre-generated QR */}
+              <button className="btn btn-g btn-sm" onClick={() => {
                 const joinUrl = `https://theatre4u.org/join.html?code=${joinCode}`;
                 const orgName = org?.name || "Our Theatre Program";
-                const qrSrc  = await QR.toDataURL(joinUrl, 240);
-                if (!qrSrc) { flash("❌ Could not generate QR — try again"); return; }
-                setQrPoster({ joinUrl, orgName, qrSrc, joinCode });
+                if (!qrDataUrl) { flash("⏳ QR generating — try again in a moment"); return; }
+                setQrPoster({ joinUrl, orgName, qrSrc: qrDataUrl, joinCode });
               }}>
                 📄 Print QR Poster
               </button>
@@ -12145,8 +12152,8 @@ function AppRoot(){
       ...(!isCrew  ? [{ id:"messages",    label:"Messages",    ico:"💬"       }] : []),
       ...(!isCrew  ? [{ id:"requests",    label:"Requests",    ico:"📋"       }] : []),
       { id:"inventory",   label:"Inventory",   ico:Ic.box     },
-      ...(!isCrew && org?.marketplace_enabled ? [{ id:"marketplace", label:"Backstage Exchange", ico:Ic.store   }] : []),
-      ...(!isCrew && org?.community_enabled   ? [{ id:"community",   label:"Community",   ico:"🎪", community:true }] : []),
+      ...(!isCrew ? [{ id:"marketplace", label:"Backstage Exchange", ico:Ic.store,   enabled:!!org?.marketplace_enabled }] : []),
+      ...(!isCrew ? [{ id:"community",   label:"Community Board",    ico:"🎪",        enabled:!!org?.community_enabled, community:true }] : []),
       ...(!isCrew  ? [{ id:"productions", label:"Productions", ico:"🎭"       }] : []),
       ...(!isMember? [{ id:"reports",     label:"Reports",     ico:Ic.chart   }] : []),
       ...(!isMember? [{ id:"funding",     label:"Funding Tracker", ico:"💰"  }] : []),
@@ -12292,7 +12299,13 @@ function AppRoot(){
                     {n.id==="messages"   && unreadCount>0    && <span className="sb-badge" style={{background:"var(--red)",color:"#fff"}}>{unreadCount}</span>}
                     {n.id==="requests"   && pendingReqCount>0 && <span className="sb-badge" style={{background:"var(--red)",color:"#fff"}}>{pendingReqCount}</span>}
                     {n.id==="inventory"  && items.length>0 && <span className="sb-badge">{activeSchool ? schoolItems.length : items.length}</span>}
-                    {n.id==="marketplace"&& listed>0       && <span className="sb-badge">{listed}</span>}
+                    {n.id==="marketplace" && listed>0 && n.enabled && <span className="sb-badge">{listed}</span>}
+                {(n.id==="marketplace"||n.id==="community") && !n.enabled && (
+                  <span style={{marginLeft:"auto",fontSize:10,color:"rgba(212,168,67,.5)",
+                    background:"rgba(212,168,67,.08)",padding:"1px 6px",borderRadius:6,flexShrink:0}}>
+                    Pro
+                  </span>
+                )}
                     {n.id==="productions"&& <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--gold)"}}>🎭</span>}
                     
                     {n.id==="points"    && creditBalance>0 && <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--gold)"}}>{creditBalance}</span>}
