@@ -8660,8 +8660,7 @@ function TeamSettings({ userId, orgName, plan }) {
   const [members,  setMembers]  = useState([]);
   const [invites,  setInvites]  = useState([]);
   const [joinCode,  setJoinCode]  = useState(null);
-  const [qrPoster,  setQrPoster]  = useState(null);
-  const [qrDataUrl,  setQrDataUrl]  = useState(null);
+  // qrPoster/qrDataUrl removed — QR poster feature pending redesign
   const [loading,  setLoading]  = useState(true);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole,  setInviteRole]  = useState("crew");
@@ -8685,10 +8684,7 @@ function TeamSettings({ userId, orgName, plan }) {
     const code = (iData || []).find(i => i.invite_type === "code");
     const loadedCode = code?.join_code || null;
     setJoinCode(loadedCode);
-    if (loadedCode) {
-      QR.toDataURL(`https://theatre4u.org/join.html?code=${loadedCode}`, 240)
-        .then(url => { if (url) setQrDataUrl(url); }).catch(()=>{});
-    }
+    // QR pre-generation removed with poster feature
     setInvites((iData || []).filter(i => i.invite_type === "email"));
     setLoading(false);
   }, [userId]);
@@ -8719,8 +8715,7 @@ function TeamSettings({ userId, orgName, plan }) {
     if (fetched?.join_code) {
       setJoinCode(fetched.join_code);
       setShowCode(true);
-      QR.toDataURL(`https://theatre4u.org/join.html?code=${fetched.join_code}`, 240)
-        .then(url => { if (url) setQrDataUrl(url); }).catch(()=>{});
+      // QR pre-generation removed
     } else {
       flash("❌ Code generated but couldn't load — try refreshing.");
     }
@@ -8942,83 +8937,28 @@ function TeamSettings({ userId, orgName, plan }) {
             </div>
 
             {/* Action buttons */}
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-              {/* QR Poster — exact same pattern as item printQR which works reliably */}
-              <button className="btn btn-g btn-sm" onClick={async () => {
-                const joinUrl = `https://theatre4u.org/join.html?code=${joinCode}`;
-                const orgName = org?.name || "Our Theatre Program";
-                // Open window FIRST before any await — preserves browser user-gesture context
-                const w = window.open("", "_blank", "width=520,height=720");
-                if (!w) { flash("❌ Popup blocked — allow popups for theatre4u.org"); return; }
-                // Show loading state in window immediately
-                w.document.write("<html><body style='font-family:sans-serif;text-align:center;padding:40px;color:#888'>Generating QR code...</body></html>");
-                // Now safely await the QR generation
-                const qrSrc = qrDataUrl || await QR.toDataURL(joinUrl, 220);
-                if (!qrSrc) { w.close(); flash("❌ Could not generate QR"); return; }
-                // Write the full poster into the already-open window
-                w.document.open();
-                w.document.write(`<html><head><title>Team QR — ${orgName}</title>
-<style>
-body{font-family:'Helvetica Neue',Arial,sans-serif;text-align:center;padding:32px;background:#fdf6ec;margin:0}
-.logo{font-family:Georgia,serif;font-size:22px;font-weight:700;color:#d4a843;margin-bottom:2px}
-.badge{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#888;margin-bottom:18px}
-h1{font-family:Georgia,serif;font-size:20px;color:#1a0f00;margin:0 0 6px}
-.sub{font-size:13px;color:#666;margin-bottom:18px;line-height:1.5}
-img{border:4px solid #1a0f00;border-radius:10px;display:block;margin:0 auto 16px}
-.code-box{background:#1a0f00;border-radius:10px;padding:10px 22px;display:inline-block;margin-bottom:10px}
-.code{font-family:monospace;font-size:26px;font-weight:900;letter-spacing:6px;color:#d4a843}
-.url{font-size:11px;color:#999;margin-bottom:16px;word-break:break-all}
-.steps{text-align:left;background:#f5f0e8;border-radius:10px;padding:14px 16px;margin:0 auto 16px;max-width:380px}
-.step{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;font-size:13px;color:#444}
-.step:last-child{margin-bottom:0}
-.sn{background:#d4a843;color:#1a0f00;border-radius:50%;width:22px;height:22px;min-width:22px;
-    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0;margin-top:1px}
-.foot{font-size:10px;color:#aaa;border-top:1px solid #e8e0d0;padding-top:10px;margin-top:4px}
-@media print{body{background:#fff}}
-</style></head><body>
-<div class="logo">Theatre4u™</div>
-<div class="badge">Crew Access</div>
-<h1>Join ${orgName}</h1>
-<p class="sub">Scan the QR code to join our theatre team.<br>Create a free account — takes under a minute.</p>
-<img src="${qrSrc}" width="200" height="200" alt="QR Code"/>
-<div class="code-box"><div class="code">${joinCode}</div></div>
-<div class="url">theatre4u.org/join.html?code=${joinCode}</div>
-<div class="steps">
-<div class="step"><div class="sn">1</div><div>Scan the QR code with your phone camera</div></div>
-<div class="step"><div class="sn">2</div><div>Create your free Theatre4u account (name, email, password)</div></div>
-<div class="step"><div class="sn">3</div><div>You’re in! Scan item QR codes and view our inventory</div></div>
-</div>
-<div class="foot">Theatre4u™ &mdash; theatre4u.org &mdash; Free for all theatre programs</div>
-<script>setTimeout(function(){window.print()},400)<\/script>
-</body></html>`);
-                w.document.close();
-              }}>
-                📄 Print QR Poster
-              </button>
-
-              {/* Copy link */}
-              <button className="btn bs bsm" onClick={() => {
-                navigator.clipboard?.writeText(`https://theatre4u.org/join.html?code=${joinCode}`)
-                  .then(() => flash("✓ Link copied!"))
-                  .catch(() => flash("Link: https://theatre4u.org/join.html?code=" + joinCode));
-              }}>📋 Copy Link</button>
-
-              {/* Share via text/email on mobile */}
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:14 }}>
+              <button className="btn btn-g btn-sm" onClick={() => {
+                const url = `https://theatre4u.org/join.html?code=${joinCode}`;
+                navigator.clipboard?.writeText(url)
+                  .then(() => flash("✓ Join link copied!"))
+                  .catch(() => flash("Link: " + url));
+              }}>📋 Copy Join Link</button>
               <button className="btn bs bsm" onClick={() => {
                 const url = `https://theatre4u.org/join.html?code=${joinCode}`;
                 const text = `Join ${org?.name||"our"} team on Theatre4u: ${url}`;
                 if (navigator.share) {
-                  navigator.share({ title: "Join our Theatre4u team", text, url }).catch(()=>{});
+                  navigator.share({ title:"Join our Theatre4u team", text, url }).catch(()=>{});
                 } else {
                   navigator.clipboard?.writeText(text).then(()=>flash("✓ Copied!"));
                 }
-              }}>📤 Share</button>
+              }}>📤 Share via Text / Email</button>
             </div>
 
             <div style={{ fontSize: 11, color: "var(--faint)", lineHeight: 1.6 }}>
-              Anyone with this code or link joins as <strong>Crew</strong> — view and scan inventory.
-              Post the QR poster in your green room, costume closet, or scene shop.
-              This code never expires — revoke it from this page if needed.
+              Anyone with this code or link joins as <strong>Crew</strong> and can view and scan inventory.
+              Copy the link and paste it in a group text, email, or post it on your callboard.
+              This code never expires — revoke it anytime from this page.
             </div>
           </div>
         )}
@@ -9036,117 +8976,7 @@ img{border:4px solid #1a0f00;border-radius:10px;display:block;margin:0 auto 16px
         </div>
       )}
 
-      {/* QR Poster modal */}
-      {qrPoster && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:9000,
-          display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
-          onClick={e=>e.target===e.currentTarget&&setQrPoster(null)}>
-          <div style={{background:"#fdf6ec",borderRadius:16,padding:"24px 28px",
-            width:"min(500px,96vw)",textAlign:"center",
-            boxShadow:"0 12px 60px rgba(0,0,0,.6)",position:"relative"}}>
-            <button onClick={()=>setQrPoster(null)}
-              style={{position:"absolute",top:10,right:14,background:"none",border:"none",
-                fontSize:22,cursor:"pointer",color:"#888",lineHeight:1}}>×</button>
-            <div style={{fontFamily:"Georgia,serif",fontSize:20,fontWeight:700,color:"#d4a843",marginBottom:2}}>
-              Theatre4u™ — Crew Access
-            </div>
-            <h2 style={{fontFamily:"Georgia,serif",fontSize:18,color:"#1a0f00",margin:"6px 0 12px"}}>
-              Join {qrPoster.orgName}
-            </h2>
-            <div style={{display:"flex",justifyContent:"center",marginBottom:12}}>
-              <img src={qrPoster.qrSrc} width={190} height={190} alt="QR Code"
-                style={{border:"4px solid #1a0f00",borderRadius:10,display:"block"}}/>
-            </div>
-            <div style={{background:"#1a0f00",borderRadius:10,padding:"8px 20px",
-              display:"inline-block",marginBottom:8}}>
-              <div style={{fontFamily:"monospace",fontSize:26,fontWeight:900,
-                letterSpacing:6,color:"#d4a843"}}>{qrPoster.joinCode}</div>
-            </div>
-            <div style={{fontSize:11,color:"#999",marginBottom:14,wordBreak:"break-all"}}>
-              theatre4u.org/join.html?code={qrPoster.joinCode}
-            </div>
-            <div style={{textAlign:"left",background:"#f5f0e8",borderRadius:8,
-              padding:"12px 14px",marginBottom:16,fontSize:12,color:"#444"}}>
-              <strong>How to join:</strong><br/>
-              1. Scan QR code with phone camera &nbsp; 2. Create free account &nbsp; 3. Done!
-            </div>
-            <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
-              <button onClick={()=>{
-                // Print using a hidden iframe — most reliable cross-browser method
-                const existingIframe = document.getElementById("t4u-print-frame");
-                if (existingIframe) existingIframe.remove();
-                const frame = document.createElement("iframe");
-                frame.id = "t4u-print-frame";
-                frame.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:600px;height:800px;border:none;visibility:hidden";
-                document.body.appendChild(frame);
-                const doc = frame.contentDocument || frame.contentWindow.document;
-                doc.open();
-                doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Team QR</title>
-<style>
-body{margin:0;padding:32px;background:#fdf6ec;font-family:Arial,sans-serif;text-align:center}
-.logo{font-family:Georgia,serif;font-size:24px;font-weight:700;color:#d4a843;margin-bottom:4px}
-.badge{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#888;margin-bottom:20px}
-h1{font-family:Georgia,serif;font-size:22px;color:#1a0f00;margin:0 0 8px}
-.sub{font-size:13px;color:#666;margin-bottom:20px;line-height:1.5}
-.qr{margin-bottom:18px}
-.qr img{border:4px solid #1a0f00;border-radius:10px}
-.code-box{background:#1a0f00;border-radius:10px;padding:10px 24px;display:inline-block;margin-bottom:12px}
-.code{font-family:monospace;font-size:28px;font-weight:900;letter-spacing:6px;color:#d4a843}
-.url{font-size:11px;color:#999;margin-bottom:18px;word-break:break-all}
-.steps{text-align:left;background:#f5f0e8;border-radius:10px;padding:14px 18px;margin-bottom:14px}
-.step{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;font-size:13px;color:#444}
-.step:last-child{margin-bottom:0}
-.sn{background:#d4a843;color:#1a0f00;border-radius:50%;width:22px;height:22px;min-width:22px;
-    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;margin-top:1px}
-.foot{font-size:10px;color:#aaa;border-top:1px solid #e8e0d0;padding-top:12px}
-</style></head><body>
-<div class="logo">Theatre4u™</div>
-<div class="badge">Crew Access</div>
-<h1>Join ${qrPoster.orgName}</h1>
-<p class="sub">Scan the QR code to join our theatre team.<br>Create a free account — takes under a minute.</p>
-<div class="qr"><img src="${qrPoster.qrSrc}" width="200" height="200" alt="QR Code"/></div>
-<div class="code-box"><div class="code">${qrPoster.joinCode}</div></div>
-<div class="url">theatre4u.org/join.html?code=${qrPoster.joinCode}</div>
-<div class="steps">
-<div class="step"><div class="sn">1</div><div>Scan the QR code with your phone camera</div></div>
-<div class="step"><div class="sn">2</div><div>Create your free Theatre4u account (name, email, password)</div></div>
-<div class="step"><div class="sn">3</div><div>You’re in! Scan item QR codes and view our inventory</div></div>
-</div>
-<div class="foot">Theatre4u™ &mdash; theatre4u.org &mdash; Free inventory management for theatre programs</div>
-</body></html>`);
-                doc.close();
-                frame.onload = () => {
-                  frame.contentWindow.focus();
-                  frame.contentWindow.print();
-                  setTimeout(() => frame.remove(), 2000);
-                };
-                // Fallback if onload doesn't fire
-                setTimeout(() => {
-                  try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch(e) {}
-                  setTimeout(() => frame.remove(), 2000);
-                }, 500);
-              }}
-                style={{background:"#1a0f00",color:"#d4a843",border:"none",
-                  borderRadius:8,padding:"10px 22px",fontSize:14,fontWeight:700,
-                  cursor:"pointer",fontFamily:"inherit"}}>
-                🖨 Print Poster
-              </button>
-              <button onClick={()=>setQrPoster(null)}
-                style={{background:"transparent",color:"#888",border:"1px solid #ddd",
-                  borderRadius:8,padding:"10px 18px",fontSize:14,cursor:"pointer",
-                  fontFamily:"inherit"}}>
-                Close
-              </button>
-            </div>
-            <div style={{fontSize:10,color:"#bbb",marginTop:10}}>
-              Theatre4u™ · theatre4u.org
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+
 
 
 
