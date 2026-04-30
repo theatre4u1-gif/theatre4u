@@ -9001,21 +9001,6 @@ function TeamSettings({ userId, orgName, plan }) {
                   .then(() => flash("✓ Join link copied!"))
                   .catch(() => flash("Link: " + url));
               }}>📋 Copy Join Link</button>
-              <button className="btn bs bsm" onClick={() => {
-                const url = `https://theatre4u.org/join.html?code=${joinCode}`;
-                const subject = `Join ${org?.name||"our"} team on Theatre4u`;
-                const body = `Hi,\n\nYou've been invited to join ${org?.name||"our"} theatre program on Theatre4u.\n\nClick this link to create your free account:\n${url}\n\nOr enter this join code manually: ${joinCode}\n\n— Sent via Theatre4u`;
-                // Try native share first (works on mobile)
-                if (navigator.share) {
-                  navigator.share({ title: subject, text: body, url }).catch(()=>{
-                    // Fallback to mailto if share is cancelled or fails
-                    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                  });
-                } else {
-                  // Desktop: open mailto so they can email or copy from their mail client
-                  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                }
-              }}>✉️ Email Join Link</button>
             </div>
 
             <div style={{ fontSize: 11, color: "var(--faint)", lineHeight: 1.6 }}>
