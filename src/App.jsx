@@ -5697,7 +5697,9 @@ function AdminDashboard({ currentUser }) {
   const [planF,     setPlanF]     = useState("all");
   const [saving,    setSaving]    = useState(null);
   const [msg,       setMsg]       = useState("");
-  const [adminTab,  setAdminTab]  = useState("orgs");  // orgs | analytics | feedback | codes
+  const [adminTab,  setAdminTab]  = useState("orgs");
+  const [betaLeads, setBetaLeads] = useState([]);
+  const [leadsLoading, setLeadsLoading] = useState(false);
   const [analytics, setAnalytics] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [feedback,  setFeedback]  = useState([]);
@@ -5787,8 +5789,8 @@ function AdminDashboard({ currentUser }) {
 
         {/* Tab nav */}
         <div className="tabs" style={{ marginBottom: 20 }}>
-          {[["orgs","🏛 Organizations"],["analytics","📈 Analytics"],["inventory","📦 Inventories"],["accounts","⚠️ Accounts"],["feedback","💬 Feedback"],["codes","🎟 Beta Codes"]].map(([id,lbl])=>(
-            <button key={id} className={`tab ${adminTab===id?"on":""}`} onClick={()=>setAdminTab(id)}>{lbl}
+          {[["orgs","🏛 Organizations"],["analytics","📈 Analytics"],["leads","🎟 Beta Leads"],["inventory","📦 Inventories"],["accounts","⚠️ Accounts"],["feedback","💬 Feedback"],["codes","🎟 Beta Codes"]].map(([id,lbl])=>(
+            <button key={id} className={`tab ${adminTab===id?"on":""}`} onClick={()=>{ setAdminTab(id); if(id==="leads"&&betaLeads.length===0){ setLeadsLoading(true); SB.from("beta_leads").select("*").order("created_at",{ascending:false}).then(({data})=>{ setBetaLeads(data||[]); setLeadsLoading(false); }); } }}>{lbl}
               {id==="feedback"&&feedback.filter(f=>f.status==="new").length>0&&(
                 <span style={{background:"var(--red)",color:"#fff",borderRadius:8,padding:"1px 6px",fontSize:10,fontWeight:800,marginLeft:5}}>
                   {feedback.filter(f=>f.status==="new").length}
@@ -5822,6 +5824,61 @@ function AdminDashboard({ currentUser }) {
               setAnalyticsLoading(false);
             }}
           />
+        )}
+
+        {adminTab==="leads"&&(
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <div>
+                <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>Beta Leads — Opening Night Signups</h3>
+                <p style={{fontSize:13,color:"var(--muted)"}}>Everyone who submitted the beta.html form. "Converted" = they created a Theatre4u account.</p>
+              </div>
+              <button className="btn btn-o btn-sm" onClick={async()=>{
+                setLeadsLoading(true);
+                const{data}=await SB.from("beta_leads").select("*").order("created_at",{ascending:false});
+                setBetaLeads(data||[]);
+                setLeadsLoading(false);
+              }}>↺ Refresh</button>
+            </div>
+            {leadsLoading&&<div style={{color:"var(--muted)",padding:20}}>Loading…</div>}
+            {!leadsLoading&&betaLeads.length===0&&(
+              <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:24,textAlign:"center"}}>
+                <div style={{fontSize:32,marginBottom:8}}>🎟</div>
+                <div style={{fontWeight:700,marginBottom:6}}>No beta leads yet</div>
+                <div style={{fontSize:13,color:"var(--muted)"}}>Submissions from theatre4u.org/beta.html will appear here. Share that link to start collecting leads.</div>
+              </div>
+            )}
+            {!leadsLoading&&betaLeads.length>0&&(
+              <div>
+                <div style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>{betaLeads.length} total · {betaLeads.filter(l=>l.converted).length} converted to accounts</div>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                  <thead><tr style={{background:"var(--parch)"}}>
+                    {["Program","Name","Email","Type","Location","Source","Date","Status"].map(h=>(
+                      <th key={h} style={{padding:"8px 10px",textAlign:"left",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",borderBottom:"1px solid var(--border)"}}>{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {betaLeads.map(lead=>(
+                      <tr key={lead.id} style={{borderBottom:"1px solid var(--border)"}}>
+                        <td style={{padding:"8px 10px",fontWeight:600}}>{lead.org}</td>
+                        <td style={{padding:"8px 10px"}}>{lead.name}</td>
+                        <td style={{padding:"8px 10px"}}><a href={"mailto:"+lead.email} style={{color:"var(--gold)"}}>{lead.email}</a></td>
+                        <td style={{padding:"8px 10px",color:"var(--muted)",fontSize:12}}>{lead.type||"—"}</td>
+                        <td style={{padding:"8px 10px",color:"var(--muted)",fontSize:12}}>{lead.location||"—"}</td>
+                        <td style={{padding:"8px 10px",color:"var(--muted)",fontSize:12}}>{lead.source||"—"}</td>
+                        <td style={{padding:"8px 10px",color:"var(--muted)",fontSize:12}}>{new Date(lead.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</td>
+                        <td style={{padding:"8px 10px"}}>
+                          {lead.converted
+                            ?<span style={{fontSize:11,fontWeight:700,color:"#4caf50",background:"rgba(76,175,80,.1)",padding:"2px 8px",borderRadius:8}}>✓ Account Created</span>
+                            :<span style={{fontSize:11,color:"var(--muted)",background:"var(--parch)",padding:"2px 8px",borderRadius:8}}>Lead Only</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         )}
 
         {adminTab==="orgs"&&(<>
@@ -8975,10 +9032,9 @@ function TeamSettings({ userId, orgName, plan }) {
           {msg}
         </div>
       )}
-
-
-
-
+    </div>
+  );
+}
 
 // ── QR Code Privacy Settings ─────────────────────────────────────────────────
 function QRPrivacySettings({ org, setOrg, userId }) {
