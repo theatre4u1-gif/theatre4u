@@ -7893,25 +7893,55 @@ function CSVImport({ onImport, onClose, userId }) {
   const doImport = async () => {
     setImporting(true);
     setProgress(0);
-    const BATCH = 50;
+    const BATCH = 10; // smaller batches so one bad row doesn't kill 50
     let imported = 0, failed = 0;
+    const failedRows = [];
     const now = new Date().toISOString();
 
     for (let i=0; i<parsed.length; i+=BATCH) {
-      const batch = parsed.slice(i, i+BATCH).map(item => ({
-        ...item,
-        org_id: userId,
-        added: now,
+      const batchItems = parsed.slice(i, i+BATCH).map(item => ({
+        org_id:      userId,
+        added:       now,
+        name:        item.name        || "",
+        category:    item.category    || "other",
+        condition:   item.condition   || "Good",
+        size:        item.size        || "N/A",
+        qty:         item.qty         ?? 1,
+        avail:       item.avail       || "In Stock",
+        mkt:         item.mkt         || "Not Listed",
+        rent:        item.rent        ?? 0,
+        sale:        item.sale        ?? 0,
+        loan_period: item.loan_period ?? 2,
+        deposit:     item.deposit     ?? 0,
+        location:    item.location    || "",
+        notes:       item.notes       || "",
+        description: item.description || "",
+        tags:        Array.isArray(item.tags) ? item.tags : [],
+        img:         item.img         || null,
+        // Explicitly omit: id (DB generates), item_number, display_id, dept_id,
+        // purchase_cost, purchase_date, purchase_vendor, funding_source_id, location_id
       }));
-      const { error } = await SB.from("items").insert(batch);
-      if (error) { failed += batch.length; console.error("Import batch error:", error); }
-      else { imported += batch.length; }
+      const { error } = await SB.from("items").insert(batchItems);
+      if (error) {
+        failed += batchItems.length;
+        failedRows.push({ batch: Math.floor(i/BATCH)+1, error: error.message, code: error.code });
+        console.error("Import batch error:", error);
+      } else {
+        imported += batchItems.length;
+      }
       setProgress(Math.round(((i+BATCH)/parsed.length)*100));
     }
+
+    // Surface any errors to the user
+    if (failedRows.length > 0) {
+      console.error("Import failures:", JSON.stringify(failedRows));
+      setErrors(failedRows.map(f => `Batch ${f.batch} failed: ${f.error} (code: ${f.code})`));
+    }
+
     setResult({ imported, failed, total: parsed.length });
     setImporting(false);
     setStep("done");
-    if (imported > 0) onImport(); // trigger reload
+    if (imported > 0) onImport();
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -8138,7 +8168,7 @@ function CSVImport({ onImport, onClose, userId }) {
             <div style={{textAlign:"center",padding:"24px 0"}}>
               <div style={{fontSize:56,marginBottom:16}}>{result.failed===0?"🎉":"⚠️"}</div>
               <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:24,marginBottom:8}}>
-                {result.failed===0?"Import Complete!":"Import Finished with Errors"}
+                {result.failed===0?"Import Complete!":result.imported===0?"Import Failed":"Import Finished with Errors"}
               </h3>
               <div style={{display:"flex",gap:12,justifyContent:"center",marginBottom:20,flexWrap:"wrap"}}>
                 <div style={{background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.2)",
@@ -8152,14 +8182,36 @@ function CSVImport({ onImport, onClose, userId }) {
                   <div style={{fontSize:11,color:"var(--muted)"}}>Failed</div>
                 </div>}
               </div>
+              {/* Show actual error messages if any failed */}
+              {errors.length>0&&(
+                <div style={{background:"rgba(194,24,91,.07)",border:"1px solid rgba(194,24,91,.2)",
+                  borderRadius:8,padding:"12px 16px",marginBottom:16,textAlign:"left"}}>
+                  <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:"var(--red)"}}>Error details:</div>
+                  {errors.map((e,i)=>(
+                    <div key={i} style={{fontSize:12,color:"var(--red)",marginBottom:4,lineHeight:1.5}}>{e}</div>
+                  ))}
+                  <div style={{fontSize:11,color:"var(--muted)",marginTop:8}}>
+                    Common causes: missing required field, invalid value type, or database permission issue.
+                    Email hello@theatre4u.org with your CSV if the problem persists.
+                  </div>
+                </div>
+              )}
               <p style={{color:"var(--muted)",fontSize:13,marginBottom:20}}>
                 {result.imported>0
                   ? "Your items are now in your Inventory. You can edit any of them individually to add photos or refine details."
-                  : "Something went wrong. Please check your CSV file and try again."}
+                  : "Something went wrong — no items were imported. Check the error details above."}
               </p>
-              <button onClick={onClose} className="btn btn-g" style={{padding:"9px 28px"}}>
-                Go to Inventory →
-              </button>
+              <div style={{display:"flex",gap:8,justifyContent:"center"}}>
+                {result.imported===0&&(
+                  <button onClick={()=>{setStep("upload");setErrors([]);setResult(null);setParsed([]);}}
+                    className="btn btn-o" style={{padding:"9px 24px"}}>
+                    Try Again
+                  </button>
+                )}
+                <button onClick={onClose} className="btn btn-g" style={{padding:"9px 28px"}}>
+                  {result.imported>0?"Go to Inventory →":"Close"}
+                </button>
+              </div>
             </div>
           )}
         </div>
