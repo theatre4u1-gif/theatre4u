@@ -3924,8 +3924,9 @@ const PLANS_DEF = {
 // ── Admin accounts — add emails here for free District access + admin dashboard
 const ADMIN_EMAILS = [
   "theatre4u1@gmail.com",
-  // Add tester emails here:
-  // "tester1@example.com",
+  "hello@theatre4u.org",
+  "rzick@hbuhsd.edu",
+  // Add future admin team members here
 ];
 const isAdminEmail = (e) => ADMIN_EMAILS.includes((e||"").toLowerCase().trim());
 const ADMIN_EMAIL  = ADMIN_EMAILS[0]; // legacy alias
@@ -5685,6 +5686,218 @@ function AdminAnalyticsTab({ analytics, loading, onLoad }) {
       <div style={{marginTop:12,display:"flex",justifyContent:"flex-end"}}>
         <button onClick={onLoad} className="btn btn-o btn-sm">↺ Refresh</button>
       </div>
+    </div>
+  );
+}
+
+// ── Admin Operations Page ────────────────────────────────────────────────────
+// Separate from AdminDashboard — focused tools for managing the platform
+// as the team grows beyond just Bob
+function AdminOpsPage({ currentUser, org }) {
+  const [opsTab, setOpsTab]       = useState("team");
+  const [adminTeam, setAdminTeam] = useState([]);
+  const [orgs, setOrgs]           = useState([]);
+  const [query, setQuery]         = useState("");
+  const [loading, setLoading]     = useState(false);
+  const [msg, setMsg]             = useState("");
+  const flash = (m) => { setMsg(m); setTimeout(()=>setMsg(""),3000); };
+
+  useEffect(() => {
+    if (opsTab === "team") {
+      SB.from("admin_team").select("*").order("created_at").then(({data}) => setAdminTeam(data||[]));
+    }
+    if (opsTab === "upgrade") {
+      setLoading(true);
+      SB.from("orgs").select("id,name,email,plan,director_name,director_title,is_leading_player,created_at,city,location")
+        .order("created_at",{ascending:false}).limit(50)
+        .then(({data}) => { setOrgs(data||[]); setLoading(false); });
+    }
+  }, [opsTab]);
+
+  const filteredOrgs = orgs.filter(o =>
+    !query || o.name?.toLowerCase().includes(query.toLowerCase()) ||
+    o.email?.toLowerCase().includes(query.toLowerCase()) ||
+    o.director_name?.toLowerCase().includes(query.toLowerCase())
+  );
+
+  const upgradeOrg = async (orgId, plan, isLP) => {
+    const { error } = await SB.from("orgs").update({ plan, is_leading_player: isLP }).eq("id", orgId);
+    if (!error) {
+      setOrgs(prev => prev.map(o => o.id === orgId ? {...o, plan, is_leading_player: isLP} : o));
+      flash(`✓ Updated`);
+    }
+  };
+
+  return (
+    <div style={{padding:"32px 36px 56px",position:"relative",zIndex:1}}>
+      <div style={{marginBottom:24}}>
+        <h1 style={{fontFamily:"var(--serif)",fontSize:28,marginBottom:4}}>⚙️ Admin Tools</h1>
+        <p style={{fontSize:14,color:"var(--muted)"}}>Platform operations — manage the admin team, upgrade accounts, and handle support tasks.</p>
+      </div>
+
+      {/* Tab nav */}
+      <div style={{display:"flex",gap:6,marginBottom:24,flexWrap:"wrap"}}>
+        {[["team","👥 Admin Team"],["upgrade","⭐ Upgrade Accounts"],["sql","🔧 Quick Actions"]].map(([id,lbl])=>(
+          <button key={id} className={`tab ${opsTab===id?"on":""}`} onClick={()=>setOpsTab(id)}>{lbl}</button>
+        ))}
+      </div>
+
+      {msg && <div style={{background:"rgba(76,175,80,.12)",border:"1px solid var(--green)",borderRadius:8,
+        padding:"8px 14px",marginBottom:16,fontSize:13,color:"var(--green)"}}>{msg}</div>}
+
+      {/* ADMIN TEAM TAB */}
+      {opsTab==="team"&&(
+        <div>
+          <div style={{marginBottom:16}}>
+            <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>Admin Team</h3>
+            <p style={{fontSize:13,color:"var(--muted)"}}>People who have admin access to Theatre4u. Add new team members by adding their email to the ADMIN_EMAILS array in App.jsx and to the admin_team table.</p>
+          </div>
+          <div className="card card-p">
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+              <thead><tr style={{background:"var(--parch)"}}>
+                {["Name","Email","Role","Status","Added"].map(h=>(
+                  <th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:11,fontWeight:700,
+                    textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",
+                    borderBottom:"1px solid var(--border)"}}>{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {adminTeam.length === 0 && (
+                  <tr><td colSpan={5} style={{padding:20,textAlign:"center",color:"var(--muted)",fontSize:13}}>
+                    Loading admin team…
+                  </td></tr>
+                )}
+                {adminTeam.map(member=>(
+                  <tr key={member.id} style={{borderBottom:"1px solid var(--border)"}}>
+                    <td style={{padding:"10px 12px",fontWeight:600}}>{member.name}</td>
+                    <td style={{padding:"10px 12px"}}>{member.email}</td>
+                    <td style={{padding:"10px 12px"}}>
+                      <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:8,
+                        background:member.role==="superadmin"?"rgba(212,168,67,.15)":"rgba(66,165,245,.1)",
+                        color:member.role==="superadmin"?"var(--gold)":"#64b5f6",
+                        textTransform:"capitalize"}}>{member.role}</span>
+                    </td>
+                    <td style={{padding:"10px 12px"}}>
+                      <span style={{fontSize:11,color:member.active?"var(--green)":"var(--muted)"}}>
+                        {member.active?"● Active":"○ Inactive"}
+                      </span>
+                    </td>
+                    <td style={{padding:"10px 12px",color:"var(--muted)",fontSize:12}}>
+                      {new Date(member.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{marginTop:14,padding:"12px 14px",background:"var(--parch)",borderRadius:8,fontSize:12,color:"var(--muted)"}}>
+              To add a new admin: (1) Add their email to <code>ADMIN_EMAILS</code> in App.jsx, (2) Run in Supabase SQL:<br/>
+              <code style={{display:"block",marginTop:6,fontFamily:"monospace",fontSize:11,color:"var(--text)"}}>
+                INSERT INTO admin_team (org_id, email, name, role) VALUES ('their-org-id', 'email@domain.com', 'Their Name', 'admin');
+              </code>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* UPGRADE ACCOUNTS TAB */}
+      {opsTab==="upgrade"&&(
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:12}}>
+            <div>
+              <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>Upgrade Accounts</h3>
+              <p style={{fontSize:13,color:"var(--muted)"}}>Set plan and Leading Player status for any program. Use this to give beta testers free Pro access.</p>
+            </div>
+            <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by name, email, director…"
+              style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:8,
+                padding:"8px 14px",fontSize:13,color:"var(--text)",width:280,outline:"none"}}/>
+          </div>
+          {loading && <div style={{color:"var(--muted)",padding:20,textAlign:"center"}}>Loading…</div>}
+          {!loading && (
+            <div className="card card-p" style={{padding:0,overflow:"hidden"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                <thead><tr style={{background:"var(--parch)"}}>
+                  {["Program","Director","Contact","Plan","Leading Player","Actions"].map(h=>(
+                    <th key={h} style={{padding:"10px 14px",textAlign:"left",fontSize:11,fontWeight:700,
+                      textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",
+                      borderBottom:"1px solid var(--border)"}}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {filteredOrgs.map(o=>(
+                    <tr key={o.id} style={{borderBottom:"1px solid var(--border)"}}>
+                      <td style={{padding:"10px 14px"}}>
+                        <div style={{fontWeight:700}}>{o.name}</div>
+                        <div style={{fontSize:11,color:"var(--muted)"}}>{o.city||o.location||"—"}</div>
+                      </td>
+                      <td style={{padding:"10px 14px",fontSize:12}}>
+                        <div>{o.director_name||"—"}</div>
+                        {o.director_title&&<div style={{fontSize:11,color:"var(--muted)"}}>{o.director_title}</div>}
+                      </td>
+                      <td style={{padding:"10px 14px",fontSize:12,color:"var(--muted)"}}>{o.email}</td>
+                      <td style={{padding:"10px 14px"}}>
+                        <select value={o.plan} onChange={e=>upgradeOrg(o.id,e.target.value,o.is_leading_player)}
+                          style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,
+                            padding:"4px 8px",fontSize:12,color:"var(--text)",cursor:"pointer"}}>
+                          {["free","pro","district","district_m","district_l"].map(p=>(
+                            <option key={p} value={p}>{p}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td style={{padding:"10px 14px"}}>
+                        <button onClick={()=>upgradeOrg(o.id,o.plan,!o.is_leading_player)}
+                          style={{background:o.is_leading_player?"rgba(212,168,67,.15)":"var(--parch)",
+                            border:"1px solid",borderColor:o.is_leading_player?"var(--gold)":"var(--border)",
+                            borderRadius:6,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer",
+                            color:o.is_leading_player?"var(--gold)":"var(--muted)"}}>
+                          {o.is_leading_player?"⭐ Yes":"○ No"}
+                        </button>
+                      </td>
+                      <td style={{padding:"10px 14px"}}>
+                        <a href={"mailto:"+o.email+"?subject=Theatre4u Preview Access"}
+                          style={{fontSize:11,color:"var(--gold)",textDecoration:"none",fontWeight:600}}>
+                          ✉ Email
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* QUICK ACTIONS TAB */}
+      {opsTab==="sql"&&(
+        <div>
+          <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>Quick Actions</h3>
+          <p style={{fontSize:13,color:"var(--muted)",marginBottom:20}}>Common admin tasks with one click.</p>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+            {[
+              { icon:"⭐", title:"Grant Beta Pro Access", desc:"Upgrade an org to Pro + Leading Player for the preview period.",
+                action: "Go to Upgrade Accounts tab → find the org → set plan to 'pro' → toggle Leading Player to Yes" },
+              { icon:"📧", title:"Email a Beta Tester", desc:"Send a personal welcome or follow-up email.",
+                action: "Go to Upgrade Accounts tab → click ✉ Email next to their name" },
+              { icon:"🔧", title:"Fix Email Typo in Lead", desc:"Correct a beta lead's email address.",
+                action: "Run in Supabase SQL: UPDATE beta_leads SET email='correct@email.com' WHERE email='wrong@email.com';" },
+              { icon:"🗑️", title:"Close a Test Account", desc:"Remove test accounts before launch.",
+                action: "Go to Platform Admin → Accounts tab → find the org → close account" },
+              { icon:"💰", title:"Reset Stage Points", desc:"Award Stage Points to a tester for feedback.",
+                action: "Run in Supabase SQL: INSERT INTO credit_ledger (org_id, amount, note) VALUES ('org-id', 150, 'Beta feedback reward');" },
+              { icon:"🔄", title:"Convert a Beta Lead", desc:"Mark a beta lead as converted after they create an account.",
+                action: "Run in Supabase SQL: UPDATE beta_leads SET converted=true WHERE email='their@email.com';" },
+            ].map(action=>(
+              <div key={action.title} className="card card-p">
+                <div style={{fontSize:28,marginBottom:8}}>{action.icon}</div>
+                <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>{action.title}</div>
+                <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:10}}>{action.desc}</div>
+                <div style={{fontSize:11,color:"var(--text)",background:"var(--parch)",borderRadius:6,
+                  padding:"8px 10px",fontFamily:"monospace",lineHeight:1.5}}>{action.action}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -10368,7 +10581,8 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
     }
     const { data, error } = await SB.from("orgs").update({
       name: f.name, type: f.type, email: f.email, phone: f.phone,
-      location: f.location, bio: f.bio, website: f.website,
+      director_name: f.director_name, director_title: f.director_title,
+      city: f.city, location: f.location, bio: f.bio, website: f.website,
       facebook: f.facebook, instagram: f.instagram,
       logo_url: f.logo_url, founded_year: f.founded_year,
       student_count: f.student_count, profile_public: f.profile_public,
@@ -10490,8 +10704,13 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
                 </div>
                 <div>
                   <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 22 }}>{f.name || "Your Program Name"}</div>
+                  {(f.director_name||f.director_title) && (
+                    <div style={{ fontSize: 13, color: "var(--gold)", marginTop: 1, fontWeight: 600 }}>
+                      {[f.director_name, f.director_title].filter(Boolean).join(" — ")}
+                    </div>
+                  )}
                   <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>
-                    {[f.type, f.location].filter(Boolean).join(" · ") || "Location not set"}
+                    {[f.type, f.city||f.location].filter(Boolean).join(" · ") || "Location not set"}
                   </div>
                 </div>
               </div>
@@ -10522,8 +10741,26 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
               <div className="fg fu"><label className="fl">Organization Name</label>
                 <input className="fi" value={f.name || ""} onChange={e => upd("name", e.target.value)} placeholder="Lincoln High Drama Dept." /></div>
 
-              <div className="fg fu">
-                <label className="fl">Profile Photo / Logo URL</label>
+              {/* Director contact section */}
+              <div style={{ gridColumn:"1/-1", borderTop:"1px solid var(--border)", paddingTop:14, marginTop:4 }}>
+                <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:1, color:"var(--muted)", marginBottom:12 }}>Director / Contact</div>
+              </div>
+
+              <div className="fg"><label className="fl">Director Name</label>
+                <input className="fi" value={f.director_name||""} onChange={e=>upd("director_name",e.target.value)} placeholder="Jane Smith"/></div>
+
+              <div className="fg"><label className="fl">Title</label>
+                <input className="fi" value={f.director_title||""} onChange={e=>upd("director_title",e.target.value)} placeholder="Theatre Director"/></div>
+
+              <div className="fg"><label className="fl">Contact Email</label>
+                <input className="fi" type="email" value={f.email||""} onChange={e=>upd("email",e.target.value)} placeholder="drama@school.edu"/></div>
+
+              <div className="fg"><label className="fl">Phone</label>
+                <input className="fi" value={f.phone||""} onChange={e=>upd("phone",e.target.value)} placeholder="(555) 123-4567"/></div>
+
+              <div style={{ gridColumn:"1/-1", borderTop:"1px solid var(--border)", paddingTop:14, marginTop:4 }}>
+                <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:1, color:"var(--muted)", marginBottom:12 }}>Program Info</div>
+              </div>
                 <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
                   {f.logo_url && <img src={f.logo_url} alt="Logo preview" style={{width:52,height:52,borderRadius:8,objectFit:"cover",border:"1px solid var(--border)",flexShrink:0}}/>}
                   <div style={{flex:1}}>
@@ -10545,12 +10782,6 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
 
               <div className="fg"><label className="fl">City / Location</label>
                 <input className="fi" value={f.location || ""} onChange={e => upd("location", e.target.value)} placeholder="Portland, OR" /></div>
-
-              <div className="fg"><label className="fl">Contact Email</label>
-                <input className="fi" type="email" value={f.email || ""} onChange={e => upd("email", e.target.value)} placeholder="drama@school.edu" /></div>
-
-              <div className="fg"><label className="fl">Phone</label>
-                <input className="fi" value={f.phone || ""} onChange={e => upd("phone", e.target.value)} placeholder="(555) 123-4567" /></div>
 
               <div className="fg"><label className="fl">Year Founded</label>
                 <input className="fi" type="number" min="1800" max="2026" value={f.founded_year || ""} onChange={e => upd("founded_year", parseInt(e.target.value) || null)} placeholder="e.g. 1998" /></div>
@@ -12110,7 +12341,10 @@ function AppRoot(){
       { id:"profile",     label:"My Profile",  ico:"👤"       },
       ...(!isMember ? [{ id:"points", label:"Stage Points", ico:"🪙" }] : []),
       ...(!isMember && plan === "district" ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
-      ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
+      ...(!isMember && isAdmin ? [
+        { id:"admin",     label:"Platform Admin", ico:Ic.settings, admin:true },
+        { id:"admin-ops", label:"Admin Tools",    ico:"⚙️",        admin:true },
+      ] : []),
     ];
   })();
   const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Backstage Exchange", productions:"Productions", reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:"Stage Points", points:"Stage Points", community:"Community Board" };
@@ -12362,6 +12596,7 @@ function AppRoot(){
 
 
                   {page==="admin"       && isAdmin && <AdminDashboard currentUser={user}/>}
+                  {page==="admin-ops"   && isAdmin && <AdminOpsPage currentUser={user} org={org}/>}
                 </div>
             }
           </div>
