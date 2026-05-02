@@ -2129,6 +2129,17 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
                       {item.location&&<div style={{fontSize:12,color:"var(--muted)",marginBottom:4,display:"flex",alignItems:"center",gap:3}}>📍 {item.location}</div>}
                       <div className="inv-meta">{item.display_id&&<span className="chip" style={{fontFamily:"monospace",fontWeight:800,color:"var(--amber)",letterSpacing:.5}}>{item.display_id}</span>}<span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span>{item.size!=="N/A"&&<span className="chip">{item.size}</span>}<span className="chip">{item.avail}</span></div>
                       <div className="inv-foot"><span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span>{item.mkt==="For Loan"?<span style={{fontSize:12,color:"#00838f",fontWeight:700}}>{item.loan_period||2}wk loan{item.deposit>0?" · "+fmt$(item.deposit)+" dep.":""}</span>:item.mkt!=="Not Listed"&&<span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>}</div>
+                      {/* Quick action buttons on card */}
+                      {canEdit&&<div style={{display:"flex",gap:5,marginTop:8,borderTop:"1px solid var(--border)",paddingTop:8}} onClick={e=>e.stopPropagation()}>
+                        <button className="btn btn-o btn-sm" style={{flex:1,fontSize:11,padding:"4px 0"}}
+                          onClick={e=>{e.stopPropagation();openE(item);}}>
+                          ✏️ Edit
+                        </button>
+                        {canDelete&&<button className="btn btn-d btn-sm" style={{fontSize:11,padding:"4px 10px"}}
+                          onClick={e=>{e.stopPropagation();if(window.confirm("Delete \""+item.name+"\"? This cannot be undone."))onDelete(item.id);}}>
+                          🗑
+                        </button>}
+                      </div>}
                     </div>
                   </div>
                 );
