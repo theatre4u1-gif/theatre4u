@@ -1008,7 +1008,7 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false}){
         {(f.size==="Custom"||!SIZES.includes(f.size)&&f.size&&f.size!=="") && (
           <input className="fi" style={{marginTop:4}} value={f.customSize||f.size||""}
             onChange={e=>upd("size",e.target.value)}
-            placeholder="Enter exact size or measurements (e.g. 38" chest, Women's 10)"/>
+            placeholder='Enter exact size or measurements (e.g. 38in chest, Womens 10)'/>
         )}
       </div>
       <div className="fg"><label className="fl">Quantity</label><input className="fi" type="number" min="0" step="1" placeholder="1" value={f.qty||""} onChange={e=>upd("qty",parseInt(e.target.value)||0)}/></div>
