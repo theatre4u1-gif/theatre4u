@@ -10761,6 +10761,8 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
               <div style={{ gridColumn:"1/-1", borderTop:"1px solid var(--border)", paddingTop:14, marginTop:4 }}>
                 <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:1, color:"var(--muted)", marginBottom:12 }}>Program Info</div>
               </div>
+
+              <div className="fg fu"><label className="fl">Profile Photo / Logo URL</label>
                 <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
                   {f.logo_url && <img src={f.logo_url} alt="Logo preview" style={{width:52,height:52,borderRadius:8,objectFit:"cover",border:"1px solid var(--border)",flexShrink:0}}/>}
                   <div style={{flex:1}}>
