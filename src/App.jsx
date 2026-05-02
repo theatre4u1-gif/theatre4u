@@ -876,46 +876,46 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false}){
 
   return(
     <div className="fg2">
-      {/* Size Chart Modal */}
+      {/* Size Chart Modal — hardcoded light colors so it's always readable */}
       {sizeChartOpen && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:9999,
           display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
           onClick={e=>e.target===e.currentTarget&&setSizeChartOpen(false)}>
-          <div style={{background:"var(--card)",borderRadius:14,padding:24,width:"min(680px,95vw)",
+          <div style={{background:"#fff",borderRadius:14,padding:24,width:"min(680px,95vw)",
             maxHeight:"85vh",overflowY:"auto",boxShadow:"0 12px 48px rgba(0,0,0,.5)"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-              <div style={{fontFamily:"var(--serif)",fontSize:20,fontWeight:700}}>📏 Costume Size Chart</div>
+              <div style={{fontFamily:"Georgia,serif",fontSize:20,fontWeight:700,color:"#1a0f00"}}>📏 Costume Size Chart</div>
               <button onClick={()=>setSizeChartOpen(false)}
-                style={{background:"none",border:"1px solid var(--border)",borderRadius:6,
-                  width:28,height:28,cursor:"pointer",fontSize:16,color:"var(--muted)",
+                style={{background:"none",border:"1px solid #ddd",borderRadius:6,
+                  width:28,height:28,cursor:"pointer",fontSize:16,color:"#888",
                   display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
             </div>
-            <p style={{fontSize:12,color:"var(--muted)",marginBottom:16,lineHeight:1.5}}>
-              Use these charts as a guide. Vintage and theatrical costumes may run differently — 
+            <p style={{fontSize:12,color:"#666",marginBottom:16,lineHeight:1.5}}>
+              Use these charts as a guide. Vintage and theatrical costumes may run differently —
               always measure when possible. Record exact measurements in the Notes field.
             </p>
             {/* Women's */}
             <div style={{marginBottom:20}}>
-              <div style={{fontWeight:700,fontSize:14,marginBottom:8,color:"var(--gold)"}}>Women's / Female</div>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:8,color:"#d4a843"}}>Women's / Female</div>
               <div style={{overflowX:"auto"}}>
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-                  <thead><tr style={{background:"var(--parch)"}}>
+                  <thead><tr style={{background:"#f5f0e8"}}>
                     {["Size","US Numeric","Bust","Waist","Hips"].map(h=>(
                       <th key={h} style={{padding:"7px 10px",textAlign:"left",fontWeight:700,
-                        fontSize:11,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",
-                        borderBottom:"1px solid var(--border)"}}>{h}</th>
+                        fontSize:11,textTransform:"uppercase",letterSpacing:1,color:"#888",
+                        borderBottom:"1px solid #e0d8c8"}}>{h}</th>
                     ))}
                   </tr></thead>
                   <tbody>
                     {SIZE_CHART.womens.map((r,i)=>(
-                      <tr key={r.size+i} style={{borderBottom:"1px solid var(--border)",
-                        background:f.size===r.size?"rgba(212,168,67,.08)":"transparent"}}>
+                      <tr key={r.size+i} style={{borderBottom:"1px solid #e8e0d0",
+                        background:f.size===r.size?"rgba(212,168,67,.12)":"transparent"}}>
                         <td style={{padding:"7px 10px",fontWeight:f.size===r.size?800:600,
-                          color:f.size===r.size?"var(--gold)":"var(--text)"}}>{r.size}</td>
-                        <td style={{padding:"7px 10px",color:"var(--muted)"}}>{r.numeric}</td>
-                        <td style={{padding:"7px 10px"}}>{r.bust}</td>
-                        <td style={{padding:"7px 10px"}}>{r.waist}</td>
-                        <td style={{padding:"7px 10px"}}>{r.hips}</td>
+                          color:f.size===r.size?"#b8860b":"#1a0f00"}}>{r.size}</td>
+                        <td style={{padding:"7px 10px",color:"#666"}}>{r.numeric}</td>
+                        <td style={{padding:"7px 10px",color:"#333"}}>{r.bust}</td>
+                        <td style={{padding:"7px 10px",color:"#333"}}>{r.waist}</td>
+                        <td style={{padding:"7px 10px",color:"#333"}}>{r.hips}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -924,25 +924,25 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false}){
             </div>
             {/* Men's */}
             <div style={{marginBottom:20}}>
-              <div style={{fontWeight:700,fontSize:14,marginBottom:8,color:"var(--gold)"}}>Men's / Male</div>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:8,color:"#d4a843"}}>Men's / Male</div>
               <div style={{overflowX:"auto"}}>
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-                  <thead><tr style={{background:"var(--parch)"}}>
+                  <thead><tr style={{background:"#f5f0e8"}}>
                     {["Size","Chest","Waist","Neck"].map(h=>(
                       <th key={h} style={{padding:"7px 10px",textAlign:"left",fontWeight:700,
-                        fontSize:11,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",
-                        borderBottom:"1px solid var(--border)"}}>{h}</th>
+                        fontSize:11,textTransform:"uppercase",letterSpacing:1,color:"#888",
+                        borderBottom:"1px solid #e0d8c8"}}>{h}</th>
                     ))}
                   </tr></thead>
                   <tbody>
                     {SIZE_CHART.mens.map((r,i)=>(
-                      <tr key={r.size+i} style={{borderBottom:"1px solid var(--border)",
-                        background:f.size===r.size?"rgba(212,168,67,.08)":"transparent"}}>
+                      <tr key={r.size+i} style={{borderBottom:"1px solid #e8e0d0",
+                        background:f.size===r.size?"rgba(212,168,67,.12)":"transparent"}}>
                         <td style={{padding:"7px 10px",fontWeight:f.size===r.size?800:600,
-                          color:f.size===r.size?"var(--gold)":"var(--text)"}}>{r.size}</td>
-                        <td style={{padding:"7px 10px"}}>{r.chest}</td>
-                        <td style={{padding:"7px 10px"}}>{r.waist}</td>
-                        <td style={{padding:"7px 10px"}}>{r.neck}</td>
+                          color:f.size===r.size?"#b8860b":"#1a0f00"}}>{r.size}</td>
+                        <td style={{padding:"7px 10px",color:"#333"}}>{r.chest}</td>
+                        <td style={{padding:"7px 10px",color:"#333"}}>{r.waist}</td>
+                        <td style={{padding:"7px 10px",color:"#333"}}>{r.neck}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -951,34 +951,39 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false}){
             </div>
             {/* Kids */}
             <div style={{marginBottom:20}}>
-              <div style={{fontWeight:700,fontSize:14,marginBottom:8,color:"var(--gold)"}}>Children's</div>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:8,color:"#d4a843"}}>Children's</div>
               <div style={{overflowX:"auto"}}>
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-                  <thead><tr style={{background:"var(--parch)"}}>
+                  <thead><tr style={{background:"#f5f0e8"}}>
                     {["Size","Approx. Age","Height","Chest"].map(h=>(
                       <th key={h} style={{padding:"7px 10px",textAlign:"left",fontWeight:700,
-                        fontSize:11,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",
-                        borderBottom:"1px solid var(--border)"}}>{h}</th>
+                        fontSize:11,textTransform:"uppercase",letterSpacing:1,color:"#888",
+                        borderBottom:"1px solid #e0d8c8"}}>{h}</th>
                     ))}
                   </tr></thead>
                   <tbody>
                     {SIZE_CHART.kids.map((r,i)=>(
-                      <tr key={r.size+i} style={{borderBottom:"1px solid var(--border)",
-                        background:f.size===r.size?"rgba(212,168,67,.08)":"transparent"}}>
+                      <tr key={r.size+i} style={{borderBottom:"1px solid #e8e0d0",
+                        background:f.size===r.size?"rgba(212,168,67,.12)":"transparent"}}>
                         <td style={{padding:"7px 10px",fontWeight:f.size===r.size?800:600,
-                          color:f.size===r.size?"var(--gold)":"var(--text)"}}>{r.size}</td>
-                        <td style={{padding:"7px 10px",color:"var(--muted)"}}>{r.age}</td>
-                        <td style={{padding:"7px 10px"}}>{r.height}</td>
-                        <td style={{padding:"7px 10px"}}>{r.chest}</td>
+                          color:f.size===r.size?"#b8860b":"#1a0f00"}}>{r.size}</td>
+                        <td style={{padding:"7px 10px",color:"#666"}}>{r.age}</td>
+                        <td style={{padding:"7px 10px",color:"#333"}}>{r.height}</td>
+                        <td style={{padding:"7px 10px",color:"#333"}}>{r.chest}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             </div>
-            <div style={{background:"var(--parch)",borderRadius:8,padding:12,fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
-              <strong style={{color:"var(--text)"}}>💡 Tip:</strong> For period costumes, corsets, and fitted pieces, 
-              record exact measurements in the <strong>Notes</strong> field (e.g. "Bust 38", Waist 30", Length 52" from shoulder").
+            <div style={{background:"#f5f0e8",borderRadius:8,padding:12,fontSize:12,color:"#666",lineHeight:1.6}}>
+              <strong style={{color:"#1a0f00"}}>💡 Tip:</strong> For period costumes, corsets, and fitted pieces,
+              record exact measurements in the <strong>Notes</strong> field (e.g. "Bust 38&quot;, Waist 30&quot;, Length 52&quot; from shoulder").
+              This helps programs find the right fit without trying on.
+            </div>
+          </div>
+        </div>
+      )}              record exact measurements in the <strong>Notes</strong> field (e.g. "Bust 38", Waist 30", Length 52" from shoulder").
               This helps programs find the right fit without trying on.
             </div>
           </div>
