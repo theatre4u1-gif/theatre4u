@@ -65,7 +65,7 @@ const EM = {
   csvNoName:           { title:"Name Column Required",        body:"Your spreadsheet must have an Item Name column. Drag one of your columns to 'Item Name' in the column mapping step before importing.",                                                              cta:"Go Back and Fix" },
   csvZeroImported:     { title:"Nothing Was Imported",        body:"Every row in your file failed to import. Make sure each item has a name, and that the file has data below the header row.",                                                                        cta:"Try Again" },
   photoTooLarge:       { title:"Photo Is Too Large",          body:"That photo is too large to upload. Try a file under 10 MB — photos taken on a phone and shared directly are usually a perfect size.",                                                              cta:"Choose a Smaller Photo" },
-  photoWrongType:      { title:"Unsupported File Type",       body:"Only JPEG, PNG, and WebP photos can be uploaded. Convert your file to one of those formats and try again.",                                                                                         cta:"Choose a Different File" },
+  photoWrongType:      { title:"Unsupported File Type",       body:"Photos must be JPEG, PNG, WebP, or HEIC (iPhone) format. If uploading from an iPhone, make sure to select 'Most Compatible' in Camera settings, or the platform will convert HEIC automatically.",                                                                                         cta:"Choose a Different File" },
   loginBadPassword:    { title:"Password Didn't Match",       body:"That password isn't right for this account. Double-check for typos, or use 'Forgot password' to set a new one.",                                                                                   cta:"Reset Password" },
   loginNoEmail:        { title:"Account Not Found",           body:"There's no Theatre4u account for that email address. Check for typos, or sign up to create a new account.",                                                                                        cta:"Create an Account" },
   sessionExpired:      { title:"Session Expired",             body:"You've been signed out after a period of inactivity. Sign back in to continue where you left off.",                                                                                                cta:"Sign In" },
@@ -207,35 +207,33 @@ const SIZES = ["XS","S","M","L","XL","XXL","2X","3X","4X","One Size","N/A","Cust
 // Size chart data for the popup modal
 const SIZE_CHART = {
   womens: [
-    { size:"XS",  numeric:"0–2",   bust:"33–34"",  waist:"24–25"", hips:"34–35""  },
-    { size:"S",   numeric:"4–6",   bust:"35–36"",  waist:"26–27"", hips:"36–37""  },
-    { size:"M",   numeric:"8–10",  bust:"37–38"",  waist:"28–29"", hips:"38–39""  },
-    { size:"L",   numeric:"12–14", bust:"39–41"",  waist:"30–33"", hips:"41–42""  },
-    { size:"XL",  numeric:"16–18", bust:"42–44"",  waist:"34–36"", hips:"43–45""  },
-    { size:"XXL", numeric:"20–22", bust:"45–47"",  waist:"37–39"", hips:"46–48""  },
-    { size:"2X",  numeric:"20–22", bust:"45–47"",  waist:"37–39"", hips:"46–48""  },
-    { size:"3X",  numeric:"24–26", bust:"48–50"",  waist:"40–43"", hips:"49–52""  },
+    { size:"XS",  numeric:"0-2",   bust:"33-34in",  waist:"24-25in", hips:"34-35in"  },
+    { size:"S",   numeric:"4-6",   bust:"35-36in",  waist:"26-27in", hips:"36-37in"  },
+    { size:"M",   numeric:"8-10",  bust:"37-38in",  waist:"28-29in", hips:"38-39in"  },
+    { size:"L",   numeric:"12-14", bust:"39-41in",  waist:"30-33in", hips:"41-42in"  },
+    { size:"XL",  numeric:"16-18", bust:"42-44in",  waist:"34-36in", hips:"43-45in"  },
+    { size:"XXL", numeric:"20-22", bust:"45-47in",  waist:"37-39in", hips:"46-48in"  },
+    { size:"2X",  numeric:"20-22", bust:"45-47in",  waist:"37-39in", hips:"46-48in"  },
+    { size:"3X",  numeric:"24-26", bust:"48-50in",  waist:"40-43in", hips:"49-52in"  },
   ],
   mens: [
-    { size:"XS",  chest:"32–34"", waist:"26–28"", neck:"13–13.5""  },
-    { size:"S",   chest:"36–38"", waist:"28–30"", neck:"14–14.5""  },
-    { size:"M",   chest:"38–40"", waist:"30–32"", neck:"15–15.5""  },
-    { size:"L",   chest:"42–44"", waist:"33–35"", neck:"16–16.5""  },
-    { size:"XL",  chest:"46–48"", waist:"36–38"", neck:"17–17.5""  },
-    { size:"XXL", chest:"50–52"", waist:"39–42"", neck:"18–18.5""  },
-    { size:"2X",  chest:"50–52"", waist:"39–42"", neck:"18–18.5""  },
-    { size:"3X",  chest:"54–56"", waist:"43–46"", neck:"19–19.5""  },
+    { size:"XS",  chest:"32-34in", waist:"26-28in", neck:"13-13.5in"  },
+    { size:"S",   chest:"36-38in", waist:"28-30in", neck:"14-14.5in"  },
+    { size:"M",   chest:"38-40in", waist:"30-32in", neck:"15-15.5in"  },
+    { size:"L",   chest:"42-44in", waist:"33-35in", neck:"16-16.5in"  },
+    { size:"XL",  chest:"46-48in", waist:"36-38in", neck:"17-17.5in"  },
+    { size:"XXL", chest:"50-52in", waist:"39-42in", neck:"18-18.5in"  },
+    { size:"2X",  chest:"50-52in", waist:"39-42in", neck:"18-18.5in"  },
+    { size:"3X",  chest:"54-56in", waist:"43-46in", neck:"19-19.5in"  },
   ],
   kids: [
-    { size:"XS",  age:"4–5",   height:"42–44"", chest:"21–22""  },
-    { size:"S",   age:"6–7",   height:"45–48"", chest:"23–24""  },
-    { size:"M",   age:"8–10",  height:"50–54"", chest:"25–27""  },
-    { size:"L",   age:"10–12", height:"55–58"", chest:"28–30""  },
-    { size:"XL",  age:"12–14", height:"59–62"", chest:"31–33""  },
+    { size:"XS",  age:"4-5",   height:"42-44in", chest:"21-22in"  },
+    { size:"S",   age:"6-7",   height:"45-48in", chest:"23-24in"  },
+    { size:"M",   age:"8-10",  height:"50-54in", chest:"25-27in"  },
+    { size:"L",   age:"10-12", height:"55-58in", chest:"28-30in"  },
+    { size:"XL",  age:"12-14", height:"59-62in", chest:"31-33in"  },
   ],
 };
-
-// Clothing categories that should show the size chart link
 const CLOTHING_CATS = new Set(["costumes","uniforms","footwear","accessories","hats","wigs"]);
 const AVAIL = ["In Stock","In Use","Checked Out","Being Repaired","Lost","Retired"];
 const MKT   = ["Not Listed","For Rent","For Sale","Rent or Sale","For Loan"];
@@ -294,6 +292,28 @@ function makeSamples(){
   ].map(i=>({...i,id:uid(),added:new Date().toISOString()}));
 }
 
+// Convert HEIC/HEIF files to JPEG before canvas processing
+// Uses heic2any library loaded on demand — no bundle size impact
+async function convertHeicToJpeg(file) {
+  try {
+    // Dynamically load heic2any only when needed
+    const heic2any = (await import("https://esm.sh/heic2any@0.0.4")).default;
+    const blob = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
+    // heic2any may return an array for multi-frame HEIC — take first frame
+    const converted = Array.isArray(blob) ? blob[0] : blob;
+    return new File([converted], file.name.replace(/\.heic$/i, ".jpg"), { type: "image/jpeg" });
+  } catch(e) {
+    console.error("HEIC conversion failed:", e);
+    return null;
+  }
+}
+
+// Detect if a file is HEIC/HEIF
+function isHeic(file) {
+  return /\.(heic|heif)$/i.test(file.name) || 
+         file.type === "image/heic" || file.type === "image/heif";
+}
+
 function resizeImg(file,maxW=560,q=0.78){
   return new Promise(res=>{
     const r=new FileReader();
@@ -316,6 +336,12 @@ function resizeImg(file,maxW=560,q=0.78){
 // Upload a file to Supabase Storage and return the public URL
 async function uploadPhoto(file, userId) {
   try {
+    // Convert HEIC/HEIF to JPEG first (iPhone photos, Live Photos, etc.)
+    if (isHeic(file)) {
+      const converted = await convertHeicToJpeg(file);
+      if (converted) file = converted;
+      // If conversion fails, try anyway — canvas may handle it on Safari
+    }
     // Resize first to keep file sizes small
     const dataUrl = await resizeImg(file, 800, 0.82);
     // Convert base64 dataURL to a Blob
@@ -2509,7 +2535,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
               <div className="empty-ico">🏪</div>
               <h3>{mktTab==="mine"?"No Active Listings":"No Listings Found"}</h3>
               <p>{mktTab==="mine"
-                ?"Mark items as “For Rent” or “For Sale” in Inventory to list them here."
+                ?"Mark items as “For Rentin or “For Salein in Inventory to list them here."
                 :radius!=="all"
                   ?"Try expanding your search radius or searching All to see listings everywhere."
                   :"No listings yet — be the first to list items for your community!"}</p>
@@ -8164,7 +8190,9 @@ function CommunityPostForm({initial, onSave, onCancel, saving=false}) {
     if(!files.length) return;
     setUploading(true);
     const urls = [];
-    for(const file of files){
+    for(let file of files){
+      // Convert HEIC/HEIF to JPEG first
+      if(isHeic(file)){ const c=await convertHeicToJpeg(file); if(c) file=c; }
       // Use resizeImg if available, otherwise compressImage
       const resized = typeof resizeImg==="function"
         ? await resizeImg(file,1200,0.85)
