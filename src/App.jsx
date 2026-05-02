@@ -202,7 +202,41 @@ const MILESTONE_POINTS = {
   team_invite:      { pts: 15,  label: "Team Member Invited" },
   referral_earn:    { pts: 50,  label: "Referral Bonus" },
 };
-const SIZES = ["XS","S","M","L","XL","XXL","One Size","N/A"];
+const SIZES = ["XS","S","M","L","XL","XXL","2X","3X","4X","One Size","N/A","Custom"];
+
+// Size chart data for the popup modal
+const SIZE_CHART = {
+  womens: [
+    { size:"XS",  numeric:"0–2",   bust:"33–34"",  waist:"24–25"", hips:"34–35""  },
+    { size:"S",   numeric:"4–6",   bust:"35–36"",  waist:"26–27"", hips:"36–37""  },
+    { size:"M",   numeric:"8–10",  bust:"37–38"",  waist:"28–29"", hips:"38–39""  },
+    { size:"L",   numeric:"12–14", bust:"39–41"",  waist:"30–33"", hips:"41–42""  },
+    { size:"XL",  numeric:"16–18", bust:"42–44"",  waist:"34–36"", hips:"43–45""  },
+    { size:"XXL", numeric:"20–22", bust:"45–47"",  waist:"37–39"", hips:"46–48""  },
+    { size:"2X",  numeric:"20–22", bust:"45–47"",  waist:"37–39"", hips:"46–48""  },
+    { size:"3X",  numeric:"24–26", bust:"48–50"",  waist:"40–43"", hips:"49–52""  },
+  ],
+  mens: [
+    { size:"XS",  chest:"32–34"", waist:"26–28"", neck:"13–13.5""  },
+    { size:"S",   chest:"36–38"", waist:"28–30"", neck:"14–14.5""  },
+    { size:"M",   chest:"38–40"", waist:"30–32"", neck:"15–15.5""  },
+    { size:"L",   chest:"42–44"", waist:"33–35"", neck:"16–16.5""  },
+    { size:"XL",  chest:"46–48"", waist:"36–38"", neck:"17–17.5""  },
+    { size:"XXL", chest:"50–52"", waist:"39–42"", neck:"18–18.5""  },
+    { size:"2X",  chest:"50–52"", waist:"39–42"", neck:"18–18.5""  },
+    { size:"3X",  chest:"54–56"", waist:"43–46"", neck:"19–19.5""  },
+  ],
+  kids: [
+    { size:"XS",  age:"4–5",   height:"42–44"", chest:"21–22""  },
+    { size:"S",   age:"6–7",   height:"45–48"", chest:"23–24""  },
+    { size:"M",   age:"8–10",  height:"50–54"", chest:"25–27""  },
+    { size:"L",   age:"10–12", height:"55–58"", chest:"28–30""  },
+    { size:"XL",  age:"12–14", height:"59–62"", chest:"31–33""  },
+  ],
+};
+
+// Clothing categories that should show the size chart link
+const CLOTHING_CATS = new Set(["costumes","uniforms","footwear","accessories","hats","wigs"]);
 const AVAIL = ["In Stock","In Use","Checked Out","Being Repaired","Lost","Retired"];
 const MKT   = ["Not Listed","For Rent","For Sale","Rent or Sale","For Loan"];
 
@@ -742,6 +776,7 @@ function LocationDropdown({ userId, value, onChange }) {
 function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false}){
   const blank={name:"",category:"costumes",condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,loan_period:2,deposit:0,avail:"In Stock",img:null,tags:[],purchase_cost:"",purchase_date:"",purchase_vendor:"",funding_source_id:""};
   const[f,setF]=useState(item||blank);
+  const[sizeChartOpen,setSizeChartOpen]=useState(false);
   const[ti,setTi]=useState("");
   const[upl,setUpl]=useState(false);
   const[svng,setSvng]=useState(false);
@@ -815,10 +850,141 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false}){
 
   return(
     <div className="fg2">
+      {/* Size Chart Modal */}
+      {sizeChartOpen && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:9999,
+          display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
+          onClick={e=>e.target===e.currentTarget&&setSizeChartOpen(false)}>
+          <div style={{background:"var(--card)",borderRadius:14,padding:24,width:"min(680px,95vw)",
+            maxHeight:"85vh",overflowY:"auto",boxShadow:"0 12px 48px rgba(0,0,0,.5)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <div style={{fontFamily:"var(--serif)",fontSize:20,fontWeight:700}}>📏 Costume Size Chart</div>
+              <button onClick={()=>setSizeChartOpen(false)}
+                style={{background:"none",border:"1px solid var(--border)",borderRadius:6,
+                  width:28,height:28,cursor:"pointer",fontSize:16,color:"var(--muted)",
+                  display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+            </div>
+            <p style={{fontSize:12,color:"var(--muted)",marginBottom:16,lineHeight:1.5}}>
+              Use these charts as a guide. Vintage and theatrical costumes may run differently — 
+              always measure when possible. Record exact measurements in the Notes field.
+            </p>
+            {/* Women's */}
+            <div style={{marginBottom:20}}>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:8,color:"var(--gold)"}}>Women's / Female</div>
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                  <thead><tr style={{background:"var(--parch)"}}>
+                    {["Size","US Numeric","Bust","Waist","Hips"].map(h=>(
+                      <th key={h} style={{padding:"7px 10px",textAlign:"left",fontWeight:700,
+                        fontSize:11,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",
+                        borderBottom:"1px solid var(--border)"}}>{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {SIZE_CHART.womens.map((r,i)=>(
+                      <tr key={r.size+i} style={{borderBottom:"1px solid var(--border)",
+                        background:f.size===r.size?"rgba(212,168,67,.08)":"transparent"}}>
+                        <td style={{padding:"7px 10px",fontWeight:f.size===r.size?800:600,
+                          color:f.size===r.size?"var(--gold)":"var(--text)"}}>{r.size}</td>
+                        <td style={{padding:"7px 10px",color:"var(--muted)"}}>{r.numeric}</td>
+                        <td style={{padding:"7px 10px"}}>{r.bust}</td>
+                        <td style={{padding:"7px 10px"}}>{r.waist}</td>
+                        <td style={{padding:"7px 10px"}}>{r.hips}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            {/* Men's */}
+            <div style={{marginBottom:20}}>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:8,color:"var(--gold)"}}>Men's / Male</div>
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                  <thead><tr style={{background:"var(--parch)"}}>
+                    {["Size","Chest","Waist","Neck"].map(h=>(
+                      <th key={h} style={{padding:"7px 10px",textAlign:"left",fontWeight:700,
+                        fontSize:11,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",
+                        borderBottom:"1px solid var(--border)"}}>{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {SIZE_CHART.mens.map((r,i)=>(
+                      <tr key={r.size+i} style={{borderBottom:"1px solid var(--border)",
+                        background:f.size===r.size?"rgba(212,168,67,.08)":"transparent"}}>
+                        <td style={{padding:"7px 10px",fontWeight:f.size===r.size?800:600,
+                          color:f.size===r.size?"var(--gold)":"var(--text)"}}>{r.size}</td>
+                        <td style={{padding:"7px 10px"}}>{r.chest}</td>
+                        <td style={{padding:"7px 10px"}}>{r.waist}</td>
+                        <td style={{padding:"7px 10px"}}>{r.neck}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            {/* Kids */}
+            <div style={{marginBottom:20}}>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:8,color:"var(--gold)"}}>Children's</div>
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                  <thead><tr style={{background:"var(--parch)"}}>
+                    {["Size","Approx. Age","Height","Chest"].map(h=>(
+                      <th key={h} style={{padding:"7px 10px",textAlign:"left",fontWeight:700,
+                        fontSize:11,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",
+                        borderBottom:"1px solid var(--border)"}}>{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {SIZE_CHART.kids.map((r,i)=>(
+                      <tr key={r.size+i} style={{borderBottom:"1px solid var(--border)",
+                        background:f.size===r.size?"rgba(212,168,67,.08)":"transparent"}}>
+                        <td style={{padding:"7px 10px",fontWeight:f.size===r.size?800:600,
+                          color:f.size===r.size?"var(--gold)":"var(--text)"}}>{r.size}</td>
+                        <td style={{padding:"7px 10px",color:"var(--muted)"}}>{r.age}</td>
+                        <td style={{padding:"7px 10px"}}>{r.height}</td>
+                        <td style={{padding:"7px 10px"}}>{r.chest}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div style={{background:"var(--parch)",borderRadius:8,padding:12,fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
+              <strong style={{color:"var(--text)"}}>💡 Tip:</strong> For period costumes, corsets, and fitted pieces, 
+              record exact measurements in the <strong>Notes</strong> field (e.g. "Bust 38", Waist 30", Length 52" from shoulder").
+              This helps programs find the right fit without trying on.
+            </div>
+          </div>
+        </div>
+      )}
       <div className="fg fu"><label className="fl">Item Name *</label><input className="fi" value={f.name} onChange={e=>upd("name",e.target.value)} placeholder="e.g. Victorian Ball Gown" autoFocus/></div>
       <div className="fg"><label className="fl">Category</label><select className="fs" value={f.category} onChange={e=>upd("category",e.target.value)}>{CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</select></div>
       <div className="fg"><label className="fl">Condition</label><select className="fs" value={f.condition} onChange={e=>upd("condition",e.target.value)}>{CONDS.map(c=><option key={c}>{c}</option>)}</select></div>
-      <div className="fg"><label className="fl">Size</label><select className="fs" value={f.size} onChange={e=>upd("size",e.target.value)}>{SIZES.map(s=><option key={s}>{s}</option>)}</select></div>
+      <div className="fg">
+        <label className="fl" style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <span>Size</span>
+          {CLOTHING_CATS.has(f.category) && (
+            <button type="button" onClick={()=>setSizeChartOpen(true)}
+              style={{background:"none",border:"none",color:"var(--gold)",fontSize:11,
+                fontWeight:700,cursor:"pointer",padding:0,textDecoration:"underline"}}>
+              📏 Size Chart
+            </button>
+          )}
+        </label>
+        <select className="fs" value={f.size==="Custom"?"Custom":SIZES.includes(f.size)?f.size:"N/A"}
+          onChange={e=>{
+            upd("size", e.target.value);
+            if(e.target.value !== "Custom") upd("customSize","");
+          }}>
+          {SIZES.map(s=><option key={s}>{s}</option>)}
+        </select>
+        {(f.size==="Custom"||!SIZES.includes(f.size)&&f.size&&f.size!=="") && (
+          <input className="fi" style={{marginTop:4}} value={f.customSize||f.size||""}
+            onChange={e=>upd("size",e.target.value)}
+            placeholder="Enter exact size or measurements (e.g. 38" chest, Women's 10)"/>
+        )}
+      </div>
       <div className="fg"><label className="fl">Quantity</label><input className="fi" type="number" min="0" step="1" placeholder="1" value={f.qty||""} onChange={e=>upd("qty",parseInt(e.target.value)||0)}/></div>
       <div className="fg"><label className="fl">Availability</label><select className="fs" value={f.avail} onChange={e=>upd("avail",e.target.value)}>{AVAIL.map(a=><option key={a}>{a}</option>)}</select></div>
       <div className="fg"><label className="fl">Location</label><input className="fi" value={f.location} onChange={e=>upd("location",e.target.value)} placeholder="e.g. Costume Closet A"/></div>
@@ -1824,7 +1990,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
 
   const[search,setSrch]=useState("");const[catF,setCatF]=useState("all");
   const[condF,setCondF]=useState("all");const[availF,setAvailF]=useState("all");
-  const[mktF,setMktF]=useState("all");const[view,setView]=useState("grid"); // grid | table | locations
+  const[mktF,setMktF]=useState("all");const[sizeF,setSizeF]=useState("all");const[view,setView]=useState("grid"); // grid | table | locations
   const[showF,setShowF]=useState(false);const[pg,setPg]=useState(1);
   const[modal,setModal]=useState(null);const[active,setActive]=useState(null);
   const[showImport,setShowImport]=useState(false);
@@ -1832,19 +1998,20 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
   const mktCls=m=>m==="For Rent"?"mb-rent":m==="For Sale"?"mb-sale":m==="Rent or Sale"?"mb-both":m==="For Loan"?"mb-loan":"mb-none";
   const filtered=useMemo(()=>{
     let f=items;
-    if(search){const q=search.toLowerCase();f=f.filter(i=>i.name.toLowerCase().includes(q)||(i.notes||"").toLowerCase().includes(q)||(i.location||"").toLowerCase().includes(q)||(i.display_id||"").toLowerCase().includes(q)||(i.tags||[]).some(t=>t.includes(q)))}
+    if(search){const q=search.toLowerCase();f=f.filter(i=>i.name.toLowerCase().includes(q)||(i.notes||"").toLowerCase().includes(q)||(i.location||"").toLowerCase().includes(q)||(i.display_id||"").toLowerCase().includes(q)||(i.size||"").toLowerCase().includes(q)||(i.tags||[]).some(t=>t.includes(q)))}
     if(catF!=="all")f=f.filter(i=>i.category===catF);
     if(condF!=="all")f=f.filter(i=>i.condition===condF);
     if(availF!=="all")f=f.filter(i=>i.avail===availF);
     if(mktF!=="all")f=f.filter(i=>i.mkt===mktF);
+    if(sizeF!=="all")f=f.filter(i=>i.size===sizeF);
     if(locFilter!=="all")f=f.filter(i=>
       i.location_id===locFilter ||
       (i.location&&locFilterName&&i.location.toLowerCase()===locFilterName.name.toLowerCase())
     );
     return f;
-  },[items,search,catF,condF,availF,mktF,locFilter,locFilterName]);
+  },[items,search,catF,condF,availF,mktF,sizeF,locFilter,locFilterName]);
   const paged=useMemo(()=>filtered.slice((pg-1)*PP,pg*PP),[filtered,pg]);
-  useEffect(()=>setPg(1),[search,catF,condF,availF,mktF]);
+  useEffect(()=>setPg(1),[search,catF,condF,availF,mktF,sizeF]);
   const openD=item=>{setActive(item);setModal("d")};
   const openE=item=>{setActive(item);setModal("e")};
   const handleSave=async form=>{
@@ -1913,10 +2080,11 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
         {showF&&(
           <div className="fbar fin">
             <div><label>Category</label><select value={catF} onChange={e=>setCatF(e.target.value)}><option value="all">All</option>{CATS.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></div>
+            <div><label>Size</label><select value={sizeF} onChange={e=>setSizeF(e.target.value)}><option value="all">All Sizes</option>{["XS","S","M","L","XL","XXL","2X","3X","4X","One Size","N/A"].map(s=><option key={s} value={s}>{s}</option>)}</select></div>
             <div><label>Condition</label><select value={condF} onChange={e=>setCondF(e.target.value)}><option value="all">All</option>{CONDS.map(c=><option key={c}>{c}</option>)}</select></div>
             <div><label>Availability</label><select value={availF} onChange={e=>setAvailF(e.target.value)}><option value="all">All</option>{AVAIL.map(a=><option key={a}>{a}</option>)}</select></div>
             <div><label>Exchange Status</label><select value={mktF} onChange={e=>setMktF(e.target.value)}><option value="all">All</option>{MKT.map(s=><option key={s}>{s}</option>)}</select></div>
-            <button className="btn btn-o btn-sm" onClick={()=>{setCatF("all");setCondF("all");setAvailF("all");setMktF("all")}}>Clear</button>
+            <button className="btn btn-o btn-sm" onClick={()=>{setCatF("all");setSizeF("all");setCondF("all");setAvailF("all");setMktF("all")}}>Clear</button>
           </div>
         )}
         <div style={{fontSize:13,fontWeight:700,color:"var(--faint)",marginBottom:12}}>{filtered.length} item{filtered.length!==1?"s":""}</div>
