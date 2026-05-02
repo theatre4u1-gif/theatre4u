@@ -978,12 +978,7 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false}){
             </div>
             <div style={{background:"#f5f0e8",borderRadius:8,padding:12,fontSize:12,color:"#666",lineHeight:1.6}}>
               <strong style={{color:"#1a0f00"}}>💡 Tip:</strong> For period costumes, corsets, and fitted pieces,
-              record exact measurements in the <strong>Notes</strong> field (e.g. "Bust 38&quot;, Waist 30&quot;, Length 52&quot; from shoulder").
-              This helps programs find the right fit without trying on.
-            </div>
-          </div>
-        </div>
-      )}              record exact measurements in the <strong>Notes</strong> field (e.g. "Bust 38", Waist 30", Length 52" from shoulder").
+              record exact measurements in the Notes field (e.g. Bust 38in, Waist 30in, Length 52in from shoulder).
               This helps programs find the right fit without trying on.
             </div>
           </div>
