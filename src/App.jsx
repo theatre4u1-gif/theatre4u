@@ -1544,7 +1544,7 @@ function CommunitySpotlight({onViewAll}){
   );
 }
 
-function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketplace,goCommunity,goProfile,goPoints}){
+function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketplace,goCommunity,goProfile,goPoints,goLabels=null}){
   const totalQty=items.reduce((s,i)=>s+(i.qty||1),0);
   const listed=items.filter(i=>i.mkt!=="Not Listed").length;
   const withImg=items.filter(i=>i.img).length;
@@ -1598,7 +1598,10 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
         )}
 
         {/* Stats */}
-        <div className="stats">
+        {goLabels&&items.length>0&&items.every(i=>!i.display_id?.startsWith("T4U-"))&&(
+        <LabelStoreBanner onGoLabels={goLabels}/>
+      )}
+      <div className="stats">
           {[
             {ico:"📦",val:totalQty,   lbl:"Total Items",     col:"#c4761a", bg:"photo-1558618666-fcd25c85cd64"}, // organized prop storage
             {ico:"📂",val:items.length,lbl:"Entries",         col:"#1554a0", bg:"photo-1489987707025-afc232f7ea0f"}, // costume racks
@@ -5837,6 +5840,602 @@ function AdminAnalyticsTab({ analytics, loading, onLoad }) {
 // ADMIN HUB — Single consolidated admin page replacing dual sidebar items
 // Tabs: Overview · Users · Analytics · Feedback · Labels · Tools
 // ══════════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════
+// LABELS PAGE — full label purchase, management, and claim system
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Small banner shown on dashboard and after signup to prompt label purchase
+function LabelStoreBanner({ onGoLabels }) {
+  return(
+    <div style={{background:"linear-gradient(135deg,rgba(212,168,67,.1),rgba(212,168,67,.04))",
+      border:"1px solid rgba(212,168,67,.25)",borderRadius:12,padding:"14px 18px",
+      display:"flex",gap:14,alignItems:"flex-start",marginBottom:18}}>
+      <div style={{fontSize:28,flexShrink:0}}>🏷</div>
+      <div style={{flex:1}}>
+        <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>
+          Get pre-printed QR labels for your inventory
+        </div>
+        <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
+          Stick them on costumes, props, set pieces, equipment, and storage bins.
+          Scan any label with a phone camera to instantly pull up the item.
+          Polyester labels for indoor use · Weatherproof for scene shops and storage.
+        </div>
+        <button className="btn btn-g btn-sm" onClick={onGoLabels}>
+          Shop Label Packs →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LabelsPage({ org, userId, items=[], stripeReturn=null, onClearReturn=null }) {
+  // Handle Stripe return — auto-navigate to My Labels tab on success
+  useEffect(()=>{
+    if(stripeReturn==="success"){ setTab("mine"); }
+    if(stripeReturn) setTimeout(()=>{ onClearReturn?.(); }, 6000);
+  },[stripeReturn]);
+  const [packs, setPacks]       = useState([]);
+  const [myLabels, setMyLabels] = useState([]);
+  const [myOrders, setMyOrders] = useState([]);
+  const [tab, setTab]           = useState("shop"); // shop | mine | claim
+  const [claimCode, setClaimCode] = useState("");
+  const [claimItemId, setClaimItemId] = useState("");
+  const [claimResult, setClaimResult] = useState(null);
+  const [claimSearch, setClaimSearch] = useState("");
+  const [purchasing, setPurchasing] = useState(null); // which pack is being purchased
+  const [purchStep, setPurchStep]  = useState("packs"); // packs | address | confirm | done
+  const [address, setAddress]      = useState({name:"",street:"",city:"",state:"",zip:"",country:"US"});
+  const [includeLogo, setIncludeLogo] = useState(false);
+  const [logoUrl, setLogoUrl]      = useState("");
+  const [loading, setLoading]      = useState(false);
+  const [msg, setMsg]              = useState("");
+  const flash = m => { setMsg(m); setTimeout(()=>setMsg(""),4000); };
+
+  useEffect(()=>{
+    SB.from("label_packs").select("*").eq("active",true).order("sort_order")
+      .then(({data})=>setPacks(data||[]));
+    SB.from("label_pool").select("code,seq,status,item_id,assigned_at,claimed_at")
+      .eq("org_id",userId).order("seq")
+      .then(({data})=>setMyLabels(data||[]));
+    SB.from("label_orders").select("*").eq("org_id",userId).order("created_at",{ascending:false})
+      .then(({data})=>setMyOrders(data||[]));
+  },[userId]);
+
+  const unclaimedLabels = myLabels.filter(l=>l.status==="assigned");
+  const claimedLabels   = myLabels.filter(l=>l.status==="claimed");
+
+  const startPurchase = (pack) => {
+    setPurchasing(pack);
+    setPurchStep("address");
+    // Pre-fill with org info if available
+    setAddress(a=>({...a,
+      name: org?.director_name||org?.name||"",
+      city: org?.city||"",
+    }));
+  };
+
+  const confirmPurchase = async () => {
+    if(!purchasing) return;
+    setLoading(true);
+    try {
+      const { data: session } = await SB.auth.getSession();
+      const token = session?.session?.access_token;
+      const res = await fetch(
+        "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/create-label-checkout",
+        { method:"POST",
+          headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},
+          body: JSON.stringify({
+            org_id:      userId,
+            pack_id:     purchasing.id,
+            address,
+            include_logo: includeLogo && !!logoUrl,
+            logo_url:    (includeLogo && logoUrl) ? logoUrl : null,
+          })
+        }
+      );
+      const result = await res.json();
+      if(!result.ok || !result.checkout_url){
+        flash("❌ Could not start checkout: " + (result.error||"Unknown error"));
+        setLoading(false);
+        return;
+      }
+      // Redirect to Stripe Checkout — payment, label assignment, and
+      // confirmation email all happen automatically via webhook
+      window.location.href = result.checkout_url;
+    } catch(e) {
+      flash("❌ " + String(e));
+      setLoading(false);
+    }
+  };
+
+  const claimLabel = async () => {
+    if(!claimCode.trim()||!claimItemId) return;
+    setLoading(true);
+    const { data, error } = await SB.rpc("claim_label_to_item",{
+      p_code:    claimCode.trim().toUpperCase(),
+      p_org_id:  userId,
+      p_item_id: claimItemId,
+    });
+    if(error||!data?.ok){
+      setClaimResult({ ok:false, msg: data?.error || error?.message || "Failed" });
+    } else {
+      setClaimResult({ ok:true, msg:`Label ${claimCode} linked to item!` });
+      // Refresh labels
+      const {data:refreshed} = await SB.from("label_pool")
+        .select("code,seq,status,item_id").eq("org_id",userId).order("seq");
+      setMyLabels(refreshed||[]);
+      setClaimCode(""); setClaimItemId("");
+    }
+    setLoading(false);
+  };
+
+  const filteredUnclaimed = unclaimedLabels.filter(l=>
+    !claimSearch || l.code.includes(claimSearch.toUpperCase())
+  );
+
+  const unlinkedItems = items.filter(i=>
+    !myLabels.some(l=>l.item_id===i.id) &&
+    !i.display_id?.startsWith("T4U-")
+  );
+
+  const MAT_ICON = { polyester:"🏷", weatherproof:"💧" };
+  const MAT_NOTE = {
+    polyester:"Indoor polyester — great for costumes, props, and storage bins. Scratch-resistant and waterproof.",
+    weatherproof:"Heavy-duty weatherproof — for lighting rigs, set pieces, outdoor equipment, and scene shop storage.",
+  };
+
+  return(
+    <div style={{padding:"28px 32px 64px"}}>
+      <div style={{marginBottom:20}}>
+        <h1 style={{fontFamily:"var(--serif)",fontSize:28,margin:"0 0 4px"}}>🏷 QR Labels</h1>
+        <p style={{fontSize:13,color:"var(--muted)",margin:0}}>
+          Pre-printed QR labels for your physical inventory. Stick, scan, done.
+        </p>
+      </div>
+
+      {msg&&<div style={{background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.3)",
+        borderRadius:8,padding:"8px 14px",marginBottom:14,fontSize:13,color:"#4caf50"}}>{msg}</div>}
+
+      {/* Stripe return banners */}
+      {stripeReturn==="success"&&(
+        <div style={{background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.3)",
+          borderRadius:10,padding:"14px 18px",marginBottom:16,display:"flex",gap:12,alignItems:"flex-start"}}>
+          <div style={{fontSize:28}}>🎉</div>
+          <div>
+            <div style={{fontWeight:700,fontSize:14,color:"#4caf50",marginBottom:3}}>Payment confirmed!</div>
+            <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.5}}>
+              Your labels have been assigned and a confirmation email sent to {org?.email}.
+              They'll ship within 5–7 business days. Use the <strong>Link Label to Item</strong> tab
+              when they arrive to connect each one to your inventory.
+            </div>
+          </div>
+        </div>
+      )}
+      {stripeReturn==="cancelled"&&(
+        <div style={{background:"rgba(255,152,0,.08)",border:"1px solid rgba(255,152,0,.25)",
+          borderRadius:10,padding:"14px 18px",marginBottom:16,fontSize:13,color:"var(--muted)"}}>
+          Payment was cancelled. Your order was not placed. You can try again below.
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div style={{display:"flex",gap:5,marginBottom:22,flexWrap:"wrap",
+        borderBottom:"1px solid var(--border)",paddingBottom:10}}>
+        {[["shop","🛒 Shop Labels"],["mine","📦 My Labels"+(myLabels.length>0?` (${myLabels.length})`:"")],
+          ["claim","🔗 Link Label to Item"+(unclaimedLabels.length>0?` (${unclaimedLabels.length})`:"")]
+        ].map(([id,lbl])=>(
+          <button key={id} onClick={()=>{setTab(id);setPurchStep("packs");setPurchasing(null);}}
+            style={{padding:"7px 14px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,
+              fontWeight:tab===id?700:500,fontFamily:"inherit",transition:"all .15s",
+              background:tab===id?"var(--gold)":"transparent",
+              color:tab===id?"#1a0f00":"var(--muted)"}}>
+            {lbl}
+          </button>
+        ))}
+      </div>
+
+      {/* ── SHOP TAB ── */}
+      {tab==="shop"&&(
+        <>
+          {purchStep==="packs"&&(
+            <div>
+              {/* How it works */}
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12,marginBottom:24}}>
+                {[
+                  {icon:"📦",t:"Order a pack",b:"Choose how many labels you need. We assign codes from our pool exclusively to your program — no duplicates possible."},
+                  {icon:"✉️",t:"We ship them",b:"Labels arrive in 5–7 business days. Each one has a unique T4U code and QR code pre-printed."},
+                  {icon:"📌",t:"Stick & scan",b:"Stick labels on items. Then use the Link tab here to connect each label to an item in your inventory."},
+                  {icon:"📱",t:"Scan anywhere",b:"Anyone can scan a label with any phone camera. If found, they see your program contact info."},
+                ].map(s=>(
+                  <div key={s.t} style={{background:"var(--parch)",border:"1px solid var(--border)",
+                    borderRadius:10,padding:"12px 14px"}}>
+                    <div style={{fontSize:24,marginBottom:6}}>{s.icon}</div>
+                    <div style={{fontWeight:700,fontSize:13,marginBottom:4}}>{s.t}</div>
+                    <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>{s.b}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Packs */}
+              <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:14}}>Choose a Label Pack</h3>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:14}}>
+                {packs.map(pack=>(
+                  <div key={pack.id} style={{background:"var(--white)",border:"1px solid var(--border)",
+                    borderRadius:12,overflow:"hidden"}}>
+                    <div style={{background:"var(--parch)",padding:"14px 16px",borderBottom:"1px solid var(--border)"}}>
+                      <div style={{fontSize:22,marginBottom:4}}>{MAT_ICON[pack.material]||"🏷"}</div>
+                      <div style={{fontWeight:700,fontSize:16}}>{pack.name}</div>
+                      <div style={{fontSize:28,fontWeight:800,color:"var(--gold)",lineHeight:1.1,marginTop:4}}>
+                        ${(pack.price_cents/100).toFixed(2)}
+                      </div>
+                      <div style={{fontSize:11,color:"var(--muted)"}}>
+                        {(pack.price_cents/100/pack.label_count).toFixed(2)}/label · {pack.label_count} labels
+                      </div>
+                    </div>
+                    <div style={{padding:"12px 16px"}}>
+                      <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:12}}>
+                        {pack.description}
+                      </div>
+                      <div style={{fontSize:11,color:"var(--muted)",marginBottom:12,lineHeight:1.4,
+                        background:"var(--parch)",borderRadius:6,padding:"7px 9px"}}>
+                        {MAT_NOTE[pack.material]}
+                      </div>
+                      <button className="btn btn-g" style={{width:"100%"}} onClick={()=>startPurchase(pack)}>
+                        Order {pack.name} →
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Material guide */}
+              <div style={{marginTop:24,background:"var(--parch)",border:"1px solid var(--border)",
+                borderRadius:10,padding:"16px 18px"}}>
+                <div style={{fontWeight:700,fontSize:14,marginBottom:10}}>Which label type do I need?</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+                  <div>
+                    <div style={{fontWeight:600,fontSize:13,marginBottom:4}}>🏷 Polyester (standard)</div>
+                    <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
+                      For most theatre uses. Waterproof, scratch-resistant, great for:<br/>
+                      • Costumes and garment bags<br/>
+                      • Props and handheld items<br/>
+                      • Storage bins and shelving<br/>
+                      • Administrative binders and cases
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{fontWeight:600,fontSize:13,marginBottom:4}}>💧 Weatherproof</div>
+                    <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
+                      For heavy use or outdoor environments:<br/>
+                      • Lighting rigs and fixtures<br/>
+                      • Set pieces and flats<br/>
+                      • Power equipment and generators<br/>
+                      • Cable bins and flight cases
+                    </div>
+                  </div>
+                </div>
+                <div style={{marginTop:12,fontSize:11,color:"var(--faint)"}}>
+                  All labels are 1.5" × 1.5". Custom sizes available — contact hello@theatre4u.org.
+                  Labels include: Theatre4u QR code · unique T4U code · your program name printed on request.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {purchStep==="address"&&purchasing&&(
+            <div style={{maxWidth:480}}>
+              <div style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>
+                {purchasing.name} — Shipping Address
+              </div>
+              <p style={{fontSize:13,color:"var(--muted)",marginBottom:18}}>
+                Where should we ship your {purchasing.label_count} labels?
+              </p>
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                {[
+                  ["name","Full Name / Attn","text"],
+                  ["street","Street Address","text"],
+                  ["city","City","text"],
+                  ["state","State (e.g. CA)","text"],
+                  ["zip","ZIP Code","text"],
+                ].map(([k,placeholder,type])=>(
+                  <input key={k} type={type} value={address[k]||""}
+                    onChange={e=>setAddress(a=>({...a,[k]:e.target.value}))}
+                    placeholder={placeholder} className="fi"/>
+                ))}
+              </div>
+              {/* Logo option */}
+              <div style={{background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.2)",
+                borderRadius:8,padding:"12px 14px",marginTop:4}}>
+                <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+                  <input type="checkbox" id="logo-check" checked={includeLogo}
+                    onChange={e=>setIncludeLogo(e.target.checked)}
+                    style={{marginTop:2,flexShrink:0}}/>
+                  <label htmlFor="logo-check" style={{fontSize:13,cursor:"pointer"}}>
+                    <strong>Add my program logo to each label</strong>
+                    <span style={{fontSize:11,color:"var(--muted)",display:"block",marginTop:2}}>
+                      Your logo appears in the top-left corner of each label alongside the QR code.
+                      Paste a link to your logo image (Google Drive, Dropbox, or your school website).
+                    </span>
+                  </label>
+                </div>
+                {includeLogo&&(
+                  <div style={{marginTop:10}}>
+                    <input value={logoUrl} onChange={e=>setLogoUrl(e.target.value)}
+                      placeholder="Paste image URL (PNG or JPG, square works best)…"
+                      className="fi" style={{fontSize:12}}/>
+                    <div style={{fontSize:11,color:"var(--muted)",marginTop:4,lineHeight:1.5}}>
+                      Must be a direct image link (ends in .png or .jpg).
+                      For Google Drive: File → Share → Copy link, then change the URL to end in &sz=w200.
+                      Minimum 200×200px recommended. We'll proof the layout before printing.
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={{marginTop:12,padding:"12px 14px",background:"var(--parch)",
+                borderRadius:8,fontSize:12,color:"var(--muted)",lineHeight:1.6,marginBottom:16}}>
+                <strong style={{color:"var(--text)"}}>Order total: ${(purchasing.price_cents/100).toFixed(2)}</strong>
+                <br/>You'll be taken to a secure Stripe checkout page to pay.
+                Labels are assigned and a confirmation email sent automatically after payment.
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <button className="btn btn-g" onClick={()=>setPurchStep("confirm")}>
+                  Review Order →
+                </button>
+                <button className="btn btn-o" onClick={()=>{setPurchStep("packs");setPurchasing(null);}}>
+                  ← Back
+                </button>
+              </div>
+            </div>
+          )}
+
+          {purchStep==="confirm"&&purchasing&&(
+            <div style={{maxWidth:480}}>
+              <div style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:14}}>Confirm Order</div>
+              <div style={{background:"var(--parch)",border:"1px solid var(--border)",
+                borderRadius:10,padding:"16px 18px",marginBottom:16}}>
+                <table style={{width:"100%",fontSize:13,borderCollapse:"collapse"}}>
+                  {[
+                    ["Pack",purchasing.name],
+                    ["Labels",purchasing.label_count+" labels"],
+                    ["Material",purchasing.material==="weatherproof"?"Weatherproof vinyl":"Polyester"],
+                    ["Logo",includeLogo&&logoUrl?"Yes — included":"No"],
+                    ["Ship to",`${address.name} · ${address.street}, ${address.city}, ${address.state} ${address.zip}`],
+                    ["Total","$"+(purchasing.price_cents/100).toFixed(2)+" (invoiced)"],
+                  ].map(([k,v])=>(
+                    <tr key={k} style={{borderBottom:"1px solid var(--border)"}}>
+                      <td style={{padding:"7px 0",color:"var(--muted)",width:80}}>{k}</td>
+                      <td style={{padding:"7px 0",fontWeight:k==="Total"?700:400}}>{v}</td>
+                    </tr>
+                  ))}
+                </table>
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <button className="btn btn-g" disabled={loading} onClick={confirmPurchase}>
+                  {loading?"Redirecting to Stripe…":"💳 Pay & Confirm Order →"}
+                </button>
+                <button className="btn btn-o" onClick={()=>setPurchStep("address")}>← Edit</button>
+              </div>
+            </div>
+          )}
+
+          {purchStep==="done"&&(
+            <div style={{maxWidth:480,textAlign:"center",padding:"32px 0"}}>
+              <div style={{fontSize:56,marginBottom:16}}>🎉</div>
+              <div style={{fontFamily:"var(--serif)",fontSize:24,marginBottom:8}}>Order Confirmed!</div>
+              <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.6,marginBottom:20}}>
+                Your labels have been reserved and an invoice will be emailed to{" "}
+                <strong>{org?.email}</strong>. Labels ship within 5–7 business days of payment.
+                Once they arrive, use the <strong>Link Label to Item</strong> tab to connect each one to your inventory.
+              </p>
+              <button className="btn btn-g" onClick={()=>{setTab("mine");setPurchStep("packs");}}>
+                View My Labels →
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── MY LABELS TAB ── */}
+      {tab==="mine"&&(
+        <div>
+          {myLabels.length===0?(
+            <div style={{textAlign:"center",padding:"40px 0"}}>
+              <div style={{fontSize:48,marginBottom:12}}>📭</div>
+              <div style={{fontWeight:700,fontSize:16,marginBottom:8}}>No labels yet</div>
+              <p style={{fontSize:13,color:"var(--muted)",marginBottom:16}}>
+                Order a label pack to get started.
+              </p>
+              <button className="btn btn-g" onClick={()=>setTab("shop")}>Shop Labels →</button>
+            </div>
+          ):(
+            <div>
+              {/* Stats */}
+              <div style={{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap"}}>
+                {[
+                  {n:myLabels.length, label:"Total Labels",  color:"var(--gold)"},
+                  {n:unclaimedLabels.length, label:"Ready to Link", color:"#2196f3"},
+                  {n:claimedLabels.length,   label:"Linked to Items",color:"#4caf50"},
+                ].map(s=>(
+                  <div key={s.label} style={{background:"var(--parch)",border:"1px solid var(--border)",
+                    borderRadius:10,padding:"12px 18px",textAlign:"center",minWidth:120}}>
+                    <div style={{fontSize:28,fontWeight:800,color:s.color}}>{s.n}</div>
+                    <div style={{fontSize:11,color:"var(--muted)",textTransform:"uppercase",
+                      letterSpacing:.5,marginTop:2}}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Orders history */}
+              {myOrders.length>0&&(
+                <div style={{marginBottom:20}}>
+                  <div style={{fontWeight:700,fontSize:13,marginBottom:8,textTransform:"uppercase",
+                    letterSpacing:1,color:"var(--muted)"}}>Order History</div>
+                  {myOrders.map(o=>(
+                    <div key={o.id} style={{display:"flex",gap:12,alignItems:"center",
+                      padding:"8px 12px",background:"var(--parch)",border:"1px solid var(--border)",
+                      borderRadius:8,marginBottom:6,flexWrap:"wrap"}}>
+                      <span style={{fontSize:13,fontWeight:600}}>{o.item_count} labels</span>
+                      <span style={{fontSize:12,color:"var(--muted)"}}>{o.label_type}</span>
+                      {o.code_start&&<span style={{fontSize:11,fontFamily:"monospace",
+                        color:"var(--amber)"}}>{o.code_start} → {o.code_end}</span>}
+                      <span style={{fontSize:11,fontWeight:700,textTransform:"capitalize",
+                        color:o.status==="shipped"||o.fulfilled?"#4caf50":o.status==="processing"?"#2196f3":"var(--gold)"}}>
+                        {o.fulfilled?"✓ Fulfilled":o.status==="processing"?"🔄 Processing":"⏳ Pending"}
+                      </span>
+                      <span style={{fontSize:11,color:"var(--muted)",marginLeft:"auto"}}>
+                        {new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Label list */}
+              {unclaimedLabels.length>0&&(
+                <div style={{marginBottom:4}}>
+                  <div style={{fontWeight:700,fontSize:13,marginBottom:8,textTransform:"uppercase",
+                    letterSpacing:1,color:"var(--muted)"}}>Ready to Link ({unclaimedLabels.length})</div>
+                  <div style={{background:"rgba(33,150,243,.05)",border:"1px solid rgba(33,150,243,.2)",
+                    borderRadius:8,padding:"10px 14px",fontSize:12,color:"var(--muted)",marginBottom:10}}>
+                    These labels have been assigned to your program but not yet linked to items.
+                    Go to the <strong>Link Label to Item</strong> tab to connect them.
+                  </div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                    {unclaimedLabels.slice(0,30).map(l=>(
+                      <span key={l.code} style={{fontFamily:"monospace",fontSize:12,padding:"3px 8px",
+                        background:"var(--parch)",border:"1px solid var(--border)",borderRadius:6,
+                        color:"var(--amber)",cursor:"pointer"}}
+                        onClick={()=>{setClaimCode(l.code);setTab("claim");}}>
+                        {l.code}
+                      </span>
+                    ))}
+                    {unclaimedLabels.length>30&&<span style={{fontSize:12,color:"var(--muted)",
+                      alignSelf:"center"}}>+{unclaimedLabels.length-30} more</span>}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── CLAIM / LINK TAB ── */}
+      {tab==="claim"&&(
+        <div style={{maxWidth:560}}>
+          <div style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>Link a Label to an Item</div>
+          <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.6,marginBottom:20}}>
+            After sticking a label on an item, scan it or type the T4U code below,
+            then select which item it belongs to. The label will be permanently linked.
+          </p>
+
+          {claimResult&&(
+            <div style={{background:claimResult.ok?"rgba(76,175,80,.1)":"rgba(194,24,91,.08)",
+              border:`1px solid ${claimResult.ok?"rgba(76,175,80,.3)":"rgba(194,24,91,.25)"}`,
+              borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:13,
+              color:claimResult.ok?"#4caf50":"var(--red)"}}>
+              {claimResult.ok?"✓ ":""}{claimResult.msg}
+            </div>
+          )}
+
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <div>
+              <label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>
+                Label Code (from the label)
+              </label>
+              <div style={{display:"flex",gap:8}}>
+                <input value={claimCode} onChange={e=>setClaimCode(e.target.value.toUpperCase())}
+                  placeholder="T4U-000000" className="fi"
+                  style={{fontFamily:"monospace",fontSize:15,letterSpacing:2,flex:1}}/>
+                {unclaimedLabels.length>0&&(
+                  <select value={claimCode}
+                    onChange={e=>setClaimCode(e.target.value)}
+                    style={{background:"var(--white)",border:"1px solid var(--border)",
+                      borderRadius:8,padding:"7px 10px",fontSize:12,color:"var(--text)"}}>
+                    <option value="">← Or pick</option>
+                    {unclaimedLabels.map(l=><option key={l.code} value={l.code}>{l.code}</option>)}
+                  </select>
+                )}
+              </div>
+            </div>
+            <div>
+              <label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>
+                Item to Link
+              </label>
+              <input value={claimSearch} onChange={e=>setClaimSearch(e.target.value)}
+                placeholder="Search items…" className="fi" style={{marginBottom:6}}/>
+              <select value={claimItemId} onChange={e=>setClaimItemId(e.target.value)}
+                style={{width:"100%",background:"var(--white)",border:"1px solid var(--border)",
+                  borderRadius:8,padding:"8px 10px",fontSize:13,color:"var(--text)"}}>
+                <option value="">Select an item…</option>
+                {unlinkedItems
+                  .filter(i=>!claimSearch||i.name.toLowerCase().includes(claimSearch.toLowerCase()))
+                  .map(i=>(
+                  <option key={i.id} value={i.id}>{i.name}{i.location?" — "+i.location:""}</option>
+                ))}
+              </select>
+              <div style={{fontSize:11,color:"var(--muted)",marginTop:4}}>
+                Showing items that don't yet have a label. Already-labelled items are hidden.
+              </div>
+            </div>
+            <button className="btn btn-g" disabled={!claimCode||!claimItemId||loading}
+              onClick={claimLabel} style={{alignSelf:"flex-start"}}>
+              {loading?"Linking…":"🔗 Link Label to Item"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Pool health indicator for Admin Hub
+function PoolHealthWidget() {
+  const [stats, setStats] = useState(null);
+  useEffect(()=>{
+    Promise.all([
+      SB.from("label_pool").select("*",{count:"exact",head:true}).eq("status","available"),
+      SB.from("label_pool").select("*",{count:"exact",head:true}).eq("status","assigned"),
+      SB.from("label_pool").select("*",{count:"exact",head:true}).eq("status","claimed"),
+    ]).then(([a,b,c])=>setStats({available:a.count||0,assigned:b.count||0,claimed:c.count||0}));
+  },[]);
+  if(!stats) return null;
+  const total = stats.available+stats.assigned+stats.claimed;
+  const pctLeft = Math.round(stats.available/Math.max(total,1)*100);
+  return(
+    <div style={{marginTop:20,background:"var(--parch)",border:"1px solid var(--border)",
+      borderRadius:10,padding:"14px 16px"}}>
+      <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>Label Pool Health</div>
+      <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:10}}>
+        {[
+          {n:stats.available,label:"Available",color:"#4caf50"},
+          {n:stats.assigned, label:"Assigned (ordered)",color:"#2196f3"},
+          {n:stats.claimed,  label:"Claimed (in use)",color:"var(--gold)"},
+        ].map(s=>(
+          <div key={s.label} style={{textAlign:"center",minWidth:100}}>
+            <div style={{fontSize:22,fontWeight:800,color:s.color}}>{s.n.toLocaleString()}</div>
+            <div style={{fontSize:11,color:"var(--muted)"}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{height:8,background:"var(--border)",borderRadius:4,overflow:"hidden",marginBottom:8}}>
+        <div style={{height:"100%",width:pctLeft+"%",background:"#4caf50",borderRadius:4,transition:"width .4s"}}/>
+      </div>
+      <div style={{fontSize:11,color:"var(--muted)"}}>
+        {pctLeft}% of pool available · {stats.available.toLocaleString()} labels ready to assign
+        {stats.available<500&&<span style={{color:"#e53935",fontWeight:700}}> ⚠ Pool getting low — seed more labels in Supabase SQL.</span>}
+      </div>
+      {stats.available<500&&(
+        <div style={{marginTop:8,background:"rgba(229,57,53,.08)",border:"1px solid rgba(229,57,53,.2)",
+          borderRadius:6,padding:"8px 10px",fontSize:11,color:"var(--muted)",fontFamily:"monospace",lineHeight:1.5}}>
+          Run in Supabase SQL to add 10,000 more labels:<br/>
+          SELECT seed_label_pool({total+1}, {total+10000});
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminHub({ currentUser, org }) {
   const [tab, setTab]             = useState("overview");
   const [orgs, setOrgs]           = useState([]);
@@ -6213,49 +6812,214 @@ function AdminHub({ currentUser, org }) {
       {/* ── LABEL ORDERS ── */}
       {!loading&&tab==="labels"&&(
         <div>
-          <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>🏷 Label Orders</h3>
-          <p style={{fontSize:13,color:"var(--muted)",marginBottom:8,lineHeight:1.6}}>
-            Physical QR label orders from Theatre4u programs. Programs request labels through their inventory settings.
-            You fulfill, ship, and mark as shipped here.
-          </p>
-          <div style={{background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"10px 14px",marginBottom:20,fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
-            <strong style={{color:"var(--text)"}}>📋 Label Program Status:</strong> In development.
-            The order flow is in place — programs can submit requests. Fulfillment, pricing, and shipping
-            integration will be built out as volume grows. Current cost estimate: ~$0.10–0.25 per label for
-            weatherproof vinyl with QR code, printed in sheets of 30.
-          </div>
-          {labelOrders.length===0
-            ?<div style={{color:"var(--muted)",fontSize:13,padding:32,textAlign:"center",background:"var(--parch)",borderRadius:10,border:"1px solid var(--border)"}}>
-                No label orders yet. Once programs request labels from their inventory page, orders will appear here.
-              </div>
-            :<div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
-                <thead><tr style={{background:"rgba(0,0,0,.08)"}}>
-                  {["Program","Contact","Count","Type","Status","Tracking","Date"].map(h=>(
-                    <th key={h} style={{padding:"9px 12px",textAlign:"left",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)"}}>{h}</th>
-                  ))}
-                </tr></thead>
-                <tbody>
-                  {labelOrders.map(o=>(
-                    <tr key={o.id} style={{borderTop:"1px solid var(--border)"}}>
-                      <td style={{padding:"9px 12px",fontWeight:600}}>{o.org_name}</td>
-                      <td style={{padding:"9px 12px"}}><a href={"mailto:"+o.contact_email} style={{color:"var(--gold)",fontSize:12}}>{o.contact_email}</a></td>
-                      <td style={{padding:"9px 12px",fontWeight:700}}>{o.item_count}</td>
-                      <td style={{padding:"9px 12px",color:"var(--muted)",fontSize:12,textTransform:"capitalize"}}>{o.label_type}</td>
-                      <td style={{padding:"9px 12px"}}>
-                        <select value={o.status} onChange={e=>updateLabelOrder(o.id,{status:e.target.value})}
-                          style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,padding:"3px 7px",fontSize:12,color:"var(--text)",cursor:"pointer"}}>
-                          {["pending","processing","shipped","delivered"].map(s=><option key={s} value={s}>{s}</option>)}
-                        </select>
-                      </td>
-                      <td style={{padding:"9px 12px",fontSize:12,color:"var(--muted)"}}>{o.tracking||"—"}</td>
-                      <td style={{padding:"9px 12px",color:"var(--muted)",fontSize:12}}>{new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16,flexWrap:"wrap",gap:12}}>
+            <div>
+              <h3 style={{fontFamily:"var(--serif)",fontSize:18,margin:"0 0 2px"}}>🏷 Label Orders</h3>
+              <p style={{fontSize:13,color:"var(--muted)",margin:0}}>
+                {labelOrders.length} orders · {labelOrders.filter(o=>o.status==="pending").length} pending fulfillment
+              </p>
             </div>
-          }
+            <div style={{display:"flex",gap:8}}>
+              <button className="btn btn-o btn-sm" onClick={async()=>{
+                // Export ALL unfulfilled orders with code ranges as CSV for WePrintBarcodes
+                const pending = labelOrders.filter(o=>o.status==="pending"||o.status==="processing");
+                if(pending.length===0){alert("No pending orders to export.");return;}
+                // Get all labels for pending orders
+                const orderIds = pending.map(o=>o.id);
+                const {data:labels} = await SB.from("label_pool")
+                  .select("code,seq,order_id,org_id")
+                  .in("order_id",orderIds)
+                  .eq("status","assigned")
+                  .order("seq");
+                if(!labels||labels.length===0){alert("No labels found for pending orders.");return;}
+                // WePrintBarcodes CSV format: QR_Data, Label_Text (optional)
+                const rows = ["QR_Data,Label_Text,Order_ID,Org"];
+                labels.forEach(l=>{
+                  const order = pending.find(o=>o.id===l.order_id);
+                  const url = `https://theatre4u.org/item?code=${l.code}`;
+                  rows.push(`"${url}","${l.code}","${l.order_id}","${order?.org_name||""}"`);
+                });
+                const csv = rows.join("\n");
+                const blob = new Blob([csv],{type:"text/csv"});
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = `theatre4u_labels_${new Date().toISOString().slice(0,10)}.csv`;
+                a.click();
+                URL.revokeObjectURL(a.href);
+              }}>
+                ⬇ Export CSV for WePrintBarcodes
+              </button>
+              <button className="btn btn-o btn-sm" onClick={()=>setTab("labels")}>↺ Refresh</button>
+            </div>
+          </div>
+
+          {/* WePrintBarcodes workflow guide */}
+          <div style={{background:"rgba(33,150,243,.05)",border:"1px solid rgba(33,150,243,.2)",
+            borderRadius:10,padding:"14px 16px",marginBottom:20}}>
+            <div style={{fontWeight:700,fontSize:13,marginBottom:10,color:"var(--text)"}}>
+              📋 Fulfillment Workflow — WePrintBarcodes.com
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
+              {[
+                {n:"1",t:"Export CSV",b:'Click "Export CSV for WePrintBarcodes" above. The file contains one row per label with the QR URL and label text.'},
+                {n:"2",t:"Go to WePrintBarcodes",b:"Visit weprintbarcodes.com → QR Code Labels. Select your label size (1.5\"×1.5\" recommended) and material (polyester or weatherproof)."},
+                {n:"3",t:"Upload CSV",b:"Choose \"Variable Data\" or \"Sequential QR Codes\". Upload your CSV file. The QR_Data column becomes the encoded URL on each label."},
+                {n:"4",t:"Proof & order",b:"Review the digital proof. Set ship-to as the program's address (from the delivery_addr column in each order). Place order."},
+                {n:"5",t:"Update status",b:"Once shipped, paste the tracking number below and change status to Shipped. The program sees this in their Labels tab."},
+              ].map(s=>(
+                <div key={s.n} style={{background:"var(--white)",borderRadius:8,padding:"10px 12px",
+                  border:"1px solid var(--border)"}}>
+                  <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                    <div style={{background:"#2196f3",color:"#fff",borderRadius:"50%",width:22,height:22,
+                      minWidth:22,display:"flex",alignItems:"center",justifyContent:"center",
+                      fontSize:11,fontWeight:800,flexShrink:0}}>{s.n}</div>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:12,marginBottom:3}}>{s.t}</div>
+                      <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.4}}>{s.b}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{marginTop:12,display:"flex",gap:12,flexWrap:"wrap",fontSize:12,color:"var(--muted)"}}>
+              <span>🔗 <a href="https://www.weprintbarcodes.com/qr-code-labels.html" target="_blank" rel="noreferrer" style={{color:"var(--gold)"}}>WePrintBarcodes QR Labels ↗</a></span>
+              <span>📏 Recommended size: 1.5" × 1.5"</span>
+              <span>🏷 Material: polyester matte (indoor) or vinyl weatherproof</span>
+              <span>📦 Ships on rolls — easier to apply than sheets</span>
+            </div>
+          </div>
+
+          {/* Pool stats */}
+          <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
+            {[
+              {label:"Available in Pool", q:"available",  color:"#4caf50"},
+              {label:"Assigned (ordered)",q:"assigned",   color:"#2196f3"},
+              {label:"Claimed (in use)",  q:"claimed",    color:"var(--gold)"},
+            ].map(async s=><div/> /* rendered below */)}
+          </div>
+
+          {/* Orders list */}
+          {labelOrders.length===0?(
+            <div style={{color:"var(--muted)",fontSize:13,padding:32,textAlign:"center",
+              background:"var(--parch)",borderRadius:10,border:"1px solid var(--border)"}}>
+              No label orders yet. Once programs order labels from the Labels page, they'll appear here.
+            </div>
+          ):(
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              {labelOrders.map(o=>{
+                let addr = null;
+                try { addr = JSON.parse(o.delivery_addr||"{}"); } catch(e){}
+                return(
+                  <div key={o.id} style={{background:"var(--parch)",border:"1px solid var(--border)",
+                    borderRadius:10,padding:"14px 16px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",
+                      alignItems:"flex-start",gap:12,flexWrap:"wrap",marginBottom:10}}>
+                      <div>
+                        <div style={{fontWeight:700,fontSize:15}}>{o.org_name}</div>
+                        <div style={{fontSize:12,color:"var(--muted)"}}>
+                          <a href={"mailto:"+o.contact_email} style={{color:"var(--gold)"}}>{o.contact_email}</a>
+                        </div>
+                      </div>
+                      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                        <span style={{fontWeight:800,fontSize:18,color:"var(--gold)"}}>{o.item_count}</span>
+                        <span style={{fontSize:12,color:"var(--muted)",textTransform:"capitalize"}}>{o.label_type} labels</span>
+                        <select value={o.status} onChange={e=>updateLabelOrder(o.id,{status:e.target.value})}
+                          style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,
+                            padding:"4px 8px",fontSize:12,color:"var(--text)",cursor:"pointer"}}>
+                          {["pending","processing","shipped","delivered"].map(s=>(
+                            <option key={s} value={s}>
+                              {s==="pending"?"⏳ Pending":s==="processing"?"🔄 Processing":s==="shipped"?"✈ Shipped":"✓ Delivered"}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Code range */}
+                    {o.code_start&&(
+                      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8,flexWrap:"wrap"}}>
+                        <span style={{fontSize:11,color:"var(--muted)",textTransform:"uppercase",letterSpacing:.5}}>Label range:</span>
+                        <code style={{fontSize:12,fontFamily:"monospace",color:"var(--amber)",
+                          background:"rgba(196,118,26,.1)",padding:"2px 8px",borderRadius:4}}>
+                          {o.code_start} → {o.code_end}
+                        </code>
+                        <span style={{fontSize:11,color:"var(--muted)"}}>({o.item_count} labels)</span>
+                        <button className="btn btn-o btn-sm" style={{fontSize:11,padding:"2px 8px"}}
+                          onClick={async()=>{
+                            // Export just this order's labels as CSV
+                            const {data:labels} = await SB.from("label_pool")
+                              .select("code,seq")
+                              .eq("order_id",o.id)
+                              .order("seq");
+                            if(!labels||labels.length===0){alert("No labels found for this order.");return;}
+                            const rows=["QR_Data,Label_Text"];
+                            labels.forEach(l=>{
+                              rows.push(`"https://theatre4u.org/item?code=${l.code}","${l.code}"`);
+                            });
+                            const blob=new Blob([rows.join("\n")],{type:"text/csv"});
+                            const a=document.createElement("a");
+                            a.href=URL.createObjectURL(blob);
+                            a.download=`labels_${o.org_name.replace(/\s+/g,"_")}_${o.code_start}-${o.code_end}.csv`;
+                            a.click();
+                            URL.revokeObjectURL(a.href);
+                          }}>
+                          ⬇ Export This Order
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Ship-to address */}
+                    {addr&&addr.street&&(
+                      <div style={{fontSize:12,color:"var(--muted)",marginBottom:8,
+                        display:"flex",gap:6,alignItems:"flex-start"}}>
+                        <span>📦</span>
+                        <span>{addr.name} · {addr.street}, {addr.city}, {addr.state} {addr.zip}</span>
+                      </div>
+                    )}
+
+                    {/* Logo indicator */}
+                    {o.include_logo&&(
+                      <div style={{fontSize:12,color:"var(--gold)",marginBottom:8,
+                        display:"flex",gap:6,alignItems:"center"}}>
+                        <span>🖼</span>
+                        <span>Logo requested{o.logo_url?" — ":""}</span>
+                        {o.logo_url&&<a href={o.logo_url} target="_blank" rel="noreferrer"
+                          style={{color:"var(--gold)",fontSize:11}}>View logo ↗</a>}
+                        <span style={{fontSize:11,color:"var(--muted)"}}>
+                          Include in WePrintBarcodes order as header graphic
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Tracking number input */}
+                    <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                      <input
+                        defaultValue={o.tracking||""}
+                        placeholder="Add tracking number…"
+                        onBlur={async e=>{
+                          const v=e.target.value.trim();
+                          if(v&&v!==o.tracking){
+                            await updateLabelOrder(o.id,{tracking:v,
+                              status:o.status==="pending"||o.status==="processing"?"shipped":o.status});
+                          }
+                        }}
+                        style={{flex:1,minWidth:180,background:"var(--white)",border:"1px solid var(--border)",
+                          borderRadius:6,padding:"5px 10px",fontSize:12,color:"var(--text)",fontFamily:"monospace"}}/>
+                      <span style={{fontSize:11,color:"var(--faint)"}}>
+                        {new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
+                      </span>
+                      {o.amount_cents>0&&<span style={{fontSize:12,fontWeight:700,color:"#4caf50"}}>
+                        ${(o.amount_cents/100).toFixed(2)}
+                      </span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Pool health */}
+          <PoolHealthWidget/>
         </div>
       )}
 
@@ -12572,6 +13336,18 @@ function trackVisit(page, extra = {}) {
 
 function AppRoot(){
   const [user,setUser]     = useState(null);
+  // ── Handle Stripe label checkout returns ──────────────────────────────────
+  const [stripeReturn, setStripeReturn] = useState(()=>{
+    const p = new URLSearchParams(window.location.search);
+    if(p.get("labels_success")) return "success";
+    if(p.get("labels_cancelled")) return "cancelled";
+    return null;
+  });
+  useEffect(()=>{
+    if(stripeReturn && user){
+      nav("labels");
+    }
+  },[stripeReturn, user]);
   // ── Hash routing — handles #/item/:id for public QR scans ─────────────────
   // ── Hash routing: #/item/:id and #/location/:id (storage location QR codes) ──
   const _parseHash = (h) => ({
@@ -13042,6 +13818,7 @@ function AppRoot(){
       ...(!isCrew && org?.community_enabled   ? [{ id:"community",   label:"Community",   ico:"🎪", community:true }] : []),
       ...(!isCrew  ? [{ id:"productions", label:"Productions", ico:"🎭"       }] : []),
       ...(!isMember? [{ id:"reports",     label:"Reports",     ico:Ic.chart   }] : []),
+      ...(!isMember? [{ id:"labels",      label:"QR Labels",   ico:"🏷"        }] : []),
       ...(!isMember? [{ id:"funding",     label:"Funding Tracker", ico:"💰"  }] : []),
       // Prop 28 nav hidden — legacy data accessible via Funding Tracker migration banner
       { id:"profile",     label:"My Profile",  ico:"👤"       },
@@ -13253,7 +14030,7 @@ function AppRoot(){
                       setPendingReqCount(count||0);
                     }}/>}
                   {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
-                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} pointBalance={creditBalance} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
+                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} pointBalance={creditBalance} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")} goLabels={()=>nav("labels")}/>}
                   {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} onGoReports={()=>nav("reports")}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
@@ -13270,6 +14047,7 @@ function AppRoot(){
                   {page==="marketplace" && <MarketplaceGate items={items} org={org} setOrg={setOrg} plan={plan} userId={user?.id} activeSchool={activeSchool} allSchoolsMode={plan==="district"} onEdit={edit} onDelete={del}/>}
                   {page==="productions" && <Productions userId={user?.id} allItems={items}/>}
                   {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan} org={org}/>}
+                  {page==="labels"      && <LabelsPage  org={org} userId={user?.id} items={items} stripeReturn={stripeReturn} onClearReturn={()=>setStripeReturn(null)}/>}
                   {page==="funding"     && <FundingPage userId={user?.id} org={org} plan={plan}/>}
                   {page==="prop28"      && <Prop28Page  userId={user?.id} org={org} onNav={nav}/>}
                   {page==="profile"     && <OrgProfilePage userId={user?.id} org={org} setOrg={saveOrg} plan={plan} items={items}/>}
