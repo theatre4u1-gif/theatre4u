@@ -65,7 +65,7 @@ const EM = {
   csvNoName:           { title:"Name Column Required",        body:"Your spreadsheet must have an Item Name column. Drag one of your columns to 'Item Name' in the column mapping step before importing.",                                                              cta:"Go Back and Fix" },
   csvZeroImported:     { title:"Nothing Was Imported",        body:"Every row in your file failed to import. Make sure each item has a name, and that the file has data below the header row.",                                                                        cta:"Try Again" },
   photoTooLarge:       { title:"Photo Is Too Large",          body:"That photo is too large to upload. Try a file under 10 MB — photos taken on a phone and shared directly are usually a perfect size.",                                                              cta:"Choose a Smaller Photo" },
-  photoWrongType:      { title:"Unsupported File Type",       body:"Photos must be JPEG, PNG, WebP, or HEIC (iPhone) format. If uploading from an iPhone, make sure to select 'Most Compatible' in Camera settings, or the platform will convert HEIC automatically.",                                                                                         cta:"Choose a Different File" },
+  photoWrongType:      { title:"Unsupported File Type",       body:"Only JPEG, PNG, and WebP photos can be uploaded. Convert your file to one of those formats and try again.",                                                                                         cta:"Choose a Different File" },
   loginBadPassword:    { title:"Password Didn't Match",       body:"That password isn't right for this account. Double-check for typos, or use 'Forgot password' to set a new one.",                                                                                   cta:"Reset Password" },
   loginNoEmail:        { title:"Account Not Found",           body:"There's no Theatre4u account for that email address. Check for typos, or sign up to create a new account.",                                                                                        cta:"Create an Account" },
   sessionExpired:      { title:"Session Expired",             body:"You've been signed out after a period of inactivity. Sign back in to continue where you left off.",                                                                                                cta:"Sign In" },
@@ -202,39 +202,7 @@ const MILESTONE_POINTS = {
   team_invite:      { pts: 15,  label: "Team Member Invited" },
   referral_earn:    { pts: 50,  label: "Referral Bonus" },
 };
-const SIZES = ["XS","S","M","L","XL","XXL","2X","3X","4X","One Size","N/A","Custom"];
-
-// Size chart data for the popup modal
-const SIZE_CHART = {
-  womens: [
-    { size:"XS",  numeric:"0-2",   bust:"33-34in",  waist:"24-25in", hips:"34-35in"  },
-    { size:"S",   numeric:"4-6",   bust:"35-36in",  waist:"26-27in", hips:"36-37in"  },
-    { size:"M",   numeric:"8-10",  bust:"37-38in",  waist:"28-29in", hips:"38-39in"  },
-    { size:"L",   numeric:"12-14", bust:"39-41in",  waist:"30-33in", hips:"41-42in"  },
-    { size:"XL",  numeric:"16-18", bust:"42-44in",  waist:"34-36in", hips:"43-45in"  },
-    { size:"XXL", numeric:"20-22", bust:"45-47in",  waist:"37-39in", hips:"46-48in"  },
-    { size:"2X",  numeric:"20-22", bust:"45-47in",  waist:"37-39in", hips:"46-48in"  },
-    { size:"3X",  numeric:"24-26", bust:"48-50in",  waist:"40-43in", hips:"49-52in"  },
-  ],
-  mens: [
-    { size:"XS",  chest:"32-34in", waist:"26-28in", neck:"13-13.5in"  },
-    { size:"S",   chest:"36-38in", waist:"28-30in", neck:"14-14.5in"  },
-    { size:"M",   chest:"38-40in", waist:"30-32in", neck:"15-15.5in"  },
-    { size:"L",   chest:"42-44in", waist:"33-35in", neck:"16-16.5in"  },
-    { size:"XL",  chest:"46-48in", waist:"36-38in", neck:"17-17.5in"  },
-    { size:"XXL", chest:"50-52in", waist:"39-42in", neck:"18-18.5in"  },
-    { size:"2X",  chest:"50-52in", waist:"39-42in", neck:"18-18.5in"  },
-    { size:"3X",  chest:"54-56in", waist:"43-46in", neck:"19-19.5in"  },
-  ],
-  kids: [
-    { size:"XS",  age:"4-5",   height:"42-44in", chest:"21-22in"  },
-    { size:"S",   age:"6-7",   height:"45-48in", chest:"23-24in"  },
-    { size:"M",   age:"8-10",  height:"50-54in", chest:"25-27in"  },
-    { size:"L",   age:"10-12", height:"55-58in", chest:"28-30in"  },
-    { size:"XL",  age:"12-14", height:"59-62in", chest:"31-33in"  },
-  ],
-};
-const CLOTHING_CATS = new Set(["costumes","uniforms","footwear","accessories","hats","wigs"]);
+const SIZES = ["XS","S","M","L","XL","XXL","One Size","N/A"];
 const AVAIL = ["In Stock","In Use","Checked Out","Being Repaired","Lost","Retired"];
 const MKT   = ["Not Listed","For Rent","For Sale","Rent or Sale","For Loan"];
 
@@ -292,28 +260,6 @@ function makeSamples(){
   ].map(i=>({...i,id:uid(),added:new Date().toISOString()}));
 }
 
-// Convert HEIC/HEIF files to JPEG before canvas processing
-// Uses heic2any library loaded on demand — no bundle size impact
-async function convertHeicToJpeg(file) {
-  try {
-    // Dynamically load heic2any only when needed
-    const heic2any = (await import("https://esm.sh/heic2any@0.0.4")).default;
-    const blob = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
-    // heic2any may return an array for multi-frame HEIC — take first frame
-    const converted = Array.isArray(blob) ? blob[0] : blob;
-    return new File([converted], file.name.replace(/\.heic$/i, ".jpg"), { type: "image/jpeg" });
-  } catch(e) {
-    console.error("HEIC conversion failed:", e);
-    return null;
-  }
-}
-
-// Detect if a file is HEIC/HEIF
-function isHeic(file) {
-  return /\.(heic|heif)$/i.test(file.name) || 
-         file.type === "image/heic" || file.type === "image/heif";
-}
-
 function resizeImg(file,maxW=560,q=0.78){
   return new Promise(res=>{
     const r=new FileReader();
@@ -336,12 +282,6 @@ function resizeImg(file,maxW=560,q=0.78){
 // Upload a file to Supabase Storage and return the public URL
 async function uploadPhoto(file, userId) {
   try {
-    // Convert HEIC/HEIF to JPEG first (iPhone photos, Live Photos, etc.)
-    if (isHeic(file)) {
-      const converted = await convertHeicToJpeg(file);
-      if (converted) file = converted;
-      // If conversion fails, try anyway — canvas may handle it on Safari
-    }
     // Resize first to keep file sizes small
     const dataUrl = await resizeImg(file, 800, 0.82);
     // Convert base64 dataURL to a Blob
@@ -802,7 +742,6 @@ function LocationDropdown({ userId, value, onChange }) {
 function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false}){
   const blank={name:"",category:"costumes",condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,loan_period:2,deposit:0,avail:"In Stock",img:null,tags:[],purchase_cost:"",purchase_date:"",purchase_vendor:"",funding_source_id:""};
   const[f,setF]=useState(item||blank);
-  const[sizeChartOpen,setSizeChartOpen]=useState(false);
   const[ti,setTi]=useState("");
   const[upl,setUpl]=useState(false);
   const[svng,setSvng]=useState(false);
@@ -876,141 +815,10 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false}){
 
   return(
     <div className="fg2">
-      {/* Size Chart Modal — hardcoded light colors so it's always readable */}
-      {sizeChartOpen && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:9999,
-          display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
-          onClick={e=>e.target===e.currentTarget&&setSizeChartOpen(false)}>
-          <div style={{background:"#fff",borderRadius:14,padding:24,width:"min(680px,95vw)",
-            maxHeight:"85vh",overflowY:"auto",boxShadow:"0 12px 48px rgba(0,0,0,.5)"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-              <div style={{fontFamily:"Georgia,serif",fontSize:20,fontWeight:700,color:"#1a0f00"}}>📏 Costume Size Chart</div>
-              <button onClick={()=>setSizeChartOpen(false)}
-                style={{background:"none",border:"1px solid #ddd",borderRadius:6,
-                  width:28,height:28,cursor:"pointer",fontSize:16,color:"#888",
-                  display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
-            </div>
-            <p style={{fontSize:12,color:"#666",marginBottom:16,lineHeight:1.5}}>
-              Use these charts as a guide. Vintage and theatrical costumes may run differently —
-              always measure when possible. Record exact measurements in the Notes field.
-            </p>
-            {/* Women's */}
-            <div style={{marginBottom:20}}>
-              <div style={{fontWeight:700,fontSize:14,marginBottom:8,color:"#d4a843"}}>Women's / Female</div>
-              <div style={{overflowX:"auto"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-                  <thead><tr style={{background:"#f5f0e8"}}>
-                    {["Size","US Numeric","Bust","Waist","Hips"].map(h=>(
-                      <th key={h} style={{padding:"7px 10px",textAlign:"left",fontWeight:700,
-                        fontSize:11,textTransform:"uppercase",letterSpacing:1,color:"#888",
-                        borderBottom:"1px solid #e0d8c8"}}>{h}</th>
-                    ))}
-                  </tr></thead>
-                  <tbody>
-                    {SIZE_CHART.womens.map((r,i)=>(
-                      <tr key={r.size+i} style={{borderBottom:"1px solid #e8e0d0",
-                        background:f.size===r.size?"rgba(212,168,67,.12)":"transparent"}}>
-                        <td style={{padding:"7px 10px",fontWeight:f.size===r.size?800:600,
-                          color:f.size===r.size?"#b8860b":"#1a0f00"}}>{r.size}</td>
-                        <td style={{padding:"7px 10px",color:"#666"}}>{r.numeric}</td>
-                        <td style={{padding:"7px 10px",color:"#333"}}>{r.bust}</td>
-                        <td style={{padding:"7px 10px",color:"#333"}}>{r.waist}</td>
-                        <td style={{padding:"7px 10px",color:"#333"}}>{r.hips}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            {/* Men's */}
-            <div style={{marginBottom:20}}>
-              <div style={{fontWeight:700,fontSize:14,marginBottom:8,color:"#d4a843"}}>Men's / Male</div>
-              <div style={{overflowX:"auto"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-                  <thead><tr style={{background:"#f5f0e8"}}>
-                    {["Size","Chest","Waist","Neck"].map(h=>(
-                      <th key={h} style={{padding:"7px 10px",textAlign:"left",fontWeight:700,
-                        fontSize:11,textTransform:"uppercase",letterSpacing:1,color:"#888",
-                        borderBottom:"1px solid #e0d8c8"}}>{h}</th>
-                    ))}
-                  </tr></thead>
-                  <tbody>
-                    {SIZE_CHART.mens.map((r,i)=>(
-                      <tr key={r.size+i} style={{borderBottom:"1px solid #e8e0d0",
-                        background:f.size===r.size?"rgba(212,168,67,.12)":"transparent"}}>
-                        <td style={{padding:"7px 10px",fontWeight:f.size===r.size?800:600,
-                          color:f.size===r.size?"#b8860b":"#1a0f00"}}>{r.size}</td>
-                        <td style={{padding:"7px 10px",color:"#333"}}>{r.chest}</td>
-                        <td style={{padding:"7px 10px",color:"#333"}}>{r.waist}</td>
-                        <td style={{padding:"7px 10px",color:"#333"}}>{r.neck}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            {/* Kids */}
-            <div style={{marginBottom:20}}>
-              <div style={{fontWeight:700,fontSize:14,marginBottom:8,color:"#d4a843"}}>Children's</div>
-              <div style={{overflowX:"auto"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-                  <thead><tr style={{background:"#f5f0e8"}}>
-                    {["Size","Approx. Age","Height","Chest"].map(h=>(
-                      <th key={h} style={{padding:"7px 10px",textAlign:"left",fontWeight:700,
-                        fontSize:11,textTransform:"uppercase",letterSpacing:1,color:"#888",
-                        borderBottom:"1px solid #e0d8c8"}}>{h}</th>
-                    ))}
-                  </tr></thead>
-                  <tbody>
-                    {SIZE_CHART.kids.map((r,i)=>(
-                      <tr key={r.size+i} style={{borderBottom:"1px solid #e8e0d0",
-                        background:f.size===r.size?"rgba(212,168,67,.12)":"transparent"}}>
-                        <td style={{padding:"7px 10px",fontWeight:f.size===r.size?800:600,
-                          color:f.size===r.size?"#b8860b":"#1a0f00"}}>{r.size}</td>
-                        <td style={{padding:"7px 10px",color:"#666"}}>{r.age}</td>
-                        <td style={{padding:"7px 10px",color:"#333"}}>{r.height}</td>
-                        <td style={{padding:"7px 10px",color:"#333"}}>{r.chest}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <div style={{background:"#f5f0e8",borderRadius:8,padding:12,fontSize:12,color:"#666",lineHeight:1.6}}>
-              <strong style={{color:"#1a0f00"}}>💡 Tip:</strong> For period costumes, corsets, and fitted pieces,
-              record exact measurements in the Notes field (e.g. Bust 38in, Waist 30in, Length 52in from shoulder).
-              This helps programs find the right fit without trying on.
-            </div>
-          </div>
-        </div>
-      )}
       <div className="fg fu"><label className="fl">Item Name *</label><input className="fi" value={f.name} onChange={e=>upd("name",e.target.value)} placeholder="e.g. Victorian Ball Gown" autoFocus/></div>
       <div className="fg"><label className="fl">Category</label><select className="fs" value={f.category} onChange={e=>upd("category",e.target.value)}>{CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</select></div>
       <div className="fg"><label className="fl">Condition</label><select className="fs" value={f.condition} onChange={e=>upd("condition",e.target.value)}>{CONDS.map(c=><option key={c}>{c}</option>)}</select></div>
-      <div className="fg">
-        <label className="fl" style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <span>Size</span>
-          {CLOTHING_CATS.has(f.category) && (
-            <button type="button" onClick={()=>setSizeChartOpen(true)}
-              style={{background:"none",border:"none",color:"var(--gold)",fontSize:11,
-                fontWeight:700,cursor:"pointer",padding:0,textDecoration:"underline"}}>
-              📏 Size Chart
-            </button>
-          )}
-        </label>
-        <select className="fs" value={f.size==="Custom"?"Custom":SIZES.includes(f.size)?f.size:"N/A"}
-          onChange={e=>{
-            upd("size", e.target.value);
-            if(e.target.value !== "Custom") upd("customSize","");
-          }}>
-          {SIZES.map(s=><option key={s}>{s}</option>)}
-        </select>
-        {(f.size==="Custom"||!SIZES.includes(f.size)&&f.size&&f.size!=="") && (
-          <input className="fi" style={{marginTop:4}} value={f.customSize||f.size||""}
-            onChange={e=>upd("size",e.target.value)}
-            placeholder='Enter exact size or measurements (e.g. 38in chest, Womens 10)'/>
-        )}
-      </div>
+      <div className="fg"><label className="fl">Size</label><select className="fs" value={f.size} onChange={e=>upd("size",e.target.value)}>{SIZES.map(s=><option key={s}>{s}</option>)}</select></div>
       <div className="fg"><label className="fl">Quantity</label><input className="fi" type="number" min="0" step="1" placeholder="1" value={f.qty||""} onChange={e=>upd("qty",parseInt(e.target.value)||0)}/></div>
       <div className="fg"><label className="fl">Availability</label><select className="fs" value={f.avail} onChange={e=>upd("avail",e.target.value)}>{AVAIL.map(a=><option key={a}>{a}</option>)}</select></div>
       <div className="fg"><label className="fl">Location</label><input className="fi" value={f.location} onChange={e=>upd("location",e.target.value)} placeholder="e.g. Costume Closet A"/></div>
@@ -1991,11 +1799,15 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
   );
 }
 
-function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null}){
+function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, onGoReports=null}){
     const[upgradeReason,setUpgradeReason]=useState(null);
   // Role-based permissions
-  const canEdit   = memberRole !== "house";
-  const canAdd    = memberRole !== "house";
+  // House: can view AND add items, but not edit existing or delete
+  // Crew:  can view, add, and edit, but not delete
+  // Stage Manager: full inventory access except delete
+  // Director: full access
+  const canAdd    = true; // all roles can add new items
+  const canEdit   = memberRole !== "house";  // house can only add, not edit existing
   const canDelete = memberRole === "director" || memberRole === "stage_manager";
 
   // ── Storage location deep link — filter items when QR scanned ────────────────
@@ -2016,7 +1828,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
 
   const[search,setSrch]=useState("");const[catF,setCatF]=useState("all");
   const[condF,setCondF]=useState("all");const[availF,setAvailF]=useState("all");
-  const[mktF,setMktF]=useState("all");const[sizeF,setSizeF]=useState("all");const[view,setView]=useState("grid"); // grid | table | locations
+  const[mktF,setMktF]=useState("all");const[view,setView]=useState("grid"); // grid | table | locations
   const[showF,setShowF]=useState(false);const[pg,setPg]=useState(1);
   const[modal,setModal]=useState(null);const[active,setActive]=useState(null);
   const[showImport,setShowImport]=useState(false);
@@ -2024,20 +1836,19 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
   const mktCls=m=>m==="For Rent"?"mb-rent":m==="For Sale"?"mb-sale":m==="Rent or Sale"?"mb-both":m==="For Loan"?"mb-loan":"mb-none";
   const filtered=useMemo(()=>{
     let f=items;
-    if(search){const q=search.toLowerCase();f=f.filter(i=>i.name.toLowerCase().includes(q)||(i.notes||"").toLowerCase().includes(q)||(i.location||"").toLowerCase().includes(q)||(i.display_id||"").toLowerCase().includes(q)||(i.size||"").toLowerCase().includes(q)||(i.tags||[]).some(t=>t.includes(q)))}
+    if(search){const q=search.toLowerCase();f=f.filter(i=>i.name.toLowerCase().includes(q)||(i.notes||"").toLowerCase().includes(q)||(i.location||"").toLowerCase().includes(q)||(i.display_id||"").toLowerCase().includes(q)||(i.tags||[]).some(t=>t.includes(q)))}
     if(catF!=="all")f=f.filter(i=>i.category===catF);
     if(condF!=="all")f=f.filter(i=>i.condition===condF);
     if(availF!=="all")f=f.filter(i=>i.avail===availF);
     if(mktF!=="all")f=f.filter(i=>i.mkt===mktF);
-    if(sizeF!=="all")f=f.filter(i=>i.size===sizeF);
     if(locFilter!=="all")f=f.filter(i=>
       i.location_id===locFilter ||
       (i.location&&locFilterName&&i.location.toLowerCase()===locFilterName.name.toLowerCase())
     );
     return f;
-  },[items,search,catF,condF,availF,mktF,sizeF,locFilter,locFilterName]);
+  },[items,search,catF,condF,availF,mktF,locFilter,locFilterName]);
   const paged=useMemo(()=>filtered.slice((pg-1)*PP,pg*PP),[filtered,pg]);
-  useEffect(()=>setPg(1),[search,catF,condF,availF,mktF,sizeF]);
+  useEffect(()=>setPg(1),[search,catF,condF,availF,mktF]);
   const openD=item=>{setActive(item);setModal("d")};
   const openE=item=>{setActive(item);setModal("e")};
   const handleSave=async form=>{
@@ -2101,16 +1912,16 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
               if(items.length>=max){setUpgradeReason(EM.planItemLimit.body);return;}
               setActive(null);setModal("a");
             }}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add Item</button>}
+            <button className="btn btn-o" style={{fontSize:12,padding:"6px 12px"}} onClick={()=>onGoReports?onGoReports():null} title="Go to Reports">📊 Reports</button>
           </div>
         </div>
         {showF&&(
           <div className="fbar fin">
             <div><label>Category</label><select value={catF} onChange={e=>setCatF(e.target.value)}><option value="all">All</option>{CATS.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></div>
-            <div><label>Size</label><select value={sizeF} onChange={e=>setSizeF(e.target.value)}><option value="all">All Sizes</option>{["XS","S","M","L","XL","XXL","2X","3X","4X","One Size","N/A"].map(s=><option key={s} value={s}>{s}</option>)}</select></div>
             <div><label>Condition</label><select value={condF} onChange={e=>setCondF(e.target.value)}><option value="all">All</option>{CONDS.map(c=><option key={c}>{c}</option>)}</select></div>
             <div><label>Availability</label><select value={availF} onChange={e=>setAvailF(e.target.value)}><option value="all">All</option>{AVAIL.map(a=><option key={a}>{a}</option>)}</select></div>
             <div><label>Exchange Status</label><select value={mktF} onChange={e=>setMktF(e.target.value)}><option value="all">All</option>{MKT.map(s=><option key={s}>{s}</option>)}</select></div>
-            <button className="btn btn-o btn-sm" onClick={()=>{setCatF("all");setSizeF("all");setCondF("all");setAvailF("all");setMktF("all")}}>Clear</button>
+            <button className="btn btn-o btn-sm" onClick={()=>{setCatF("all");setCondF("all");setAvailF("all");setMktF("all")}}>Clear</button>
           </div>
         )}
         <div style={{fontSize:13,fontWeight:700,color:"var(--faint)",marginBottom:12}}>{filtered.length} item{filtered.length!==1?"s":""}</div>
@@ -2129,17 +1940,6 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
                       {item.location&&<div style={{fontSize:12,color:"var(--muted)",marginBottom:4,display:"flex",alignItems:"center",gap:3}}>📍 {item.location}</div>}
                       <div className="inv-meta">{item.display_id&&<span className="chip" style={{fontFamily:"monospace",fontWeight:800,color:"var(--amber)",letterSpacing:.5}}>{item.display_id}</span>}<span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span>{item.size!=="N/A"&&<span className="chip">{item.size}</span>}<span className="chip">{item.avail}</span></div>
                       <div className="inv-foot"><span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span>{item.mkt==="For Loan"?<span style={{fontSize:12,color:"#00838f",fontWeight:700}}>{item.loan_period||2}wk loan{item.deposit>0?" · "+fmt$(item.deposit)+" dep.":""}</span>:item.mkt!=="Not Listed"&&<span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>}</div>
-                      {/* Quick action buttons on card */}
-                      {canEdit&&<div style={{display:"flex",gap:5,marginTop:8,borderTop:"1px solid var(--border)",paddingTop:8}} onClick={e=>e.stopPropagation()}>
-                        <button className="btn btn-o btn-sm" style={{flex:1,fontSize:11,padding:"4px 0"}}
-                          onClick={e=>{e.stopPropagation();openE(item);}}>
-                          ✏️ Edit
-                        </button>
-                        {canDelete&&<button className="btn btn-d btn-sm" style={{fontSize:11,padding:"4px 10px"}}
-                          onClick={e=>{e.stopPropagation();if(window.confirm("Delete \""+item.name+"\"? This cannot be undone."))onDelete(item.id);}}>
-                          🗑
-                        </button>}
-                      </div>}
                     </div>
                   </div>
                 );
@@ -2546,7 +2346,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
               <div className="empty-ico">🏪</div>
               <h3>{mktTab==="mine"?"No Active Listings":"No Listings Found"}</h3>
               <p>{mktTab==="mine"
-                ?"Mark items as “For Rentin or “For Salein in Inventory to list them here."
+                ?"Mark items as “For Rent” or “For Sale” in Inventory to list them here."
                 :radius!=="all"
                   ?"Try expanding your search radius or searching All to see listings everywhere."
                   :"No listings yet — be the first to list items for your community!"}</p>
@@ -4129,9 +3929,8 @@ const PLANS_DEF = {
 // ── Admin accounts — add emails here for free District access + admin dashboard
 const ADMIN_EMAILS = [
   "theatre4u1@gmail.com",
-  "hello@theatre4u.org",
-  "rzick@hbuhsd.edu",
-  // Add future admin team members here
+  // Add tester emails here:
+  // "tester1@example.com",
 ];
 const isAdminEmail = (e) => ADMIN_EMAILS.includes((e||"").toLowerCase().trim());
 const ADMIN_EMAIL  = ADMIN_EMAILS[0]; // legacy alias
@@ -5895,209 +5694,469 @@ function AdminAnalyticsTab({ analytics, loading, onLoad }) {
   );
 }
 
-// ── Admin Operations Page ────────────────────────────────────────────────────
-// Separate from AdminDashboard — focused tools for managing the platform
-// as the team grows beyond just Bob
-function AdminOpsPage({ currentUser, org }) {
-  const [opsTab, setOpsTab]       = useState("team");
-  const [adminTeam, setAdminTeam] = useState([]);
+// ══════════════════════════════════════════════════════════════════════════════
+// ADMIN HUB — Single consolidated admin page replacing dual sidebar items
+// Tabs: Overview · Users · Analytics · Feedback · Labels · Tools
+// ══════════════════════════════════════════════════════════════════════════════
+function AdminHub({ currentUser, org }) {
+  const [tab, setTab]             = useState("overview");
   const [orgs, setOrgs]           = useState([]);
+  const [leads, setLeads]         = useState([]);
+  const [feedback, setFeedback]   = useState([]);
+  const [analytics, setAnalytics] = useState({ views:0, sessions:0, byPage:[], byDay:[] });
+  const [labelOrders, setLabelOrders] = useState([]);
   const [query, setQuery]         = useState("");
   const [loading, setLoading]     = useState(false);
   const [msg, setMsg]             = useState("");
-  const flash = (m) => { setMsg(m); setTimeout(()=>setMsg(""),3000); };
+  const flash = m => { setMsg(m); setTimeout(()=>setMsg(""), 3000); };
 
+  // Load data when tab changes
   useEffect(() => {
-    if (opsTab === "team") {
-      SB.from("admin_team").select("*").order("created_at").then(({data}) => setAdminTeam(data||[]));
-    }
-    if (opsTab === "upgrade") {
+    (async () => {
       setLoading(true);
-      SB.from("orgs").select("id,name,email,plan,director_name,director_title,is_leading_player,created_at,city,location")
-        .order("created_at",{ascending:false}).limit(50)
-        .then(({data}) => { setOrgs(data||[]); setLoading(false); });
-    }
-  }, [opsTab]);
-
-  const filteredOrgs = orgs.filter(o =>
-    !query || o.name?.toLowerCase().includes(query.toLowerCase()) ||
-    o.email?.toLowerCase().includes(query.toLowerCase()) ||
-    o.director_name?.toLowerCase().includes(query.toLowerCase())
-  );
+      if (tab === "overview" || tab === "users") {
+        const { data } = await SB.from("orgs")
+          .select("id,name,email,plan,is_leading_player,director_name,director_title,city,location,created_at")
+          .order("created_at", { ascending: false }).limit(100);
+        setOrgs(data || []);
+      }
+      if (tab === "overview" || tab === "feedback") {
+        const { data } = await SB.from("beta_feedback")
+          .select("*").order("created_at", { ascending: false }).limit(50);
+        setFeedback(data || []);
+      }
+      if (tab === "overview" || tab === "users") {
+        const { data } = await SB.from("beta_leads")
+          .select("*").order("created_at", { ascending: false }).limit(50);
+        setLeads(data || []);
+      }
+      if (tab === "analytics") {
+        const { data: pv } = await SB.from("page_views")
+          .select("page,session_id,created_at,utm_source,utm_campaign")
+          .order("created_at", { ascending: false }).limit(2000);
+        if (pv) {
+          const byPage = {};
+          const bySess = {};
+          const byDay  = {};
+          pv.forEach(v => {
+            byPage[v.page] = (byPage[v.page]||0) + 1;
+            bySess[v.session_id] = true;
+            const day = (v.created_at||"").slice(0,10);
+            if (day) byDay[day] = (byDay[day]||0) + 1;
+          });
+          const dayEntries = Object.entries(byDay)
+            .sort(([a],[b]) => a > b ? 1 : -1).slice(-14);
+          const maxDay = Math.max(1, ...dayEntries.map(([,v])=>v));
+          setAnalytics({
+            views: pv.length,
+            sessions: Object.keys(bySess).length,
+            byPage: Object.entries(byPage).sort(([,a],[,b])=>b-a),
+            byDay: dayEntries,
+            maxDay,
+          });
+        }
+      }
+      if (tab === "labels") {
+        const { data } = await SB.from("label_orders")
+          .select("*").order("created_at", { ascending: false });
+        setLabelOrders(data || []);
+      }
+      setLoading(false);
+    })();
+  }, [tab]);
 
   const upgradeOrg = async (orgId, plan, isLP) => {
     const { error } = await SB.from("orgs").update({ plan, is_leading_player: isLP }).eq("id", orgId);
     if (!error) {
-      setOrgs(prev => prev.map(o => o.id === orgId ? {...o, plan, is_leading_player: isLP} : o));
-      flash(`✓ Updated`);
+      setOrgs(prev => prev.map(o => o.id===orgId ? {...o, plan, is_leading_player:isLP} : o));
+      flash("✓ Updated");
     }
   };
 
+  const updateFeedback = async (id, status) => {
+    await SB.from("beta_feedback").update({ status }).eq("id", id);
+    setFeedback(prev => prev.map(f => f.id===id ? {...f, status} : f));
+    flash("✓ Status updated");
+  };
+
+  const updateLabelOrder = async (id, updates) => {
+    await SB.from("label_orders").update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id);
+    setLabelOrders(prev => prev.map(o => o.id===id ? {...o,...updates} : o));
+    flash("✓ Order updated");
+  };
+
+  const filteredOrgs = orgs.filter(o =>
+    !query || [o.name,o.email,o.director_name,o.city,o.location]
+      .some(v => v?.toLowerCase().includes(query.toLowerCase()))
+  );
+
+  // Stats for overview
+  const totalOrgs   = orgs.length;
+  const paidOrgs    = orgs.filter(o=>o.plan!=="free").length;
+  const leadingPlayers = orgs.filter(o=>o.is_leading_player).length;
+  const newFeedback = feedback.filter(f=>f.status==="new").length;
+  const newLeads    = leads.filter(l=>!l.converted).length;
+
+  const TABS = [
+    ["overview",  "🏠 Overview"],
+    ["users",     "👥 Users & Leads"],
+    ["analytics", "📈 Analytics"],
+    ["feedback",  "💬 Feedback"],
+    ["labels",    "🏷 Label Orders"],
+    ["tools",     "🔧 Tools"],
+  ];
+
   return (
-    <div style={{padding:"32px 36px 56px",position:"relative",zIndex:1}}>
-      <div style={{marginBottom:24}}>
-        <h1 style={{fontFamily:"var(--serif)",fontSize:28,marginBottom:4}}>⚙️ Admin Tools</h1>
-        <p style={{fontSize:14,color:"var(--muted)"}}>Platform operations — manage the admin team, upgrade accounts, and handle support tasks.</p>
+    <div style={{padding:"28px 32px 64px",minHeight:"80vh"}}>
+      <div style={{marginBottom:22}}>
+        <h1 style={{fontFamily:"var(--serif)",fontSize:28,margin:"0 0 4px"}}>🎛 Admin Hub</h1>
+        <p style={{fontSize:13,color:"var(--muted)",margin:0}}>Theatre4u™ platform administration — everything in one place.</p>
       </div>
 
-      {/* Tab nav */}
-      <div style={{display:"flex",gap:6,marginBottom:24,flexWrap:"wrap"}}>
-        {[["team","👥 Admin Team"],["upgrade","⭐ Upgrade Accounts"],["sql","🔧 Quick Actions"]].map(([id,lbl])=>(
-          <button key={id} className={`tab ${opsTab===id?"on":""}`} onClick={()=>setOpsTab(id)}>{lbl}</button>
+      {/* Tab bar */}
+      <div style={{display:"flex",gap:5,marginBottom:24,flexWrap:"wrap",borderBottom:"1px solid var(--border)",paddingBottom:12}}>
+        {TABS.map(([id,lbl])=>(
+          <button key={id} onClick={()=>setTab(id)}
+            style={{padding:"7px 14px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:tab===id?700:500,
+              background:tab===id?"var(--gold)":"transparent",
+              color:tab===id?"#1a0f00":"var(--muted)",fontFamily:"inherit",transition:"all .15s"}}>
+            {lbl}{id==="feedback"&&newFeedback>0?` (${newFeedback})`:""}{id==="users"&&newLeads>0?` (${newLeads})`:""}{id==="labels"&&labelOrders.filter(o=>o.status==="pending").length>0?` (${labelOrders.filter(o=>o.status==="pending").length})`:""}
+          </button>
         ))}
       </div>
 
-      {msg && <div style={{background:"rgba(76,175,80,.12)",border:"1px solid var(--green)",borderRadius:8,
-        padding:"8px 14px",marginBottom:16,fontSize:13,color:"var(--green)"}}>{msg}</div>}
+      {msg&&<div style={{background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.3)",borderRadius:8,padding:"8px 14px",marginBottom:16,fontSize:13,color:"#4caf50"}}>{msg}</div>}
+      {loading&&<div style={{color:"var(--muted)",padding:20,textAlign:"center"}}>Loading…</div>}
 
-      {/* ADMIN TEAM TAB */}
-      {opsTab==="team"&&(
+      {/* ── OVERVIEW ── */}
+      {!loading&&tab==="overview"&&(
         <div>
-          <div style={{marginBottom:16}}>
-            <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>Admin Team</h3>
-            <p style={{fontSize:13,color:"var(--muted)"}}>People who have admin access to Theatre4u. Add new team members by adding their email to the ADMIN_EMAILS array in App.jsx and to the admin_team table.</p>
+          {/* KPI cards */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:24}}>
+            {[
+              { n:totalOrgs,      label:"Total Programs",   color:"var(--gold)", icon:"🎭" },
+              { n:paidOrgs,       label:"Paid Plans",       color:"#4caf50",     icon:"💳" },
+              { n:leadingPlayers, label:"Leading Players",  color:"#9c27b0",     icon:"⭐" },
+              { n:newLeads,       label:"New Beta Leads",   color:"#2196f3",     icon:"📥" },
+              { n:newFeedback,    label:"New Feedback",     color:"#ff9800",     icon:"💬" },
+              { n:analytics.views,label:"Page Views",       color:"var(--muted)",icon:"👁" },
+            ].map(k=>(
+              <div key={k.label} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px"}}>
+                <div style={{fontSize:22,marginBottom:4}}>{k.icon}</div>
+                <div style={{fontSize:28,fontWeight:800,color:k.color,lineHeight:1}}>{k.n}</div>
+                <div style={{fontSize:11,color:"var(--muted)",marginTop:2,textTransform:"uppercase",letterSpacing:.5}}>{k.label}</div>
+              </div>
+            ))}
           </div>
-          <div className="card card-p">
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
-              <thead><tr style={{background:"var(--parch)"}}>
-                {["Name","Email","Role","Status","Added"].map(h=>(
-                  <th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:11,fontWeight:700,
-                    textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",
-                    borderBottom:"1px solid var(--border)"}}>{h}</th>
-                ))}
-              </tr></thead>
-              <tbody>
-                {adminTeam.length === 0 && (
-                  <tr><td colSpan={5} style={{padding:20,textAlign:"center",color:"var(--muted)",fontSize:13}}>
-                    Loading admin team…
-                  </td></tr>
-                )}
-                {adminTeam.map(member=>(
-                  <tr key={member.id} style={{borderBottom:"1px solid var(--border)"}}>
-                    <td style={{padding:"10px 12px",fontWeight:600}}>{member.name}</td>
-                    <td style={{padding:"10px 12px"}}>{member.email}</td>
-                    <td style={{padding:"10px 12px"}}>
-                      <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:8,
-                        background:member.role==="superadmin"?"rgba(212,168,67,.15)":"rgba(66,165,245,.1)",
-                        color:member.role==="superadmin"?"var(--gold)":"#64b5f6",
-                        textTransform:"capitalize"}}>{member.role}</span>
-                    </td>
-                    <td style={{padding:"10px 12px"}}>
-                      <span style={{fontSize:11,color:member.active?"var(--green)":"var(--muted)"}}>
-                        {member.active?"● Active":"○ Inactive"}
-                      </span>
-                    </td>
-                    <td style={{padding:"10px 12px",color:"var(--muted)",fontSize:12}}>
-                      {new Date(member.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div style={{marginTop:14,padding:"12px 14px",background:"var(--parch)",borderRadius:8,fontSize:12,color:"var(--muted)"}}>
-              To add a new admin: (1) Add their email to <code>ADMIN_EMAILS</code> in App.jsx, (2) Run in Supabase SQL:<br/>
-              <code style={{display:"block",marginTop:6,fontFamily:"monospace",fontSize:11,color:"var(--text)"}}>
-                INSERT INTO admin_team (org_id, email, name, role) VALUES ('their-org-id', 'email@domain.com', 'Their Name', 'admin');
-              </code>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* UPGRADE ACCOUNTS TAB */}
-      {opsTab==="upgrade"&&(
-        <div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:12}}>
-            <div>
-              <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>Upgrade Accounts</h3>
-              <p style={{fontSize:13,color:"var(--muted)"}}>Set plan and Leading Player status for any program. Use this to give beta testers free Pro access.</p>
-            </div>
-            <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by name, email, director…"
-              style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:8,
-                padding:"8px 14px",fontSize:13,color:"var(--text)",width:280,outline:"none"}}/>
-          </div>
-          {loading && <div style={{color:"var(--muted)",padding:20,textAlign:"center"}}>Loading…</div>}
-          {!loading && (
-            <div className="card card-p" style={{padding:0,overflow:"hidden"}}>
+          {/* Recent signups */}
+          <div style={{marginBottom:24}}>
+            <h3 style={{fontFamily:"var(--serif)",fontSize:16,marginBottom:10}}>Recent Signups</h3>
+            <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
-                <thead><tr style={{background:"var(--parch)"}}>
-                  {["Program","Director","Contact","Plan","Leading Player","Actions"].map(h=>(
-                    <th key={h} style={{padding:"10px 14px",textAlign:"left",fontSize:11,fontWeight:700,
-                      textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",
-                      borderBottom:"1px solid var(--border)"}}>{h}</th>
+                <thead><tr style={{background:"rgba(0,0,0,.1)"}}>
+                  {["Program","Director","Email","Plan","Joined"].map(h=>(
+                    <th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)"}}>{h}</th>
                   ))}
                 </tr></thead>
                 <tbody>
-                  {filteredOrgs.map(o=>(
-                    <tr key={o.id} style={{borderBottom:"1px solid var(--border)"}}>
-                      <td style={{padding:"10px 14px"}}>
-                        <div style={{fontWeight:700}}>{o.name}</div>
-                        <div style={{fontSize:11,color:"var(--muted)"}}>{o.city||o.location||"—"}</div>
+                  {orgs.slice(0,8).map(o=>(
+                    <tr key={o.id} style={{borderTop:"1px solid var(--border)"}}>
+                      <td style={{padding:"8px 12px",fontWeight:600}}>{o.name}</td>
+                      <td style={{padding:"8px 12px",color:"var(--muted)",fontSize:12}}>{o.director_name||"—"}</td>
+                      <td style={{padding:"8px 12px"}}><a href={"mailto:"+o.email} style={{color:"var(--gold)",fontSize:12}}>{o.email}</a></td>
+                      <td style={{padding:"8px 12px"}}>
+                        <span style={{fontSize:11,fontWeight:700,padding:"2px 7px",borderRadius:6,
+                          background:o.plan==="free"?"rgba(100,100,100,.15)":"rgba(76,175,80,.15)",
+                          color:o.plan==="free"?"var(--muted)":"#4caf50",textTransform:"capitalize"}}>{o.plan}</span>
                       </td>
-                      <td style={{padding:"10px 14px",fontSize:12}}>
-                        <div>{o.director_name||"—"}</div>
-                        {o.director_title&&<div style={{fontSize:11,color:"var(--muted)"}}>{o.director_title}</div>}
-                      </td>
-                      <td style={{padding:"10px 14px",fontSize:12,color:"var(--muted)"}}>{o.email}</td>
-                      <td style={{padding:"10px 14px"}}>
-                        <select value={o.plan} onChange={e=>upgradeOrg(o.id,e.target.value,o.is_leading_player)}
-                          style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,
-                            padding:"4px 8px",fontSize:12,color:"var(--text)",cursor:"pointer"}}>
-                          {["free","pro","district","district_m","district_l"].map(p=>(
-                            <option key={p} value={p}>{p}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td style={{padding:"10px 14px"}}>
-                        <button onClick={()=>upgradeOrg(o.id,o.plan,!o.is_leading_player)}
-                          style={{background:o.is_leading_player?"rgba(212,168,67,.15)":"var(--parch)",
-                            border:"1px solid",borderColor:o.is_leading_player?"var(--gold)":"var(--border)",
-                            borderRadius:6,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer",
-                            color:o.is_leading_player?"var(--gold)":"var(--muted)"}}>
-                          {o.is_leading_player?"⭐ Yes":"○ No"}
-                        </button>
-                      </td>
-                      <td style={{padding:"10px 14px"}}>
-                        <a href={"mailto:"+o.email+"?subject=Theatre4u Preview Access"}
-                          style={{fontSize:11,color:"var(--gold)",textDecoration:"none",fontWeight:600}}>
-                          ✉ Email
-                        </a>
-                      </td>
+                      <td style={{padding:"8px 12px",color:"var(--muted)",fontSize:12}}>{new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+          </div>
+          {/* Recent feedback */}
+          {feedback.length>0&&(
+            <div>
+              <h3 style={{fontFamily:"var(--serif)",fontSize:16,marginBottom:10}}>Recent Feedback</h3>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {feedback.slice(0,4).map(f=>(
+                  <div key={f.id} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:8,padding:"10px 14px",display:"flex",gap:12,alignItems:"flex-start"}}>
+                    <div style={{fontSize:18,flexShrink:0}}>{f.category==="bug"?"🐛":f.category==="feature"?"✨":f.category==="ux"?"👁":"💬"}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"var(--gold)",marginBottom:2}}>{f.org_name||"Anonymous"} · {f.category}</div>
+                      <div style={{fontSize:13,color:"var(--text)",lineHeight:1.5}}>{f.message||"(no message)"}</div>
+                    </div>
+                    <span style={{fontSize:10,color:"var(--muted)",flexShrink:0,marginTop:2}}>{new Date(f.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       )}
 
-      {/* QUICK ACTIONS TAB */}
-      {opsTab==="sql"&&(
+      {/* ── USERS & LEADS ── */}
+      {!loading&&tab==="users"&&(
         <div>
-          <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>Quick Actions</h3>
-          <p style={{fontSize:13,color:"var(--muted)",marginBottom:20}}>Common admin tasks with one click.</p>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
+            <div>
+              <h3 style={{fontFamily:"var(--serif)",fontSize:18,margin:"0 0 2px"}}>Programs & Beta Leads</h3>
+              <p style={{fontSize:12,color:"var(--muted)",margin:0}}>{orgs.length} programs · {leads.length} beta leads · {leads.filter(l=>!l.converted).length} not yet converted</p>
+            </div>
+            <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name, email, director…"
+              style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:8,padding:"7px 12px",fontSize:13,color:"var(--text)",width:260,outline:"none"}}/>
+          </div>
+
+          {/* Active programs */}
+          <h4 style={{fontSize:13,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:8}}>Active Accounts</h4>
+          <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden",marginBottom:20}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+              <thead><tr style={{background:"rgba(0,0,0,.08)"}}>
+                {["Program","Director","Contact","Plan","⭐ LP","Actions"].map(h=>(
+                  <th key={h} style={{padding:"9px 12px",textAlign:"left",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)"}}>{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {filteredOrgs.map(o=>(
+                  <tr key={o.id} style={{borderTop:"1px solid var(--border)"}}>
+                    <td style={{padding:"9px 12px"}}>
+                      <div style={{fontWeight:700}}>{o.name}</div>
+                      <div style={{fontSize:11,color:"var(--muted)"}}>{o.city||o.location||""}</div>
+                    </td>
+                    <td style={{padding:"9px 12px",fontSize:12}}>
+                      <div>{o.director_name||"—"}</div>
+                      {o.director_title&&<div style={{fontSize:11,color:"var(--muted)"}}>{o.director_title}</div>}
+                    </td>
+                    <td style={{padding:"9px 12px"}}><a href={"mailto:"+o.email} style={{color:"var(--gold)",fontSize:12}}>{o.email}</a></td>
+                    <td style={{padding:"9px 12px"}}>
+                      <select value={o.plan} onChange={e=>upgradeOrg(o.id,e.target.value,o.is_leading_player)}
+                        style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,padding:"3px 7px",fontSize:12,color:"var(--text)",cursor:"pointer"}}>
+                        {["free","pro","district","district_m","district_l"].map(p=><option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </td>
+                    <td style={{padding:"9px 12px",textAlign:"center"}}>
+                      <button onClick={()=>upgradeOrg(o.id,o.plan,!o.is_leading_player)}
+                        style={{background:o.is_leading_player?"rgba(212,168,67,.15)":"transparent",
+                          border:"1px solid",borderColor:o.is_leading_player?"var(--gold)":"var(--border)",
+                          borderRadius:6,padding:"3px 9px",fontSize:11,fontWeight:700,cursor:"pointer",
+                          color:o.is_leading_player?"var(--gold)":"var(--muted)"}}>
+                        {o.is_leading_player?"⭐":"○"}
+                      </button>
+                    </td>
+                    <td style={{padding:"9px 12px"}}>
+                      <a href={"mailto:"+o.email+"?subject=Theatre4u — Following up"}
+                        style={{fontSize:11,color:"var(--gold)",textDecoration:"none",fontWeight:700}}>✉ Email</a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Beta leads */}
+          <h4 style={{fontSize:13,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:8}}>Beta Leads (beta.html submissions)</h4>
+          {leads.length===0
+            ?<div style={{color:"var(--muted)",fontSize:13,padding:16,textAlign:"center"}}>No beta leads yet. Share theatre4u.org/beta.html to collect leads.</div>
+            :<div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                <thead><tr style={{background:"rgba(0,0,0,.08)"}}>
+                  {["Program","Name","Email","Type","Location","Status","Date"].map(h=>(
+                    <th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)"}}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {leads.filter(l=>!query||[l.org,l.name,l.email].some(v=>v?.toLowerCase().includes(query.toLowerCase()))).map(l=>(
+                    <tr key={l.id} style={{borderTop:"1px solid var(--border)"}}>
+                      <td style={{padding:"8px 12px",fontWeight:600}}>{l.org}</td>
+                      <td style={{padding:"8px 12px"}}>{l.name}</td>
+                      <td style={{padding:"8px 12px"}}><a href={"mailto:"+l.email} style={{color:"var(--gold)",fontSize:12}}>{l.email}</a></td>
+                      <td style={{padding:"8px 12px",color:"var(--muted)",fontSize:12}}>{l.type||"—"}</td>
+                      <td style={{padding:"8px 12px",color:"var(--muted)",fontSize:12}}>{l.location||"—"}</td>
+                      <td style={{padding:"8px 12px"}}>
+                        {l.converted
+                          ?<span style={{fontSize:11,fontWeight:700,color:"#4caf50"}}>✓ Converted</span>
+                          :<span style={{fontSize:11,color:"var(--muted)"}}>Lead only</span>}
+                      </td>
+                      <td style={{padding:"8px 12px",color:"var(--muted)",fontSize:12}}>{new Date(l.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      )}
+
+      {/* ── ANALYTICS ── */}
+      {!loading&&tab==="analytics"&&(
+        <div>
+          <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>Platform Analytics</h3>
+          <p style={{fontSize:13,color:"var(--muted)",marginBottom:20}}>Page view data from the track-visit edge function. All time.</p>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:24}}>
+            <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:20,textAlign:"center"}}>
+              <div style={{fontSize:40,fontWeight:800,color:"var(--gold)"}}>{analytics.views}</div>
+              <div style={{fontSize:12,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1}}>Total Page Views</div>
+            </div>
+            <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:20,textAlign:"center"}}>
+              <div style={{fontSize:40,fontWeight:800,color:"var(--gold)"}}>{analytics.sessions}</div>
+              <div style={{fontSize:12,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1}}>Unique Sessions</div>
+            </div>
+          </div>
+          {/* Views by page */}
+          <h4 style={{fontSize:13,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Views by Page</h4>
+          <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:24}}>
+            {analytics.byPage.map(([page,count])=>(
+              <div key={page} style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{fontSize:13,width:100,color:"var(--text)",textTransform:"capitalize",flexShrink:0}}>{page}</div>
+                <div style={{flex:1,height:20,background:"var(--border)",borderRadius:4,overflow:"hidden"}}>
+                  <div style={{width:(count/Math.max(...analytics.byPage.map(([,v])=>v))*100)+"%",height:"100%",background:"var(--gold)",borderRadius:4,transition:"width .4s"}}/>
+                </div>
+                <div style={{fontSize:13,fontWeight:700,color:"var(--gold)",width:40,textAlign:"right"}}>{count}</div>
+              </div>
+            ))}
+          </div>
+          {/* Daily chart */}
+          <h4 style={{fontSize:13,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Daily Views (Last 14 days)</h4>
+          <div style={{display:"flex",gap:4,alignItems:"flex-end",height:120,padding:"0 4px",background:"var(--parch)",borderRadius:10,border:"1px solid var(--border)"}}>
+            {analytics.byDay.map(([day,count])=>(
+              <div key={day} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4,paddingBottom:8}}>
+                <div style={{fontSize:9,color:"var(--muted)",fontWeight:700}}>{count}</div>
+                <div style={{width:"100%",background:"var(--gold)",borderRadius:"3px 3px 0 0",height:Math.max(4,(count/analytics.maxDay*80))+"px",transition:"height .4s"}}/>
+                <div style={{fontSize:8,color:"var(--faint)",transform:"rotate(-45deg)",whiteSpace:"nowrap"}}>{day.slice(5)}</div>
+              </div>
+            ))}
+            {analytics.byDay.length===0&&<div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",color:"var(--muted)",fontSize:13}}>No daily data yet</div>}
+          </div>
+          <div style={{marginTop:16,background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"12px 16px",fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
+            <strong style={{color:"var(--text)"}}>💡 To track traffic sources:</strong> Add UTM parameters to your links.
+            Example: <code style={{background:"var(--parch)",padding:"1px 5px",borderRadius:4}}>theatre4u.org/beta.html?utm_source=reddit&utm_campaign=beta_launch</code>
+            The source will appear in the page_views table for analysis.
+          </div>
+        </div>
+      )}
+
+      {/* ── FEEDBACK ── */}
+      {!loading&&tab==="feedback"&&(
+        <div>
+          <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>User Feedback</h3>
+          <p style={{fontSize:13,color:"var(--muted)",marginBottom:16}}>Submitted via the feedback button in the app. Use status to track resolution.</p>
+          {feedback.length===0
+            ?<div style={{color:"var(--muted)",fontSize:13,padding:32,textAlign:"center"}}>No feedback yet.</div>
+            :<div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {feedback.map(f=>(
+                <div key={f.id} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
+                    <div style={{flex:1}}>
+                      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:6,flexWrap:"wrap"}}>
+                        <span style={{fontSize:18}}>{f.category==="bug"?"🐛":f.category==="feature"?"✨":f.category==="ux"?"👁":"💬"}</span>
+                        <span style={{fontWeight:700,fontSize:13}}>{f.org_name||"Anonymous"}</span>
+                        <span style={{fontSize:11,color:"var(--muted)",textTransform:"capitalize",background:"var(--border)",padding:"1px 6px",borderRadius:4}}>{f.category}</span>
+                        {f.rating&&<span style={{fontSize:11,color:"var(--gold)"}}>{"★".repeat(f.rating)}{"☆".repeat(5-f.rating)}</span>}
+                        <span style={{fontSize:11,color:"var(--muted)"}}>{new Date(f.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</span>
+                      </div>
+                      <div style={{fontSize:13,color:"var(--text)",lineHeight:1.6}}>{f.message||"(no message)"}</div>
+                      {f.page_context&&<div style={{fontSize:11,color:"var(--muted)",marginTop:4}}>Page: {f.page_context}</div>}
+                    </div>
+                    <select value={f.status||"new"} onChange={e=>updateFeedback(f.id,e.target.value)}
+                      style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,padding:"4px 8px",fontSize:12,color:"var(--text)",cursor:"pointer",flexShrink:0}}>
+                      {["new","reviewing","resolved","wont_fix"].map(s=><option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
+          }
+        </div>
+      )}
+
+      {/* ── LABEL ORDERS ── */}
+      {!loading&&tab==="labels"&&(
+        <div>
+          <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>🏷 Label Orders</h3>
+          <p style={{fontSize:13,color:"var(--muted)",marginBottom:8,lineHeight:1.6}}>
+            Physical QR label orders from Theatre4u programs. Programs request labels through their inventory settings.
+            You fulfill, ship, and mark as shipped here.
+          </p>
+          <div style={{background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"10px 14px",marginBottom:20,fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
+            <strong style={{color:"var(--text)"}}>📋 Label Program Status:</strong> In development.
+            The order flow is in place — programs can submit requests. Fulfillment, pricing, and shipping
+            integration will be built out as volume grows. Current cost estimate: ~$0.10–0.25 per label for
+            weatherproof vinyl with QR code, printed in sheets of 30.
+          </div>
+          {labelOrders.length===0
+            ?<div style={{color:"var(--muted)",fontSize:13,padding:32,textAlign:"center",background:"var(--parch)",borderRadius:10,border:"1px solid var(--border)"}}>
+                No label orders yet. Once programs request labels from their inventory page, orders will appear here.
+              </div>
+            :<div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                <thead><tr style={{background:"rgba(0,0,0,.08)"}}>
+                  {["Program","Contact","Count","Type","Status","Tracking","Date"].map(h=>(
+                    <th key={h} style={{padding:"9px 12px",textAlign:"left",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)"}}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {labelOrders.map(o=>(
+                    <tr key={o.id} style={{borderTop:"1px solid var(--border)"}}>
+                      <td style={{padding:"9px 12px",fontWeight:600}}>{o.org_name}</td>
+                      <td style={{padding:"9px 12px"}}><a href={"mailto:"+o.contact_email} style={{color:"var(--gold)",fontSize:12}}>{o.contact_email}</a></td>
+                      <td style={{padding:"9px 12px",fontWeight:700}}>{o.item_count}</td>
+                      <td style={{padding:"9px 12px",color:"var(--muted)",fontSize:12,textTransform:"capitalize"}}>{o.label_type}</td>
+                      <td style={{padding:"9px 12px"}}>
+                        <select value={o.status} onChange={e=>updateLabelOrder(o.id,{status:e.target.value})}
+                          style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,padding:"3px 7px",fontSize:12,color:"var(--text)",cursor:"pointer"}}>
+                          {["pending","processing","shipped","delivered"].map(s=><option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </td>
+                      <td style={{padding:"9px 12px",fontSize:12,color:"var(--muted)"}}>{o.tracking||"—"}</td>
+                      <td style={{padding:"9px 12px",color:"var(--muted)",fontSize:12}}>{new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      )}
+
+      {/* ── TOOLS ── */}
+      {!loading&&tab==="tools"&&(
+        <div>
+          <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>Admin Tools & Quick Actions</h3>
+          <p style={{fontSize:13,color:"var(--muted)",marginBottom:20}}>Common tasks and reference SQL for managing the platform.</p>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
             {[
-              { icon:"⭐", title:"Grant Beta Pro Access", desc:"Upgrade an org to Pro + Leading Player for the preview period.",
-                action: "Go to Upgrade Accounts tab → find the org → set plan to 'pro' → toggle Leading Player to Yes" },
-              { icon:"📧", title:"Email a Beta Tester", desc:"Send a personal welcome or follow-up email.",
-                action: "Go to Upgrade Accounts tab → click ✉ Email next to their name" },
-              { icon:"🔧", title:"Fix Email Typo in Lead", desc:"Correct a beta lead's email address.",
-                action: "Run in Supabase SQL: UPDATE beta_leads SET email='correct@email.com' WHERE email='wrong@email.com';" },
-              { icon:"🗑️", title:"Close a Test Account", desc:"Remove test accounts before launch.",
-                action: "Go to Platform Admin → Accounts tab → find the org → close account" },
-              { icon:"💰", title:"Reset Stage Points", desc:"Award Stage Points to a tester for feedback.",
-                action: "Run in Supabase SQL: INSERT INTO credit_ledger (org_id, amount, note) VALUES ('org-id', 150, 'Beta feedback reward');" },
-              { icon:"🔄", title:"Convert a Beta Lead", desc:"Mark a beta lead as converted after they create an account.",
-                action: "Run in Supabase SQL: UPDATE beta_leads SET converted=true WHERE email='their@email.com';" },
-            ].map(action=>(
-              <div key={action.title} className="card card-p">
-                <div style={{fontSize:28,marginBottom:8}}>{action.icon}</div>
-                <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>{action.title}</div>
-                <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:10}}>{action.desc}</div>
-                <div style={{fontSize:11,color:"var(--text)",background:"var(--parch)",borderRadius:6,
-                  padding:"8px 10px",fontFamily:"monospace",lineHeight:1.5}}>{action.action}</div>
+              { icon:"⭐", title:"Grant Beta Pro Access",
+                body:"Go to Users tab → find the program → set plan to 'pro' → toggle ⭐ LP to on.",
+                sql:null },
+              { icon:"✉️", title:"Email a Tester",
+                body:"Go to Users tab → click the ✉ Email link next to any program to open a pre-addressed email.",
+                sql:null },
+              { icon:"🔧", title:"Fix Email Typo in Lead",
+                body:"Run in Supabase SQL editor:",
+                sql:"UPDATE beta_leads SET email='correct@email.com'\nWHERE email='wrong@email.com';" },
+              { icon:"🔄", title:"Mark Lead as Converted",
+                body:"Run after a beta lead creates their Theatre4u account:",
+                sql:"UPDATE beta_leads SET converted=true\nWHERE email='their@email.com';" },
+              { icon:"💰", title:"Award Stage Points",
+                body:"Grant Stage Points to a tester for feedback or referral:",
+                sql:"INSERT INTO credit_ledger (org_id, amount, note)\nVALUES ('org-uuid-here', 150, 'Beta feedback reward');" },
+              { icon:"🏷", title:"Label Order Pricing Guide",
+                body:"Standard vinyl QR labels: ~$0.10–0.15/label. Weatherproof: ~$0.20–0.25/label. Minimum order: 30 labels ($3–7.50). Shipping: USPS First Class ~$4–6. Suggested retail: $12 for 30 standard, $18 for 30 weatherproof.",
+                sql:null },
+              { icon:"📊", title:"Export All Orgs as CSV",
+                body:"Run in Supabase SQL, then download results:",
+                sql:"SELECT name,email,plan,is_leading_player,director_name,city,created_at\nFROM orgs ORDER BY created_at DESC;" },
+              { icon:"🗑", title:"Remove Test Accounts",
+                body:"Go to Users tab → find test orgs → use Supabase auth dashboard to delete the user.",
+                sql:null },
+            ].map(tool=>(
+              <div key={tool.title} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px"}}>
+                <div style={{fontSize:28,marginBottom:8}}>{tool.icon}</div>
+                <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>{tool.title}</div>
+                <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:tool.sql?8:0}}>{tool.body}</div>
+                {tool.sql&&<code style={{display:"block",background:"rgba(0,0,0,.2)",borderRadius:6,padding:"8px 10px",fontSize:11,fontFamily:"monospace",color:"var(--text)",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{tool.sql}</code>}
               </div>
             ))}
           </div>
@@ -6115,9 +6174,7 @@ function AdminDashboard({ currentUser }) {
   const [planF,     setPlanF]     = useState("all");
   const [saving,    setSaving]    = useState(null);
   const [msg,       setMsg]       = useState("");
-  const [adminTab,  setAdminTab]  = useState("orgs");
-  const [betaLeads, setBetaLeads] = useState([]);
-  const [leadsLoading, setLeadsLoading] = useState(false);
+  const [adminTab,  setAdminTab]  = useState("orgs");  // orgs | analytics | feedback | codes
   const [analytics, setAnalytics] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [feedback,  setFeedback]  = useState([]);
@@ -6207,8 +6264,8 @@ function AdminDashboard({ currentUser }) {
 
         {/* Tab nav */}
         <div className="tabs" style={{ marginBottom: 20 }}>
-          {[["orgs","🏛 Organizations"],["analytics","📈 Analytics"],["leads","🎟 Beta Leads"],["inventory","📦 Inventories"],["accounts","⚠️ Accounts"],["feedback","💬 Feedback"],["codes","🎟 Beta Codes"]].map(([id,lbl])=>(
-            <button key={id} className={`tab ${adminTab===id?"on":""}`} onClick={()=>{ setAdminTab(id); if(id==="leads"&&betaLeads.length===0){ setLeadsLoading(true); SB.from("beta_leads").select("*").order("created_at",{ascending:false}).then(({data})=>{ setBetaLeads(data||[]); setLeadsLoading(false); }); } }}>{lbl}
+          {[["orgs","🏛 Organizations"],["analytics","📈 Analytics"],["inventory","📦 Inventories"],["accounts","⚠️ Accounts"],["feedback","💬 Feedback"],["codes","🎟 Beta Codes"]].map(([id,lbl])=>(
+            <button key={id} className={`tab ${adminTab===id?"on":""}`} onClick={()=>setAdminTab(id)}>{lbl}
               {id==="feedback"&&feedback.filter(f=>f.status==="new").length>0&&(
                 <span style={{background:"var(--red)",color:"#fff",borderRadius:8,padding:"1px 6px",fontSize:10,fontWeight:800,marginLeft:5}}>
                   {feedback.filter(f=>f.status==="new").length}
@@ -6242,61 +6299,6 @@ function AdminDashboard({ currentUser }) {
               setAnalyticsLoading(false);
             }}
           />
-        )}
-
-        {adminTab==="leads"&&(
-          <div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-              <div>
-                <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>Beta Leads — Opening Night Signups</h3>
-                <p style={{fontSize:13,color:"var(--muted)"}}>Everyone who submitted the beta.html form. "Converted" = they created a Theatre4u account.</p>
-              </div>
-              <button className="btn btn-o btn-sm" onClick={async()=>{
-                setLeadsLoading(true);
-                const{data}=await SB.from("beta_leads").select("*").order("created_at",{ascending:false});
-                setBetaLeads(data||[]);
-                setLeadsLoading(false);
-              }}>↺ Refresh</button>
-            </div>
-            {leadsLoading&&<div style={{color:"var(--muted)",padding:20}}>Loading…</div>}
-            {!leadsLoading&&betaLeads.length===0&&(
-              <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:24,textAlign:"center"}}>
-                <div style={{fontSize:32,marginBottom:8}}>🎟</div>
-                <div style={{fontWeight:700,marginBottom:6}}>No beta leads yet</div>
-                <div style={{fontSize:13,color:"var(--muted)"}}>Submissions from theatre4u.org/beta.html will appear here. Share that link to start collecting leads.</div>
-              </div>
-            )}
-            {!leadsLoading&&betaLeads.length>0&&(
-              <div>
-                <div style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>{betaLeads.length} total · {betaLeads.filter(l=>l.converted).length} converted to accounts</div>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
-                  <thead><tr style={{background:"var(--parch)"}}>
-                    {["Program","Name","Email","Type","Location","Source","Date","Status"].map(h=>(
-                      <th key={h} style={{padding:"8px 10px",textAlign:"left",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",borderBottom:"1px solid var(--border)"}}>{h}</th>
-                    ))}
-                  </tr></thead>
-                  <tbody>
-                    {betaLeads.map(lead=>(
-                      <tr key={lead.id} style={{borderBottom:"1px solid var(--border)"}}>
-                        <td style={{padding:"8px 10px",fontWeight:600}}>{lead.org}</td>
-                        <td style={{padding:"8px 10px"}}>{lead.name}</td>
-                        <td style={{padding:"8px 10px"}}><a href={"mailto:"+lead.email} style={{color:"var(--gold)"}}>{lead.email}</a></td>
-                        <td style={{padding:"8px 10px",color:"var(--muted)",fontSize:12}}>{lead.type||"—"}</td>
-                        <td style={{padding:"8px 10px",color:"var(--muted)",fontSize:12}}>{lead.location||"—"}</td>
-                        <td style={{padding:"8px 10px",color:"var(--muted)",fontSize:12}}>{lead.source||"—"}</td>
-                        <td style={{padding:"8px 10px",color:"var(--muted)",fontSize:12}}>{new Date(lead.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</td>
-                        <td style={{padding:"8px 10px"}}>
-                          {lead.converted
-                            ?<span style={{fontSize:11,fontWeight:700,color:"#4caf50",background:"rgba(76,175,80,.1)",padding:"2px 8px",borderRadius:8}}>✓ Account Created</span>
-                            :<span style={{fontSize:11,color:"var(--muted)",background:"var(--parch)",padding:"2px 8px",borderRadius:8}}>Lead Only</span>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
         )}
 
         {adminTab==="orgs"&&(<>
@@ -7899,55 +7901,25 @@ function CSVImport({ onImport, onClose, userId }) {
   const doImport = async () => {
     setImporting(true);
     setProgress(0);
-    const BATCH = 10; // smaller batches so one bad row doesn't kill 50
+    const BATCH = 50;
     let imported = 0, failed = 0;
-    const failedRows = [];
     const now = new Date().toISOString();
 
     for (let i=0; i<parsed.length; i+=BATCH) {
-      const batchItems = parsed.slice(i, i+BATCH).map(item => ({
-        org_id:      userId,
-        added:       now,
-        name:        item.name        || "",
-        category:    item.category    || "other",
-        condition:   item.condition   || "Good",
-        size:        item.size        || "N/A",
-        qty:         item.qty         ?? 1,
-        avail:       item.avail       || "In Stock",
-        mkt:         item.mkt         || "Not Listed",
-        rent:        item.rent        ?? 0,
-        sale:        item.sale        ?? 0,
-        loan_period: item.loan_period ?? 2,
-        deposit:     item.deposit     ?? 0,
-        location:    item.location    || "",
-        notes:       item.notes       || "",
-        description: item.description || "",
-        tags:        Array.isArray(item.tags) ? item.tags : [],
-        img:         item.img         || null,
-        // Explicitly omit: id (DB generates), item_number, display_id, dept_id,
-        // purchase_cost, purchase_date, purchase_vendor, funding_source_id, location_id
+      const batch = parsed.slice(i, i+BATCH).map(item => ({
+        ...item,
+        org_id: userId,
+        added: now,
       }));
-      const { error } = await SB.from("items").insert(batchItems);
-      if (error) {
-        failed += batchItems.length;
-        failedRows.push({ batch: Math.floor(i/BATCH)+1, error: error.message, code: error.code });
-        console.error("Import batch error:", error);
-      } else {
-        imported += batchItems.length;
-      }
+      const { error } = await SB.from("items").insert(batch);
+      if (error) { failed += batch.length; console.error("Import batch error:", error); }
+      else { imported += batch.length; }
       setProgress(Math.round(((i+BATCH)/parsed.length)*100));
     }
-
-    // Surface any errors to the user
-    if (failedRows.length > 0) {
-      console.error("Import failures:", JSON.stringify(failedRows));
-      setErrors(failedRows.map(f => `Batch ${f.batch} failed: ${f.error} (code: ${f.code})`));
-    }
-
     setResult({ imported, failed, total: parsed.length });
     setImporting(false);
     setStep("done");
-    if (imported > 0) onImport();
+    if (imported > 0) onImport(); // trigger reload
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -8174,7 +8146,7 @@ function CSVImport({ onImport, onClose, userId }) {
             <div style={{textAlign:"center",padding:"24px 0"}}>
               <div style={{fontSize:56,marginBottom:16}}>{result.failed===0?"🎉":"⚠️"}</div>
               <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:24,marginBottom:8}}>
-                {result.failed===0?"Import Complete!":result.imported===0?"Import Failed":"Import Finished with Errors"}
+                {result.failed===0?"Import Complete!":"Import Finished with Errors"}
               </h3>
               <div style={{display:"flex",gap:12,justifyContent:"center",marginBottom:20,flexWrap:"wrap"}}>
                 <div style={{background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.2)",
@@ -8188,36 +8160,14 @@ function CSVImport({ onImport, onClose, userId }) {
                   <div style={{fontSize:11,color:"var(--muted)"}}>Failed</div>
                 </div>}
               </div>
-              {/* Show actual error messages if any failed */}
-              {errors.length>0&&(
-                <div style={{background:"rgba(194,24,91,.07)",border:"1px solid rgba(194,24,91,.2)",
-                  borderRadius:8,padding:"12px 16px",marginBottom:16,textAlign:"left"}}>
-                  <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:"var(--red)"}}>Error details:</div>
-                  {errors.map((e,i)=>(
-                    <div key={i} style={{fontSize:12,color:"var(--red)",marginBottom:4,lineHeight:1.5}}>{e}</div>
-                  ))}
-                  <div style={{fontSize:11,color:"var(--muted)",marginTop:8}}>
-                    Common causes: missing required field, invalid value type, or database permission issue.
-                    Email hello@theatre4u.org with your CSV if the problem persists.
-                  </div>
-                </div>
-              )}
               <p style={{color:"var(--muted)",fontSize:13,marginBottom:20}}>
                 {result.imported>0
                   ? "Your items are now in your Inventory. You can edit any of them individually to add photos or refine details."
-                  : "Something went wrong — no items were imported. Check the error details above."}
+                  : "Something went wrong. Please check your CSV file and try again."}
               </p>
-              <div style={{display:"flex",gap:8,justifyContent:"center"}}>
-                {result.imported===0&&(
-                  <button onClick={()=>{setStep("upload");setErrors([]);setResult(null);setParsed([]);}}
-                    className="btn btn-o" style={{padding:"9px 24px"}}>
-                    Try Again
-                  </button>
-                )}
-                <button onClick={onClose} className="btn btn-g" style={{padding:"9px 28px"}}>
-                  {result.imported>0?"Go to Inventory →":"Close"}
-                </button>
-              </div>
+              <button onClick={onClose} className="btn btn-g" style={{padding:"9px 28px"}}>
+                Go to Inventory →
+              </button>
             </div>
           )}
         </div>
@@ -8253,9 +8203,7 @@ function CommunityPostForm({initial, onSave, onCancel, saving=false}) {
     if(!files.length) return;
     setUploading(true);
     const urls = [];
-    for(let file of files){
-      // Convert HEIC/HEIF to JPEG first
-      if(isHeic(file)){ const c=await convertHeicToJpeg(file); if(c) file=c; }
+    for(const file of files){
       // Use resizeImg if available, otherwise compressImage
       const resized = typeof resizeImg==="function"
         ? await resizeImg(file,1200,0.85)
@@ -9189,7 +9137,7 @@ function TeamSettings({ userId, orgName, plan }) {
   const [members,  setMembers]  = useState([]);
   const [invites,  setInvites]  = useState([]);
   const [joinCode,  setJoinCode]  = useState(null);
-  // qrPoster/qrDataUrl removed — QR poster feature pending redesign
+  const [qrPoster,  setQrPoster]  = useState(null);
   const [loading,  setLoading]  = useState(true);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole,  setInviteRole]  = useState("crew");
@@ -9211,9 +9159,7 @@ function TeamSettings({ userId, orgName, plan }) {
     setMembers(mData || []);
     // Find existing join code invite
     const code = (iData || []).find(i => i.invite_type === "code");
-    const loadedCode = code?.join_code || null;
-    setJoinCode(loadedCode);
-    // QR pre-generation removed with poster feature
+    setJoinCode(code?.join_code || null);
     setInvites((iData || []).filter(i => i.invite_type === "email"));
     setLoading(false);
   }, [userId]);
@@ -9244,7 +9190,6 @@ function TeamSettings({ userId, orgName, plan }) {
     if (fetched?.join_code) {
       setJoinCode(fetched.join_code);
       setShowCode(true);
-      // QR pre-generation removed
     } else {
       flash("❌ Code generated but couldn't load — try refreshing.");
     }
@@ -9466,19 +9411,41 @@ function TeamSettings({ userId, orgName, plan }) {
             </div>
 
             {/* Action buttons */}
-            <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:14 }}>
-              <button className="btn btn-g btn-sm" onClick={() => {
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+              {/* QR Poster button — renders in-app modal then triggers browser print */}
+              <button className="btn btn-g btn-sm" onClick={async () => {
+                const joinUrl = `https://theatre4u.org/join.html?code=${joinCode}`;
+                const orgName = org?.name || "Our Theatre Program";
+                const qrSrc  = await QR.toDataURL(joinUrl, 240);
+                if (!qrSrc) { flash("❌ Could not generate QR — try again"); return; }
+                setQrPoster({ joinUrl, orgName, qrSrc, joinCode });
+              }}>
+                📄 Print QR Poster
+              </button>
+
+              {/* Copy link */}
+              <button className="btn bs bsm" onClick={() => {
+                navigator.clipboard?.writeText(`https://theatre4u.org/join.html?code=${joinCode}`)
+                  .then(() => flash("✓ Link copied!"))
+                  .catch(() => flash("Link: https://theatre4u.org/join.html?code=" + joinCode));
+              }}>📋 Copy Link</button>
+
+              {/* Share via text/email on mobile */}
+              <button className="btn bs bsm" onClick={() => {
                 const url = `https://theatre4u.org/join.html?code=${joinCode}`;
-                navigator.clipboard?.writeText(url)
-                  .then(() => flash("✓ Join link copied!"))
-                  .catch(() => flash("Link: " + url));
-              }}>📋 Copy Join Link</button>
+                const text = `Join ${org?.name||"our"} team on Theatre4u: ${url}`;
+                if (navigator.share) {
+                  navigator.share({ title: "Join our Theatre4u team", text, url }).catch(()=>{});
+                } else {
+                  navigator.clipboard?.writeText(text).then(()=>flash("✓ Copied!"));
+                }
+              }}>📤 Share</button>
             </div>
 
             <div style={{ fontSize: 11, color: "var(--faint)", lineHeight: 1.6 }}>
-              Anyone with this code or link joins as <strong>Crew</strong> and can view and scan inventory.
-              Copy the link and paste it in a group text, email, or post it on your callboard.
-              This code never expires — revoke it anytime from this page.
+              Anyone with this code or link joins as <strong>Crew</strong> — view and scan inventory.
+              Post the QR poster in your green room, costume closet, or scene shop.
+              This code never expires — revoke it from this page if needed.
             </div>
           </div>
         )}
@@ -9495,11 +9462,197 @@ function TeamSettings({ userId, orgName, plan }) {
           {msg}
         </div>
       )}
+
+      {/* QR Poster modal — renders in-app, uses window.print() */}
+      {qrPoster && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:9000,
+          display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
+          onClick={e=>e.target===e.currentTarget&&setQrPoster(null)}>
+          <div style={{background:"#fdf6ec",borderRadius:16,padding:32,
+            width:"min(480px,95vw)",textAlign:"center",
+            boxShadow:"0 12px 60px rgba(0,0,0,.5)",position:"relative"}}>
+            {/* Close */}
+            <button onClick={()=>setQrPoster(null)}
+              style={{position:"absolute",top:12,right:14,background:"none",border:"none",
+                fontSize:22,cursor:"pointer",color:"#888",lineHeight:1}}>×</button>
+            {/* Poster content */}
+            <div id="t4u-qr-poster-inner">
+              <div style={{fontFamily:"Georgia,serif",fontSize:22,fontWeight:700,
+                color:"#d4a843",marginBottom:2}}>Theatre4u™</div>
+              <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:2,
+                color:"#888",marginBottom:18}}>Crew Access</div>
+              <h2 style={{fontFamily:"Georgia,serif",fontSize:20,color:"#1a0f00",
+                margin:"0 0 8px"}}>Join {qrPoster.orgName}</h2>
+              <p style={{fontSize:12,color:"#666",marginBottom:18,lineHeight:1.5}}>
+                Scan the QR code to join our theatre team.<br/>
+                Create a free account — takes under a minute.
+              </p>
+              {/* QR image */}
+              <div style={{display:"flex",justifyContent:"center",marginBottom:16}}>
+                <img src={qrPoster.qrSrc} width={200} height={200} alt="QR Code"
+                  style={{border:"4px solid #1a0f00",borderRadius:10}}/>
+              </div>
+              {/* Code */}
+              <div style={{background:"#1a0f00",borderRadius:10,padding:"10px 22px",
+                display:"inline-block",marginBottom:12}}>
+                <div style={{fontFamily:"monospace",fontSize:28,fontWeight:900,
+                  letterSpacing:6,color:"#d4a843"}}>{qrPoster.joinCode}</div>
+              </div>
+              <div style={{fontSize:11,color:"#999",marginBottom:18,wordBreak:"break-all"}}>
+                theatre4u.org/join.html?code={qrPoster.joinCode}
+              </div>
+              {/* Steps */}
+              <div style={{textAlign:"left",background:"#f5f0e8",borderRadius:10,
+                padding:"14px 16px",marginBottom:18}}>
+                {[
+                  "Scan the QR code with your phone camera",
+                  "Create your free Theatre4u account (name, email, password)",
+                  "You're in! Scan item QR codes and access our inventory",
+                ].map((step,i)=>(
+                  <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",
+                    marginBottom:i<2?8:0,fontSize:12,color:"#444"}}>
+                    <div style={{background:"#d4a843",color:"#1a0f00",borderRadius:"50%",
+                      width:20,height:20,minWidth:20,display:"flex",alignItems:"center",
+                      justifyContent:"center",fontWeight:800,fontSize:10,marginTop:1}}>
+                      {i+1}
+                    </div>
+                    <div>{step}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Print + close buttons */}
+            <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
+              <button onClick={()=>window.print()}
+                style={{background:"#1a0f00",color:"#d4a843",border:"none",
+                  borderRadius:8,padding:"10px 24px",fontSize:14,fontWeight:700,
+                  cursor:"pointer",fontFamily:"inherit"}}>
+                🖨 Print Poster
+              </button>
+              <button onClick={()=>setQrPoster(null)}
+                style={{background:"transparent",color:"#888",border:"1px solid #ddd",
+                  borderRadius:8,padding:"10px 20px",fontSize:14,cursor:"pointer",
+                  fontFamily:"inherit"}}>
+                Close
+              </button>
+            </div>
+            <div style={{fontSize:10,color:"#bbb",marginTop:12}}>
+              Theatre4u™ · theatre4u.org
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
+
+
 // ── QR Code Privacy Settings ─────────────────────────────────────────────────
+// ── Label Order Panel — shown in Settings for programs to request physical labels ─
+function LabelOrderPanel({ org, userId }) {
+  const [open, setOpen]       = useState(false);
+  const [count, setCount]     = useState(30);
+  const [type, setType]       = useState("standard");
+  const [notes, setNotes]     = useState("");
+  const [saving, setSaving]   = useState(false);
+  const [done, setDone]       = useState(false);
+  const [existing, setExisting] = useState([]);
+
+  useEffect(()=>{
+    SB.from("label_orders").select("id,item_count,label_type,status,created_at")
+      .eq("org_id", userId).order("created_at",{ascending:false})
+      .then(({data})=>setExisting(data||[]));
+  },[userId]);
+
+  const submit = async () => {
+    if(count<1)return;
+    setSaving(true);
+    await SB.from("label_orders").insert({
+      org_id: userId,
+      org_name: org?.name||"",
+      contact_name: org?.director_name||"",
+      contact_email: org?.email||"",
+      item_count: count,
+      label_type: type,
+      notes: notes.trim()||null,
+    });
+    setSaving(false);
+    setDone(true);
+    setExisting(prev=>[{item_count:count,label_type:type,status:"pending",created_at:new Date().toISOString()},...prev]);
+  };
+
+  return (
+    <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,padding:20,marginTop:16}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12}}>
+        <div>
+          <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>🏷 Order Physical QR Labels</div>
+          <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
+            Get professionally printed, stick-on QR labels for your inventory bins, racks, and props.
+            Standard vinyl or weatherproof options available.
+          </div>
+        </div>
+        <button onClick={()=>setOpen(o=>!o)} className="btn btn-o btn-sm" style={{flexShrink:0}}>
+          {open?"Cancel":"Request Labels"}
+        </button>
+      </div>
+      {existing.length>0&&!open&&(
+        <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:4}}>
+          {existing.slice(0,3).map((o,i)=>(
+            <div key={i} style={{fontSize:12,color:"var(--muted)",display:"flex",gap:10}}>
+              <span>{new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>
+              <span>{o.item_count} labels · {o.label_type}</span>
+              <span style={{color:o.status==="shipped"?"#4caf50":o.status==="pending"?"var(--gold)":"var(--muted)",fontWeight:600,textTransform:"capitalize"}}>
+                {o.status==="pending"?"⏳ Pending":o.status==="shipped"?"✓ Shipped":o.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      {open&&!done&&(
+        <div style={{marginTop:16,display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div>
+              <label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Number of Labels</label>
+              <select value={count} onChange={e=>setCount(Number(e.target.value))} className="fld"
+                style={{width:"100%"}}>
+                {[30,60,90,120,150,200,250,300].map(n=><option key={n} value={n}>{n} labels</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Label Type</label>
+              <select value={type} onChange={e=>setType(e.target.value)} className="fld" style={{width:"100%"}}>
+                <option value="standard">Standard Vinyl (indoor)</option>
+                <option value="weatherproof">Weatherproof (outdoor/heavy use)</option>
+                <option value="color-coded">Color-Coded by Category</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Notes (optional)</label>
+            <textarea value={notes} onChange={e=>setNotes(e.target.value)} className="fld"
+              placeholder="Any special requests, preferred colors, or items you're labeling…"
+              rows={2} style={{width:"100%",resize:"vertical"}}/>
+          </div>
+          <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"10px 14px",fontSize:12,color:"var(--muted)"}}>
+            <strong style={{color:"var(--text)"}}>Pricing (estimated):</strong> Standard: ~$12 for 30 / ~$30 for 90.
+            Weatherproof: ~$18 for 30 / ~$45 for 90. Includes shipping.
+            <br/>Submitting this form is not a charge — we'll confirm details and send an invoice before fulfilling.
+          </div>
+          <button onClick={submit} disabled={saving} className="btn btn-g" style={{alignSelf:"flex-start"}}>
+            {saving?"Submitting…":"Submit Label Request →"}
+          </button>
+        </div>
+      )}
+      {done&&(
+        <div style={{marginTop:16,background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.25)",borderRadius:8,padding:"12px 16px",fontSize:13,color:"var(--text)"}}>
+          ✓ <strong>Label request submitted!</strong> We'll follow up at {org?.email} with pricing confirmation and estimated ship date.
+        </div>
+      )}
+    </div>
+  );
+}
+
 function QRPrivacySettings({ org, setOrg, userId }) {
   const [saving, setSaving] = useState(false);
   const [saved,  setSaved]  = useState(false);
@@ -9859,6 +10012,7 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
         <div className="card card-p">
           <div className="sh"><h2>🔒 QR Code Privacy</h2><p>Control what others see when they scan your item QR labels.</p></div>
           <QRPrivacySettings org={org} setOrg={setOrg} userId={userId}/>
+          <LabelOrderPanel org={org} userId={userId}/>
         </div>
 
         <div className="sc">
@@ -10840,8 +10994,7 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
     }
     const { data, error } = await SB.from("orgs").update({
       name: f.name, type: f.type, email: f.email, phone: f.phone,
-      director_name: f.director_name, director_title: f.director_title,
-      city: f.city, location: f.location, bio: f.bio, website: f.website,
+      location: f.location, bio: f.bio, website: f.website,
       facebook: f.facebook, instagram: f.instagram,
       logo_url: f.logo_url, founded_year: f.founded_year,
       student_count: f.student_count, profile_public: f.profile_public,
@@ -10963,13 +11116,8 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
                 </div>
                 <div>
                   <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 22 }}>{f.name || "Your Program Name"}</div>
-                  {(f.director_name||f.director_title) && (
-                    <div style={{ fontSize: 13, color: "var(--gold)", marginTop: 1, fontWeight: 600 }}>
-                      {[f.director_name, f.director_title].filter(Boolean).join(" — ")}
-                    </div>
-                  )}
                   <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>
-                    {[f.type, f.city||f.location].filter(Boolean).join(" · ") || "Location not set"}
+                    {[f.type, f.location].filter(Boolean).join(" · ") || "Location not set"}
                   </div>
                 </div>
               </div>
@@ -11000,28 +11148,8 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
               <div className="fg fu"><label className="fl">Organization Name</label>
                 <input className="fi" value={f.name || ""} onChange={e => upd("name", e.target.value)} placeholder="Lincoln High Drama Dept." /></div>
 
-              {/* Director contact section */}
-              <div style={{ gridColumn:"1/-1", borderTop:"1px solid var(--border)", paddingTop:14, marginTop:4 }}>
-                <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:1, color:"var(--muted)", marginBottom:12 }}>Director / Contact</div>
-              </div>
-
-              <div className="fg"><label className="fl">Director Name</label>
-                <input className="fi" value={f.director_name||""} onChange={e=>upd("director_name",e.target.value)} placeholder="Jane Smith"/></div>
-
-              <div className="fg"><label className="fl">Title</label>
-                <input className="fi" value={f.director_title||""} onChange={e=>upd("director_title",e.target.value)} placeholder="Theatre Director"/></div>
-
-              <div className="fg"><label className="fl">Contact Email</label>
-                <input className="fi" type="email" value={f.email||""} onChange={e=>upd("email",e.target.value)} placeholder="drama@school.edu"/></div>
-
-              <div className="fg"><label className="fl">Phone</label>
-                <input className="fi" value={f.phone||""} onChange={e=>upd("phone",e.target.value)} placeholder="(555) 123-4567"/></div>
-
-              <div style={{ gridColumn:"1/-1", borderTop:"1px solid var(--border)", paddingTop:14, marginTop:4 }}>
-                <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:1, color:"var(--muted)", marginBottom:12 }}>Program Info</div>
-              </div>
-
-              <div className="fg fu"><label className="fl">Profile Photo / Logo URL</label>
+              <div className="fg fu">
+                <label className="fl">Profile Photo / Logo URL</label>
                 <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
                   {f.logo_url && <img src={f.logo_url} alt="Logo preview" style={{width:52,height:52,borderRadius:8,objectFit:"cover",border:"1px solid var(--border)",flexShrink:0}}/>}
                   <div style={{flex:1}}>
@@ -11043,6 +11171,12 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
 
               <div className="fg"><label className="fl">City / Location</label>
                 <input className="fi" value={f.location || ""} onChange={e => upd("location", e.target.value)} placeholder="Portland, OR" /></div>
+
+              <div className="fg"><label className="fl">Contact Email</label>
+                <input className="fi" type="email" value={f.email || ""} onChange={e => upd("email", e.target.value)} placeholder="drama@school.edu" /></div>
+
+              <div className="fg"><label className="fl">Phone</label>
+                <input className="fi" value={f.phone || ""} onChange={e => upd("phone", e.target.value)} placeholder="(555) 123-4567" /></div>
 
               <div className="fg"><label className="fl">Year Founded</label>
                 <input className="fi" type="number" min="1800" max="2026" value={f.founded_year || ""} onChange={e => upd("founded_year", parseInt(e.target.value) || null)} placeholder="e.g. 1998" /></div>
@@ -12321,7 +12455,9 @@ function AppRoot(){
 
   // ── CRUD ─────────────────────────────────────────────────────────────────
   const add = useCallback(async(item)=>{
-    const row={...item,org_id:user.id};
+    // For team members, org.id is the director's org — not user.id
+    const targetOrgId = org?.id || user.id;
+    const row={...item,org_id:targetOrgId};
     // Sanitize optional numeric/date/uuid fields — empty string → null
     if(!row.purchase_cost || row.purchase_cost==="")    row.purchase_cost    = null;
     else row.purchase_cost = parseFloat(row.purchase_cost) || null;
@@ -12593,8 +12729,8 @@ function AppRoot(){
       ...(!isCrew  ? [{ id:"messages",    label:"Messages",    ico:"💬"       }] : []),
       ...(!isCrew  ? [{ id:"requests",    label:"Requests",    ico:"📋"       }] : []),
       { id:"inventory",   label:"Inventory",   ico:Ic.box     },
-      ...(!isCrew ? [{ id:"marketplace", label:"Backstage Exchange", ico:Ic.store,   enabled:!!org?.marketplace_enabled }] : []),
-      ...(!isCrew ? [{ id:"community",   label:"Community Board",    ico:"🎪",        enabled:!!org?.community_enabled, community:true }] : []),
+      ...(!isCrew && org?.marketplace_enabled ? [{ id:"marketplace", label:"Backstage Exchange", ico:Ic.store   }] : []),
+      ...(!isCrew && org?.community_enabled   ? [{ id:"community",   label:"Community",   ico:"🎪", community:true }] : []),
       ...(!isCrew  ? [{ id:"productions", label:"Productions", ico:"🎭"       }] : []),
       ...(!isMember? [{ id:"reports",     label:"Reports",     ico:Ic.chart   }] : []),
       ...(!isMember? [{ id:"funding",     label:"Funding Tracker", ico:"💰"  }] : []),
@@ -12602,10 +12738,7 @@ function AppRoot(){
       { id:"profile",     label:"My Profile",  ico:"👤"       },
       ...(!isMember ? [{ id:"points", label:"Stage Points", ico:"🪙" }] : []),
       ...(!isMember && plan === "district" ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
-      ...(!isMember && isAdmin ? [
-        { id:"admin",     label:"Platform Admin", ico:Ic.settings, admin:true },
-        { id:"admin-ops", label:"Admin Tools",    ico:"⚙️",        admin:true },
-      ] : []),
+      ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin Hub", ico:"🎛", admin:true }] : []),
     ];
   })();
   const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Backstage Exchange", productions:"Productions", reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:"Stage Points", points:"Stage Points", community:"Community Board" };
@@ -12729,13 +12862,7 @@ function AppRoot(){
                 {NAV.map(n=>(
                   <div key={n.id}
                     className={`sb-item ${page===n.id?"on":""}`}
-                    onClick={()=>{
-                      // Disabled community/marketplace on paid plan → go to Settings to enable
-                      if ((n.id==="marketplace"||n.id==="community") && !n.enabled && plan!=="free") {
-                        nav("settings"); return;
-                      }
-                      nav(n.id);
-                    }}
+                    onClick={()=>nav(n.id)}
                     style={n.admin ? {marginTop:12, borderTop:"1px solid rgba(212,168,67,.15)", paddingTop:12, color: page===n.id ? undefined : "rgba(212,168,67,.65)"}
                          : n.district ? {marginTop:4, color: page===n.id ? undefined : "rgba(66,165,245,.75)"}
                          
@@ -12749,19 +12876,7 @@ function AppRoot(){
                     {n.id==="messages"   && unreadCount>0    && <span className="sb-badge" style={{background:"var(--red)",color:"#fff"}}>{unreadCount}</span>}
                     {n.id==="requests"   && pendingReqCount>0 && <span className="sb-badge" style={{background:"var(--red)",color:"#fff"}}>{pendingReqCount}</span>}
                     {n.id==="inventory"  && items.length>0 && <span className="sb-badge">{activeSchool ? schoolItems.length : items.length}</span>}
-                    {n.id==="marketplace" && listed>0 && n.enabled && <span className="sb-badge">{listed}</span>}
-                {(n.id==="marketplace"||n.id==="community") && !n.enabled && plan==="free" && (
-                  <span style={{marginLeft:"auto",fontSize:10,color:"rgba(212,168,67,.5)",
-                    background:"rgba(212,168,67,.08)",padding:"1px 6px",borderRadius:6,flexShrink:0}}>
-                    Pro
-                  </span>
-                )}
-                {(n.id==="marketplace"||n.id==="community") && !n.enabled && plan!=="free" && (
-                  <span style={{marginLeft:"auto",fontSize:9,color:"rgba(255,255,255,.3)",
-                    background:"rgba(255,255,255,.06)",padding:"1px 6px",borderRadius:6,flexShrink:0}}>
-                    Off
-                  </span>
-                )}
+                    {n.id==="marketplace"&& listed>0       && <span className="sb-badge">{listed}</span>}
                     {n.id==="productions"&& <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--gold)"}}>🎭</span>}
                     
                     {n.id==="points"    && creditBalance>0 && <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--gold)"}}>{creditBalance}</span>}
@@ -12830,7 +12945,7 @@ function AppRoot(){
                     }}/>}
                   {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
                   {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} pointBalance={creditBalance} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
-                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)}/>}
+                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} onGoReports={()=>nav("reports")}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
                       ? <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading {activeSchool.name}…</div>
@@ -12856,8 +12971,7 @@ function AppRoot(){
                   {page==="points"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>Stage Points is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true}/></div>}
 
 
-                  {page==="admin"       && isAdmin && <AdminDashboard currentUser={user}/>}
-                  {page==="admin-ops"   && isAdmin && <AdminOpsPage currentUser={user} org={org}/>}
+                  {page==="admin"       && isAdmin && <AdminHub currentUser={user} org={org}/>}
                 </div>
             }
           </div>
