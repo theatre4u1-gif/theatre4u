@@ -2078,7 +2078,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
   const[requestItem, setRequestItem]  = useState(null);
   // Location search
   const[zipInput, setZipInput]= useState(org?.zipcode||"");
-  const[radius,   setRadius]  = useState("25");   // miles or "state" or "all"
+  const[radius,   setRadius]  = useState("all");  // miles or "state" or "all" — default all so no one sees empty page
   const[userCoords,setUserCoords]=useState(null); // {lat,lng,state}
   const[geoLoading,setGeoLoading]=useState(false);
   const[geoErr,   setGeoErr]  = useState("");
@@ -2168,8 +2168,10 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
     }
 
     // Sort: own items first, then by distance if we have coords
-    if(userCoords?.lat&&radius!=="all"&&radius!=="state"){
+    if(userCoords?.lat){
       f=[...f].sort((a,b)=>{
+        if(a.org_id===org?.id) return -1;
+        if(b.org_id===org?.id) return 1;
         const da=a.org_lat?milesBetween(userCoords.lat,userCoords.lng,a.org_lat,a.org_lng):9999;
         const db=b.org_lat?milesBetween(userCoords.lat,userCoords.lng,b.org_lat,b.org_lng):9999;
         return da-db;
@@ -2178,6 +2180,21 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
 
     return f;
   },[allListings,mktTab,search,catF,typeF,radius,userCoords,org?.id]);
+
+  // Split filtered into nearby (< 100mi) and national sections
+  const nearbyItems   = filtered.filter(i=>{
+    if(i.org_id===org?.id) return true;
+    if(!userCoords?.lat||!i.org_lat) return false;
+    return milesBetween(userCoords.lat,userCoords.lng,i.org_lat,i.org_lng) < 100;
+  });
+  const nationalItems = filtered.filter(i=>{
+    if(i.org_id===org?.id) return false;
+    if(!userCoords?.lat||!i.org_lat) return false;
+    return milesBetween(userCoords.lat,userCoords.lng,i.org_lat,i.org_lng) >= 100;
+  });
+  const unknownItems  = filtered.filter(i=>i.org_id!==org?.id&&(!userCoords?.lat||!i.org_lat));
+  // For pagination we still use flat filtered list
+  const hasGeo = userCoords?.lat && filtered.some(i=>i.org_lat);
 
   const paged=useMemo(()=>filtered.slice((pg-1)*PP,pg*PP),[filtered,pg]);
   useEffect(()=>setPg(1),[search,catF,typeF,radius,userCoords,mktTab]);
@@ -2340,19 +2357,49 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
           {userCoords&&radius!=="all"&&!loadingAll&&` within ${radius==="state"?STATE_NAMES[userCoords.state]||userCoords.state:radius+" miles"}`}
         </div>
 
-        {/* ── Listings Grid ── */}
-        {paged.length===0
+        {/* ── Community banner (always shown in browse tab) ── */}
+        {mktTab==="browse"&&(
+          <div style={{background:"linear-gradient(135deg,rgba(212,168,67,.08),rgba(212,168,67,.04))",
+            border:"1px solid rgba(212,168,67,.25)",borderRadius:12,padding:"14px 18px",
+            marginBottom:18,display:"flex",gap:14,alignItems:"flex-start"}}>
+            <div style={{fontSize:28,flexShrink:0}}>🌎</div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:14,color:"var(--gold)",marginBottom:4}}>
+                Theatre4u is growing across the country
+              </div>
+              <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>
+                Programs in California, Ohio, Missouri, North Carolina, New Hampshire and more are sharing
+                costumes, props, lighting and sets. Every program that joins makes this exchange more
+                valuable for everyone.
+              </div>
+              <div style={{marginTop:10,display:"flex",gap:8,flexWrap:"wrap"}}>
+                <button className="btn btn-g btn-sm" style={{fontSize:12}}
+                  onClick={()=>{
+                    const url=`https://theatre4u.org/beta.html`;
+                    navigator.clipboard?.writeText(url).then(()=>alert("Link copied! Share it with neighboring programs."));
+                  }}>
+                  📨 Invite a Neighboring Program
+                </button>
+                <div style={{fontSize:12,color:"var(--faint)",alignSelf:"center"}}>
+                  Free to join · Help build your regional network
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Listings — sectioned by proximity ── */}
+        {filtered.length===0
           ?<div className="empty">
               <div className="empty-ico">🏪</div>
               <h3>{mktTab==="mine"?"No Active Listings":"No Listings Found"}</h3>
               <p>{mktTab==="mine"
                 ?"Mark items as “For Rent” or “For Sale” in Inventory to list them here."
-                :radius!=="all"
-                  ?"Try expanding your search radius or searching All to see listings everywhere."
-                  :"No listings yet — be the first to list items for your community!"}</p>
+                :"No listings match your search. Try clearing filters."}</p>
             </div>
-          :<div className="inv-grid">
-            {paged.map(item=>{
+          :<>{(() => {
+            // Helper: render a single listing card
+            const renderCard = (item, isFar=false) => {
               const cat=CAT[item.category]||CAT.other;
               const isOwn = item.org_id===org?.id;
               const dist = userCoords?.lat&&item.org_lat
@@ -2366,8 +2413,12 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
                       {isOwn?"⭐ Your Listing":item.org_name}
                     </div>
                     <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
-                      {item.org_state&&<span style={{fontSize:10,fontWeight:700,color:"var(--faint)"}}>{item.org_state}</span>}
-                      {dist!==null&&!isOwn&&<span style={{fontSize:10,fontWeight:700,color:"var(--amber)",background:"rgba(196,118,26,.1)",padding:"1px 6px",borderRadius:8}}>~{dist}mi</span>}
+                      {item.org_location&&!isOwn&&<span style={{fontSize:10,color:"var(--faint)"}}>{item.org_location}</span>}
+                      {dist!==null&&!isOwn&&(
+                        isFar
+                          ?<span style={{fontSize:10,fontWeight:700,color:"var(--muted)",background:"var(--parch)",padding:"1px 6px",borderRadius:8}}>{dist.toLocaleString()}+ mi</span>
+                          :<span style={{fontSize:10,fontWeight:700,color:"var(--amber)",background:"rgba(196,118,26,.1)",padding:"1px 6px",borderRadius:8}}>~{dist}mi</span>
+                      )}
                     </div>
                   </div>
                   <div className="inv-img">{item.img
@@ -2378,29 +2429,117 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
                     <div className="inv-cat" style={{color:cat.color}}>{cat.icon} {cat.label}</div>
                     <div className="inv-name">{item.name}</div>
                     {item.notes&&<p style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:14,color:"var(--muted)",margin:"3px 0 8px",lineHeight:1.5}}>{item.notes.slice(0,80)}{item.notes.length>80?"…":""}</p>}
-                    {item.org_location&&!isOwn&&<div style={{fontSize:11,color:"var(--faint)",marginBottom:4}}>📍 {item.org_location}</div>}
                     <div className="inv-meta"><span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span></div>
                     <div className="inv-foot">
                       <span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span>
                       {item.mkt==="For Loan"?<span style={{fontSize:12,color:"#00838f",fontWeight:700}}>{item.loan_period||2}wk loan{item.deposit>0?" · "+fmt$(item.deposit)+" dep.":""}</span>:<span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>}
                     </div>
-                    {!isOwn&&<div style={{display:"flex",gap:6,marginTop:8}}>
-                      <button className="btn btn-g btn-sm" style={{flex:1,fontSize:12}}
-                        onClick={e=>{e.stopPropagation();setRequestItem(item);}}>
-                        📋 Request
-                      </button>
-                      <button className="btn btn-o btn-sm" style={{flex:1,fontSize:12}}
-                        onClick={e=>{e.stopPropagation();setContactItem(item);}}>
-                        💬 Message
-                      </button>
+                    {!isOwn&&(
+                      <div style={{display:"flex",gap:6,marginTop:8}}>
+                        {!isFar&&<button className="btn btn-g btn-sm" style={{flex:1,fontSize:12}}
+                          onClick={e=>{e.stopPropagation();setRequestItem(item);}}>
+                          📋 Request
+                        </button>}
+                        <button className="btn btn-o btn-sm" style={{flex:isFar?1:undefined,fontSize:12}}
+                          onClick={e=>{e.stopPropagation();setContactItem(item);}}>
+                          💬 Message
+                        </button>
+                      </div>
+                    )}
+                    {isFar&&!isOwn&&<div style={{fontSize:10,color:"var(--faint)",marginTop:6,lineHeight:1.4}}>
+                      Shipping arranged directly between programs. Message to discuss.
                     </div>}
                   </div>
                 </div>
               );
-            })}
-          </div>
+            };
+
+            // Decide which sections to show
+            const showSections = hasGeo && mktTab==="browse";
+
+            if(!showSections){
+              // No geo — show all in one flat grid
+              const paginated = filtered.slice((pg-1)*PP, pg*PP);
+              return <>
+                <div className="inv-grid">{paginated.map(i=>renderCard(i,false))}</div>
+                <Pager total={filtered.length} page={pg} per={PP} onPage={setPg}/>
+              </>;
+            }
+
+            // Geo available — show sectioned layout
+            const allSectioned = [...nearbyItems, ...unknownItems, ...nationalItems];
+            const paginated = allSectioned.slice((pg-1)*PP, pg*PP);
+            const nearbyInPage   = paginated.filter(i=>nearbyItems.some(n=>n.id===i.id));
+            const unknownInPage  = paginated.filter(i=>unknownItems.some(n=>n.id===i.id));
+            const nationalInPage = paginated.filter(i=>nationalItems.some(n=>n.id===i.id));
+
+            return <>
+              {nearbyInPage.length>0&&(
+                <>
+                  <div style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,
+                    color:"var(--muted)",marginBottom:10,display:"flex",alignItems:"center",gap:8}}>
+                    <span>📍 Nearby</span>
+                    <span style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:6,
+                      padding:"1px 7px",fontWeight:700,fontSize:11}}>{nearbyItems.length}</span>
+                  </div>
+                  <div className="inv-grid" style={{marginBottom:24}}>
+                    {nearbyInPage.map(i=>renderCard(i,false))}
+                  </div>
+                </>
+              )}
+              {unknownInPage.length>0&&(
+                <div className="inv-grid" style={{marginBottom:24}}>
+                  {unknownInPage.map(i=>renderCard(i,false))}
+                </div>
+              )}
+              {nationalInPage.length>0&&(
+                <>
+                  <div style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,
+                    color:"var(--muted)",marginBottom:10,marginTop:nearbyInPage.length>0?4:0,
+                    display:"flex",alignItems:"center",gap:8,borderTop:nearbyInPage.length>0?"1px solid var(--border)":"none",
+                    paddingTop:nearbyInPage.length>0?18:0}}>
+                    <span>🌎 From programs across the country</span>
+                    <span style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:6,
+                      padding:"1px 7px",fontWeight:700,fontSize:11}}>{nationalItems.length}</span>
+                  </div>
+                  <div style={{fontSize:12,color:"var(--muted)",marginBottom:12,lineHeight:1.5}}>
+                    These items are farther away but visible so you can see what other programs are sharing.
+                    Message any program to discuss availability, shipping, or long-term loans.
+                  </div>
+                  <div className="inv-grid" style={{marginBottom:24}}>
+                    {nationalInPage.map(i=>renderCard(i,true))}
+                  </div>
+                </>
+              )}
+              <Pager total={allSectioned.length} page={pg} per={PP} onPage={setPg}/>
+            </>;
+          })()}</>
         }
-        <Pager total={filtered.length} page={pg} per={PP} onPage={setPg}/>
+
+        {/* ── Join CTA at bottom ── */}
+        {mktTab==="browse"&&filtered.length>0&&(
+          <div style={{marginTop:24,padding:"22px 24px",background:"var(--parch)",
+            border:"1px solid var(--border)",borderRadius:12,textAlign:"center"}}>
+            <div style={{fontFamily:"var(--serif)",fontSize:20,marginBottom:8}}>
+              Help build your regional theatre network
+            </div>
+            <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6,maxWidth:460,margin:"0 auto 16px"}}>
+              Know a drama teacher who's always hunting for costumes or props?
+              Invite them to join Theatre4u — it's free, and every program that
+              lists items makes the whole community stronger.
+            </div>
+            <button className="btn btn-g" onClick={()=>{
+              const url="https://theatre4u.org/beta.html";
+              navigator.clipboard?.writeText(url)
+                .then(()=>alert("Invite link copied!\n\nShare this with neighboring theater programs:\n"+url));
+            }}>
+              📨 Copy Invite Link for Neighboring Programs
+            </button>
+            <div style={{fontSize:11,color:"var(--faint)",marginTop:8}}>
+              theatre4u.org/beta.html · Free to join
+            </div>
+          </div>
+        )}
       </div>
       {viewing&&<Modal title="Listing Details" onClose={()=>setViewing(null)}>
         <ItemDetail item={viewing}
@@ -9550,103 +9689,273 @@ function TeamSettings({ userId, orgName, plan }) {
 
 // ── QR Code Privacy Settings ─────────────────────────────────────────────────
 // ── Label Order Panel — shown in Settings for programs to request physical labels ─
-function LabelOrderPanel({ org, userId }) {
-  const [open, setOpen]       = useState(false);
-  const [count, setCount]     = useState(30);
-  const [type, setType]       = useState("standard");
-  const [notes, setNotes]     = useState("");
-  const [saving, setSaving]   = useState(false);
-  const [done, setDone]       = useState(false);
-  const [existing, setExisting] = useState([]);
+function LabelOrderPanel({ org, userId, items=[] }) {
+  const [step, setStep]       = useState("intro");  // intro | select | preview | order
+  const [labelItems, setLabelItems] = useState([]);
+  const [allItems,   setAllItems]   = useState([]);
+  const [labelSize,  setLabelSize]  = useState("2x2");
+  const [labelStyle, setLabelStyle] = useState("standard");
+  const [searching,  setSearching]  = useState("");
+  const [previewing, setPreviewing] = useState(false);
+  const [existing,   setExisting]   = useState([]);
+  const [saving,     setSaving]     = useState(false);
+  const [requestDone,setRequestDone]= useState(false);
 
   useEffect(()=>{
-    SB.from("label_orders").select("id,item_count,label_type,status,created_at")
-      .eq("org_id", userId).order("created_at",{ascending:false})
+    SB.from("items").select("id,name,category,location,display_id,img")
+      .eq("org_id",userId).order("added",{ascending:false}).limit(200)
+      .then(({data})=>setAllItems(data||[]));
+    SB.from("label_orders").select("id,item_count,label_type,status,created_at,tracking")
+      .eq("org_id",userId).order("created_at",{ascending:false})
       .then(({data})=>setExisting(data||[]));
   },[userId]);
 
-  const submit = async () => {
-    if(count<1)return;
-    setSaving(true);
-    await SB.from("label_orders").insert({
-      org_id: userId,
-      org_name: org?.name||"",
-      contact_name: org?.director_name||"",
-      contact_email: org?.email||"",
-      item_count: count,
-      label_type: type,
-      notes: notes.trim()||null,
-    });
-    setSaving(false);
-    setDone(true);
-    setExisting(prev=>[{item_count:count,label_type:type,status:"pending",created_at:new Date().toISOString()},...prev]);
+  const toggleItem = id => setLabelItems(prev =>
+    prev.includes(id) ? prev.filter(x=>x!==id) : [...prev,id]
+  );
+  const selectAll  = () => setLabelItems(allItems.map(i=>i.id));
+  const clearAll   = () => setLabelItems([]);
+
+  const SIZES = { "2x2":"2\" x 2\" (recommended)", "2x3":"2\" x 3\" (portrait)", "3x3":"3\" x 3\" (large)", "1x3":"1\" x 3\" (strip)" };
+  const STYLES = {
+    standard:    { name:"Standard Vinyl", desc:"Indoor use · Matte finish · Waterproof · ~$0.25/label" },
+    weatherproof:{ name:"Weatherproof",   desc:"Outdoor/heavy use · Extra durable · ~$0.40/label" },
+    "color-coded":{ name:"Color-Coded",  desc:"Color by category · Easier visual sorting · ~$0.35/label" },
   };
 
-  return (
-    <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,padding:20,marginTop:16}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12}}>
+  const selectedItems = allItems.filter(i=>labelItems.includes(i.id));
+  const count = selectedItems.length;
+  const pricePerLabel = labelStyle==="standard"?0.25:labelStyle==="weatherproof"?0.40:0.35;
+  const estTotal = (count * pricePerLabel + 7).toFixed(2); // +$7 shipping estimate
+
+  // Generate a label preview for one item
+  const LabelPreview = ({item}) => {
+    const cat = CAT[item.category]||CAT.other;
+    const url = `https://theatre4u.org/#/item/${item.id}`;
+    const [qrSrc, setQrSrc] = useState(null);
+    useEffect(()=>{
+      QR.toDataURL(url,80).then(setQrSrc);
+    },[item.id]);
+    return(
+      <div style={{width:96,height:96,border:"2px solid #1a0f00",borderRadius:6,
+        padding:6,background:"#fff",display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
+        <div style={{fontSize:8,fontWeight:800,color:"#d4a843",textTransform:"uppercase",
+          letterSpacing:.5,lineHeight:1}}>{cat.icon} {cat.label}</div>
+        <div style={{fontSize:9,fontWeight:700,color:"#1a0f00",lineHeight:1.2,flex:1,
+          overflow:"hidden"}}>{item.name}</div>
+        <div style={{display:"flex",gap:4,alignItems:"flex-end",justifyContent:"space-between"}}>
+          <div>
+            {item.location&&<div style={{fontSize:7,color:"#666"}}>📍{item.location.slice(0,12)}</div>}
+            {item.display_id&&<div style={{fontSize:7,fontWeight:700,color:"#d4a843",fontFamily:"monospace"}}>{item.display_id}</div>}
+            <div style={{fontSize:7,color:"#999"}}>theatre4u.org</div>
+          </div>
+          {qrSrc&&<img src={qrSrc} width={30} height={30} alt="QR"/>}
+        </div>
+      </div>
+    );
+  };
+
+  const submitRequest = async () => {
+    setSaving(true);
+    await SB.from("label_orders").insert({
+      org_id:        userId,
+      org_name:      org?.name||"",
+      contact_email: org?.email||"",
+      contact_name:  org?.director_name||"",
+      item_count:    count,
+      label_type:    labelStyle,
+      notes:         `Size: ${labelSize}. Items: ${selectedItems.map(i=>i.name).join(", ")}`,
+    });
+    setSaving(false);
+    setRequestDone(true);
+    setExisting(prev=>[{item_count:count,label_type:labelStyle,status:"pending",
+      created_at:new Date().toISOString()},...prev]);
+  };
+
+  return(
+    <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,
+      padding:20,marginTop:16}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:16}}>
         <div>
-          <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>🏷 Order Physical QR Labels</div>
-          <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
-            Get professionally printed, stick-on QR labels for your inventory bins, racks, and props.
-            Standard vinyl or weatherproof options available.
+          <div style={{fontWeight:700,fontSize:15,marginBottom:3}}>🏷 QR Label Printing</div>
+          <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>
+            Order professional QR label stickers for your inventory bins, racks, and props.
+            We design them, you order direct from Sticker Mule — shipped to your door.
           </div>
         </div>
-        <button onClick={()=>setOpen(o=>!o)} className="btn btn-o btn-sm" style={{flexShrink:0}}>
-          {open?"Cancel":"Request Labels"}
-        </button>
+        {step!=="intro"&&<button onClick={()=>{setStep("intro");setRequestDone(false);}} className="btn btn-o btn-sm">← Back</button>}
       </div>
-      {existing.length>0&&!open&&(
-        <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:4}}>
+
+      {/* Existing orders */}
+      {existing.length>0&&step==="intro"&&(
+        <div style={{marginBottom:14,display:"flex",flexDirection:"column",gap:4}}>
+          <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:4}}>Previous Orders</div>
           {existing.slice(0,3).map((o,i)=>(
-            <div key={i} style={{fontSize:12,color:"var(--muted)",display:"flex",gap:10}}>
+            <div key={i} style={{fontSize:12,color:"var(--muted)",display:"flex",gap:12,alignItems:"center"}}>
               <span>{new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>
               <span>{o.item_count} labels · {o.label_type}</span>
-              <span style={{color:o.status==="shipped"?"#4caf50":o.status==="pending"?"var(--gold)":"var(--muted)",fontWeight:600,textTransform:"capitalize"}}>
-                {o.status==="pending"?"⏳ Pending":o.status==="shipped"?"✓ Shipped":o.status}
+              {o.tracking&&<span style={{fontSize:11}}>📦 {o.tracking}</span>}
+              <span style={{fontWeight:600,
+                color:o.status==="shipped"||o.status==="delivered"?"#4caf50":o.status==="processing"?"#2196f3":"var(--gold)",
+                textTransform:"capitalize"}}>
+                {o.status==="pending"?"⏳ Pending":o.status==="processing"?"🔄 Processing":o.status==="shipped"?"✈ Shipped":"✓ Delivered"}
               </span>
             </div>
           ))}
         </div>
       )}
-      {open&&!done&&(
-        <div style={{marginTop:16,display:"flex",flexDirection:"column",gap:12}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-            <div>
-              <label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Number of Labels</label>
-              <select value={count} onChange={e=>setCount(Number(e.target.value))} className="fld"
-                style={{width:"100%"}}>
-                {[30,60,90,120,150,200,250,300].map(n=><option key={n} value={n}>{n} labels</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Label Type</label>
-              <select value={type} onChange={e=>setType(e.target.value)} className="fld" style={{width:"100%"}}>
-                <option value="standard">Standard Vinyl (indoor)</option>
-                <option value="weatherproof">Weatherproof (outdoor/heavy use)</option>
-                <option value="color-coded">Color-Coded by Category</option>
-              </select>
-            </div>
+
+      {/* INTRO */}
+      {step==="intro"&&(
+        <div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+            {[
+              { icon:"🎨", title:"We design the labels", body:"Your item name, category icon, QR code, storage location, and Theatre4u branding on every label." },
+              { icon:"🏷", title:"You order from Sticker Mule", body:"We'll email you a print-ready file. Upload it to Sticker Mule, choose weatherproof vinyl, done." },
+              { icon:"📦", title:"Ships to your door", body:"Sticker Mule ships in 4–6 days. Weatherproof labels survive costume closets and scene shops." },
+            ].map(s=>(
+              <div key={s.title} style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:8,padding:"12px 14px"}}>
+                <div style={{fontSize:22,marginBottom:6}}>{s.icon}</div>
+                <div style={{fontWeight:700,fontSize:12,marginBottom:4}}>{s.title}</div>
+                <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.5}}>{s.body}</div>
+              </div>
+            ))}
           </div>
-          <div>
-            <label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Notes (optional)</label>
-            <textarea value={notes} onChange={e=>setNotes(e.target.value)} className="fld"
-              placeholder="Any special requests, preferred colors, or items you're labeling…"
-              rows={2} style={{width:"100%",resize:"vertical"}}/>
+          <div style={{background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"10px 14px",fontSize:12,color:"var(--muted)",marginBottom:14,lineHeight:1.6}}>
+            <strong style={{color:"var(--text)"}}>Estimated cost at Sticker Mule:</strong>
+            {" "}~$19 for 50 labels · ~$36 for 100 labels · ~$65 for 200 labels.
+            Prices include free worldwide shipping. Weatherproof vinyl is ~30% more.
           </div>
-          <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"10px 14px",fontSize:12,color:"var(--muted)"}}>
-            <strong style={{color:"var(--text)"}}>Pricing (estimated):</strong> Standard: ~$12 for 30 / ~$30 for 90.
-            Weatherproof: ~$18 for 30 / ~$45 for 90. Includes shipping.
-            <br/>Submitting this form is not a charge — we'll confirm details and send an invoice before fulfilling.
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <button className="btn btn-g" onClick={()=>setStep("select")}>
+              Design My Labels →
+            </button>
+            <a href="https://www.stickermule.com/custom-labels" target="_blank" rel="noreferrer"
+              style={{fontSize:12,color:"var(--gold)"}}>View Sticker Mule pricing ↗</a>
           </div>
-          <button onClick={submit} disabled={saving} className="btn btn-g" style={{alignSelf:"flex-start"}}>
-            {saving?"Submitting…":"Submit Label Request →"}
-          </button>
         </div>
       )}
-      {done&&(
-        <div style={{marginTop:16,background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.25)",borderRadius:8,padding:"12px 16px",fontSize:13,color:"var(--text)"}}>
-          ✓ <strong>Label request submitted!</strong> We'll follow up at {org?.email} with pricing confirmation and estimated ship date.
+
+      {/* SELECT ITEMS */}
+      {step==="select"&&(
+        <div>
+          <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
+            <input value={searching} onChange={e=>setSearching(e.target.value)}
+              placeholder="Search items…" className="fi" style={{flex:1,minWidth:180,padding:"6px 10px"}}/>
+            <button className="btn btn-o btn-sm" onClick={selectAll}>Select All</button>
+            <button className="btn btn-o btn-sm" onClick={clearAll}>Clear</button>
+            <span style={{fontSize:12,color:"var(--muted)"}}>{count} selected</span>
+          </div>
+          <div style={{maxHeight:260,overflowY:"auto",border:"1px solid var(--border)",borderRadius:8,
+            background:"var(--white)",marginBottom:14}}>
+            {allItems
+              .filter(i=>!searching||i.name.toLowerCase().includes(searching.toLowerCase())||
+                (i.location||"").toLowerCase().includes(searching.toLowerCase()))
+              .map(i=>(
+              <div key={i.id} onClick={()=>toggleItem(i.id)}
+                style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",
+                  borderBottom:"1px solid var(--border)",
+                  background:labelItems.includes(i.id)?"rgba(212,168,67,.08)":"transparent"}}>
+                <div style={{width:16,height:16,borderRadius:4,border:"1.5px solid var(--border)",
+                  background:labelItems.includes(i.id)?"var(--gold)":"transparent",flexShrink:0,
+                  display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  {labelItems.includes(i.id)&&<span style={{color:"#1a0f00",fontSize:11,fontWeight:900}}>✓</span>}
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:600}}>{i.name}</div>
+                  {i.location&&<div style={{fontSize:11,color:"var(--muted)"}}>📍 {i.location}</div>}
+                </div>
+                {i.display_id&&<span style={{fontFamily:"monospace",fontSize:11,color:"var(--amber)"}}>{i.display_id}</span>}
+              </div>
+            ))}
+            {allItems.length===0&&<div style={{padding:20,textAlign:"center",color:"var(--muted)",fontSize:13}}>No items in inventory yet.</div>}
+          </div>
+          {/* Label options */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+            <div>
+              <label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Label Size</label>
+              <select value={labelSize} onChange={e=>setLabelSize(e.target.value)} className="fld" style={{width:"100%"}}>
+                {Object.entries(SIZES).map(([v,l])=><option key={v} value={v}>{l}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Label Material</label>
+              <select value={labelStyle} onChange={e=>setLabelStyle(e.target.value)} className="fld" style={{width:"100%"}}>
+                {Object.entries(STYLES).map(([v,s])=><option key={v} value={v}>{s.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{fontSize:12,color:"var(--muted)",marginBottom:14}}>
+            {STYLES[labelStyle]?.desc}
+          </div>
+          <div style={{display:"flex",gap:10,alignItems:"center"}}>
+            <button className="btn btn-g" disabled={count===0} onClick={()=>setStep("preview")}>
+              Preview Labels ({count}) →
+            </button>
+            {count>0&&<span style={{fontSize:12,color:"var(--muted)"}}>Est. ~${estTotal} at Sticker Mule</span>}
+          </div>
+        </div>
+      )}
+
+      {/* PREVIEW + ORDER */}
+      {step==="preview"&&(
+        <div>
+          <div style={{fontSize:13,color:"var(--muted)",marginBottom:14,lineHeight:1.5}}>
+            Preview of your {count} labels at {SIZES[labelSize]} size.
+            We'll send you a print-ready PDF to upload to Sticker Mule.
+          </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20,
+            maxHeight:320,overflowY:"auto",padding:4}}>
+            {selectedItems.slice(0,20).map(item=>(
+              <LabelPreview key={item.id} item={item}/>
+            ))}
+            {count>20&&<div style={{width:96,height:96,border:"2px dashed var(--border)",borderRadius:6,
+              display:"flex",alignItems:"center",justifyContent:"center",
+              fontSize:13,color:"var(--muted)",textAlign:"center",padding:8}}>
+              +{count-20} more labels
+            </div>}
+          </div>
+          {!requestDone?(
+            <div>
+              <div style={{background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.2)",
+                borderRadius:8,padding:"12px 14px",fontSize:12,color:"var(--muted)",marginBottom:14,lineHeight:1.6}}>
+                <strong style={{color:"var(--text)"}}>How this works:</strong>{" "}
+                Submit your request below. We'll generate a print-ready PDF file and email it to{" "}
+                <strong>{org?.email}</strong> within 1–2 business days.
+                Upload it to <a href="https://www.stickermule.com/custom-labels" target="_blank" rel="noreferrer"
+                  style={{color:"var(--gold)"}}>Sticker Mule</a>, choose vinyl labels, and order directly.
+                No Theatre4u transaction fee — you pay Sticker Mule directly.
+              </div>
+              <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                <button onClick={submitRequest} disabled={saving} className="btn btn-g">
+                  {saving?"Submitting…":"📧 Send Me the Print File →"}
+                </button>
+                <button onClick={()=>setStep("select")} className="btn btn-o btn-sm">← Edit Selection</button>
+                <span style={{fontSize:11,color:"var(--faint)"}}>Free · No charge until you order from Sticker Mule</span>
+              </div>
+            </div>
+          ):(
+            <div style={{background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.25)",
+              borderRadius:8,padding:"14px 16px",fontSize:13,color:"var(--text)"}}>
+              <div style={{fontWeight:700,marginBottom:4}}>✓ Request received!</div>
+              <div style={{lineHeight:1.6,color:"var(--muted)"}}>
+                We'll email a print-ready PDF to <strong>{org?.email}</strong> within 1–2 business days.
+                Then just upload it to{" "}
+                <a href="https://www.stickermule.com/custom-labels" target="_blank" rel="noreferrer"
+                  style={{color:"var(--gold)"}}>stickermule.com/custom-labels</a>{" "}
+                and order the size that matches your labels. Ships in 4–6 days.
+              </div>
+              <div style={{marginTop:10,display:"flex",gap:8}}>
+                <button onClick={()=>{setStep("intro");setRequestDone(false);}} className="btn btn-o btn-sm">
+                  Order More Labels
+                </button>
+                <a href="https://www.stickermule.com/custom-labels" target="_blank" rel="noreferrer"
+                  className="btn btn-g btn-sm" style={{textDecoration:"none"}}>
+                  Go to Sticker Mule ↗
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
