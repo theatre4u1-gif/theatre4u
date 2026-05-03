@@ -1598,9 +1598,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
         )}
 
         {/* Stats */}
-        {goLabels&&items.length>0&&items.every(i=>!i.display_id?.startsWith("T4U-"))&&(
-        <LabelStoreBanner onGoLabels={goLabels}/>
-      )}
+        {/* LabelStoreBanner disabled until label vendor confirmed */}
       <div className="stats">
           {[
             {ico:"📦",val:totalQty,   lbl:"Total Items",     col:"#c4761a", bg:"photo-1558618666-fcd25c85cd64"}, // organized prop storage
@@ -6018,8 +6016,29 @@ function LabelsPage({ org, userId, items=[], stripeReturn=null, onClearReturn=nu
         </div>
       )}
 
-      {/* Tabs */}
-      <div style={{display:"flex",gap:5,marginBottom:22,flexWrap:"wrap",
+      {/* Coming Soon placeholder */}
+      <div style={{background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.25)",
+        borderRadius:12,padding:"28px 32px",maxWidth:560}}>
+        <div style={{fontSize:36,marginBottom:12}}>🏷</div>
+        <div style={{fontFamily:"var(--serif)",fontSize:20,marginBottom:8}}>QR Labels — Coming Soon</div>
+        <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.7,marginBottom:16}}>
+          We're working on a label printing partnership so you can order pre-printed QR labels
+          for your inventory — costumes, props, set pieces, equipment, and storage bins.
+          Each label will have a unique code tied exclusively to your program.
+        </p>
+        <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.7,marginBottom:16}}>
+          Labels will be available in polyester (indoor) and weatherproof (scene shop and
+          outdoor equipment) options. Once the program launches, you'll be able to order
+          directly from this page and receive labels in the mail within a week.
+        </p>
+        <div style={{fontSize:12,color:"var(--faint)",borderTop:"1px solid var(--border)",paddingTop:12,marginTop:4}}>
+          Want to be notified when labels are available?
+          Email <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)"}}>hello@theatre4u.org</a> and
+          we'll let you know as soon as ordering opens.
+        </div>
+      </div>
+      {/* Hidden: full tab UI preserved below for when vendor is confirmed */}
+      {false && <div style={{display:"flex",gap:5,marginBottom:22,flexWrap:"wrap",
         borderBottom:"1px solid var(--border)",paddingBottom:10}}>
         {[["shop","🛒 Shop Labels"],["mine","📦 My Labels"+(myLabels.length>0?` (${myLabels.length})`:"")],
           ["claim","🔗 Link Label to Item"+(unclaimedLabels.length>0?` (${unclaimedLabels.length})`:"")]
@@ -6032,7 +6051,7 @@ function LabelsPage({ org, userId, items=[], stripeReturn=null, onClearReturn=nu
             {lbl}
           </button>
         ))}
-      </div>
+      </div>}
 
       {/* ── SHOP TAB ── */}
       {tab==="shop"&&(
@@ -13812,7 +13831,7 @@ function AppRoot(){
       ...(!isCrew && org?.community_enabled   ? [{ id:"community",   label:"Community",   ico:"🎪", community:true }] : []),
       ...(!isCrew  ? [{ id:"productions", label:"Productions", ico:"🎭"       }] : []),
       ...(!isMember? [{ id:"reports",     label:"Reports",     ico:Ic.chart   }] : []),
-      ...(!isMember? [{ id:"labels",      label:"QR Labels",   ico:"🏷"        }] : []),
+      ...(!isMember? [{ id:"labels", label:"QR Labels", ico:"🏷", disabled:true }] : []),
       ...(!isMember? [{ id:"funding",     label:"Funding Tracker", ico:"💰"  }] : []),
       // Prop 28 nav hidden — legacy data accessible via Funding Tracker migration banner
       { id:"profile",     label:"My Profile",  ico:"👤"       },
