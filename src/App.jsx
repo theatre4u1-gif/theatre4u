@@ -6429,7 +6429,7 @@ function PoolHealthWidget() {
         <div style={{marginTop:8,background:"rgba(229,57,53,.08)",border:"1px solid rgba(229,57,53,.2)",
           borderRadius:6,padding:"8px 10px",fontSize:11,color:"var(--muted)",fontFamily:"monospace",lineHeight:1.5}}>
           Run in Supabase SQL to add 10,000 more labels:<br/>
-          SELECT seed_label_pool({total+1}, {total+10000});
+          {"SELECT seed_label_pool("+(total+1)+", "+(total+10000)+");"}
         </div>
       )}
     </div>
@@ -6890,13 +6890,7 @@ function AdminHub({ currentUser, org }) {
           </div>
 
           {/* Pool stats */}
-          <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
-            {[
-              {label:"Available in Pool", q:"available",  color:"#4caf50"},
-              {label:"Assigned (ordered)",q:"assigned",   color:"#2196f3"},
-              {label:"Claimed (in use)",  q:"claimed",    color:"var(--gold)"},
-            ].map(async s=><div/> /* rendered below */)}
-          </div>
+          {/* Pool stats shown in PoolHealthWidget below */}
 
           {/* Orders list */}
           {labelOrders.length===0?(
