@@ -6262,12 +6262,12 @@ function AdminHub({ currentUser, org }) {
                       <span style={{fontSize:16}}>✉️</span>
                       <span style={{fontWeight:700,fontSize:14}}>Emails Sent ({digest.emailsSent.length})</span>
                     </div>
-                    {Object.entries(digest.emailsByOrg).map(([orgId,entry]:any)=>(
+                    {Object.entries(digest.emailsByOrg).map(([orgId,entry])=>(
                       <div key={orgId} style={{padding:"8px 14px",borderBottom:"1px solid var(--border)",
                         display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
                         <span style={{fontSize:13,fontWeight:600}}>{entry.name||orgId.slice(0,8)}</span>
                         <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                          {entry.emails.map((n:number)=>(
+                          {entry.emails.map(n=>(
                             <span key={n} style={{fontSize:11,padding:"1px 7px",borderRadius:5,
                               background:"rgba(212,168,67,.12)",color:"var(--gold)",fontWeight:600}}>
                               #{n} {digest.emailLabels[n]||""}
@@ -6290,8 +6290,8 @@ function AdminHub({ currentUser, org }) {
                     </div>
                     <div style={{padding:"10px 14px",display:"flex",flexWrap:"wrap",gap:10}}>
                       {Object.entries(digest.pvByPage)
-                        .sort(([,a]:any,[,b]:any)=>b-a)
-                        .map(([page,count]:any)=>(
+                        .sort(([,a],[,b])=>b-a)
+                        .map(([page,count])=>(
                           <div key={page} style={{display:"flex",gap:6,alignItems:"center"}}>
                             <span style={{fontSize:12,color:"var(--text)",textTransform:"capitalize"}}>{page}</span>
                             <span style={{fontSize:13,fontWeight:700,color:"var(--gold)",
