@@ -6241,7 +6241,7 @@ function AdminHub({ currentUser, org }) {
                       <span style={{fontSize:16}}>📥</span>
                       <span style={{fontWeight:700,fontSize:14}}>New Beta Leads ({digest.newLeads.length})</span>
                     </div>
-                    {digest.newLeads.map(l=>=>(
+                    {digest.newLeads.map(l=>(
                       <div key={l.id} style={{padding:"9px 14px",borderBottom:"1px solid var(--border)",
                         display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
                         <span style={{fontWeight:600,fontSize:13}}>{l.name}</span>
@@ -6309,7 +6309,7 @@ function AdminHub({ currentUser, org }) {
                       <span style={{fontSize:16}}>📋</span>
                       <span style={{fontWeight:700,fontSize:14}}>New Feedback ({digest.newFeedback.length})</span>
                     </div>
-                    {digest.newFeedback.map(f=>=>(
+                    {digest.newFeedback.map(f=>(
                       <div key={f.id} style={{padding:"10px 14px",borderBottom:"1px solid var(--border)"}}>
                         <div style={{display:"flex",gap:8,marginBottom:4,alignItems:"center"}}>
                           <span style={{fontSize:14}}>{f.category==="bug"?"🐛":f.category==="feature"?"✨":"💬"}</span>
