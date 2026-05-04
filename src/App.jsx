@@ -6043,27 +6043,27 @@ function AdminHub({ currentUser, org }) {
           (orgData||[]).forEach(o=>{orgNames[o.id]=o.name;});
         }
         // Email num labels
-        const emailLabels:{[k:number]:string}={1:"Welcome",2:"First Item",3:"Tour",4:"Exchange",5:"Funding",6:"Reports",7:"Free Year"};
-        const emailsByOrg:{[k:string]:{name:string,emails:number[]}}={};
-        (newEmails||[]).forEach((e:any)=>{
+        const emailLabels={1:"Welcome",2:"First Item",3:"Tour",4:"Exchange",5:"Funding",6:"Reports",7:"Free Year"};
+        const emailsByOrg={};
+        (newEmails||[]).forEach(e=>{
           if(!emailsByOrg[e.org_id]) emailsByOrg[e.org_id]={name:"",emails:[]};
           emailsByOrg[e.org_id].emails.push(e.email_num);
         });
         // Page view counts
-        const pvByPage:{[k:string]:number}={};
-        const sessions=new Set<string>();
-        (pvToday||[]).forEach((v:any)=>{
+        const pvByPage={};
+        const sessions=new Set();
+        (pvToday||[]).forEach(v=>{
           pvByPage[v.page]=(pvByPage[v.page]||0)+1;
           sessions.add(v.session_id);
         });
         // Enrich email org names
         if(Object.keys(emailsByOrg).length>0){
           const {data:orgNames2}=await SB.from("orgs").select("id,name").in("id",Object.keys(emailsByOrg));
-          (orgNames2||[]).forEach((o:any)=>{if(emailsByOrg[o.id])emailsByOrg[o.id].name=o.name;});
+          (orgNames2||[]).forEach(o=>{if(emailsByOrg[o.id])emailsByOrg[o.id].name=o.name;});
         }
         setDigest({
           newOrgs:      newOrgs||[],
-          newItems:     (newItems||[]).map((i:any)=>({...i,orgName:orgNames[i.org_id]||""})),
+          newItems:     (newItems||[]).map(i=>({...i,orgName:orgNames[i.org_id]||""})),
           newLeads:     newLeadsToday||[],
           emailsSent:   newEmails||[],
           emailsByOrg,
@@ -6194,7 +6194,7 @@ function AdminHub({ currentUser, org }) {
                       <span style={{fontSize:16}}>🎭</span>
                       <span style={{fontWeight:700,fontSize:14}}>New Signups ({digest.newOrgs.length})</span>
                     </div>
-                    {digest.newOrgs.map((o:any)=>(
+                    {digest.newOrgs.map(o=>(
                       <div key={o.id} style={{padding:"9px 14px",borderBottom:"1px solid var(--border)",
                         display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
                         <span style={{fontWeight:600,fontSize:13}}>{o.name}</span>
@@ -6217,7 +6217,7 @@ function AdminHub({ currentUser, org }) {
                       <span style={{fontSize:16}}>📦</span>
                       <span style={{fontWeight:700,fontSize:14}}>Items Added ({digest.newItems.length})</span>
                     </div>
-                    {digest.newItems.map((i:any)=>{
+                    {digest.newItems.map(i=>{
                       const cat=CAT[i.category]||CAT.other;
                       return(
                         <div key={i.id} style={{padding:"8px 14px",borderBottom:"1px solid var(--border)",
@@ -6241,7 +6241,7 @@ function AdminHub({ currentUser, org }) {
                       <span style={{fontSize:16}}>📥</span>
                       <span style={{fontWeight:700,fontSize:14}}>New Beta Leads ({digest.newLeads.length})</span>
                     </div>
-                    {digest.newLeads.map((l:any)=>(
+                    {digest.newLeads.map(l=>=>(
                       <div key={l.id} style={{padding:"9px 14px",borderBottom:"1px solid var(--border)",
                         display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
                         <span style={{fontWeight:600,fontSize:13}}>{l.name}</span>
@@ -6309,7 +6309,7 @@ function AdminHub({ currentUser, org }) {
                       <span style={{fontSize:16}}>📋</span>
                       <span style={{fontWeight:700,fontSize:14}}>New Feedback ({digest.newFeedback.length})</span>
                     </div>
-                    {digest.newFeedback.map((f:any)=>(
+                    {digest.newFeedback.map(f=>=>(
                       <div key={f.id} style={{padding:"10px 14px",borderBottom:"1px solid var(--border)"}}>
                         <div style={{display:"flex",gap:8,marginBottom:4,alignItems:"center"}}>
                           <span style={{fontSize:14}}>{f.category==="bug"?"🐛":f.category==="feature"?"✨":"💬"}</span>
