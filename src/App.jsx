@@ -1809,7 +1809,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
   // Director: full access
   const canAdd    = true; // all roles can add new items
   const canEdit   = memberRole !== "house";  // house can only add, not edit existing
-  const canDelete = memberRole === "director" || memberRole === "stage_manager";
+  const canDelete = !memberRole || memberRole === "director" || memberRole === "stage_manager";
 
   // ── Storage location deep link — filter items when QR scanned ────────────────
   const [locFilter,     setLocFilter]     = useState(deepLinkLocationId || "all");
