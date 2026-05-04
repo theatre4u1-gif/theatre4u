@@ -2376,7 +2376,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
               <div style={{marginTop:10,display:"flex",gap:8,flexWrap:"wrap"}}>
                 <button className="btn btn-g btn-sm" style={{fontSize:12}}
                   onClick={()=>{
-                    const url=`https://theatre4u.org/beta.html`;
+                    const url=`https://theatre4u.org`;
                     navigator.clipboard?.writeText(url).then(()=>alert("Link copied! Share it with neighboring programs."));
                   }}>
                   📨 Invite a Neighboring Program
@@ -2530,14 +2530,14 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
               lists items makes the whole community stronger.
             </div>
             <button className="btn btn-g" onClick={()=>{
-              const url="https://theatre4u.org/beta.html";
+              const url="https://theatre4u.org";
               navigator.clipboard?.writeText(url)
                 .then(()=>alert("Invite link copied!\n\nShare this with neighboring theater programs:\n"+url));
             }}>
               📨 Copy Invite Link for Neighboring Programs
             </button>
             <div style={{fontSize:11,color:"var(--faint)",marginTop:8}}>
-              theatre4u.org/beta.html · Free to join
+              theatre4u.org · Free to join during preview
             </div>
           </div>
         )}
