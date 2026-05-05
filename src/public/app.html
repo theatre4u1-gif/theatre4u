@@ -204,6 +204,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 /* ── Page transitions ── */
 .fin{animation:fadeIn .2s ease}
 </style>
+
+    <!-- Meta Pixel Code -->
+    <script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js'); fbq('init', '1486269912908144'); fbq('track', 'PageView');</script>
+    <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1486269912908144&ev=PageView&noscript=1"/></noscript>
+    <!-- End Meta Pixel Code -->
 </head>
 <body>
 <div id="root"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;background:#0a0a0f"><div style="font-size:52px">🎭</div><div style="width:32px;height:32px;border:2.5px solid #2a2a38;border-top-color:#d4a843;border-radius:50%;animation:spin .7s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div></div>
@@ -987,13 +992,12 @@ const POINT_EARN_RATES = {
 };
 const POINTS_FREE_MONTH = 1500;
 
-function HomeTab({items, org, pointBalance=0, districtSettings=null, onAddItem, onViewItem}) {
+function HomeTab({items, org, pointBalance=0, onAddItem, onViewItem}) {
   const totalQty = items.reduce((s,i)=>s+(i.qty||1),0);
   const listed   = items.filter(i=>i.mkt!=="Not Listed").length;
   const recent   = items.slice(0,6);
   const plan     = org?.plan || "free";
   const pct      = Math.min(100, Math.round((pointBalance / POINTS_FREE_MONTH) * 100));
-  const inDistrict = org?.district_id && districtSettings;
 
   const memberRole = org?._memberRole || null;
   const roleLabel = memberRole === "stage_manager" ? "📋 Stage Manager" :
@@ -1052,25 +1056,6 @@ function HomeTab({items, org, pointBalance=0, districtSettings=null, onAddItem, 
             h("span",{style:{fontWeight:700,color:pointBalance>=POINTS_FREE_MONTH?"rgba(212,168,67,.9)":"rgba(255,255,255,.4)"}},
               pct + "% to free month"
             )
-          )
-        )
-      )
-    ),
-    // District membership card
-    inDistrict && h("div",{style:{padding:"0 16px 12px"}},
-      h("div",{style:{
-        background:"linear-gradient(135deg,rgba(212,168,67,.12),rgba(212,168,67,.04))",
-        border:"1.5px solid rgba(212,168,67,.25)",borderRadius:12,padding:"12px 14px",
-        display:"flex",alignItems:"center",gap:12}},
-        h("div",{style:{fontSize:26}},"🏢"),
-        h("div",{style:{flex:1}},
-          h("div",{style:{fontWeight:800,fontSize:13,color:"rgba(212,168,67,.9)"}},
-            districtSettings?.name || "District Account"),
-          h("div",{style:{fontSize:11,color:"rgba(255,255,255,.4)",marginTop:2}},
-            "Your program is part of this district",
-            districtSettings?.allow_shared_inventory
-              ? " · Shared inventory enabled"
-              : ""
           )
         )
       )
@@ -1536,8 +1521,7 @@ function App() {
   const [tab, setTab]         = useState("home");
   const [loading, setLoading] = useState(true);
   const [authChk, setAuthChk] = useState(false);
-  const [pointBalance,     setPointBalance]     = useState(0);
-  const [districtSettings, setDistrictSettings] = useState(null);
+  const [pointBalance, setPointBalance] = useState(0);
   const [viewItem, setViewItem] = useState(null);
   const [addOpen, setAddOpen]   = useState(false);
   const [online, setOnline]     = useState(navigator.onLine);
@@ -1580,11 +1564,6 @@ function App() {
       if(itemData) setItems(itemData);
       // Load Stage Points balance
       SB.rpc("get_my_credit_balance").then(({data})=>{ if(data!=null) setPointBalance(data||0); }).catch(()=>{});
-      // Load district settings if org is in a district
-      if (orgData?.district_id) {
-        SB.from("districts").select("*").eq("id", orgData.district_id).single()
-          .then(({data:dist}) => { if(dist) setDistrictSettings(dist); }).catch(()=>{});
-      }
       setLoading(false);
     })();
   },[user]);
@@ -1653,7 +1632,7 @@ function App() {
     // Tab content
     !viewItem && h("div",{style:{flex:1,overflow:"hidden",display:"flex",flexDirection:"column"}},
       !isStandalone && h(InstallBanner,null),
-      tab==="home"      && h(HomeTab,{items,org,pointBalance,districtSettings,onAddItem:()=>setAddOpen(true),onViewItem:handleViewItem}),
+      tab==="home"      && h(HomeTab,{items,org,pointBalance,onAddItem:()=>setAddOpen(true),onViewItem:handleViewItem}),
       tab==="inventory" && h(InventoryTab,{items,onViewItem:handleViewItem,onAddItem:()=>setAddOpen(true)}),
       tab==="funding"   && h(FundingMobileTab,{userId:user.id}),
       tab==="points"    && h(PointsTab,{userId:user?.id,pointBalance,setPointBalance}),
