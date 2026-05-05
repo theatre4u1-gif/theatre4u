@@ -11125,42 +11125,45 @@ function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     </div>
 
     {/* Our Story */}
-    <div style={{padding:"80px 32px",maxWidth:900,margin:"0 auto",textAlign:"center"}}>
+    <div style={{padding:"80px 32px",maxWidth:860,margin:"0 auto",textAlign:"center"}}>
       <div style={{display:"inline-block",padding:"4px 14px",background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.2)",borderRadius:20,fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:20}}>
         Our Story
       </div>
-      <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(26px,4vw,40px)",marginBottom:24,lineHeight:1.2}}>
-        Thirty Years in the Theatre,<br/><span style={{color:"var(--gold)"}}>Building Something Better.</span>
+      <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(26px,4vw,40px)",marginBottom:40,lineHeight:1.2}}>
+        Built by a Theatre Person,<br/><span style={{color:"var(--gold)"}}>For Theatre People.</span>
       </h2>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,textAlign:"left",marginBottom:40}}>
-        <div>
-          <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)",marginBottom:16}}>
-            Theatre4u™ was built by someone who found theatre in high school and never looked back. Over thirty years — studying the craft, performing in New Hampshire, San Francisco, New York City, and finally Southern California — the stage has always been home.
-          </p>
-          <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)"}}>
-            That journey led to the classroom and to a simple realization: theatre programs everywhere are filled with talented, dedicated people doing extraordinary work — and they deserve tools that help them do even more of it.
-          </p>
-        </div>
-        <div>
-          <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)",marginBottom:16}}>
-            Theatre4u™ keeps track of everything your program owns — and opens the door to a community of programs ready to share resources, collaborate, and support each other across the region.
-          </p>
-          <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)"}}>
-            <strong style={{color:"#fff"}}>Theatre is always better together.</strong> This platform was built to help make that connection easier — from the wings to the whole community.
-          </p>
+
+      {/* Pull quote */}
+      <div style={{background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.2)",borderRadius:16,padding:"36px 40px",marginBottom:40,textAlign:"left",position:"relative"}}>
+        <div style={{fontSize:72,lineHeight:.8,color:"rgba(212,168,67,.2)",fontFamily:"Georgia,serif",position:"absolute",top:16,left:24,userSelect:"none"}}>&ldquo;</div>
+        <p style={{fontSize:17,lineHeight:1.9,color:"rgba(255,255,255,.85)",fontStyle:"italic",marginBottom:20,paddingLeft:8}}>
+          After spending over 30 years in the theatre and 18+ years in the classroom, I know how quickly props and costumes can seem to explode out of control. As theatre artists moving from one production to the next, we need to know which box that magic wand for Puffs lives in — and what size and color the Victorian dress is — without making the trek out to the costume annex.
+        </p>
+        <p style={{fontSize:17,lineHeight:1.9,color:"rgba(255,255,255,.85)",fontStyle:"italic",marginBottom:28,paddingLeft:8}}>
+          And we need a chance to connect with other theatre programs that may have something we need, or need something we have. This is why Theatre4u was started.
+        </p>
+        <div style={{display:"flex",alignItems:"center",gap:14,paddingLeft:8}}>
+          <div style={{width:46,height:46,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),#8a6a20)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a1000" strokeWidth="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          </div>
+          <div>
+            <div style={{fontWeight:800,fontSize:15,color:"#fff",marginBottom:2}}>Bob Zick</div>
+            <div style={{fontSize:13,color:"rgba(255,255,255,.5)"}}>Founder, Theatre4u™ &amp; Artstracker</div>
+          </div>
         </div>
       </div>
-      <div style={{display:"flex",gap:24,justifyContent:"center",flexWrap:"wrap"}}>
+
+      {/* Trust badges */}
+      <div style={{display:"flex",gap:16,justifyContent:"center",flexWrap:"wrap"}}>
         {[
-          {ico:"🎭",val:"30+",lbl:"Years in theatre"},
-          {ico:"🎓",lbl:"Studied & performed theatre"},
-          {ico:"🏫",lbl:"Built for the classroom"},
-          {ico:"🤝",lbl:"Teacher to teacher"},
+          {val:"30+",lbl:"Years in Theatre"},
+          {val:"18+",lbl:"Years in the Classroom"},
+          {val:"K–12",lbl:"Built for Educators"},
+          {lbl:"Teacher to Teacher"},
         ].map(s=>(
-          <div key={s.lbl} style={{textAlign:"center",padding:"16px 20px",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,minWidth:130}}>
-            <div style={{fontSize:26,marginBottom:6}}>{s.ico}</div>
-            {s.val&&<div style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:"var(--gold)",marginBottom:2}}>{s.val}</div>}
-            <div style={{fontSize:12,color:"rgba(255,255,255,.5)",fontWeight:600}}>{s.lbl}</div>
+          <div key={s.lbl} style={{textAlign:"center",padding:"16px 24px",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,minWidth:130}}>
+            {s.val&&<div style={{fontFamily:"'Playfair Display',serif",fontSize:28,color:"var(--gold)",marginBottom:4}}>{s.val}</div>}
+            <div style={{fontSize:12,color:"rgba(255,255,255,.5)",fontWeight:600,textTransform:"uppercase",letterSpacing:.5}}>{s.lbl}</div>
           </div>
         ))}
       </div>
