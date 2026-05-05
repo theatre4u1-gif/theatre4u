@@ -13103,21 +13103,6 @@ function trackVisit(page, extra = {}) {
 function AppRoot(){
   const [user,setUser]     = useState(null);
 
-  // ── Meta Pixel ─────────────────────────────────────────────────────────────
-  useEffect(()=>{
-    if(window.fbq) return; // already loaded
-    const f=window; const b=document; const e='script'; const v='https://connect.facebook.net/en_US/fbevents.js';
-    let n,t,s;
-    n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments);};
-    if(!f._fbq) f._fbq=n;
-    n.push=n; n.loaded=true; n.version='2.0'; n.queue=[];
-    t=b.createElement(e); t.async=true; t.src=v;
-    s=b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t,s);
-    window.fbq('init','1486269912908144');
-    window.fbq('track','PageView');
-  },[]);
-  // ── End Meta Pixel ─────────────────────────────────────────────────────────
-
   // ── Handle Stripe label checkout returns ──────────────────────────────────
   const [stripeReturn, setStripeReturn] = useState(()=>{
     const p = new URLSearchParams(window.location.search);
