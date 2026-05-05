@@ -3,45 +3,18 @@
     {
       "source": "/(.*)",
       "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "SAMEORIGIN"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        },
-        {
-          "key": "Permissions-Policy",
-          "value": "camera=(self), microphone=(), geolocation=(self), payment=()"
-        },
-        {
-          "key": "Strict-Transport-Security",
-          "value": "max-age=63072000; includeSubDomains; preload"
-        }
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(self), microphone=(), geolocation=(self), payment=()" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" }
       ]
     }
   ],
   "rewrites": [
-    {
-      "source": "/join",
-      "destination": "/join.html"
-    },
-    {
-      "source": "/org/:slug",
-      "destination": "/org-profile.html"
-    },
-    {
-      "source": "/((?!help.html|app.html|join.html|org-profile.html|assets/).*)",
-      "destination": "/index.html"
-    }
+    { "source": "/join", "destination": "/join.html" },
+    { "source": "/org/:slug", "destination": "/org-profile.html" },
+    { "source": "/((?!help.html|app.html|join.html|org-profile.html|assets/).*)", "destination": "/index.html" }
   ]
 }
