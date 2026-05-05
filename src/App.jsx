@@ -11125,30 +11125,40 @@ function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     </div>
 
     {/* Our Story */}
-    <div style={{padding:"80px 32px",maxWidth:860,margin:"0 auto",textAlign:"center"}}>
+    <div style={{padding:"80px 32px",maxWidth:900,margin:"0 auto",textAlign:"center"}}>
       <div style={{display:"inline-block",padding:"4px 14px",background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.2)",borderRadius:20,fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:20}}>
         Our Story
       </div>
-      <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(26px,4vw,40px)",marginBottom:40,lineHeight:1.2}}>
+      <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(26px,4vw,40px)",marginBottom:24,lineHeight:1.2}}>
         Built by a Theatre Person,<br/><span style={{color:"var(--gold)"}}>For Theatre People.</span>
       </h2>
 
-      {/* Pull quote */}
-      <div style={{background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.2)",borderRadius:16,padding:"36px 40px",marginBottom:40,textAlign:"left",position:"relative"}}>
-        <div style={{fontSize:72,lineHeight:.8,color:"rgba(212,168,67,.2)",fontFamily:"Georgia,serif",position:"absolute",top:16,left:24,userSelect:"none"}}>&ldquo;</div>
-        <p style={{fontSize:17,lineHeight:1.9,color:"rgba(255,255,255,.85)",fontStyle:"italic",marginBottom:20,paddingLeft:8}}>
-          After spending over 30 years in the theatre and 18+ years in the classroom, I know how quickly props and costumes can seem to explode out of control. As theatre artists moving from one production to the next, we need to know which box that magic wand for Puffs lives in — and what size and color the Victorian dress is — without making the trek out to the costume annex.
-        </p>
-        <p style={{fontSize:17,lineHeight:1.9,color:"rgba(255,255,255,.85)",fontStyle:"italic",marginBottom:28,paddingLeft:8}}>
-          And we need a chance to connect with other theatre programs that may have something we need, or need something we have. This is why Theatre4u was started.
-        </p>
-        <div style={{display:"flex",alignItems:"center",gap:14,paddingLeft:8}}>
-          <div style={{width:46,height:46,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),#8a6a20)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a1000" strokeWidth="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-          </div>
-          <div>
-            <div style={{fontWeight:800,fontSize:15,color:"#fff",marginBottom:2}}>Bob Zick</div>
-            <div style={{fontSize:13,color:"rgba(255,255,255,.5)"}}>Founder, Theatre4u™ &amp; Artstracker</div>
+      {/* Two-column story */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,textAlign:"left",marginBottom:48}}>
+        <div>
+          <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)",marginBottom:16}}>
+            After spending over 30 years in the theatre and 18+ years in the classroom, I know how quickly props and costumes can seem to explode out of control. As theatre artists moving from one production to the next, we need to know which box that magic wand for Puffs lives in — and what size and color the Victorian dress is — without making the trek out to the costume annex.
+          </p>
+          <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)"}}>
+            And we need a chance to connect with other theatre programs that may have something we need, or need something we have.
+          </p>
+        </div>
+        <div>
+          <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)",marginBottom:16}}>
+            Theatre4u keeps track of everything your program owns — and opens the door to a community of programs ready to share resources, collaborate, and support each other.
+          </p>
+          <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)"}}>
+            <strong style={{color:"#fff"}}>Theatre is always better together.</strong> This platform was built to help make that connection easier — from the wings to the whole community.
+          </p>
+          {/* Attribution */}
+          <div style={{marginTop:28,paddingTop:20,borderTop:"1px solid rgba(255,255,255,.1)",display:"flex",alignItems:"center",gap:12}}>
+            <div style={{width:40,height:40,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),#8a6a20)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1000" strokeWidth="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            </div>
+            <div>
+              <div style={{fontWeight:700,fontSize:14,color:"#fff"}}>Bob Zick</div>
+              <div style={{fontSize:12,color:"rgba(255,255,255,.45)"}}>Founder, Theatre4u™ &amp; Artstracker · Ocean View High School Drama, 18 years</div>
+            </div>
           </div>
         </div>
       </div>
