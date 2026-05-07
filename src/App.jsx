@@ -4298,223 +4298,357 @@ function UpgradePlans({ compact = false, userId = null, userEmail = null }) {
 function AdminDailyDigest() {
   const [digest,  setDigest]  = useState(null);
   const [loading, setLoading] = useState(true);
+  const [window_h, setWindow] = useState("24h"); // 24h | 7d | 30d
 
-  useEffect(()=>{
-    (async()=>{
-      const since = new Date(Date.now()-24*60*60*1000).toISOString();
-      const [
-        {data:newOrgs}, {data:newItems}, {data:newLeads},
-        {data:newEmails},{data:pvToday},  {data:newMsgs},
-        {data:newFb}
-      ] = await Promise.all([
-        SB.from("orgs").select("id,name,email,plan,created_at").gte("created_at",since),
-        SB.from("items").select("id,name,category,org_id,added").gte("added",since).order("added",{ascending:false}),
-        SB.from("beta_leads").select("id,name,email,org,created_at").gte("created_at",since),
-        SB.from("email_sequence").select("id,org_id,email_num,sent_at").gte("sent_at",since),
-        SB.from("page_views").select("page,session_id,created_at").gte("created_at",since),
-        SB.from("messages").select("id,created_at").gte("created_at",since),
-        SB.from("beta_feedback").select("id,category,org_name,message,created_at").gte("created_at",since),
-      ]);
+  const load = async (hours=24) => {
+    setLoading(true);
+    const since = new Date(Date.now()-hours*60*60*1000).toISOString();
 
-      // Enrich items with org names
-      const orgNames = {};
-      if((newItems||[]).length>0){
-        const ids=[...new Set((newItems||[]).map(i=>i.org_id))];
-        const {data:od}=await SB.from("orgs").select("id,name").in("id",ids);
-        (od||[]).forEach(o=>{orgNames[o.id]=o.name;});
-      }
+    const [
+      {data:newOrgs},  {data:newItems},  {data:newLeads},
+      {data:newEmails},{data:pvToday},   {data:newMsgs},
+      {data:newFb},    {data:loginEvts}
+    ] = await Promise.all([
+      SB.from("orgs").select("id,name,email,plan,created_at").gte("created_at",since).order("created_at",{ascending:false}),
+      SB.from("items").select("id,name,category,org_id,added").gte("added",since).order("added",{ascending:false}),
+      SB.from("beta_leads").select("id,name,email,org,created_at").gte("created_at",since),
+      SB.from("email_sequence").select("id,org_id,email_num,sent_at").gte("sent_at",since),
+      SB.from("page_views").select("page,session_id,org_id,referrer,utm_source,created_at").gte("created_at",since).order("created_at",{ascending:false}),
+      SB.from("messages").select("id,created_at").gte("created_at",since),
+      SB.from("beta_feedback").select("id,category,org_name,message,created_at").gte("created_at",since),
+      SB.from("login_events").select("id,org_id,org_name,email,plan,session_id,created_at").gte("created_at",since).order("created_at",{ascending:false}),
+    ]);
 
-      // Page view counts
-      const pvByPage = {};
-      const sessions = new Set();
-      (pvToday||[]).forEach(v=>{
-        pvByPage[v.page]=(pvByPage[v.page]||0)+1;
-        sessions.add(v.session_id);
-      });
+    // Enrich items with org names
+    const orgNames = {};
+    if((newItems||[]).length>0){
+      const ids=[...new Set((newItems||[]).map(i=>i.org_id))];
+      const {data:od}=await SB.from("orgs").select("id,name").in("id",ids);
+      (od||[]).forEach(o=>{orgNames[o.id]=o.name;});
+    }
 
-      // Email org names
-      const emailsByOrg = {};
-      const emailLabels = {1:"Welcome",2:"First Item",3:"Tour",4:"Exchange",5:"Funding",6:"Reports",7:"Free Year"};
-      (newEmails||[]).forEach(e=>{
-        if(!emailsByOrg[e.org_id]) emailsByOrg[e.org_id]={name:"",emails:[]};
-        emailsByOrg[e.org_id].emails.push(e.email_num);
-      });
-      if(Object.keys(emailsByOrg).length>0){
-        const {data:en}=await SB.from("orgs").select("id,name").in("id",Object.keys(emailsByOrg));
-        (en||[]).forEach(o=>{if(emailsByOrg[o.id])emailsByOrg[o.id].name=o.name;});
-      }
+    // Enrich page views with org names for those who are logged in
+    const pvOrgIds = [...new Set((pvToday||[]).filter(v=>v.org_id).map(v=>v.org_id))];
+    const pvOrgNames = {};
+    if(pvOrgIds.length>0){
+      const {data:pod}=await SB.from("orgs").select("id,name,plan").in("id",pvOrgIds);
+      (pod||[]).forEach(o=>{pvOrgNames[o.id]={name:o.name,plan:o.plan};});
+    }
 
-      setDigest({
-        newOrgs:    newOrgs||[],
-        newItems:   (newItems||[]).map(i=>({...i,orgName:orgNames[i.org_id]||""})),
-        newLeads:   newLeads||[],
-        emailsSent: newEmails||[],
-        emailsByOrg, emailLabels,
-        pageViews:  pvToday?.length||0,
-        uniqueSessions: sessions.size,
-        pvByPage,
-        messages:   newMsgs||[],
-        newFeedback:newFb||[],
-        generatedAt:new Date().toLocaleString("en-US",{timeZone:"America/Los_Angeles",
-          month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",timeZoneName:"short"}),
-      });
-      setLoading(false);
-    })();
-  },[]);
+    // Page view stats
+    const sessions     = new Set();
+    const pvByPage     = {};
+    const pvBySource   = {};
+    const loggedInSess = new Set();
+    (pvToday||[]).forEach(v=>{
+      sessions.add(v.session_id);
+      pvByPage[v.page]=(pvByPage[v.page]||0)+1;
+      const src = v.utm_source
+        ? v.utm_source.toLowerCase()
+        : v.referrer
+          ? v.referrer.includes("facebook")||v.referrer.includes("fb.") ? "facebook"
+          : v.referrer.includes("instagram") ? "instagram"
+          : v.referrer.includes("google")    ? "google"
+          : v.referrer.includes("theatre4u") ? "direct/internal"
+          : "other"
+        : "direct";
+      pvBySource[src]=(pvBySource[src]||0)+1;
+      if(v.org_id) loggedInSess.add(v.session_id);
+    });
 
-  if(loading) return <div style={{textAlign:"center",padding:40,color:"var(--muted)"}}>Loading digest…</div>;
-  if(!digest)  return null;
+    // Email org names
+    const emailsByOrg  = {};
+    const emailLabels  = {1:"Welcome",2:"First Steps",3:"Tour",4:"Exchange",5:"Funding",6:"Reports",7:"Free Year"};
+    (newEmails||[]).forEach(e=>{
+      if(!emailsByOrg[e.org_id]) emailsByOrg[e.org_id]={name:"",emails:[]};
+      emailsByOrg[e.org_id].emails.push(e.email_num);
+    });
+    if(Object.keys(emailsByOrg).length>0){
+      const {data:en}=await SB.from("orgs").select("id,name").in("id",Object.keys(emailsByOrg));
+      (en||[]).forEach(o=>{if(emailsByOrg[o.id])emailsByOrg[o.id].name=o.name;});
+    }
 
-  const KPI = ({icon,label,n,color}) => (
+    // Deduplicate logins by org (most recent per org)
+    const loginByOrg = {};
+    (loginEvts||[]).forEach(e=>{
+      if(!loginByOrg[e.org_id]||e.created_at>loginByOrg[e.org_id].created_at)
+        loginByOrg[e.org_id]=e;
+    });
+
+    setDigest({
+      newOrgs:         newOrgs||[],
+      newItems:        (newItems||[]).map(i=>({...i,orgName:orgNames[i.org_id]||""})),
+      newLeads:        newLeads||[],
+      emailsSent:      newEmails||[],
+      emailsByOrg,     emailLabels,
+      pageViews:       pvToday?.length||0,
+      uniqueSessions:  sessions.size,
+      loggedInSessions:loggedInSess.size,
+      pvByPage,        pvBySource,
+      pvDetail:        (pvToday||[]).slice(0,50).map(v=>({
+        ...v,
+        orgName: v.org_id ? (pvOrgNames[v.org_id]?.name||"") : "",
+        orgPlan: v.org_id ? (pvOrgNames[v.org_id]?.plan||"")  : "",
+      })),
+      loginEvents:    loginEvts||[],
+      loginByOrg:     Object.values(loginByOrg),
+      messages:       newMsgs||[],
+      newFeedback:    newFb||[],
+      hours,
+      generatedAt:    new Date().toLocaleString("en-US",{timeZone:"America/Los_Angeles",
+        month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",timeZoneName:"short"}),
+    });
+    setLoading(false);
+  };
+
+  useEffect(()=>{ load(24); },[]);
+
+  const switchWindow = h => { setWindow(h+"h"); load(h); };
+
+  if(loading) return (
+    <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>
+      <div style={{fontSize:28,marginBottom:12}}>📊</div>
+      Loading analytics…
+    </div>
+  );
+  if(!digest) return null;
+
+  const planColor = p => p==="district"?"var(--gold)":p==="pro"?"#4caf50":"var(--muted)";
+  const sourceIcon = s => s==="facebook"?"📘":s==="instagram"?"📸":s==="google"?"🔍":s==="direct"?"🔗":"🌐";
+
+  const KPI = ({icon,label,n,sub,color}) => (
     <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,
-      padding:"12px 14px",textAlign:"center"}}>
-      <div style={{fontSize:20,marginBottom:4}}>{icon}</div>
-      <div style={{fontSize:26,fontWeight:800,color:color||"var(--gold)",lineHeight:1}}>{n}</div>
+      padding:"14px 16px",textAlign:"center",minWidth:0}}>
+      <div style={{fontSize:22,marginBottom:4}}>{icon}</div>
+      <div style={{fontSize:28,fontWeight:800,color:color||"var(--gold)",lineHeight:1}}>{n}</div>
       <div style={{fontSize:10,color:"var(--muted)",marginTop:3,textTransform:"uppercase",letterSpacing:.5}}>{label}</div>
+      {sub&&<div style={{fontSize:10,color:"var(--muted)",marginTop:2}}>{sub}</div>}
     </div>
   );
 
-  const Section = ({icon,title,children}) => (
-    <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden",marginBottom:14}}>
-      <div style={{padding:"10px 14px",borderBottom:"1px solid var(--border)",display:"flex",gap:8,alignItems:"center"}}>
+  const Section = ({icon,title,count,children}) => (
+    <div style={{background:"var(--parch)",border:"1px solid var(--border)",
+      borderRadius:10,overflow:"hidden",marginBottom:14}}>
+      <div style={{padding:"10px 16px",borderBottom:"1px solid var(--border)",
+        display:"flex",gap:8,alignItems:"center",background:"rgba(255,255,255,.02)"}}>
         <span style={{fontSize:16}}>{icon}</span>
         <span style={{fontWeight:700,fontSize:14}}>{title}</span>
+        {count!==undefined&&<span style={{fontSize:11,color:"var(--muted)",marginLeft:"auto"}}>
+          {count} {count===1?"entry":"entries"}
+        </span>}
       </div>
       {children}
     </div>
   );
 
-  const Row = ({children}) => (
-    <div style={{padding:"9px 14px",borderBottom:"1px solid var(--border)",
-      display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>{children}</div>
+  const Row = ({left,right,sub,badge,badgeColor}) => (
+    <div style={{padding:"9px 16px",borderBottom:"1px solid var(--border)",
+      display:"flex",gap:10,alignItems:"center"}}>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{left}</div>
+        {sub&&<div style={{fontSize:11,color:"var(--muted)",marginTop:1}}>{sub}</div>}
+      </div>
+      {badge&&<span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:5,
+        background:`rgba(${badgeColor||"212,168,67"},.15)`,
+        color:`rgb(${badgeColor||"180,140,40"})`}}>{badge}</span>}
+      {right&&<div style={{fontSize:11,color:"var(--muted)",flexShrink:0}}>{right}</div>}
+    </div>
   );
 
+  const fmtTime = ts => new Date(ts).toLocaleTimeString("en-US",
+    {hour:"numeric",minute:"2-digit",timeZone:"America/Los_Angeles"});
+  const fmtDate = ts => new Date(ts).toLocaleDateString("en-US",
+    {month:"short",day:"numeric",hour:"numeric",minute:"2-digit",timeZone:"America/Los_Angeles"});
+
   const allQuiet = !digest.newOrgs.length && !digest.newItems.length &&
-    !digest.newLeads.length && !digest.emailsSent.length &&
-    !digest.pageViews && !digest.newFeedback.length;
+    !digest.newLeads.length && !digest.loginEvents.length && !digest.pageViews;
 
   return (
     <div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20,flexWrap:"wrap",gap:10}}>
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",
+        marginBottom:20,flexWrap:"wrap",gap:10}}>
         <div>
-          <h3 style={{fontFamily:"var(--serif)",fontSize:20,margin:"0 0 3px"}}>Daily Activity Digest</h3>
+          <h3 style={{fontFamily:"var(--serif)",fontSize:20,margin:"0 0 4px"}}>Activity Dashboard</h3>
           <p style={{fontSize:12,color:"var(--muted)",margin:0}}>
-            Everything that happened on Theatre4u in the last 24 hours.
-            {digest.generatedAt&&<span> · Generated {digest.generatedAt}</span>}
+            Generated {digest.generatedAt}
           </p>
         </div>
-      </div>
-
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:10,marginBottom:24}}>
-        <KPI icon="🎭" label="New Signups"      n={digest.newOrgs.length}      color="var(--gold)"/>
-        <KPI icon="📦" label="Items Added"      n={digest.newItems.length}      color="#4caf50"/>
-        <KPI icon="📥" label="New Leads"        n={digest.newLeads.length}      color="#2196f3"/>
-        <KPI icon="✉️" label="Emails Sent"     n={digest.emailsSent.length}    color="#9c27b0"/>
-        <KPI icon="👁"  label="Page Views"      n={digest.pageViews}            color="var(--muted)"/>
-        <KPI icon="🔗" label="Unique Sessions"  n={digest.uniqueSessions}       color="var(--muted)"/>
-        <KPI icon="💬" label="Messages"         n={digest.messages.length}      color="#ff9800"/>
-        <KPI icon="📋" label="Feedback"         n={digest.newFeedback.length}   color="#e91e63"/>
-      </div>
-
-      {allQuiet ? (
-        <div style={{textAlign:"center",padding:"40px 0",color:"var(--muted)"}}>
-          <div style={{fontSize:40,marginBottom:12}}>🌙</div>
-          <div style={{fontWeight:700,fontSize:16,marginBottom:6}}>All quiet in the last 24 hours</div>
-          <div style={{fontSize:13}}>No new signups, items, leads, or feedback.</div>
+        {/* Time window switcher */}
+        <div style={{display:"flex",gap:4}}>
+          {[["24h",24],["7d",168],["30d",720]].map(([label,h])=>(
+            <button key={label} onClick={()=>switchWindow(h)}
+              className="btn btn-o btn-sm"
+              style={{padding:"4px 12px",fontSize:11,
+                background:window_h===label?"var(--gold)":"var(--parch)",
+                color:window_h===label?"#1a1000":"var(--muted)",
+                borderColor:window_h===label?"var(--gold)":"var(--border)"}}>
+              {label}
+            </button>
+          ))}
         </div>
-      ) : (
-        <div style={{display:"flex",flexDirection:"column",gap:2}}>
-          {digest.newOrgs.length>0&&(
-            <Section icon="🎭" title={`New Signups (${digest.newOrgs.length})`}>
-              {digest.newOrgs.map(o=>(
-                <Row key={o.id}>
-                  <span style={{fontWeight:600,fontSize:13}}>{o.name}</span>
-                  <a href={"mailto:"+o.email} style={{fontSize:12,color:"var(--gold)"}}>{o.email}</a>
-                  <span style={{fontSize:11,padding:"1px 6px",borderRadius:4,
-                    background:o.plan==="free"?"rgba(100,100,100,.1)":"rgba(76,175,80,.1)",
-                    color:o.plan==="free"?"var(--muted)":"#4caf50",textTransform:"capitalize"}}>{o.plan}</span>
-                  <span style={{fontSize:11,color:"var(--muted)",marginLeft:"auto"}}>
-                    {new Date(o.created_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/Los_Angeles"})}
-                  </span>
-                </Row>
-              ))}
-            </Section>
-          )}
-          {digest.newItems.length>0&&(
-            <Section icon="📦" title={`Items Added (${digest.newItems.length})`}>
-              {digest.newItems.map(i=>{
-                const cat=CAT[i.category]||CAT.other;
-                return(
-                  <Row key={i.id}>
-                    <span style={{fontSize:13,fontWeight:600}}>{i.name}</span>
-                    <span style={{fontSize:11,color:cat.color}}>{cat.icon} {cat.label}</span>
-                    <span style={{fontSize:11,color:"var(--muted)"}}>by {i.orgName}</span>
-                    <span style={{fontSize:11,color:"var(--muted)",marginLeft:"auto"}}>
-                      {new Date(i.added).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/Los_Angeles"})}
-                    </span>
-                  </Row>
-                );
-              })}
-            </Section>
-          )}
-          {digest.newLeads.length>0&&(
-            <Section icon="📥" title={`New Beta Leads (${digest.newLeads.length})`}>
-              {digest.newLeads.map(l=>(
-                <Row key={l.id}>
-                  <span style={{fontWeight:600,fontSize:13}}>{l.name}</span>
-                  <span style={{fontSize:12,color:"var(--muted)"}}>{l.org}</span>
-                  <a href={"mailto:"+l.email} style={{fontSize:12,color:"var(--gold)"}}>{l.email}</a>
-                  <span style={{fontSize:11,color:"var(--muted)",marginLeft:"auto"}}>
-                    {new Date(l.created_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/Los_Angeles"})}
-                  </span>
-                </Row>
-              ))}
-            </Section>
-          )}
-          {digest.emailsSent.length>0&&(
-            <Section icon="✉️" title={`Emails Sent (${digest.emailsSent.length})`}>
-              {Object.entries(digest.emailsByOrg).map(([orgId,entry])=>(
-                <Row key={orgId}>
-                  <span style={{fontSize:13,fontWeight:600}}>{entry.name||orgId.slice(0,8)}</span>
-                  <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                    {entry.emails.map(n=>(
-                      <span key={n} style={{fontSize:11,padding:"1px 7px",borderRadius:5,
-                        background:"rgba(212,168,67,.12)",color:"var(--gold)",fontWeight:600}}>
-                        #{n} {digest.emailLabels[n]||""}
-                      </span>
-                    ))}
-                  </div>
-                </Row>
-              ))}
-            </Section>
-          )}
-          {digest.pageViews>0&&(
-            <Section icon="👁" title={`Page Views (${digest.pageViews} · ${digest.uniqueSessions} sessions)`}>
-              <div style={{padding:"10px 14px",display:"flex",flexWrap:"wrap",gap:10}}>
-                {Object.entries(digest.pvByPage).sort(([,a],[,b])=>b-a).map(([page,count])=>(
-                  <div key={page} style={{display:"flex",gap:6,alignItems:"center"}}>
-                    <span style={{fontSize:12,color:"var(--text)",textTransform:"capitalize"}}>{page}</span>
-                    <span style={{fontSize:13,fontWeight:700,color:"var(--gold)",
-                      background:"rgba(212,168,67,.1)",padding:"1px 8px",borderRadius:5}}>{count}</span>
+      </div>
+
+      {/* KPI row */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",
+        gap:10,marginBottom:24}}>
+        <KPI icon="🎭" label="New Signups"      n={digest.newOrgs.length}       color="var(--gold)"/>
+        <KPI icon="🔑" label="Logins"           n={digest.loginEvents.length}   color="#4caf50"
+          sub={digest.loginByOrg.length+" orgs"}/>
+        <KPI icon="📦" label="Items Added"      n={digest.newItems.length}       color="#2196f3"/>
+        <KPI icon="👁"  label="Page Views"      n={digest.pageViews}
+          sub={digest.uniqueSessions+" sessions"}/>
+        <KPI icon="🔗" label="Logged-in Visits" n={digest.loggedInSessions}      color="#9c27b0"/>
+        <KPI icon="📥" label="New Leads"        n={digest.newLeads.length}       color="#ff9800"/>
+        <KPI icon="✉️" label="Emails Sent"     n={digest.emailsSent.length}/>
+        <KPI icon="📋" label="Feedback"         n={digest.newFeedback.length}    color="#e91e63"/>
+      </div>
+
+      {allQuiet?(
+        <div style={{textAlign:"center",padding:"48px 0",color:"var(--muted)"}}>
+          <div style={{fontSize:40,marginBottom:12}}>🌙</div>
+          <div style={{fontWeight:700,fontSize:16,marginBottom:6}}>All quiet</div>
+          <div style={{fontSize:13}}>No new activity in this window.</div>
+        </div>
+      ):(
+        <div>
+
+          {/* Traffic Sources */}
+          {Object.keys(digest.pvBySource).length>0&&(
+            <Section icon="📡" title="Traffic Sources" count={digest.pageViews}>
+              <div style={{padding:"12px 16px",display:"flex",flexWrap:"wrap",gap:10}}>
+                {Object.entries(digest.pvBySource)
+                  .sort(([,a],[,b])=>b-a)
+                  .map(([src,count])=>(
+                  <div key={src} style={{display:"flex",alignItems:"center",gap:8,
+                    padding:"8px 14px",borderRadius:8,background:"rgba(255,255,255,.04)",
+                    border:"1px solid var(--border)"}}>
+                    <span style={{fontSize:16}}>{sourceIcon(src)}</span>
+                    <div>
+                      <div style={{fontWeight:600,fontSize:13,textTransform:"capitalize"}}>{src}</div>
+                      <div style={{fontSize:11,color:"var(--muted)"}}>{count} visit{count!==1?"s":""}</div>
+                    </div>
+                    <div style={{fontFamily:"var(--serif)",fontSize:20,fontWeight:700,
+                      color:"var(--gold)",marginLeft:4}}>
+                      {Math.round(count/digest.pageViews*100)}%
+                    </div>
                   </div>
                 ))}
               </div>
             </Section>
           )}
+
+          {/* Who's Logging In */}
+          {digest.loginByOrg.length>0&&(
+            <Section icon="🔑" title="Who Logged In" count={digest.loginByOrg.length}>
+              {digest.loginByOrg.map(e=>(
+                <Row key={e.org_id}
+                  left={e.org_name||e.email||"Unknown"}
+                  sub={e.email}
+                  badge={e.plan}
+                  badgeColor={e.plan==="district"?"180,140,40":e.plan==="pro"?"60,160,80":"120,120,120"}
+                  right={fmtDate(e.created_at)}
+                />
+              ))}
+            </Section>
+          )}
+
+          {/* New Signups */}
+          {digest.newOrgs.length>0&&(
+            <Section icon="🎭" title="New Signups" count={digest.newOrgs.length}>
+              {digest.newOrgs.map(o=>(
+                <Row key={o.id}
+                  left={o.name}
+                  sub={<a href={"mailto:"+o.email} style={{color:"var(--gold)"}}>{o.email}</a>}
+                  badge={o.plan}
+                  badgeColor={o.plan==="district"?"180,140,40":"60,160,80"}
+                  right={fmtTime(o.created_at)}
+                />
+              ))}
+            </Section>
+          )}
+
+          {/* Items Added */}
+          {digest.newItems.length>0&&(
+            <Section icon="📦" title="Items Added" count={digest.newItems.length}>
+              {digest.newItems.map(i=>{
+                const cat=CAT[i.category]||CAT.other;
+                return(
+                  <Row key={i.id}
+                    left={i.name}
+                    sub={cat.icon+" "+cat.label+" · by "+i.orgName}
+                    right={fmtTime(i.added||i.created_at)}
+                  />
+                );
+              })}
+            </Section>
+          )}
+
+          {/* Page view detail — who visited while logged in */}
+          {digest.pvDetail.filter(v=>v.org_id).length>0&&(
+            <Section icon="👁" title="Logged-in Page Activity"
+              count={digest.pvDetail.filter(v=>v.org_id).length}>
+              {digest.pvDetail.filter(v=>v.org_id).map((v,i)=>(
+                <Row key={i}
+                  left={v.orgName||"Unknown org"}
+                  sub={v.page}
+                  badge={v.orgPlan}
+                  badgeColor={v.orgPlan==="district"?"180,140,40":v.orgPlan==="pro"?"60,160,80":"120,120,120"}
+                  right={fmtTime(v.created_at)}
+                />
+              ))}
+            </Section>
+          )}
+
+          {/* New Leads */}
+          {digest.newLeads.length>0&&(
+            <Section icon="📥" title="New Beta Leads" count={digest.newLeads.length}>
+              {digest.newLeads.map(l=>(
+                <Row key={l.id}
+                  left={l.name}
+                  sub={l.org+" · "+l.email}
+                  right={fmtDate(l.created_at)}
+                />
+              ))}
+            </Section>
+          )}
+
+          {/* Emails Sent */}
+          {digest.emailsSent.length>0&&(
+            <Section icon="✉️" title="Emails Sent" count={digest.emailsSent.length}>
+              {Object.entries(digest.emailsByOrg).map(([orgId,entry])=>(
+                <Row key={orgId}
+                  left={entry.name||orgId.slice(0,8)}
+                  sub={<div style={{display:"flex",gap:4,marginTop:2,flexWrap:"wrap"}}>
+                    {entry.emails.map(n=>(
+                      <span key={n} style={{fontSize:10,padding:"1px 6px",borderRadius:4,
+                        background:"rgba(212,168,67,.12)",color:"var(--gold)"}}>
+                        #{n} {digest.emailLabels[n]||""}
+                      </span>
+                    ))}
+                  </div>}
+                />
+              ))}
+            </Section>
+          )}
+
+          {/* Feedback */}
           {digest.newFeedback.length>0&&(
-            <Section icon="📋" title={`New Feedback (${digest.newFeedback.length})`}>
+            <Section icon="📋" title="New Feedback" count={digest.newFeedback.length}>
               {digest.newFeedback.map(f=>(
-                <div key={f.id} style={{padding:"10px 14px",borderBottom:"1px solid var(--border)"}}>
+                <div key={f.id} style={{padding:"10px 16px",borderBottom:"1px solid var(--border)"}}>
                   <div style={{display:"flex",gap:8,marginBottom:4,alignItems:"center"}}>
-                    <span style={{fontSize:14}}>{f.category==="bug"?"🐛":f.category==="feature"?"✨":"💬"}</span>
+                    <span>{f.category==="bug"?"🐛":f.category==="feature"?"✨":"💬"}</span>
                     <span style={{fontWeight:600,fontSize:13}}>{f.org_name||"Anonymous"}</span>
-                    <span style={{fontSize:11,color:"var(--muted)",textTransform:"capitalize"}}>{f.category}</span>
+                    <span style={{fontSize:10,color:"var(--muted)",textTransform:"capitalize"}}>{f.category}</span>
+                    <span style={{fontSize:10,color:"var(--muted)",marginLeft:"auto"}}>{fmtDate(f.created_at)}</span>
                   </div>
-                  <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.5}}>{f.message}</div>
+                  <div style={{fontSize:13,color:"rgba(255,255,255,.65)",lineHeight:1.5}}>{f.message}</div>
                 </div>
               ))}
             </Section>
           )}
+
         </div>
       )}
     </div>
@@ -10886,6 +11020,21 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
           }
           throw error;
         }
+        // Track login event
+        try {
+          const sid = window.__t4u_sid || sessionStorage.getItem("t4u_sid") || "";
+          const { data:orgData } = await SB.from("orgs").select("name,plan").eq("id",data.user.id).single();
+          await SB.from("login_events").insert({
+            org_id:     data.user.id,
+            org_name:   orgData?.name || null,
+            email:      data.user.email,
+            plan:       orgData?.plan || null,
+            session_id: sid,
+            user_agent: navigator.userAgent,
+            referrer:   document.referrer || null,
+            utm_source: window.__t4u_utm?.source || null,
+          });
+        } catch(_) {}
         onAuth(data.user);
         close();
       }
