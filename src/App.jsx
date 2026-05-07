@@ -6625,6 +6625,315 @@ async function printProductionReport(prod, needs, prodItems, allItems, org) {
   if(w){ w.document.write(html); w.document.close(); }
 }
 
+// ── Production Needs CSV Import ───────────────────────────────────────────────
+function ProductionNeedsImport({ prod, userId, onImported, onClose }) {
+  const [step,      setStep]      = useState("upload"); // upload → preview → done
+  const [rows,      setRows]      = useState([]);
+  const [headers,   setHeaders]   = useState([]);
+  const [mapping,   setMapping]   = useState({});
+  const [preview,   setPreview]   = useState([]);
+  const [importing, setImporting] = useState(false);
+  const [result,    setResult]    = useState(null);
+  const fileRef = useRef();
+
+  // Fields we can map from CSV
+  const FIELDS = [
+    { key:"name",           label:"Item Name *",     required:true  },
+    { key:"category",       label:"Category",        required:false },
+    { key:"qty_needed",     label:"Quantity",        required:false },
+    { key:"status",         label:"Status",          required:false },
+    { key:"source",         label:"Source",          required:false },
+    { key:"estimated_cost", label:"Estimated Cost",  required:false },
+    { key:"notes",          label:"Notes",           required:false },
+  ];
+
+  const downloadTemplate = () => {
+    const h = ["Item Name","Category","Quantity","Status","Source","Estimated Cost","Notes"];
+    const ex = [
+      ["Magic Wand","props","1","needed","unknown","","Check with Lincoln High"],
+      ["Victorian Ball Gown","costumes","2","searching","exchange","","Need size M and L"],
+      ["Crown","props","3","needed","buy","15.00","Party City or Amazon"],
+      ["Fog Machine","effects","1","found","in_house","","We have one in effects cage"],
+      ["Period Boots","costumes","4","needed","borrow","","Try Fountain Valley HS"],
+    ];
+    const csv = [h,...ex].map(r=>r.join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+    a.download = "production_needs_template.csv";
+    a.click();
+  };
+
+  // Auto-match column headers to field keys
+  const autoMatch = h => {
+    const s = h.toLowerCase().trim();
+    if (s.includes("name") || s.includes("item"))          return "name";
+    if (s.includes("cat"))                                  return "category";
+    if (s.includes("qty") || s.includes("quantity") || s.includes("num")) return "qty_needed";
+    if (s.includes("status"))                               return "status";
+    if (s.includes("source") || s.includes("how"))         return "source";
+    if (s.includes("cost") || s.includes("price") || s.includes("est")) return "estimated_cost";
+    if (s.includes("note") || s.includes("comment"))       return "notes";
+    return null;
+  };
+
+  const handleFile = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const allRows = parseCSV(ev.target.result);
+      if (allRows.length < 2) { alert("File must have a header row and at least one data row."); return; }
+      const hdrs = allRows[0];
+      const dataRows = allRows.slice(1).filter(r => r.some(c=>c));
+      setHeaders(hdrs);
+      setRows(dataRows);
+      // Auto-detect mapping
+      const auto = {};
+      hdrs.forEach((h,i) => { const m = autoMatch(h); if (m) auto[i] = m; });
+      setMapping(auto);
+      buildPreviewFromRows(hdrs, dataRows, auto);
+    };
+    reader.readAsText(file);
+  };
+
+  const buildPreviewFromRows = (hdrs, dataRows, map) => {
+    // Validate category and source values
+    const validCats   = CATS.map(c=>c.id);
+    const validStatus = ["needed","searching","found","acquired","not_needed"];
+    const validSource = ["unknown","in_house","exchange","borrow","buy","donate"];
+
+    const items = dataRows.map(row => {
+      const item = {
+        name:"", category:"other", qty_needed:1,
+        status:"needed", source:"unknown",
+        estimated_cost:null, notes:"",
+      };
+      Object.entries(map).forEach(([colIdx, fieldKey]) => {
+        const raw = (row[parseInt(colIdx)]||"").trim();
+        if (!raw) return;
+        switch(fieldKey) {
+          case "name":           item.name = raw; break;
+          case "category": {
+            const lc = raw.toLowerCase();
+            const match = validCats.find(c=>lc.includes(c)||c.includes(lc));
+            if (match) item.category = match;
+            else item.category = "other";
+            break;
+          }
+          case "qty_needed":     item.qty_needed = parseInt(raw)||1; break;
+          case "status": {
+            const lc = raw.toLowerCase();
+            item.status = validStatus.find(s=>s.includes(lc)||lc.includes(s))||"needed";
+            break;
+          }
+          case "source": {
+            const lc = raw.toLowerCase();
+            if (lc.includes("house")||lc.includes("own")||lc.includes("inventory")) item.source="in_house";
+            else if (lc.includes("exchange")||lc.includes("borrow exchange"))       item.source="exchange";
+            else if (lc.includes("borrow"))                                          item.source="borrow";
+            else if (lc.includes("buy")||lc.includes("purch"))                      item.source="buy";
+            else if (lc.includes("donat"))                                           item.source="donate";
+            else item.source="unknown";
+            break;
+          }
+          case "estimated_cost": item.estimated_cost = parseFloat(raw.replace(/[$,]/g,""))||null; break;
+          case "notes":          item.notes = raw; break;
+        }
+      });
+      return item;
+    }).filter(i => i.name.trim());
+
+    setPreview(items);
+    setStep("preview");
+  };
+
+  const doImport = async () => {
+    setImporting(true);
+    const now = new Date().toISOString();
+    const payload = preview.map(item => ({
+      ...item,
+      production_id: prod.id,
+      org_id: userId,
+      added_at: now,
+      updated_at: now,
+    }));
+
+    // Insert in batches of 50
+    let imported = 0;
+    for (let i=0; i<payload.length; i+=50) {
+      const { error } = await SB.from("production_needs").insert(payload.slice(i, i+50));
+      if (!error) imported += Math.min(50, payload.length-i);
+    }
+    setResult(imported);
+    setStep("done");
+    setImporting(false);
+  };
+
+  const card = { background:"var(--parch)", border:"1px solid var(--border)",
+    borderRadius:10, padding:20 };
+
+  // ── DONE ──
+  if (step === "done") return (
+    <div style={{...card, textAlign:"center"}}>
+      <div style={{fontSize:40,marginBottom:12}}>✅</div>
+      <h3 style={{fontFamily:"var(--serif)",marginBottom:8}}>Import Complete</h3>
+      <p style={{color:"var(--muted)",fontSize:13,marginBottom:20}}>
+        {result} item{result!==1?"s":""} added to your needs list.
+      </p>
+      <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+        <button className="btn btn-o btn-sm" onClick={()=>{
+          setStep("upload"); setPreview([]); setRows([]); setHeaders([]); setMapping({}); setResult(null);
+        }}>Import Another File</button>
+        <button className="btn btn-g btn-sm" onClick={()=>onImported()}>Done</button>
+      </div>
+    </div>
+  );
+
+  // ── PREVIEW ──
+  if (step === "preview") return (
+    <div style={card}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+        <div>
+          <div style={{fontWeight:700,fontSize:15,marginBottom:2}}>
+            Preview — {preview.length} items ready to import
+          </div>
+          <div style={{fontSize:12,color:"var(--muted)"}}>
+            Review the list below. Items with a blank name are skipped automatically.
+          </div>
+        </div>
+        <button className="btn btn-o btn-sm" onClick={()=>setStep("upload")}>← Back</button>
+      </div>
+
+      {/* Column mapping */}
+      <div style={{marginBottom:16,padding:"12px 14px",background:"rgba(255,255,255,.04)",
+        borderRadius:8,border:"1px solid var(--border)"}}>
+        <div style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,
+          color:"var(--muted)",marginBottom:10}}>Column Mapping</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:8}}>
+          {FIELDS.map(f=>{
+            const colIdx = Object.entries(mapping).find(([,v])=>v===f.key)?.[0];
+            return (
+              <div key={f.key} style={{display:"flex",alignItems:"center",gap:8,fontSize:12}}>
+                <span style={{color:"var(--muted)",width:110,flexShrink:0}}>{f.label}</span>
+                <select value={colIdx??""} className="fs"
+                  style={{fontSize:11,padding:"3px 6px",flex:1}}
+                  onChange={e=>{
+                    const newMap={...mapping};
+                    // Remove old mapping for this field
+                    Object.keys(newMap).forEach(k=>{ if(newMap[k]===f.key) delete newMap[k]; });
+                    if(e.target.value!=="") newMap[e.target.value]=f.key;
+                    setMapping(newMap);
+                    buildPreviewFromRows(headers, rows, newMap);
+                  }}>
+                  <option value="">— skip —</option>
+                  {headers.map((h,i)=><option key={i} value={i}>{h}</option>)}
+                </select>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Preview table */}
+      <div style={{maxHeight:280,overflowY:"auto",marginBottom:16,
+        border:"1px solid var(--border)",borderRadius:8}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+          <thead>
+            <tr style={{background:"rgba(255,255,255,.06)"}}>
+              {["Item","Category","Qty","Status","Source","Est. Cost","Notes"].map(h=>(
+                <th key={h} style={{padding:"7px 10px",textAlign:"left",fontSize:10,
+                  fontWeight:800,textTransform:"uppercase",letterSpacing:1,
+                  color:"var(--muted)",borderBottom:"1px solid var(--border)",
+                  whiteSpace:"nowrap"}}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {preview.map((item,i)=>(
+              <tr key={i} style={{borderBottom:"1px solid var(--border)"}}>
+                <td style={{padding:"6px 10px",fontWeight:600}}>{item.name}</td>
+                <td style={{padding:"6px 10px",color:"var(--muted)"}}>{item.category}</td>
+                <td style={{padding:"6px 10px",color:"var(--muted)"}}>{item.qty_needed}</td>
+                <td style={{padding:"6px 10px",color:"var(--muted)"}}>{item.status}</td>
+                <td style={{padding:"6px 10px",color:"var(--muted)"}}>{item.source}</td>
+                <td style={{padding:"6px 10px",color:"var(--muted)"}}>
+                  {item.estimated_cost?`$${item.estimated_cost.toFixed(2)}`:"—"}
+                </td>
+                <td style={{padding:"6px 10px",color:"var(--muted)",
+                  maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",
+                  whiteSpace:"nowrap"}}>{item.notes||"—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <button className="btn btn-o btn-sm" onClick={onClose}>Cancel</button>
+        <button className="btn btn-g" disabled={importing||preview.length===0} onClick={doImport}>
+          {importing ? "Importing…" : `Import ${preview.length} Items`}
+        </button>
+      </div>
+    </div>
+  );
+
+  // ── UPLOAD ──
+  return (
+    <div style={card}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+        <div style={{fontWeight:700,fontSize:15}}>Import Needs List from CSV</div>
+        <button className="btn btn-o btn-sm" onClick={onClose}>✕ Cancel</button>
+      </div>
+
+      <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.7,marginBottom:16}}>
+        Upload a spreadsheet of everything your production needs — props, costumes, lighting,
+        whatever you're tracking. We'll map your columns and import the list in one step.
+      </p>
+
+      {/* Download template */}
+      <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",
+        background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",
+        borderRadius:8,marginBottom:20}}>
+        <span style={{fontSize:24}}>📄</span>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:700,fontSize:13,marginBottom:2}}>Download our template</div>
+          <div style={{fontSize:12,color:"var(--muted)"}}>
+            Start with our CSV template — it has the right columns already set up with example items.
+          </div>
+        </div>
+        <button className="btn btn-o btn-sm" onClick={downloadTemplate}>
+          ⬇ Template
+        </button>
+      </div>
+
+      {/* Upload area */}
+      <label style={{display:"block",border:"2px dashed var(--border)",borderRadius:10,
+        padding:"32px 20px",textAlign:"center",cursor:"pointer",
+        background:"rgba(255,255,255,.02)",transition:"border .15s"}}
+        onDragOver={e=>{e.preventDefault();}}
+        onDrop={e=>{e.preventDefault();
+          const file = e.dataTransfer.files[0];
+          if(file){fileRef.current.files=e.dataTransfer.files;handleFile({target:{files:[file]}});}
+        }}>
+        <div style={{fontSize:36,marginBottom:10}}>📂</div>
+        <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>
+          Drop your CSV here, or click to browse
+        </div>
+        <div style={{fontSize:12,color:"var(--muted)"}}>
+          Supports .csv files. Columns can be in any order — we'll help you map them.
+        </div>
+        <input ref={fileRef} type="file" accept=".csv,text/csv" hidden onChange={handleFile}/>
+      </label>
+
+      {/* Accepted columns hint */}
+      <div style={{marginTop:14,padding:"10px 14px",background:"rgba(255,255,255,.03)",
+        borderRadius:8,fontSize:11,color:"var(--muted)",lineHeight:1.8}}>
+        <strong style={{color:"var(--text)"}}>Columns we recognize:</strong>{" "}
+        Item Name (required) · Category · Quantity · Status · Source · Estimated Cost · Notes
+      </div>
+    </div>
+  );
+}
+
 // ── Production Needs Checklist ────────────────────────────────────────────────
 // Planning layer: list what you need BEFORE you have it, then track how you source it
 
@@ -6644,10 +6953,18 @@ const NEED_SOURCES = [
   { key:"donate",    label:"Donated"         },
 ];
 
-function ProductionNeedsChecklist({ prod, allItems, userId, org, onNavigateToExchange }) {
+function ProductionNeedsChecklist({ prod, allItems, userId, org, onNavigateToExchange, memberRole=null }) {
+  // Role-based permissions
+  // director (null) + stage_manager: full access
+  // crew: can add and update status, cannot delete or import
+  // house: view only (but house can't see Productions at all in nav)
+  const canAdd    = memberRole !== "house";
+  const canEdit   = memberRole !== "house";
+  const canDelete = !memberRole || memberRole === "director" || memberRole === "stage_manager";
+  const canImport = !memberRole || memberRole === "director" || memberRole === "stage_manager";
   const [needs,    setNeeds]   = useState([]);
   const [loading,  setLoading] = useState(true);
-  const [adding,   setAdding]  = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editing,  setEditing] = useState(null);
   const [filter,   setFilter]  = useState("all"); // all | needed | acquired
   const [catFilter,setCatFilter]= useState("all");
@@ -6865,14 +7182,35 @@ function ProductionNeedsChecklist({ prod, allItems, userId, org, onNavigateToExc
           ))}
         </div>
 
-        <button className="btn btn-g btn-sm" style={{ marginLeft:"auto" }}
-          onClick={()=>{ setEditing(null); setForm(blank()); setAdding(true); }}>
-          + Add Item
-        </button>
+        <div style={{ display:"flex", gap:6, marginLeft:"auto" }}>
+          {canImport && (
+            <button className="btn btn-o btn-sm"
+              onClick={()=>{ setShowImport(true); setAdding(false); setEditing(null); }}
+              style={{ fontSize:11 }}>
+              ⬆ Import CSV
+            </button>
+          )}
+          {canAdd && (
+            <button className="btn btn-g btn-sm"
+              onClick={()=>{ setEditing(null); setForm(blank()); setAdding(true); setShowImport(false); }}>
+              + Add Item
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* Import CSV */}
+      {showImport && (
+        <ProductionNeedsImport
+          prod={prod}
+          userId={userId}
+          onClose={()=>setShowImport(false)}
+          onImported={async()=>{ setShowImport(false); await load(); }}
+        />
+      )}
+
       {/* Add / Edit form */}
-      {(adding || editing) && (
+      {!showImport && (adding || editing) && (
         <NeedForm onDone={()=>{ setAdding(false); setEditing(null); setForm(blank()); }}/>
       )}
 
@@ -6904,9 +7242,11 @@ function ProductionNeedsChecklist({ prod, allItems, userId, org, onNavigateToExc
             Add every prop, costume, and piece of gear your production needs —
             even before you know where it's coming from. Then track how you source each one.
           </p>
-          <button className="btn btn-g" onClick={()=>{ setForm(blank()); setAdding(true); }}>
-            + Add Your First Item
-          </button>
+          {canAdd && (
+            <button className="btn btn-g" onClick={()=>{ setForm(blank()); setAdding(true); }}>
+              + Add Your First Item
+            </button>
+          )}
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign:"center", padding:20, color:"var(--muted)", fontSize:13 }}>
@@ -7012,12 +7352,16 @@ function ProductionNeedsChecklist({ prod, allItems, userId, org, onNavigateToExc
                                 ))}
                             </select>
                           )}
-                          <button onClick={()=>{ setEditing(need); setForm({...need, estimated_cost:need.estimated_cost||"", actual_cost:need.actual_cost||""}); setAdding(false); }}
-                            style={{ background:"none", border:"none", color:"var(--muted)",
-                              cursor:"pointer", fontSize:13, padding:"0 3px" }}>✏️</button>
-                          <button onClick={()=>deleteNeed(need.id)}
-                            style={{ background:"none", border:"none", color:"var(--muted)",
-                              cursor:"pointer", fontSize:14, padding:"0 3px" }}>✕</button>
+                          {canEdit && (
+                            <button onClick={()=>{ setEditing(need); setForm({...need, estimated_cost:need.estimated_cost||"", actual_cost:need.actual_cost||""}); setAdding(false); }}
+                              style={{ background:"none", border:"none", color:"var(--muted)",
+                                cursor:"pointer", fontSize:13, padding:"0 3px" }}>✏️</button>
+                          )}
+                          {canDelete && (
+                            <button onClick={()=>deleteNeed(need.id)}
+                              style={{ background:"none", border:"none", color:"var(--muted)",
+                                cursor:"pointer", fontSize:14, padding:"0 3px" }}>✕</button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -7173,6 +7517,7 @@ function ProductionDetail({ prod, allItems, userId, onEdit, onDelete, onClose, o
           allItems={allItems}
           userId={userId}
           org={org}
+          memberRole={org?._memberRole||null}
           onNavigateToExchange={()=>onNavigateTo&&onNavigateTo("marketplace")}
         />
       )}
@@ -12464,7 +12809,7 @@ function AppRoot(){
       { id:"inventory",   label:"Inventory",   ico:Ic.box     },
       ...(!isCrew && org?.marketplace_enabled ? [{ id:"marketplace", label:"Backstage Exchange", ico:Ic.store   }] : []),
       ...(!isCrew && org?.community_enabled   ? [{ id:"community",   label:"Community",   ico:"🎪", community:true }] : []),
-      ...(!isCrew  ? [{ id:"productions", label:"Productions", ico:"🎭"       }] : []),
+      [{ id:"productions", label:"Productions", ico:"🎭"       }],
       ...(!isMember? [{ id:"reports",     label:"Reports",     ico:Ic.chart   }] : []),
       ...(!isMember? [{ id:"funding",     label:"Funding Tracker", ico:"💰"  }] : []),
       // Prop 28 nav hidden — legacy data accessible via Funding Tracker migration banner
