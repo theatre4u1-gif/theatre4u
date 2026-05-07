@@ -73,7 +73,7 @@ const EM = {
   marketplaceNotJoined:{ title:"Not in Backstage Exchange",   body:"Your program hasn't joined Backstage Exchange yet. Go to the Exchange page to opt in and start sharing items with other programs.",                                                                 cta:"Go to Backstage Exchange" },
   communityNotJoined:  { title:"Not in Community Board",      body:"Your program hasn't joined the Community Board yet. Go to the Community page to opt in and start posting.",                                                                                         cta:"Go to Community" },
   fundingHasExps:      { title:"Source Has Expenditures",     body:"This funding source has expenditures attached and can't be deleted. Remove all expenditures from it first, then delete the source.",                                                               cta:"OK" },
-  planItemLimit:       { title:"Item Limit Reached",          body:"Your free plan includes up to 25 items. Upgrade to Pro for unlimited inventory, Backstage Exchange, Reports, and everything your program deserves.",                                                 cta:"Upgrade to Pro" },
+  planItemLimit:       { title:"Item Limit Reached",          body:"Your free plan includes up to 50 items. Upgrade to Pro for unlimited inventory and the full feature set your program deserves.",                                                                    cta:"Upgrade to Pro" },
   generic:             { title:"Something Went Wrong",        body:"An unexpected error occurred. Check your internet connection and try again. If this keeps happening, contact support at theatre4u.org.",                                                            cta:"Try Again" },
   sendInvite:          { title:"Invite Couldn't Send",        body:"The invite email couldn't be sent right now. Check your connection and try again in a moment.",                                                                                                     cta:"Try Again" },
   msgSend:             { title:"Message Not Sent",            body:"Your message couldn't be sent right now. Check your connection and try again.",                                                                                                                     cta:"Try Again" },
@@ -1544,7 +1544,7 @@ function CommunitySpotlight({onViewAll}){
   );
 }
 
-function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketplace,goCommunity,goProfile,goPoints,goLabels=null}){
+function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketplace,goCommunity,goProfile,goPoints}){
   const totalQty=items.reduce((s,i)=>s+(i.qty||1),0);
   const listed=items.filter(i=>i.mkt!=="Not Listed").length;
   const withImg=items.filter(i=>i.img).length;
@@ -1598,8 +1598,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
         )}
 
         {/* Stats */}
-        {/* LabelStoreBanner disabled until label vendor confirmed */}
-      <div className="stats">
+        <div className="stats">
           {[
             {ico:"📦",val:totalQty,   lbl:"Total Items",     col:"#c4761a", bg:"photo-1558618666-fcd25c85cd64"}, // organized prop storage
             {ico:"📂",val:items.length,lbl:"Entries",         col:"#1554a0", bg:"photo-1489987707025-afc232f7ea0f"}, // costume racks
@@ -1800,16 +1799,12 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
   );
 }
 
-function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, onGoReports=null}){
+function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null}){
     const[upgradeReason,setUpgradeReason]=useState(null);
   // Role-based permissions
-  // House: can view AND add items, but not edit existing or delete
-  // Crew:  can view, add, and edit, but not delete
-  // Stage Manager: full inventory access except delete
-  // Director: full access
-  const canAdd    = true; // all roles can add new items
-  const canEdit   = memberRole !== "house";  // house can only add, not edit existing
-  const canDelete = !memberRole || memberRole === "director" || memberRole === "stage_manager";
+  const canEdit   = memberRole !== "house";
+  const canAdd    = memberRole !== "house";
+  const canDelete = memberRole === "director" || memberRole === "stage_manager";
 
   // ── Storage location deep link — filter items when QR scanned ────────────────
   const [locFilter,     setLocFilter]     = useState(deepLinkLocationId || "all");
@@ -1860,12 +1855,12 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
     }
     setModal(null);setActive(null);
   };
-  const maxItems = PLANS_DEF[plan]?.maxItems ?? 25;
-  const nearLimit = plan==="free" && items.length >= 20 && items.length < 25;
-  const atLimit   = plan==="free" && items.length >= 25;
+  const maxItems = PLANS_DEF[plan]?.maxItems ?? 50;
+  const nearLimit = plan==="free" && items.length >= 40 && items.length < 50;
+  const atLimit   = plan==="free" && items.length >= 50;
 
   return(<>
-    {upgradeReason&&<UpgradePrompt reason={upgradeReason} onClose={()=>setUpgradeReason(null)}/>}
+    {upgradeReason&&<UpgradePrompt reason={upgradeReason} onClose={()=>setUpgradeReason(null)} userId={user?.id} userEmail={user?.email}/>}
     {locFilter!=="all"&&locFilterName&&(
       <div style={{display:"flex",alignItems:"center",gap:10,background:"rgba(232,184,93,.1)",border:"1px solid rgba(232,184,93,.3)",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
         <span style={{fontSize:20}}>📦</span>
@@ -1881,7 +1876,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
     {(nearLimit||atLimit)&&(
       <div style={{background:atLimit?"rgba(194,24,91,.12)":"rgba(212,168,67,.1)",border:"1px solid "+(atLimit?"rgba(194,24,91,.3)":"rgba(212,168,67,.25)"),borderRadius:8,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
         <span style={{fontSize:13,color:atLimit?"var(--red)":"var(--gold)",fontWeight:600}}>
-          {atLimit?"⚠️ Item limit reached — upgrade to add more items.":"⚡ "+items.length+"/25 items used on free plan."}
+          {atLimit?"⚠️ Item limit reached — upgrade to add more items.":"⚡ "+items.length+"/50 items used on free plan."}
         </span>
         <button className="btn btn-g" style={{padding:"5px 14px",fontSize:12}} onClick={()=>setUpgradeReason("Upgrade to Pro for unlimited inventory, Backstage Exchange access, Stage Points, and more.")}>Upgrade →</button>
       </div>
@@ -1909,11 +1904,10 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
             <button className="btn btn-o" style={{fontSize:12,padding:"6px 12px"}} onClick={()=>setShowImport(true)}
               title="Import from CSV">⬆ Import CSV</button>
             {canAdd&&<button className="btn btn-g" onClick={()=>{
-              const max=PLANS_DEF[plan]?.maxItems??25;
+              const max=PLANS_DEF[plan]?.maxItems??50;
               if(items.length>=max){setUpgradeReason(EM.planItemLimit.body);return;}
               setActive(null);setModal("a");
             }}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add Item</button>}
-            <button className="btn btn-o" style={{fontSize:12,padding:"6px 12px"}} onClick={()=>onGoReports?onGoReports():null} title="Go to Reports">📊 Reports</button>
           </div>
         </div>
         {showF&&(
@@ -2079,7 +2073,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
   const[requestItem, setRequestItem]  = useState(null);
   // Location search
   const[zipInput, setZipInput]= useState(org?.zipcode||"");
-  const[radius,   setRadius]  = useState("all");  // miles or "state" or "all" — default all so no one sees empty page
+  const[radius,   setRadius]  = useState("25");   // miles or "state" or "all"
   const[userCoords,setUserCoords]=useState(null); // {lat,lng,state}
   const[geoLoading,setGeoLoading]=useState(false);
   const[geoErr,   setGeoErr]  = useState("");
@@ -2169,10 +2163,8 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
     }
 
     // Sort: own items first, then by distance if we have coords
-    if(userCoords?.lat){
+    if(userCoords?.lat&&radius!=="all"&&radius!=="state"){
       f=[...f].sort((a,b)=>{
-        if(a.org_id===org?.id) return -1;
-        if(b.org_id===org?.id) return 1;
         const da=a.org_lat?milesBetween(userCoords.lat,userCoords.lng,a.org_lat,a.org_lng):9999;
         const db=b.org_lat?milesBetween(userCoords.lat,userCoords.lng,b.org_lat,b.org_lng):9999;
         return da-db;
@@ -2182,78 +2174,15 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
     return f;
   },[allListings,mktTab,search,catF,typeF,radius,userCoords,org?.id]);
 
-  // Split filtered into nearby (< 100mi) and national sections
-  const nearbyItems   = filtered.filter(i=>{
-    if(i.org_id===org?.id) return true;
-    if(!userCoords?.lat||!i.org_lat) return false;
-    return milesBetween(userCoords.lat,userCoords.lng,i.org_lat,i.org_lng) < 100;
-  });
-  const nationalItems = filtered.filter(i=>{
-    if(i.org_id===org?.id) return false;
-    if(!userCoords?.lat||!i.org_lat) return false;
-    return milesBetween(userCoords.lat,userCoords.lng,i.org_lat,i.org_lng) >= 100;
-  });
-  const unknownItems  = filtered.filter(i=>i.org_id!==org?.id&&(!userCoords?.lat||!i.org_lat));
-  // For pagination we still use flat filtered list
-  const hasGeo = userCoords?.lat && filtered.some(i=>i.org_lat);
-
   const paged=useMemo(()=>filtered.slice((pg-1)*PP,pg*PP),[filtered,pg]);
   useEffect(()=>setPg(1),[search,catF,typeF,radius,userCoords,mktTab]);
 
   if(plan==="free") return(
-    <div style={{position:"relative",minHeight:"80vh",overflow:"hidden"}}>
-      {/* Blurred background preview of the Exchange */}
-      <div style={{filter:"blur(3px)",opacity:.45,pointerEvents:"none",userSelect:"none"}}>
-        <img src={usp(BG.marketplace,1400,900)} alt="" className="page-bg-img"/>
-        <div style={{padding:"32px 36px 0"}}>
-          <div className="hero-wrap" style={{height:280}}>
-            <img src={usp(BG.marketplace,1100,340)} alt="Backstage Exchange" loading="eager"/>
-            <div className="hero-fade"/>
-            <div className="hero-body">
-              <div className="hero-eyebrow">🏪 Backstage Exchange</div>
-              <h1 className="hero-title" style={{fontSize:46}}>Backstage Exchange</h1>
-              <p className="hero-sub">Rent, buy, or loan theatre assets from programs near you.</p>
-            </div>
-            <div className="hero-bar"/>
-          </div>
-        </div>
-        <div style={{padding:"24px 36px",display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}}>
-          {["Victorian Ball Gown — Blue","LED Par Can RGBW 54×3W","Fog Machine 1000W","Wireless Mic Pack","Forest Backdrop 8×12ft","Foam Rubber Swords (8pc)"].map(n=>(
-            <div key={n} className="card card-p" style={{opacity:.8}}>
-              <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>{n}</div>
-              <div style={{fontSize:12,color:"var(--muted)"}}>Ocean View Drama · For Rent</div>
-              <div style={{fontSize:13,fontWeight:700,color:"var(--gold)",marginTop:8}}>$20–45/wk</div>
-            </div>
-          ))}
-        </div>
-      </div>
-      {/* Upgrade overlay */}
-      <div style={{position:"absolute",inset:0,display:"flex",alignItems:"flex-start",justifyContent:"center",
-        background:"rgba(10,7,18,.65)",backdropFilter:"blur(2px)",zIndex:10,
-        padding:"clamp(12px,4vw,40px)",overflowY:"auto"}}>
-        <div className="card card-p" style={{maxWidth:420,width:"100%",textAlign:"center",
-          background:"linear-gradient(135deg,#1e1208,#150f1f)",
-          border:"1.5px solid rgba(212,168,67,.4)",boxShadow:"0 12px 48px rgba(0,0,0,.6)",
-          margin:"auto"}}>
-          <div style={{fontSize:36,marginBottom:8}}>🏪</div>
-          <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:8,color:"var(--linen)"}}>
-            Backstage Exchange
-          </h2>
-          <p style={{color:"var(--muted)",fontSize:13,margin:"0 auto 16px",lineHeight:1.6}}>
-            Browse props, costumes, lighting, and sound equipment from nearby programs. Rent, loan, or buy — and list your own items to earn Stage Points.
-          </p>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:18,textAlign:"left"}}>
-            {[["🔍","Browse nearby inventory"],["📦","Request rent or loan"],["🪙","Earn Stage Points"],["🎭","Free district loans"]].map(([icon,text])=>(
-              <div key={text} style={{display:"flex",gap:6,alignItems:"flex-start",padding:"7px 9px",
-                background:"rgba(255,255,255,.04)",borderRadius:8,border:"1px solid rgba(255,255,255,.06)"}}>
-                <span style={{fontSize:15,flexShrink:0}}>{icon}</span>
-                <span style={{fontSize:11,color:"var(--muted)",lineHeight:1.4}}>{text}</span>
-              </div>
-            ))}
-          </div>
-          <UpgradePlans compact={true}/>
-        </div>
-      </div>
+    <div style={{padding:"40px 20px",textAlign:"center"}}>
+      <div style={{fontSize:44,marginBottom:14}}>🏪</div>
+      <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:22,marginBottom:10}}>Backstage Exchange is a Pro Feature</h2>
+      <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Share selected items with other programs — rent, sell, or loan. Upgrade to Pro to join Backstage Exchange.</p>
+      <UpgradePlans compact={true}/>
     </div>
   );
 
@@ -2358,49 +2287,19 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
           {userCoords&&radius!=="all"&&!loadingAll&&` within ${radius==="state"?STATE_NAMES[userCoords.state]||userCoords.state:radius+" miles"}`}
         </div>
 
-        {/* ── Community banner (always shown in browse tab) ── */}
-        {mktTab==="browse"&&(
-          <div style={{background:"linear-gradient(135deg,rgba(212,168,67,.08),rgba(212,168,67,.04))",
-            border:"1px solid rgba(212,168,67,.25)",borderRadius:12,padding:"14px 18px",
-            marginBottom:18,display:"flex",gap:14,alignItems:"flex-start"}}>
-            <div style={{fontSize:28,flexShrink:0}}>🌎</div>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:700,fontSize:14,color:"var(--gold)",marginBottom:4}}>
-                Theatre4u is growing across the country
-              </div>
-              <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>
-                Programs in California, Ohio, Missouri, North Carolina, New Hampshire and more are sharing
-                costumes, props, lighting and sets. Every program that joins makes this exchange more
-                valuable for everyone.
-              </div>
-              <div style={{marginTop:10,display:"flex",gap:8,flexWrap:"wrap"}}>
-                <button className="btn btn-g btn-sm" style={{fontSize:12}}
-                  onClick={()=>{
-                    const url=`https://theatre4u.org`;
-                    navigator.clipboard?.writeText(url).then(()=>alert("Link copied! Share it with neighboring programs."));
-                  }}>
-                  📨 Invite a Neighboring Program
-                </button>
-                <div style={{fontSize:12,color:"var(--faint)",alignSelf:"center"}}>
-                  Free to join · Help build your regional network
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── Listings — sectioned by proximity ── */}
-        {filtered.length===0
+        {/* ── Listings Grid ── */}
+        {paged.length===0
           ?<div className="empty">
               <div className="empty-ico">🏪</div>
               <h3>{mktTab==="mine"?"No Active Listings":"No Listings Found"}</h3>
               <p>{mktTab==="mine"
                 ?"Mark items as “For Rent” or “For Sale” in Inventory to list them here."
-                :"No listings match your search. Try clearing filters."}</p>
+                :radius!=="all"
+                  ?"Try expanding your search radius or searching All to see listings everywhere."
+                  :"No listings yet — be the first to list items for your community!"}</p>
             </div>
-          :<>{(() => {
-            // Helper: render a single listing card
-            const renderCard = (item, isFar=false) => {
+          :<div className="inv-grid">
+            {paged.map(item=>{
               const cat=CAT[item.category]||CAT.other;
               const isOwn = item.org_id===org?.id;
               const dist = userCoords?.lat&&item.org_lat
@@ -2414,12 +2313,8 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
                       {isOwn?"⭐ Your Listing":item.org_name}
                     </div>
                     <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
-                      {item.org_location&&!isOwn&&<span style={{fontSize:10,color:"var(--faint)"}}>{item.org_location}</span>}
-                      {dist!==null&&!isOwn&&(
-                        isFar
-                          ?<span style={{fontSize:10,fontWeight:700,color:"var(--muted)",background:"var(--parch)",padding:"1px 6px",borderRadius:8}}>{dist.toLocaleString()}+ mi</span>
-                          :<span style={{fontSize:10,fontWeight:700,color:"var(--amber)",background:"rgba(196,118,26,.1)",padding:"1px 6px",borderRadius:8}}>~{dist}mi</span>
-                      )}
+                      {item.org_state&&<span style={{fontSize:10,fontWeight:700,color:"var(--faint)"}}>{item.org_state}</span>}
+                      {dist!==null&&!isOwn&&<span style={{fontSize:10,fontWeight:700,color:"var(--amber)",background:"rgba(196,118,26,.1)",padding:"1px 6px",borderRadius:8}}>~{dist}mi</span>}
                     </div>
                   </div>
                   <div className="inv-img">{item.img
@@ -2430,117 +2325,29 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
                     <div className="inv-cat" style={{color:cat.color}}>{cat.icon} {cat.label}</div>
                     <div className="inv-name">{item.name}</div>
                     {item.notes&&<p style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:14,color:"var(--muted)",margin:"3px 0 8px",lineHeight:1.5}}>{item.notes.slice(0,80)}{item.notes.length>80?"…":""}</p>}
+                    {item.org_location&&!isOwn&&<div style={{fontSize:11,color:"var(--faint)",marginBottom:4}}>📍 {item.org_location}</div>}
                     <div className="inv-meta"><span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span></div>
                     <div className="inv-foot">
                       <span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span>
                       {item.mkt==="For Loan"?<span style={{fontSize:12,color:"#00838f",fontWeight:700}}>{item.loan_period||2}wk loan{item.deposit>0?" · "+fmt$(item.deposit)+" dep.":""}</span>:<span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>}
                     </div>
-                    {!isOwn&&(
-                      <div style={{display:"flex",gap:6,marginTop:8}}>
-                        {!isFar&&<button className="btn btn-g btn-sm" style={{flex:1,fontSize:12}}
-                          onClick={e=>{e.stopPropagation();setRequestItem(item);}}>
-                          📋 Request
-                        </button>}
-                        <button className="btn btn-o btn-sm" style={{flex:isFar?1:undefined,fontSize:12}}
-                          onClick={e=>{e.stopPropagation();setContactItem(item);}}>
-                          💬 Message
-                        </button>
-                      </div>
-                    )}
-                    {isFar&&!isOwn&&<div style={{fontSize:10,color:"var(--faint)",marginTop:6,lineHeight:1.4}}>
-                      Shipping arranged directly between programs. Message to discuss.
+                    {!isOwn&&<div style={{display:"flex",gap:6,marginTop:8}}>
+                      <button className="btn btn-g btn-sm" style={{flex:1,fontSize:12}}
+                        onClick={e=>{e.stopPropagation();setRequestItem(item);}}>
+                        📋 Request
+                      </button>
+                      <button className="btn btn-o btn-sm" style={{flex:1,fontSize:12}}
+                        onClick={e=>{e.stopPropagation();setContactItem(item);}}>
+                        💬 Message
+                      </button>
                     </div>}
                   </div>
                 </div>
               );
-            };
-
-            // Decide which sections to show
-            const showSections = hasGeo && mktTab==="browse";
-
-            if(!showSections){
-              // No geo — show all in one flat grid
-              const paginated = filtered.slice((pg-1)*PP, pg*PP);
-              return <>
-                <div className="inv-grid">{paginated.map(i=>renderCard(i,false))}</div>
-                <Pager total={filtered.length} page={pg} per={PP} onPage={setPg}/>
-              </>;
-            }
-
-            // Geo available — show sectioned layout
-            const allSectioned = [...nearbyItems, ...unknownItems, ...nationalItems];
-            const paginated = allSectioned.slice((pg-1)*PP, pg*PP);
-            const nearbyInPage   = paginated.filter(i=>nearbyItems.some(n=>n.id===i.id));
-            const unknownInPage  = paginated.filter(i=>unknownItems.some(n=>n.id===i.id));
-            const nationalInPage = paginated.filter(i=>nationalItems.some(n=>n.id===i.id));
-
-            return <>
-              {nearbyInPage.length>0&&(
-                <>
-                  <div style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,
-                    color:"var(--muted)",marginBottom:10,display:"flex",alignItems:"center",gap:8}}>
-                    <span>📍 Nearby</span>
-                    <span style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:6,
-                      padding:"1px 7px",fontWeight:700,fontSize:11}}>{nearbyItems.length}</span>
-                  </div>
-                  <div className="inv-grid" style={{marginBottom:24}}>
-                    {nearbyInPage.map(i=>renderCard(i,false))}
-                  </div>
-                </>
-              )}
-              {unknownInPage.length>0&&(
-                <div className="inv-grid" style={{marginBottom:24}}>
-                  {unknownInPage.map(i=>renderCard(i,false))}
-                </div>
-              )}
-              {nationalInPage.length>0&&(
-                <>
-                  <div style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,
-                    color:"var(--muted)",marginBottom:10,marginTop:nearbyInPage.length>0?4:0,
-                    display:"flex",alignItems:"center",gap:8,borderTop:nearbyInPage.length>0?"1px solid var(--border)":"none",
-                    paddingTop:nearbyInPage.length>0?18:0}}>
-                    <span>🌎 From programs across the country</span>
-                    <span style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:6,
-                      padding:"1px 7px",fontWeight:700,fontSize:11}}>{nationalItems.length}</span>
-                  </div>
-                  <div style={{fontSize:12,color:"var(--muted)",marginBottom:12,lineHeight:1.5}}>
-                    These items are farther away but visible so you can see what other programs are sharing.
-                    Message any program to discuss availability, shipping, or long-term loans.
-                  </div>
-                  <div className="inv-grid" style={{marginBottom:24}}>
-                    {nationalInPage.map(i=>renderCard(i,true))}
-                  </div>
-                </>
-              )}
-              <Pager total={allSectioned.length} page={pg} per={PP} onPage={setPg}/>
-            </>;
-          })()}</>
-        }
-
-        {/* ── Join CTA at bottom ── */}
-        {mktTab==="browse"&&filtered.length>0&&(
-          <div style={{marginTop:24,padding:"22px 24px",background:"var(--parch)",
-            border:"1px solid var(--border)",borderRadius:12,textAlign:"center"}}>
-            <div style={{fontFamily:"var(--serif)",fontSize:20,marginBottom:8}}>
-              Help build your regional theatre network
-            </div>
-            <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6,maxWidth:460,margin:"0 auto 16px"}}>
-              Know a drama teacher who's always hunting for costumes or props?
-              Invite them to join Theatre4u — it's free, and every program that
-              lists items makes the whole community stronger.
-            </div>
-            <button className="btn btn-g" onClick={()=>{
-              const url="https://theatre4u.org";
-              navigator.clipboard?.writeText(url)
-                .then(()=>alert("Invite link copied!\n\nShare this with neighboring theater programs:\n"+url));
-            }}>
-              📨 Copy Invite Link for Neighboring Programs
-            </button>
-            <div style={{fontSize:11,color:"var(--faint)",marginTop:8}}>
-              theatre4u.org · Free to join during preview
-            </div>
+            })}
           </div>
-        )}
+        }
+        <Pager total={filtered.length} page={pg} per={PP} onPage={setPg}/>
       </div>
       {viewing&&<Modal title="Listing Details" onClose={()=>setViewing(null)}>
         <ItemDetail item={viewing}
@@ -2731,7 +2538,7 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
             <button className="btn btn-o" onClick={onClose}>Maybe Later</button>
           </div>
           <p style={{fontSize:11,color:"var(--faint)",marginTop:12}}>
-            Pro: $15/mo or $150/yr · Unlimited inventory · Exchange · Reports · Stage Points
+            Pro: $15/mo · Unlimited inventory · Full Exchange access · Stage Points
           </p>
         </div>
       ) : (
@@ -3256,7 +3063,6 @@ function printDocument(doc, req) {
         border-radius:0 8px 8px 0;margin:14px 0;font-size:13px;line-height:1.8;color:#444}
       .sig-row{display:flex;gap:20px;margin-top:32px}
       @media print{body{padding:20px}.no-print{display:none}}
-      @media print{.shell,.lpn,.overlay-backdrop{display:none!important}#t4u-qr-poster-inner{display:block!important}}
     </style>
   </head><body>
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
@@ -3841,6 +3647,173 @@ function Requests({ userId, orgName, orgEmail }) {
   );
 }
 
+// ── Production Report Tab (inside Reports page) ───────────────────────────────
+function ProductionReportTab({ org, allItems }) {
+  const [productions, setProductions] = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [selected, setSelected]       = useState(null); // production being previewed
+  const [needs, setNeeds]             = useState([]);
+  const [prodItems, setProdItems]     = useState([]);
+  const [loadingDetail, setLd]        = useState(false);
+
+  useEffect(()=>{
+    (async()=>{
+      const { data } = await SB.from("productions")
+        .select("*, production_items(id,status), production_needs(id,status)")
+        .eq("org_id", org?.id)
+        .order("created_at",{ascending:false});
+      setProductions(data||[]);
+      setLoading(false);
+    })();
+  },[org?.id]);
+
+  const selectProd = async (prod) => {
+    setSelected(prod); setLd(true);
+    const [nr, ir] = await Promise.all([
+      SB.from("production_needs").select("*").eq("production_id",prod.id).order("added_at"),
+      SB.from("production_items").select("*").eq("production_id",prod.id).order("added_at"),
+    ]);
+    setNeeds(nr.data||[]);
+    setProdItems(ir.data||[]);
+    setLd(false);
+  };
+
+  const card = { background:"var(--parch)", border:"1px solid var(--border)",
+    borderRadius:10, padding:16, marginBottom:12 };
+
+  if (loading) return <div style={{textAlign:"center",padding:40,color:"var(--muted)"}}>Loading…</div>;
+
+  if (productions.length === 0) return (
+    <div style={{textAlign:"center",padding:48}}>
+      <div style={{fontSize:40,marginBottom:12}}>🎭</div>
+      <h3 style={{fontFamily:"var(--serif)",marginBottom:8}}>No Productions Yet</h3>
+      <p style={{color:"var(--muted)",fontSize:13,lineHeight:1.6}}>
+        Create a production in the Productions section to generate reports here.
+      </p>
+    </div>
+  );
+
+  return (
+    <div>
+      <div style={{marginBottom:20}}>
+        <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>Production Reports</h3>
+        <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>
+          Select a production to preview its needs list and inventory, then print a formatted report
+          suitable for directors, stage managers, or program documentation.
+        </p>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:24}}>
+        {productions.map(prod=>{
+          const totalNeeds = prod.production_needs?.length||0;
+          const acqNeeds   = prod.production_needs?.filter(n=>n.status==="acquired").length||0;
+          const totalInv   = prod.production_items?.length||0;
+          const isSelected = selected?.id === prod.id;
+          return (
+            <div key={prod.id}
+              onClick={()=>selectProd(prod)}
+              style={{...card, cursor:"pointer",
+                border:`1px solid ${isSelected?"var(--gold)":"var(--border)"}`,
+                background:isSelected?"rgba(212,168,67,.06)":"var(--parch)"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                <div style={{width:32,height:32,borderRadius:8,background:prod.color||"var(--gold)",
+                  display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🎭</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:14,overflow:"hidden",
+                    textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{prod.name}</div>
+                  {prod.show_title&&<div style={{fontSize:11,color:"var(--muted)"}}>{prod.show_title}</div>}
+                </div>
+                <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:6,
+                  background:"rgba(255,255,255,.08)",color:"var(--muted)",textTransform:"capitalize"}}>
+                  {prod.status}
+                </span>
+              </div>
+              <div style={{display:"flex",gap:12,fontSize:11,color:"var(--muted)"}}>
+                <span>📋 {totalNeeds} needs ({acqNeeds} sourced)</span>
+                <span>📦 {totalInv} from inventory</span>
+                {prod.opening_date&&<span>📅 {new Date(prod.opening_date).toLocaleDateString()}</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {selected && (
+        <div style={card}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+            <div style={{fontFamily:"var(--serif)",fontSize:16,fontWeight:700}}>{selected.name}</div>
+            <div style={{display:"flex",gap:8}}>
+              <button className="btn btn-o btn-sm"
+                onClick={()=>{setSelected(null);setNeeds([]);setProdItems([]);}}>
+                ✕ Close
+              </button>
+              <button className="btn btn-g btn-sm"
+                disabled={loadingDetail}
+                onClick={()=>printProductionReport(selected, needs, prodItems, allItems, org)}>
+                🖨 Print Report
+              </button>
+            </div>
+          </div>
+
+          {loadingDetail ? (
+            <div style={{textAlign:"center",padding:24,color:"var(--muted)"}}>Loading…</div>
+          ) : (
+            <div>
+              {/* Quick stats */}
+              <div style={{display:"flex",gap:16,marginBottom:16,flexWrap:"wrap"}}>
+                {[
+                  {l:"Needs List",     v:needs.length},
+                  {l:"Acquired",       v:needs.filter(n=>n.status==="acquired").length},
+                  {l:"Still Needed",   v:needs.filter(n=>n.status==="needed"||n.status==="searching").length},
+                  {l:"From Inventory", v:prodItems.length},
+                ].map(s=>(
+                  <div key={s.l} style={{textAlign:"center",padding:"10px 16px",
+                    background:"rgba(255,255,255,.04)",border:"1px solid var(--border)",
+                    borderRadius:8,minWidth:80}}>
+                    <div style={{fontFamily:"var(--serif)",fontSize:22,fontWeight:700,
+                      color:"var(--gold)"}}>{s.v}</div>
+                    <div style={{fontSize:10,color:"var(--muted)",marginTop:2}}>{s.l}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Needs preview */}
+              {needs.length > 0 && (
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:11,fontWeight:800,textTransform:"uppercase",
+                    letterSpacing:1.5,color:"var(--muted)",marginBottom:8}}>Needs List Preview</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                    {needs.slice(0,5).map(n=>{
+                      const st={needed:"🔴",searching:"🟡",found:"🔵",acquired:"🟢",not_needed:"⚫"}[n.status]||"🔴";
+                      return (
+                        <div key={n.id} style={{display:"flex",gap:8,alignItems:"center",
+                          padding:"5px 8px",borderRadius:6,background:"rgba(255,255,255,.03)"}}>
+                          <span style={{fontSize:12}}>{st}</span>
+                          <span style={{fontSize:12,flex:1}}>{n.name}{n.qty_needed>1?` ×${n.qty_needed}`:""}</span>
+                          <span style={{fontSize:11,color:"var(--muted)"}}>{n.category}</span>
+                        </div>
+                      );
+                    })}
+                    {needs.length>5&&<div style={{fontSize:11,color:"var(--muted)",padding:"4px 8px"}}>
+                      +{needs.length-5} more items in full report
+                    </div>}
+                  </div>
+                </div>
+              )}
+
+              <p style={{fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
+                The printed report includes your complete needs list grouped by category,
+                all inventory items assigned to this production, cost estimates,
+                and director's notes — formatted and ready to share.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Reports({ items, plan="free", org=null }) {
   const [tab,setTab] = useState("overview");
   const totalQty  = items.reduce((s,i)=>s+(i.qty||1),0);
@@ -3878,8 +3851,8 @@ function Reports({ items, plan="free", org=null }) {
   if(plan==="free") return(
     <div style={{padding:"40px 20px",textAlign:"center"}}>
       <div style={{fontSize:44,marginBottom:14}}>📊</div>
-      <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>Reports require a Pro account</h2>
-      <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Reports are not available on the free plan. Upgrade to Pro to unlock inventory reports, condition summaries, location breakdowns, value tracking, and CSV export.</p>
+      <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>Reports is a Pro Feature</h2>
+      <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Get detailed analytics, condition reports, location breakdowns, and CSV export. Upgrade to Pro to unlock Reports.</p>
       <UpgradePlans compact={true}/>
     </div>
   );
@@ -3910,7 +3883,7 @@ function Reports({ items, plan="free", org=null }) {
 
       <div style={{padding:"24px 36px 48px",position:"relative",zIndex:1}}>
         <div className="tabs">
-          {[["overview","Overview"],["condition","Condition"],["availability","Availability"],["market","Backstage Exchange"],["location","Locations"],["usage","📊 Platform Usage"]].map(([t,l])=>(
+          {[["overview","Overview"],["condition","Condition"],["availability","Availability"],["market","Backstage Exchange"],["location","Locations"],["productions","🎭 Productions"],["usage","📊 Platform Usage"]].map(([t,l])=>(
             <button key={t} className={`tab ${tab===t?"on":""}`} onClick={()=>setTab(t)}>{l}</button>
           ))}
         </div>
@@ -4022,13 +3995,17 @@ function Reports({ items, plan="free", org=null }) {
           <PlatformUsageReport items={items} org={org} plan={plan}/>
         )}
 
+        {tab==="productions"&&(
+          <ProductionReportTab org={org} allItems={items}/>
+        )}
+
       </div>
     </div>
   );
 }
 
 // ── Upgrade prompt modal ─────────────────────────────────────────────────────
-function UpgradePrompt({ reason, onClose }) {
+function UpgradePrompt({ reason, onClose, userId=null, userEmail=null }) {
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div style={{background:"#fdf6ec",border:"1px solid var(--gold)",borderRadius:14,width:"100%",maxWidth:520,padding:28,boxShadow:"0 8px 48px rgba(0,0,0,.4)"}}>
@@ -4037,7 +4014,7 @@ function UpgradePrompt({ reason, onClose }) {
           <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:22,marginBottom:8}}>Upgrade to Continue</h2>
           <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.6}}>{reason}</p>
         </div>
-        <UpgradePlans compact={true}/>
+        <UpgradePlans compact={true} userId={userId} userEmail={userEmail}/>
         <button onClick={onClose} style={{display:"block",margin:"16px auto 0",background:"none",border:"none",color:"var(--faint)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Maybe later</button>
       </div>
     </div>
@@ -4062,8 +4039,8 @@ function stripeLink(baseUrl, userId, userEmail) {
 }
 // ── Plan definitions ─────────────────────────────────────────────────────────
 const PLANS_DEF = {
-  free:     { label:"Free",     maxItems:25,  marketplace:false, reports:false, monthlyPrice:0,  annualPrice:0   },
-  pro:      { label:"Pro",      maxItems:Infinity, marketplace:true,  reports:true,  monthlyPrice:15, annualPrice:150 },
+  free:     { label:"Free",     maxItems:50,  marketplace:false, reports:false, monthlyPrice:0,  annualPrice:0   },
+  pro:      { label:"Pro",      maxItems:Infinity, marketplace:true,  reports:true,  monthlyPrice:12, annualPrice:120 },
   district: { label:"District", maxItems:Infinity, marketplace:true,  reports:true,  monthlyPrice:49, annualPrice:500 },
 };
 // ── Admin accounts — add emails here for free District access + admin dashboard
@@ -4103,10 +4080,10 @@ const ADMIN_EMAIL  = ADMIN_EMAILS[0]; // legacy alias
 // ══════════════════════════════════════════════════════════════════════════════
 const UPGRADE_PLANS = [
   { id:"free",     name:"Free",     monthlyPrice:"$0",  annualPrice:"Free",   per:"/forever", annualNote:null,       desc:"Perfect for getting started.",     hot:false,
-    feats:["Up to 25 items","QR code generation","Photo uploads","Basic CSV export"] },
+    feats:["Up to 50 items","QR code labels","Photo uploads","CSV export"] },
   { id:"pro",      name:"Pro",      monthlyPrice:"$15", annualPrice:"$12.50",  annualTotal:"$150/yr", per:"/month", annualNote:"save $30", desc:"For active programs & companies.", hot:true,
     feats:["Unlimited inventory","Full Backstage Exchange access","Photo storage 5GB","Analytics dashboard","Email support"] },
-  { id:"district", name:"District S", monthlyPrice:"$49", annualPrice:"$42",  annualTotal:"$500/yr", per:"/month", annualNote:"save $88", desc:"Up to 6 schools — all Pro features.", hot:false,
+  { id:"district", name:"District (up to 6 schools)", monthlyPrice:"$49", annualPrice:"$42",  annualTotal:"$500/yr", per:"/month", annualNote:"save $88", desc:"Multiple schools, one platform.",  hot:false,
     feats:["Multiple organizations","District dashboard","Bulk import","Dedicated support","Everything in Pro"] },
   { id:"district_m", name:"District M", monthlyPrice:"$99", annualPrice:"$83",  annualTotal:"$999/yr",   per:"/month", annualNote:"save $189", desc:"Up to 15 schools — 54% savings.", hot:false,
     feats:["Everything in District S","Up to 15 school sites","District dashboard","Priority support","Dedicated onboarding"] },
@@ -4146,13 +4123,14 @@ function InvoiceRequestForm({ orgName, userEmail }) {
   if(done) return (
     <div style={{marginTop:16,padding:16,background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.3)",borderRadius:10,textAlign:"center"}}>
       <div style={{fontSize:28,marginBottom:8}}>✅</div>
-      <div style={{fontWeight:700,fontSize:15,color:"var(--text)",marginBottom:4}}>Invoice request sent!</div>
-      <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Check your inbox — we sent a copy to <strong>{form.email}</strong> and will follow up within one business day. Questions? Email <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)"}}>hello@theatre4u.org</a>.</div>
+      <div style={{fontWeight:700,fontSize:15,color:"#ede8df",marginBottom:4}}>Invoice request sent!</div>
+      <div style={{fontSize:13,color:"#b0a8c0",lineHeight:1.6}}>Check your inbox — we sent a copy to <strong>{form.email}</strong> and will follow up within one business day. Questions? Email <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)"}}>hello@theatre4u.org</a>.</div>
     </div>
   );
 
-  const inputStyle = { width:"100%", background:"var(--bgi,#110f18)", border:"1px solid var(--border,#282333)", borderRadius:6, padding:"8px 10px", color:"var(--text,#ede8df)", fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:"none", boxSizing:"border-box" };
-  const labelStyle = { fontSize:11, fontWeight:600, color:"var(--muted)", textTransform:"uppercase", letterSpacing:1, display:"block", marginBottom:3 };
+  const inputStyle = { width:"100%", background:"#110f18", border:"1px solid #3a3050", borderRadius:6, padding:"9px 11px", color:"#ede8df", fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:"none", boxSizing:"border-box" };
+  const labelStyle = { fontSize:10.5, fontWeight:700, color:"#b0a8c0", textTransform:"uppercase", letterSpacing:1, display:"block", marginBottom:4 };
+  // labelStyle defined above with inputStyle
 
   return (
     <div style={{marginTop:16,display:"flex",flexDirection:"column",gap:10}}>
@@ -4177,8 +4155,10 @@ function InvoiceRequestForm({ orgName, userEmail }) {
           <label style={labelStyle}>Plan</label>
           <select style={{...inputStyle,cursor:"pointer"}} value={form.plan} onChange={e=>upd("plan",e.target.value)}>
             <option value="pro">Pro — $15/month or $150/year</option>
-            <option value="district">District — $49/month or $500/year</option>
-            <option value="enterprise">Enterprise — Custom (district will contact)</option>
+            <option value="district">District S — $49/month or $500/year (up to 6 schools)</option>
+            <option value="district_m">District M — $99/month or $1,000/year (up to 15 schools)</option>
+            <option value="district_l">District L — $199/month or $2,000/year (up to 30 schools)</option>
+            <option value="enterprise">Enterprise — Custom pricing (contact us)</option>
           </select>
         </div>
         <div>
@@ -4187,6 +4167,14 @@ function InvoiceRequestForm({ orgName, userEmail }) {
             <option value="annual">Annual (best value)</option>
             <option value="monthly">Monthly</option>
           </select>
+        </div>
+        <div style={{gridColumn:"1/-1"}}>
+          <label style={labelStyle}>Accounts Payable Mailing Address (for PO)</label>
+          <input style={inputStyle} value={form.address||""} onChange={e=>upd("address",e.target.value)} placeholder="123 School Blvd, City, CA 90000 (leave blank if paying by check)"/>
+        </div>
+        <div style={{gridColumn:"1/-1"}}>
+          <label style={labelStyle}>Notes / Special Instructions</label>
+          <input style={inputStyle} value={form.notes||""} onChange={e=>upd("notes",e.target.value)} placeholder="Required vendor forms, W-9 request, payment terms, etc."/>
         </div>
       </div>
       {err && <div style={{fontSize:12.5,color:"#e57373",padding:"8px 10px",background:"rgba(194,24,91,.08)",borderRadius:6,border:"1px solid rgba(194,24,91,.2)"}}>{err}</div>}
@@ -4251,45 +4239,50 @@ function UpgradePlans({ compact = false, userId = null, userEmail = null }) {
                 ? <button className="btn btn-full" style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",color:"rgba(240,230,211,.6)",cursor:"default",fontWeight:600,fontSize:13}} disabled>✓ Current Free Plan</button>
                 : p.id==="enterprise"
                   ? <a href="mailto:hello@theatre4u.org?subject=Enterprise District Inquiry" className="btn btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",background:"linear-gradient(135deg,#1565c0,#0d47a1)",border:"1px solid rgba(66,133,244,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>Contact Us →</a>
-                  : (!link || link === "undefined" || link.endsWith("undefined"))
-                    ? <a href="mailto:hello@theatre4u.org?subject=District Plan Inquiry" className="btn btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>Contact Us →</a>
-                    : <a href={link} target="_blank" rel="noreferrer" className={"btn btn-full "+(p.hot?"btn-g":"")} style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",...(!p.hot?{background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}:{})}}>
-                    {billing==="annual" ? "Get "+p.name+" Annual →" : "Get "+p.name+" →"}
-                  </a>
+                  : billing === "invoice"
+                    ? <button className="btn btn-full" onClick={()=>document.getElementById("t4u-invoice-form")?.scrollIntoView({behavior:"smooth",block:"start"})}
+                        style={{background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                        🏛️ Request Invoice →
+                      </button>
+                    : (!link || link === "undefined" || link.endsWith("undefined"))
+                      ? <a href="mailto:hello@theatre4u.org?subject=District Plan Inquiry" className="btn btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>Contact Us →</a>
+                      : <a href={link} target="_blank" rel="noreferrer" className={"btn btn-full "+(p.hot?"btn-g":"")} style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",...(!p.hot?{background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}:{})}}>
+                        {billing==="annual" ? "Get "+p.name+" Annual →" : "Get "+p.name+" →"}
+                      </a>
               }
             </div>
           );
         })}
       </div>
       {billing === "invoice" ? (
-        <div style={{marginTop:16,background:"rgba(212,168,67,.06)",border:"1.5px solid rgba(212,168,67,.25)",borderRadius:12,padding:20}}>
+        <div id="t4u-invoice-form" style={{marginTop:16,background:"rgba(15,10,25,.85)",border:"1.5px solid rgba(212,168,67,.3)",borderRadius:12,padding:20,scrollMarginTop:20}}>
           <div style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:17,fontWeight:700,color:"var(--gold)",marginBottom:6}}>🏛️ Pay by Check or Purchase Order</div>
-          <p style={{fontSize:13,color:"var(--text)",lineHeight:1.7,marginBottom:14}}>
+          <p style={{fontSize:13,color:"#c8bfd0",lineHeight:1.7,marginBottom:14}}>
             School districts and organizations that cannot pay by credit card can subscribe via check or purchase order.
             We will issue a formal invoice and accept payment by school check, district PO, or ACH transfer.
           </p>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
-            <div style={{background:"rgba(0,0,0,.2)",borderRadius:8,padding:12}}>
+            <div style={{background:"#1e1208",border:"1px solid rgba(212,168,67,.3)",borderRadius:8,padding:14}}>
               <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--gold)",marginBottom:6}}>Pro Plan</div>
-              <div style={{fontSize:20,fontWeight:800,color:"#f0e6d3",marginBottom:2}}>$12<span style={{fontSize:12,color:"rgba(240,230,211,.5)"}}>/month</span></div>
-              <div style={{fontSize:11,color:"rgba(240,230,211,.5)",marginBottom:8}}>or $120/year (billed annually)</div>
-              <div style={{fontSize:12,color:"rgba(240,230,211,.7)"}}>Unlimited inventory · Backstage Exchange · Funding Tracker · Team sharing</div>
+              <div style={{fontSize:22,fontWeight:800,color:"#f0e6d3",marginBottom:2}}>$15<span style={{fontSize:12,color:"rgba(240,230,211,.6)"}}>/month</span></div>
+              <div style={{fontSize:11,color:"rgba(240,230,211,.65)",marginBottom:8}}>or $150/year (billed annually)</div>
+              <div style={{fontSize:12,color:"rgba(240,230,211,.8)",lineHeight:1.5}}>Unlimited inventory · Backstage Exchange · Funding Tracker · Team sharing</div>
             </div>
-            <div style={{background:"rgba(0,0,0,.2)",borderRadius:8,padding:12}}>
+            <div style={{background:"#1e1208",border:"1px solid rgba(212,168,67,.3)",borderRadius:8,padding:14}}>
               <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--gold)",marginBottom:6}}>District Plan</div>
-              <div style={{fontSize:20,fontWeight:800,color:"#f0e6d3",marginBottom:2}}>$49<span style={{fontSize:12,color:"rgba(240,230,211,.5)"}}>/month</span></div>
-              <div style={{fontSize:11,color:"rgba(240,230,211,.5)",marginBottom:8}}>or $500/year (billed annually)</div>
-              <div style={{fontSize:12,color:"rgba(240,230,211,.7)"}}>All Pro features · Multiple schools · District dashboard</div>
+              <div style={{fontSize:22,fontWeight:800,color:"#f0e6d3",marginBottom:2}}>$49<span style={{fontSize:12,color:"rgba(240,230,211,.6)"}}>/month</span></div>
+              <div style={{fontSize:11,color:"rgba(240,230,211,.65)",marginBottom:8}}>or $500/year (billed annually)</div>
+              <div style={{fontSize:12,color:"rgba(240,230,211,.8)",lineHeight:1.5}}>All Pro features · Multiple schools · District dashboard</div>
             </div>
           </div>
-          <div style={{fontSize:12.5,color:"var(--muted)",lineHeight:1.7,marginBottom:14}}>
-            <strong style={{color:"var(--text)"}}>To get started:</strong> Email us at{" "}
+          <div style={{fontSize:12.5,color:"#b0a8c0",lineHeight:1.7,marginBottom:14}}>
+            <strong style={{color:"#ede8df"}}>To get started:</strong> Email us at{" "}
             <a href="mailto:hello@theatre4u.org?subject=Check/PO Subscription Request&body=Hi, I would like to subscribe to Theatre4u via check/purchase order.%0A%0AOrganization name:%0APlan requested (Pro / District):%0ABilling period (monthly / annual):%0AContact name:%0APO number (if applicable):%0AAccounts payable email:" style={{color:"var(--gold)"}}>hello@theatre4u.org</a>
             {" "}with your organization name, plan, and billing period. We will send a formal invoice within one business day.
           </div>
           <InvoiceRequestForm orgName={userId||""} userEmail={userEmail||""} />
-          <div style={{marginTop:12,fontSize:11,color:"var(--faint)",lineHeight:1.6}}>
-            Payment by check should be made payable to <strong style={{color:"var(--text)"}}>Artstracker LLC</strong>.
+          <div style={{marginTop:12,fontSize:11,color:"#9890a8",lineHeight:1.6}}>
+            Payment by check should be made payable to <strong style={{color:"#d4c8e0"}}>Artstracker LLC</strong>.
             Purchase orders are accepted from accredited educational institutions.
             Net-30 terms available for district accounts. Questions? Call or email — we respond personally.
           </div>
@@ -4457,7 +4450,7 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
           <img src={usp("photo-1503095396549-807759245b35", 1100, 260)} alt="District" loading="eager" />
           <div className="hero-fade" />
           <div className="hero-body">
-            <div className="hero-eyebrow">🏢 District S Plan</div>
+            <div className="hero-eyebrow">🏢 District Plan</div>
             <h1 className="hero-title" style={{ fontSize: 44 }}>
               {district?.name || "Your District"}
             </h1>
@@ -5695,1146 +5688,6 @@ function AdminInventoryView() {
 }
 
 
-// ── Admin Analytics Tab ───────────────────────────────────────────────────────
-function AdminAnalyticsTab({ analytics, loading, onLoad }) {
-  React.useEffect(() => { if (!analytics && !loading) onLoad(); }, []);
-
-  const card = { background:"var(--parch)", border:"1px solid var(--border)", borderRadius:10, padding:16 };
-
-  if (loading) return <div style={{textAlign:"center",padding:60,color:"var(--muted)"}}>Loading analytics…</div>;
-  if (!analytics) return null;
-
-  const { pvDay, pvWeek, recentOrgs, totalViews, totalSessions } = analytics;
-
-  // Aggregate by page
-  const byPage = {};
-  pvWeek.forEach(v => { byPage[v.page] = (byPage[v.page]||0) + 1; });
-
-  // Unique sessions this week
-  const uniqSessions = new Set(pvWeek.map(v => v.session_id)).size;
-
-  // Sessions by day (last 14 days)
-  const dayMap = {};
-  pvDay.forEach(v => {
-    const d = v.created_at.slice(0,10);
-    dayMap[d] = (dayMap[d]||0) + 1;
-  });
-  const dayEntries = Object.entries(dayMap).sort((a,b) => a[0].localeCompare(b[0])).slice(-14);
-  const maxDay = Math.max(...dayEntries.map(d=>d[1]), 1);
-
-  // UTM sources this week
-  const srcMap = {};
-  pvWeek.filter(v=>v.utm_source).forEach(v => { srcMap[v.utm_source] = (srcMap[v.utm_source]||0)+1; });
-  const srcEntries = Object.entries(srcMap).sort((a,b)=>b[1]-a[1]);
-
-  return (
-    <div>
-      {/* Summary tiles */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:20}}>
-        {[
-          {icon:"👁",  label:"Total Pageviews",    val:(totalViews||0).toLocaleString()},
-          {icon:"🧑",  label:"Unique Sessions",     val:(totalSessions||0).toLocaleString()},
-          {icon:"📅",  label:"Views This Week",     val:pvWeek.length.toLocaleString()},
-          {icon:"🔥",  label:"Sessions This Week",  val:uniqSessions.toLocaleString(), color:"var(--gold)"},
-        ].map(s=>(
-          <div key={s.label} style={{...card,textAlign:"center"}}>
-            <div style={{fontSize:24,marginBottom:4}}>{s.icon}</div>
-            <div style={{fontFamily:"var(--serif)",fontSize:22,fontWeight:800,color:s.color||"var(--linen)"}}>{s.val}</div>
-            <div style={{fontSize:11,color:"var(--muted)",marginTop:3}}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
-        {/* Views by page */}
-        <div style={card}>
-          <div style={{fontWeight:700,fontSize:13,marginBottom:12}}>Views by Page (7 days)</div>
-          {Object.keys(byPage).length === 0
-            ? <div style={{fontSize:12,color:"var(--muted)"}}>No data yet — visits will appear here once users land on the site.</div>
-            : Object.entries(byPage).sort((a,b)=>b[1]-a[1]).map(([page,n])=>(
-            <div key={page} style={{display:"flex",alignItems:"center",gap:10,marginBottom:7}}>
-              <div style={{width:80,fontSize:12,color:"var(--muted)",flexShrink:0,textTransform:"capitalize"}}>{page}</div>
-              <div style={{flex:1,height:6,background:"var(--white)",borderRadius:3,overflow:"hidden"}}>
-                <div style={{height:"100%",width:(n/Math.max(...Object.values(byPage))*100)+"%",
-                  background:"var(--gold)",borderRadius:3}}/>
-              </div>
-              <div style={{fontSize:12,fontWeight:700,width:28,textAlign:"right",flexShrink:0}}>{n}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Traffic sources */}
-        <div style={card}>
-          <div style={{fontWeight:700,fontSize:13,marginBottom:12}}>Traffic Sources (7 days)</div>
-          {srcEntries.length === 0
-            ? <div style={{fontSize:12,color:"var(--muted)"}}>No UTM-tagged traffic yet. Add <code>?utm_source=facebook</code> to your ad links to track sources.</div>
-            : srcEntries.map(([src,n])=>(
-            <div key={src} style={{display:"flex",alignItems:"center",gap:10,marginBottom:7}}>
-              <div style={{flex:1,fontSize:12,color:"var(--muted)"}}>{src}</div>
-              <span style={{fontSize:12,fontWeight:700,background:"rgba(212,168,67,.12)",
-                color:"var(--gold)",padding:"1px 8px",borderRadius:6}}>{n} visits</span>
-            </div>
-          ))}
-          <div style={{marginTop:12,fontSize:11,color:"var(--muted)",lineHeight:1.5,borderTop:"1px solid var(--border)",paddingTop:8}}>
-            Tag your Facebook ad URLs:<br/>
-            <code style={{fontSize:10}}>theatre4u.org?utm_source=facebook&utm_campaign=beta</code>
-          </div>
-        </div>
-      </div>
-
-      {/* Daily chart */}
-      <div style={{...card,marginBottom:20}}>
-        <div style={{fontWeight:700,fontSize:13,marginBottom:16}}>Daily Pageviews (last 14 days)</div>
-        {dayEntries.length === 0
-          ? <div style={{fontSize:12,color:"var(--muted)"}}>No data yet.</div>
-          : (
-          <div style={{display:"flex",alignItems:"flex-end",gap:4,height:80,overflowX:"auto"}}>
-            {dayEntries.map(([day,n])=>(
-              <div key={day} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,flex:1,minWidth:28}}>
-                <div style={{fontSize:9,color:"var(--muted)",fontWeight:700}}>{n}</div>
-                <div style={{width:"100%",background:"var(--gold)",borderRadius:"3px 3px 0 0",
-                  height:Math.max(4,n/maxDay*60)+"px",minHeight:4}}/>
-                <div style={{fontSize:8,color:"var(--muted)",whiteSpace:"nowrap"}}>
-                  {new Date(day+"T12:00").toLocaleDateString("en-US",{month:"numeric",day:"numeric"})}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Recent signups */}
-      <div style={card}>
-        <div style={{fontWeight:700,fontSize:13,marginBottom:12}}>Recent Signups</div>
-        {recentOrgs.length === 0
-          ? <div style={{fontSize:12,color:"var(--muted)"}}>No signups yet.</div>
-          : recentOrgs.map(org=>(
-          <div key={org.id} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",
-            borderBottom:"1px solid var(--border)"}}>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:600,fontSize:13}}>{org.name||"Unnamed"}</div>
-              <div style={{fontSize:11,color:"var(--muted)"}}>{org.email}</div>
-            </div>
-            <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:8,
-              background:org.plan==="free"?"rgba(255,255,255,.08)":"rgba(212,168,67,.15)",
-              color:org.plan==="free"?"var(--muted)":"var(--gold)"}}>
-              {org.plan||"free"}
-            </span>
-            <div style={{fontSize:11,color:"var(--muted)",whiteSpace:"nowrap",flexShrink:0}}>
-              {new Date(org.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{marginTop:12,display:"flex",justifyContent:"flex-end"}}>
-        <button onClick={onLoad} className="btn btn-o btn-sm">↺ Refresh</button>
-      </div>
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// ADMIN HUB — Single consolidated admin page replacing dual sidebar items
-// Tabs: Overview · Users · Analytics · Feedback · Labels · Tools
-// ══════════════════════════════════════════════════════════════════════════════
-// ══════════════════════════════════════════════════════════════════════════════
-// LABELS PAGE — full label purchase, management, and claim system
-// ══════════════════════════════════════════════════════════════════════════════
-
-// Small banner shown on dashboard and after signup to prompt label purchase
-function LabelStoreBanner({ onGoLabels }) {
-  return(
-    <div style={{background:"linear-gradient(135deg,rgba(212,168,67,.1),rgba(212,168,67,.04))",
-      border:"1px solid rgba(212,168,67,.25)",borderRadius:12,padding:"14px 18px",
-      display:"flex",gap:14,alignItems:"flex-start",marginBottom:18}}>
-      <div style={{fontSize:28,flexShrink:0}}>🏷</div>
-      <div style={{flex:1}}>
-        <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>
-          Get pre-printed QR labels for your inventory
-        </div>
-        <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
-          Stick them on costumes, props, set pieces, equipment, and storage bins.
-          Scan any label with a phone camera to instantly pull up the item.
-          Polyester labels for indoor use · Weatherproof for scene shops and storage.
-        </div>
-        <button className="btn btn-g btn-sm" onClick={onGoLabels}>
-          Shop Label Packs →
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function LabelsPage({ org, userId, items=[], stripeReturn=null, onClearReturn=null }) {
-  // LABELS PAUSED — vendor research in progress. Full purchase/claim/link UI
-  // is preserved in git. Re-enable when vendor is confirmed.
-  return (
-    <div style={{padding:"28px 32px 64px",maxWidth:640}}>
-      <h1 style={{fontFamily:"var(--serif)",fontSize:28,margin:"0 0 4px"}}>🏷 QR Labels</h1>
-      <p style={{fontSize:13,color:"var(--muted)",margin:"0 0 24px"}}>
-        Physical QR labels for your inventory — coming soon.
-      </p>
-      <div style={{background:"var(--parch)",border:"1px solid var(--border)",
-        borderRadius:12,padding:"32px 28px"}}>
-        <div style={{fontSize:48,marginBottom:16}}>🏷</div>
-        <div style={{fontFamily:"var(--serif)",fontSize:20,marginBottom:12}}>
-          Label ordering is coming soon
-        </div>
-        <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.7,marginBottom:12}}>
-          We're finalizing our label printing partnership so you can order pre-printed
-          QR labels for your inventory — costumes, props, set pieces, equipment, and
-          storage bins. Each label will have a unique code tied exclusively to your program.
-        </p>
-        <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.7}}>
-          Once the program launches you'll be able to order directly from this page and
-          receive labels in the mail within a week. We'll notify you by email when ordering opens.
-        </p>
-        <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid var(--border)",
-          fontSize:12,color:"var(--faint)"}}>
-          Questions? Email{" "}
-          <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)"}}>
-            hello@theatre4u.org
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Pool health indicator for Admin Hub
-function PoolHealthWidget() {
-  const [stats, setStats] = useState(null);
-  useEffect(()=>{
-    Promise.all([
-      SB.from("label_pool").select("*",{count:"exact",head:true}).eq("status","available"),
-      SB.from("label_pool").select("*",{count:"exact",head:true}).eq("status","assigned"),
-      SB.from("label_pool").select("*",{count:"exact",head:true}).eq("status","claimed"),
-    ]).then(([a,b,c])=>setStats({available:a.count||0,assigned:b.count||0,claimed:c.count||0}));
-  },[]);
-  if(!stats) return null;
-  const total = stats.available+stats.assigned+stats.claimed;
-  const pctLeft = Math.round(stats.available/Math.max(total,1)*100);
-  return(
-    <div style={{marginTop:20,background:"var(--parch)",border:"1px solid var(--border)",
-      borderRadius:10,padding:"14px 16px"}}>
-      <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>Label Pool Health</div>
-      <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:10}}>
-        {[
-          {n:stats.available,label:"Available",color:"#4caf50"},
-          {n:stats.assigned, label:"Assigned (ordered)",color:"#2196f3"},
-          {n:stats.claimed,  label:"Claimed (in use)",color:"var(--gold)"},
-        ].map(s=>(
-          <div key={s.label} style={{textAlign:"center",minWidth:100}}>
-            <div style={{fontSize:22,fontWeight:800,color:s.color}}>{s.n.toLocaleString()}</div>
-            <div style={{fontSize:11,color:"var(--muted)"}}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{height:8,background:"var(--border)",borderRadius:4,overflow:"hidden",marginBottom:8}}>
-        <div style={{height:"100%",width:pctLeft+"%",background:"#4caf50",borderRadius:4,transition:"width .4s"}}/>
-      </div>
-      <div style={{fontSize:11,color:"var(--muted)"}}>
-        {pctLeft}% of pool available · {stats.available.toLocaleString()} labels ready to assign
-        {stats.available<500&&<span style={{color:"#e53935",fontWeight:700}}> ⚠ Pool getting low — seed more labels in Supabase SQL.</span>}
-      </div>
-      {stats.available<500&&(
-        <div style={{marginTop:8,background:"rgba(229,57,53,.08)",border:"1px solid rgba(229,57,53,.2)",
-          borderRadius:6,padding:"8px 10px",fontSize:11,color:"var(--muted)",fontFamily:"monospace",lineHeight:1.5}}>
-          Run in Supabase SQL to add 10,000 more labels:<br/>
-          {"SELECT seed_label_pool("+(total+1)+", "+(total+10000)+");"}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function AdminHub({ currentUser, org }) {
-  const [tab, setTab]             = useState("overview");
-  const [orgs, setOrgs]           = useState([]);
-  const [leads, setLeads]         = useState([]);
-  const [feedback, setFeedback]   = useState([]);
-  const [analytics, setAnalytics] = useState({ views:0, sessions:0, byPage:[], byDay:[] });
-  const [labelOrders, setLabelOrders] = useState([]);
-  const [digest, setDigest]       = useState(null);
-  const [query, setQuery]         = useState("");
-  const [loading, setLoading]     = useState(false);
-  const [msg, setMsg]             = useState("");
-  const flash = m => { setMsg(m); setTimeout(()=>setMsg(""), 3000); };
-
-  // Load data when tab changes
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      if (tab === "overview" || tab === "users") {
-        const { data } = await SB.from("orgs")
-          .select("id,name,email,plan,is_leading_player,director_name,director_title,city,location,created_at")
-          .order("created_at", { ascending: false }).limit(100);
-        setOrgs(data || []);
-      }
-      if (tab === "overview" || tab === "feedback") {
-        const { data } = await SB.from("beta_feedback")
-          .select("*").order("created_at", { ascending: false }).limit(50);
-        setFeedback(data || []);
-      }
-      if (tab === "overview" || tab === "users") {
-        const { data } = await SB.from("beta_leads")
-          .select("*").order("created_at", { ascending: false }).limit(50);
-        setLeads(data || []);
-      }
-      if (tab === "analytics") {
-        const { data: pv } = await SB.from("page_views")
-          .select("page,session_id,created_at,utm_source,utm_campaign")
-          .order("created_at", { ascending: false }).limit(2000);
-        if (pv) {
-          const byPage = {};
-          const bySess = {};
-          const byDay  = {};
-          pv.forEach(v => {
-            byPage[v.page] = (byPage[v.page]||0) + 1;
-            bySess[v.session_id] = true;
-            const day = (v.created_at||"").slice(0,10);
-            if (day) byDay[day] = (byDay[day]||0) + 1;
-          });
-          const dayEntries = Object.entries(byDay)
-            .sort(([a],[b]) => a > b ? 1 : -1).slice(-14);
-          const maxDay = Math.max(1, ...dayEntries.map(([,v])=>v));
-          setAnalytics({
-            views: pv.length,
-            sessions: Object.keys(bySess).length,
-            byPage: Object.entries(byPage).sort(([,a],[,b])=>b-a),
-            byDay: dayEntries,
-            maxDay,
-          });
-        }
-      }
-      if (tab === "labels") {
-        const { data } = await SB.from("label_orders")
-          .select("*").order("created_at", { ascending: false });
-        setLabelOrders(data || []);
-      }
-      if (tab === "digest" || tab === "overview") {
-        // Load all activity from the last 24 hours
-        const since = new Date(Date.now()-24*60*60*1000).toISOString();
-        const [
-          {data:newOrgs},   {data:newItems},  {data:newLeadsToday},
-          {data:newEmails}, {data:pvToday},   {data:newMsgs},
-          {data:newFeedback24},{data:allItems},{data:allOrgs24}
-        ] = await Promise.all([
-          SB.from("orgs").select("id,name,email,plan,created_at").gte("created_at",since),
-          SB.from("items").select("id,name,category,org_id,added").gte("added",since).order("added",{ascending:false}),
-          SB.from("beta_leads").select("id,name,email,org,created_at").gte("created_at",since),
-          SB.from("email_sequence").select("id,org_id,email_num,sent_at").gte("sent_at",since),
-          SB.from("page_views").select("page,session_id,created_at").gte("created_at",since),
-          SB.from("messages").select("id,created_at").gte("created_at",since),
-          SB.from("beta_feedback").select("id,category,org_name,message,created_at").gte("created_at",since),
-          SB.from("items").select("org_id",{count:"exact",head:true}),
-          SB.from("orgs").select("id,name",{count:"exact",head:true}),
-        ]);
-        // Org name lookup for items
-        const orgNames = {};
-        (newItems||[]).forEach(i=>{
-          if(!orgNames[i.org_id]) orgNames[i.org_id]="Unknown";
-        });
-        // Enrich items with org names
-        if((newItems||[]).length>0){
-          const ids=[...new Set((newItems||[]).map(i=>i.org_id))];
-          const {data:orgData}=await SB.from("orgs").select("id,name").in("id",ids);
-          (orgData||[]).forEach(o=>{orgNames[o.id]=o.name;});
-        }
-        // Email num labels
-        const emailLabels={1:"Welcome",2:"First Item",3:"Tour",4:"Exchange",5:"Funding",6:"Reports",7:"Free Year"};
-        const emailsByOrg={};
-        (newEmails||[]).forEach(e=>{
-          if(!emailsByOrg[e.org_id]) emailsByOrg[e.org_id]={name:"",emails:[]};
-          emailsByOrg[e.org_id].emails.push(e.email_num);
-        });
-        // Page view counts
-        const pvByPage={};
-        const sessions=new Set();
-        (pvToday||[]).forEach(v=>{
-          pvByPage[v.page]=(pvByPage[v.page]||0)+1;
-          sessions.add(v.session_id);
-        });
-        // Enrich email org names
-        if(Object.keys(emailsByOrg).length>0){
-          const {data:orgNames2}=await SB.from("orgs").select("id,name").in("id",Object.keys(emailsByOrg));
-          (orgNames2||[]).forEach(o=>{if(emailsByOrg[o.id])emailsByOrg[o.id].name=o.name;});
-        }
-        setDigest({
-          newOrgs:      newOrgs||[],
-          newItems:     (newItems||[]).map(i=>({...i,orgName:orgNames[i.org_id]||""})),
-          newLeads:     newLeadsToday||[],
-          emailsSent:   newEmails||[],
-          emailsByOrg,
-          emailLabels,
-          pageViews:    pvToday?.length||0,
-          uniqueSessions: sessions.size,
-          pvByPage,
-          messages:     newMsgs||[],
-          newFeedback:  newFeedback24||[],
-          generatedAt:  new Date().toLocaleString("en-US",{timeZone:"America/Los_Angeles",
-            month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",timeZoneName:"short"}),
-        });
-      }
-      setLoading(false);
-    })();
-  }, [tab]);
-
-  const upgradeOrg = async (orgId, plan, isLP) => {
-    const { error } = await SB.from("orgs").update({ plan, is_leading_player: isLP }).eq("id", orgId);
-    if (!error) {
-      setOrgs(prev => prev.map(o => o.id===orgId ? {...o, plan, is_leading_player:isLP} : o));
-      flash("✓ Updated");
-    }
-  };
-
-  const updateFeedback = async (id, status) => {
-    await SB.from("beta_feedback").update({ status }).eq("id", id);
-    setFeedback(prev => prev.map(f => f.id===id ? {...f, status} : f));
-    flash("✓ Status updated");
-  };
-
-  const updateLabelOrder = async (id, updates) => {
-    await SB.from("label_orders").update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id);
-    setLabelOrders(prev => prev.map(o => o.id===id ? {...o,...updates} : o));
-    flash("✓ Order updated");
-  };
-
-  const filteredOrgs = orgs.filter(o =>
-    !query || [o.name,o.email,o.director_name,o.city,o.location]
-      .some(v => v?.toLowerCase().includes(query.toLowerCase()))
-  );
-
-  // Stats for overview
-  const totalOrgs   = orgs.length;
-  const paidOrgs    = orgs.filter(o=>o.plan!=="free").length;
-  const leadingPlayers = orgs.filter(o=>o.is_leading_player).length;
-  const newFeedback = feedback.filter(f=>f.status==="new").length;
-  const newLeads    = leads.filter(l=>!l.converted).length;
-
-  const TABS = [
-    ["overview",  "🏠 Overview"],
-    ["digest",    "📋 Daily Digest"],
-    ["users",     "👥 Users & Leads"],
-    ["analytics", "📈 Analytics"],
-    ["feedback",  "💬 Feedback"],
-    ["labels",    "🏷 Label Orders"],
-    ["tools",     "🔧 Tools"],
-  ];
-
-  return (
-    <div style={{padding:"28px 32px 64px",minHeight:"80vh"}}>
-      <div style={{marginBottom:22}}>
-        <h1 style={{fontFamily:"var(--serif)",fontSize:28,margin:"0 0 4px"}}>🎛 Admin Hub</h1>
-        <p style={{fontSize:13,color:"var(--muted)",margin:0}}>Theatre4u™ platform administration — everything in one place.</p>
-      </div>
-
-      {/* Tab bar */}
-      <div style={{display:"flex",gap:5,marginBottom:24,flexWrap:"wrap",borderBottom:"1px solid var(--border)",paddingBottom:12}}>
-        {TABS.map(([id,lbl])=>(
-          <button key={id} onClick={()=>setTab(id)}
-            style={{padding:"7px 14px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:tab===id?700:500,
-              background:tab===id?"var(--gold)":"transparent",
-              color:tab===id?"#1a0f00":"var(--muted)",fontFamily:"inherit",transition:"all .15s"}}>
-            {lbl}{id==="feedback"&&newFeedback>0?` (${newFeedback})`:""}{id==="users"&&newLeads>0?` (${newLeads})`:""}{id==="labels"&&labelOrders.filter(o=>o.status==="pending").length>0?` (${labelOrders.filter(o=>o.status==="pending").length})`:""}
-          </button>
-        ))}
-      </div>
-
-      {msg&&<div style={{background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.3)",borderRadius:8,padding:"8px 14px",marginBottom:16,fontSize:13,color:"#4caf50"}}>{msg}</div>}
-      {loading&&<div style={{color:"var(--muted)",padding:20,textAlign:"center"}}>Loading…</div>}
-
-      {/* ── DAILY DIGEST ── */}
-      {!loading&&tab==="digest"&&(
-        <div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20,flexWrap:"wrap",gap:10}}>
-            <div>
-              <h3 style={{fontFamily:"var(--serif)",fontSize:20,margin:"0 0 3px"}}>Daily Activity Digest</h3>
-              <p style={{fontSize:12,color:"var(--muted)",margin:0}}>
-                Everything that happened on Theatre4u in the last 24 hours.
-                {digest?.generatedAt&&<span> · Generated {digest.generatedAt}</span>}
-              </p>
-            </div>
-            <button className="btn btn-o btn-sm" onClick={()=>setTab("digest")}>↺ Refresh</button>
-          </div>
-
-          {!digest?(
-            <div style={{textAlign:"center",padding:32,color:"var(--muted)",fontSize:13}}>Loading digest…</div>
-          ):(
-            <>
-              {/* KPI row */}
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:10,marginBottom:24}}>
-                {[
-                  {icon:"🎭",label:"New Signups",     n:digest.newOrgs.length,       color:"var(--gold)"},
-                  {icon:"📦",label:"Items Added",     n:digest.newItems.length,       color:"#4caf50"},
-                  {icon:"📥",label:"New Leads",       n:digest.newLeads.length,       color:"#2196f3"},
-                  {icon:"✉️",label:"Emails Sent",     n:digest.emailsSent.length,     color:"#9c27b0"},
-                  {icon:"👁", label:"Page Views",     n:digest.pageViews,             color:"var(--muted)"},
-                  {icon:"🔗",label:"Unique Sessions", n:digest.uniqueSessions,        color:"var(--muted)"},
-                  {icon:"💬",label:"Messages",        n:digest.messages.length,       color:"#ff9800"},
-                  {icon:"📋",label:"Feedback",        n:digest.newFeedback.length,    color:"#e91e63"},
-                ].map(k=>(
-                  <div key={k.label} style={{background:"var(--parch)",border:"1px solid var(--border)",
-                    borderRadius:10,padding:"12px 14px",textAlign:"center"}}>
-                    <div style={{fontSize:20,marginBottom:4}}>{k.icon}</div>
-                    <div style={{fontSize:26,fontWeight:800,color:k.color,lineHeight:1}}>{k.n}</div>
-                    <div style={{fontSize:10,color:"var(--muted)",marginTop:3,textTransform:"uppercase",letterSpacing:.5}}>{k.label}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Sections — only show if there's activity */}
-              <div style={{display:"flex",flexDirection:"column",gap:16}}>
-
-                {/* New signups */}
-                {digest.newOrgs.length>0&&(
-                  <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
-                    <div style={{padding:"10px 14px",borderBottom:"1px solid var(--border)",display:"flex",gap:8,alignItems:"center"}}>
-                      <span style={{fontSize:16}}>🎭</span>
-                      <span style={{fontWeight:700,fontSize:14}}>New Signups ({digest.newOrgs.length})</span>
-                    </div>
-                    {digest.newOrgs.map(o=>(
-                      <div key={o.id} style={{padding:"9px 14px",borderBottom:"1px solid var(--border)",
-                        display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
-                        <span style={{fontWeight:600,fontSize:13}}>{o.name}</span>
-                        <a href={"mailto:"+o.email} style={{fontSize:12,color:"var(--gold)"}}>{o.email}</a>
-                        <span style={{fontSize:11,padding:"1px 6px",borderRadius:4,
-                          background:o.plan==="free"?"rgba(100,100,100,.1)":"rgba(76,175,80,.1)",
-                          color:o.plan==="free"?"var(--muted)":"#4caf50",textTransform:"capitalize"}}>{o.plan}</span>
-                        <span style={{fontSize:11,color:"var(--muted)",marginLeft:"auto"}}>
-                          {new Date(o.created_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/Los_Angeles"})}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Items added */}
-                {digest.newItems.length>0&&(
-                  <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
-                    <div style={{padding:"10px 14px",borderBottom:"1px solid var(--border)",display:"flex",gap:8,alignItems:"center"}}>
-                      <span style={{fontSize:16}}>📦</span>
-                      <span style={{fontWeight:700,fontSize:14}}>Items Added ({digest.newItems.length})</span>
-                    </div>
-                    {digest.newItems.map(i=>{
-                      const cat=CAT[i.category]||CAT.other;
-                      return(
-                        <div key={i.id} style={{padding:"8px 14px",borderBottom:"1px solid var(--border)",
-                          display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
-                          <span style={{fontSize:13,fontWeight:600}}>{i.name}</span>
-                          <span style={{fontSize:11,color:cat.color}}>{cat.icon} {cat.label}</span>
-                          <span style={{fontSize:11,color:"var(--muted)"}}>by {i.orgName}</span>
-                          <span style={{fontSize:11,color:"var(--muted)",marginLeft:"auto"}}>
-                            {new Date(i.added).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/Los_Angeles"})}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* New beta leads */}
-                {digest.newLeads.length>0&&(
-                  <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
-                    <div style={{padding:"10px 14px",borderBottom:"1px solid var(--border)",display:"flex",gap:8,alignItems:"center"}}>
-                      <span style={{fontSize:16}}>📥</span>
-                      <span style={{fontWeight:700,fontSize:14}}>New Beta Leads ({digest.newLeads.length})</span>
-                    </div>
-                    {digest.newLeads.map(l=>(
-                      <div key={l.id} style={{padding:"9px 14px",borderBottom:"1px solid var(--border)",
-                        display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
-                        <span style={{fontWeight:600,fontSize:13}}>{l.name}</span>
-                        <span style={{fontSize:12,color:"var(--muted)"}}>{l.org}</span>
-                        <a href={"mailto:"+l.email} style={{fontSize:12,color:"var(--gold)"}}>{l.email}</a>
-                        <span style={{fontSize:11,color:"var(--muted)",marginLeft:"auto"}}>
-                          {new Date(l.created_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/Los_Angeles"})}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Emails sent */}
-                {digest.emailsSent.length>0&&(
-                  <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
-                    <div style={{padding:"10px 14px",borderBottom:"1px solid var(--border)",display:"flex",gap:8,alignItems:"center"}}>
-                      <span style={{fontSize:16}}>✉️</span>
-                      <span style={{fontWeight:700,fontSize:14}}>Emails Sent ({digest.emailsSent.length})</span>
-                    </div>
-                    {Object.entries(digest.emailsByOrg).map(([orgId,entry])=>(
-                      <div key={orgId} style={{padding:"8px 14px",borderBottom:"1px solid var(--border)",
-                        display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                        <span style={{fontSize:13,fontWeight:600}}>{entry.name||orgId.slice(0,8)}</span>
-                        <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                          {entry.emails.map(n=>(
-                            <span key={n} style={{fontSize:11,padding:"1px 7px",borderRadius:5,
-                              background:"rgba(212,168,67,.12)",color:"var(--gold)",fontWeight:600}}>
-                              #{n} {digest.emailLabels[n]||""}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Page views breakdown */}
-                {digest.pageViews>0&&(
-                  <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
-                    <div style={{padding:"10px 14px",borderBottom:"1px solid var(--border)",display:"flex",gap:8,alignItems:"center"}}>
-                      <span style={{fontSize:16}}>👁</span>
-                      <span style={{fontWeight:700,fontSize:14}}>
-                        Page Views ({digest.pageViews} views · {digest.uniqueSessions} sessions)
-                      </span>
-                    </div>
-                    <div style={{padding:"10px 14px",display:"flex",flexWrap:"wrap",gap:10}}>
-                      {Object.entries(digest.pvByPage)
-                        .sort(([,a],[,b])=>b-a)
-                        .map(([page,count])=>(
-                          <div key={page} style={{display:"flex",gap:6,alignItems:"center"}}>
-                            <span style={{fontSize:12,color:"var(--text)",textTransform:"capitalize"}}>{page}</span>
-                            <span style={{fontSize:13,fontWeight:700,color:"var(--gold)",
-                              background:"rgba(212,168,67,.1)",padding:"1px 8px",borderRadius:5}}>{count}</span>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Feedback */}
-                {digest.newFeedback.length>0&&(
-                  <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
-                    <div style={{padding:"10px 14px",borderBottom:"1px solid var(--border)",display:"flex",gap:8,alignItems:"center"}}>
-                      <span style={{fontSize:16}}>📋</span>
-                      <span style={{fontWeight:700,fontSize:14}}>New Feedback ({digest.newFeedback.length})</span>
-                    </div>
-                    {digest.newFeedback.map(f=>(
-                      <div key={f.id} style={{padding:"10px 14px",borderBottom:"1px solid var(--border)"}}>
-                        <div style={{display:"flex",gap:8,marginBottom:4,alignItems:"center"}}>
-                          <span style={{fontSize:14}}>{f.category==="bug"?"🐛":f.category==="feature"?"✨":"💬"}</span>
-                          <span style={{fontWeight:600,fontSize:13}}>{f.org_name||"Anonymous"}</span>
-                          <span style={{fontSize:11,color:"var(--muted)",textTransform:"capitalize"}}>{f.category}</span>
-                        </div>
-                        <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.5}}>{f.message}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* All quiet */}
-                {digest.newOrgs.length===0&&digest.newItems.length===0&&
-                 digest.newLeads.length===0&&digest.emailsSent.length===0&&
-                 digest.pageViews===0&&digest.newFeedback.length===0&&(
-                  <div style={{textAlign:"center",padding:"40px 0",color:"var(--muted)"}}>
-                    <div style={{fontSize:40,marginBottom:12}}>🌙</div>
-                    <div style={{fontWeight:700,fontSize:16,marginBottom:6}}>All quiet in the last 24 hours</div>
-                    <div style={{fontSize:13}}>No new signups, items, leads, or feedback since yesterday.</div>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ── OVERVIEW ── */}
-      {!loading&&tab==="overview"&&(
-        <div>
-          {/* KPI cards */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:24}}>
-            {[
-              { n:totalOrgs,      label:"Total Programs",   color:"var(--gold)", icon:"🎭" },
-              { n:paidOrgs,       label:"Paid Plans",       color:"#4caf50",     icon:"💳" },
-              { n:leadingPlayers, label:"Leading Players",  color:"#9c27b0",     icon:"⭐" },
-              { n:newLeads,       label:"New Beta Leads",   color:"#2196f3",     icon:"📥" },
-              { n:newFeedback,    label:"New Feedback",     color:"#ff9800",     icon:"💬" },
-              { n:analytics.views,label:"Page Views",       color:"var(--muted)",icon:"👁" },
-            ].map(k=>(
-              <div key={k.label} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px"}}>
-                <div style={{fontSize:22,marginBottom:4}}>{k.icon}</div>
-                <div style={{fontSize:28,fontWeight:800,color:k.color,lineHeight:1}}>{k.n}</div>
-                <div style={{fontSize:11,color:"var(--muted)",marginTop:2,textTransform:"uppercase",letterSpacing:.5}}>{k.label}</div>
-              </div>
-            ))}
-          </div>
-          {/* Recent signups */}
-          <div style={{marginBottom:24}}>
-            <h3 style={{fontFamily:"var(--serif)",fontSize:16,marginBottom:10}}>Recent Signups</h3>
-            <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
-                <thead><tr style={{background:"rgba(0,0,0,.1)"}}>
-                  {["Program","Director","Email","Plan","Joined"].map(h=>(
-                    <th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)"}}>{h}</th>
-                  ))}
-                </tr></thead>
-                <tbody>
-                  {orgs.slice(0,8).map(o=>(
-                    <tr key={o.id} style={{borderTop:"1px solid var(--border)"}}>
-                      <td style={{padding:"8px 12px",fontWeight:600}}>{o.name}</td>
-                      <td style={{padding:"8px 12px",color:"var(--muted)",fontSize:12}}>{o.director_name||"—"}</td>
-                      <td style={{padding:"8px 12px"}}><a href={"mailto:"+o.email} style={{color:"var(--gold)",fontSize:12}}>{o.email}</a></td>
-                      <td style={{padding:"8px 12px"}}>
-                        <span style={{fontSize:11,fontWeight:700,padding:"2px 7px",borderRadius:6,
-                          background:o.plan==="free"?"rgba(100,100,100,.15)":"rgba(76,175,80,.15)",
-                          color:o.plan==="free"?"var(--muted)":"#4caf50",textTransform:"capitalize"}}>{o.plan}</span>
-                      </td>
-                      <td style={{padding:"8px 12px",color:"var(--muted)",fontSize:12}}>{new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          {/* Recent feedback */}
-          {feedback.length>0&&(
-            <div>
-              <h3 style={{fontFamily:"var(--serif)",fontSize:16,marginBottom:10}}>Recent Feedback</h3>
-              <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                {feedback.slice(0,4).map(f=>(
-                  <div key={f.id} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:8,padding:"10px 14px",display:"flex",gap:12,alignItems:"flex-start"}}>
-                    <div style={{fontSize:18,flexShrink:0}}>{f.category==="bug"?"🐛":f.category==="feature"?"✨":f.category==="ux"?"👁":"💬"}</div>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:12,fontWeight:700,color:"var(--gold)",marginBottom:2}}>{f.org_name||"Anonymous"} · {f.category}</div>
-                      <div style={{fontSize:13,color:"var(--text)",lineHeight:1.5}}>{f.message||"(no message)"}</div>
-                    </div>
-                    <span style={{fontSize:10,color:"var(--muted)",flexShrink:0,marginTop:2}}>{new Date(f.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── USERS & LEADS ── */}
-      {!loading&&tab==="users"&&(
-        <div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
-            <div>
-              <h3 style={{fontFamily:"var(--serif)",fontSize:18,margin:"0 0 2px"}}>Programs & Beta Leads</h3>
-              <p style={{fontSize:12,color:"var(--muted)",margin:0}}>{orgs.length} programs · {leads.length} beta leads · {leads.filter(l=>!l.converted).length} not yet converted</p>
-            </div>
-            <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name, email, director…"
-              style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:8,padding:"7px 12px",fontSize:13,color:"var(--text)",width:260,outline:"none"}}/>
-          </div>
-
-          {/* Active programs */}
-          <h4 style={{fontSize:13,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:8}}>Active Accounts</h4>
-          <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden",marginBottom:20}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
-              <thead><tr style={{background:"rgba(0,0,0,.08)"}}>
-                {["Program","Director","Contact","Plan","⭐ LP","Actions"].map(h=>(
-                  <th key={h} style={{padding:"9px 12px",textAlign:"left",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)"}}>{h}</th>
-                ))}
-              </tr></thead>
-              <tbody>
-                {filteredOrgs.map(o=>(
-                  <tr key={o.id} style={{borderTop:"1px solid var(--border)"}}>
-                    <td style={{padding:"9px 12px"}}>
-                      <div style={{fontWeight:700}}>{o.name}</div>
-                      <div style={{fontSize:11,color:"var(--muted)"}}>{o.city||o.location||""}</div>
-                    </td>
-                    <td style={{padding:"9px 12px",fontSize:12}}>
-                      <div>{o.director_name||"—"}</div>
-                      {o.director_title&&<div style={{fontSize:11,color:"var(--muted)"}}>{o.director_title}</div>}
-                    </td>
-                    <td style={{padding:"9px 12px"}}><a href={"mailto:"+o.email} style={{color:"var(--gold)",fontSize:12}}>{o.email}</a></td>
-                    <td style={{padding:"9px 12px"}}>
-                      <select value={o.plan} onChange={e=>upgradeOrg(o.id,e.target.value,o.is_leading_player)}
-                        style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,padding:"3px 7px",fontSize:12,color:"var(--text)",cursor:"pointer"}}>
-                        {["free","pro","district","district_m","district_l"].map(p=><option key={p} value={p}>{p}</option>)}
-                      </select>
-                    </td>
-                    <td style={{padding:"9px 12px",textAlign:"center"}}>
-                      <button onClick={()=>upgradeOrg(o.id,o.plan,!o.is_leading_player)}
-                        style={{background:o.is_leading_player?"rgba(212,168,67,.15)":"transparent",
-                          border:"1px solid",borderColor:o.is_leading_player?"var(--gold)":"var(--border)",
-                          borderRadius:6,padding:"3px 9px",fontSize:11,fontWeight:700,cursor:"pointer",
-                          color:o.is_leading_player?"var(--gold)":"var(--muted)"}}>
-                        {o.is_leading_player?"⭐":"○"}
-                      </button>
-                    </td>
-                    <td style={{padding:"9px 12px"}}>
-                      <a href={"mailto:"+o.email+"?subject=Theatre4u — Following up"}
-                        style={{fontSize:11,color:"var(--gold)",textDecoration:"none",fontWeight:700}}>✉ Email</a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Beta leads */}
-          <h4 style={{fontSize:13,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:8}}>Beta Leads (beta.html submissions)</h4>
-          {leads.length===0
-            ?<div style={{color:"var(--muted)",fontSize:13,padding:16,textAlign:"center"}}>No beta leads yet. Share theatre4u.org/beta.html to collect leads.</div>
-            :<div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
-                <thead><tr style={{background:"rgba(0,0,0,.08)"}}>
-                  {["Program","Name","Email","Type","Location","Status","Date"].map(h=>(
-                    <th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)"}}>{h}</th>
-                  ))}
-                </tr></thead>
-                <tbody>
-                  {leads.filter(l=>!query||[l.org,l.name,l.email].some(v=>v?.toLowerCase().includes(query.toLowerCase()))).map(l=>(
-                    <tr key={l.id} style={{borderTop:"1px solid var(--border)"}}>
-                      <td style={{padding:"8px 12px",fontWeight:600}}>{l.org}</td>
-                      <td style={{padding:"8px 12px"}}>{l.name}</td>
-                      <td style={{padding:"8px 12px"}}><a href={"mailto:"+l.email} style={{color:"var(--gold)",fontSize:12}}>{l.email}</a></td>
-                      <td style={{padding:"8px 12px",color:"var(--muted)",fontSize:12}}>{l.type||"—"}</td>
-                      <td style={{padding:"8px 12px",color:"var(--muted)",fontSize:12}}>{l.location||"—"}</td>
-                      <td style={{padding:"8px 12px"}}>
-                        {l.converted
-                          ?<span style={{fontSize:11,fontWeight:700,color:"#4caf50"}}>✓ Converted</span>
-                          :<span style={{fontSize:11,color:"var(--muted)"}}>Lead only</span>}
-                      </td>
-                      <td style={{padding:"8px 12px",color:"var(--muted)",fontSize:12}}>{new Date(l.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          }
-        </div>
-      )}
-
-      {/* ── ANALYTICS ── */}
-      {!loading&&tab==="analytics"&&(
-        <div>
-          <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>Platform Analytics</h3>
-          <p style={{fontSize:13,color:"var(--muted)",marginBottom:20}}>Page view data from the track-visit edge function. All time.</p>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:24}}>
-            <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:20,textAlign:"center"}}>
-              <div style={{fontSize:40,fontWeight:800,color:"var(--gold)"}}>{analytics.views}</div>
-              <div style={{fontSize:12,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1}}>Total Page Views</div>
-            </div>
-            <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:20,textAlign:"center"}}>
-              <div style={{fontSize:40,fontWeight:800,color:"var(--gold)"}}>{analytics.sessions}</div>
-              <div style={{fontSize:12,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1}}>Unique Sessions</div>
-            </div>
-          </div>
-          {/* Views by page */}
-          <h4 style={{fontSize:13,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Views by Page</h4>
-          <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:24}}>
-            {analytics.byPage.map(([page,count])=>(
-              <div key={page} style={{display:"flex",alignItems:"center",gap:10}}>
-                <div style={{fontSize:13,width:100,color:"var(--text)",textTransform:"capitalize",flexShrink:0}}>{page}</div>
-                <div style={{flex:1,height:20,background:"var(--border)",borderRadius:4,overflow:"hidden"}}>
-                  <div style={{width:(count/Math.max(...analytics.byPage.map(([,v])=>v))*100)+"%",height:"100%",background:"var(--gold)",borderRadius:4,transition:"width .4s"}}/>
-                </div>
-                <div style={{fontSize:13,fontWeight:700,color:"var(--gold)",width:40,textAlign:"right"}}>{count}</div>
-              </div>
-            ))}
-          </div>
-          {/* Daily chart */}
-          <h4 style={{fontSize:13,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Daily Views (Last 14 days)</h4>
-          <div style={{display:"flex",gap:4,alignItems:"flex-end",height:120,padding:"0 4px",background:"var(--parch)",borderRadius:10,border:"1px solid var(--border)"}}>
-            {analytics.byDay.map(([day,count])=>(
-              <div key={day} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4,paddingBottom:8}}>
-                <div style={{fontSize:9,color:"var(--muted)",fontWeight:700}}>{count}</div>
-                <div style={{width:"100%",background:"var(--gold)",borderRadius:"3px 3px 0 0",height:Math.max(4,(count/analytics.maxDay*80))+"px",transition:"height .4s"}}/>
-                <div style={{fontSize:8,color:"var(--faint)",transform:"rotate(-45deg)",whiteSpace:"nowrap"}}>{day.slice(5)}</div>
-              </div>
-            ))}
-            {analytics.byDay.length===0&&<div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",color:"var(--muted)",fontSize:13}}>No daily data yet</div>}
-          </div>
-          <div style={{marginTop:16,background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"12px 16px",fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
-            <strong style={{color:"var(--text)"}}>💡 To track traffic sources:</strong> Add UTM parameters to your links.
-            Example: <code style={{background:"var(--parch)",padding:"1px 5px",borderRadius:4}}>theatre4u.org/beta.html?utm_source=reddit&utm_campaign=beta_launch</code>
-            The source will appear in the page_views table for analysis.
-          </div>
-        </div>
-      )}
-
-      {/* ── FEEDBACK ── */}
-      {!loading&&tab==="feedback"&&(
-        <div>
-          <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>User Feedback</h3>
-          <p style={{fontSize:13,color:"var(--muted)",marginBottom:16}}>Submitted via the feedback button in the app. Use status to track resolution.</p>
-          {feedback.length===0
-            ?<div style={{color:"var(--muted)",fontSize:13,padding:32,textAlign:"center"}}>No feedback yet.</div>
-            :<div style={{display:"flex",flexDirection:"column",gap:10}}>
-              {feedback.map(f=>(
-                <div key={f.id} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
-                    <div style={{flex:1}}>
-                      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:6,flexWrap:"wrap"}}>
-                        <span style={{fontSize:18}}>{f.category==="bug"?"🐛":f.category==="feature"?"✨":f.category==="ux"?"👁":"💬"}</span>
-                        <span style={{fontWeight:700,fontSize:13}}>{f.org_name||"Anonymous"}</span>
-                        <span style={{fontSize:11,color:"var(--muted)",textTransform:"capitalize",background:"var(--border)",padding:"1px 6px",borderRadius:4}}>{f.category}</span>
-                        {f.rating&&<span style={{fontSize:11,color:"var(--gold)"}}>{"★".repeat(f.rating)}{"☆".repeat(5-f.rating)}</span>}
-                        <span style={{fontSize:11,color:"var(--muted)"}}>{new Date(f.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</span>
-                      </div>
-                      <div style={{fontSize:13,color:"var(--text)",lineHeight:1.6}}>{f.message||"(no message)"}</div>
-                      {f.page_context&&<div style={{fontSize:11,color:"var(--muted)",marginTop:4}}>Page: {f.page_context}</div>}
-                    </div>
-                    <select value={f.status||"new"} onChange={e=>updateFeedback(f.id,e.target.value)}
-                      style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,padding:"4px 8px",fontSize:12,color:"var(--text)",cursor:"pointer",flexShrink:0}}>
-                      {["new","reviewing","resolved","wont_fix"].map(s=><option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                </div>
-              ))}
-            </div>
-          }
-        </div>
-      )}
-
-      {/* ── LABEL ORDERS ── */}
-      {!loading&&tab==="labels"&&(
-        <div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16,flexWrap:"wrap",gap:12}}>
-            <div>
-              <h3 style={{fontFamily:"var(--serif)",fontSize:18,margin:"0 0 2px"}}>🏷 Label Orders</h3>
-              <p style={{fontSize:13,color:"var(--muted)",margin:0}}>
-                {labelOrders.length} orders · {labelOrders.filter(o=>o.status==="pending").length} pending fulfillment
-              </p>
-            </div>
-            <div style={{display:"flex",gap:8}}>
-              <button className="btn btn-o btn-sm" onClick={async()=>{
-                // Export ALL unfulfilled orders with code ranges as CSV for WePrintBarcodes
-                const pending = labelOrders.filter(o=>o.status==="pending"||o.status==="processing");
-                if(pending.length===0){alert("No pending orders to export.");return;}
-                // Get all labels for pending orders
-                const orderIds = pending.map(o=>o.id);
-                const {data:labels} = await SB.from("label_pool")
-                  .select("code,seq,order_id,org_id")
-                  .in("order_id",orderIds)
-                  .eq("status","assigned")
-                  .order("seq");
-                if(!labels||labels.length===0){alert("No labels found for pending orders.");return;}
-                // WePrintBarcodes CSV format: QR_Data, Label_Text (optional)
-                const rows = ["QR_Data,Label_Text,Order_ID,Org"];
-                labels.forEach(l=>{
-                  const order = pending.find(o=>o.id===l.order_id);
-                  const url = `https://theatre4u.org/item?code=${l.code}`;
-                  rows.push(`"${url}","${l.code}","${l.order_id}","${order?.org_name||""}"`);
-                });
-                const csv = rows.join("\n");
-                const blob = new Blob([csv],{type:"text/csv"});
-                const a = document.createElement("a");
-                a.href = URL.createObjectURL(blob);
-                a.download = `theatre4u_labels_${new Date().toISOString().slice(0,10)}.csv`;
-                a.click();
-                URL.revokeObjectURL(a.href);
-              }}>
-                ⬇ Export CSV for WePrintBarcodes
-              </button>
-              <button className="btn btn-o btn-sm" onClick={()=>setTab("labels")}>↺ Refresh</button>
-            </div>
-          </div>
-
-          {/* WePrintBarcodes workflow guide */}
-          <div style={{background:"rgba(33,150,243,.05)",border:"1px solid rgba(33,150,243,.2)",
-            borderRadius:10,padding:"14px 16px",marginBottom:20}}>
-            <div style={{fontWeight:700,fontSize:13,marginBottom:10,color:"var(--text)"}}>
-              📋 Fulfillment Workflow — WePrintBarcodes.com
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
-              {[
-                {n:"1",t:"Export CSV",b:'Click "Export CSV for WePrintBarcodes" above. The file contains one row per label with the QR URL and label text.'},
-                {n:"2",t:"Go to WePrintBarcodes",b:"Visit weprintbarcodes.com → QR Code Labels. Select your label size (1.5\"×1.5\" recommended) and material (polyester or weatherproof)."},
-                {n:"3",t:"Upload CSV",b:"Choose \"Variable Data\" or \"Sequential QR Codes\". Upload your CSV file. The QR_Data column becomes the encoded URL on each label."},
-                {n:"4",t:"Proof & order",b:"Review the digital proof. Set ship-to as the program's address (from the delivery_addr column in each order). Place order."},
-                {n:"5",t:"Update status",b:"Once shipped, paste the tracking number below and change status to Shipped. The program sees this in their Labels tab."},
-              ].map(s=>(
-                <div key={s.n} style={{background:"var(--white)",borderRadius:8,padding:"10px 12px",
-                  border:"1px solid var(--border)"}}>
-                  <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
-                    <div style={{background:"#2196f3",color:"#fff",borderRadius:"50%",width:22,height:22,
-                      minWidth:22,display:"flex",alignItems:"center",justifyContent:"center",
-                      fontSize:11,fontWeight:800,flexShrink:0}}>{s.n}</div>
-                    <div>
-                      <div style={{fontWeight:700,fontSize:12,marginBottom:3}}>{s.t}</div>
-                      <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.4}}>{s.b}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div style={{marginTop:12,display:"flex",gap:12,flexWrap:"wrap",fontSize:12,color:"var(--muted)"}}>
-              <span>🔗 <a href="https://www.weprintbarcodes.com/qr-code-labels.html" target="_blank" rel="noreferrer" style={{color:"var(--gold)"}}>WePrintBarcodes QR Labels ↗</a></span>
-              <span>📏 Recommended size: 1.5" × 1.5"</span>
-              <span>🏷 Material: polyester matte (indoor) or vinyl weatherproof</span>
-              <span>📦 Ships on rolls — easier to apply than sheets</span>
-            </div>
-          </div>
-
-          {/* Pool stats */}
-          {/* Pool stats shown in PoolHealthWidget below */}
-
-          {/* Orders list */}
-          {labelOrders.length===0?(
-            <div style={{color:"var(--muted)",fontSize:13,padding:32,textAlign:"center",
-              background:"var(--parch)",borderRadius:10,border:"1px solid var(--border)"}}>
-              No label orders yet. Once programs order labels from the Labels page, they'll appear here.
-            </div>
-          ):(
-            <div style={{display:"flex",flexDirection:"column",gap:12}}>
-              {labelOrders.map(o=>{
-                let addr = null;
-                try { addr = JSON.parse(o.delivery_addr||"{}"); } catch(e){}
-                return(
-                  <div key={o.id} style={{background:"var(--parch)",border:"1px solid var(--border)",
-                    borderRadius:10,padding:"14px 16px"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",
-                      alignItems:"flex-start",gap:12,flexWrap:"wrap",marginBottom:10}}>
-                      <div>
-                        <div style={{fontWeight:700,fontSize:15}}>{o.org_name}</div>
-                        <div style={{fontSize:12,color:"var(--muted)"}}>
-                          <a href={"mailto:"+o.contact_email} style={{color:"var(--gold)"}}>{o.contact_email}</a>
-                        </div>
-                      </div>
-                      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                        <span style={{fontWeight:800,fontSize:18,color:"var(--gold)"}}>{o.item_count}</span>
-                        <span style={{fontSize:12,color:"var(--muted)",textTransform:"capitalize"}}>{o.label_type} labels</span>
-                        <select value={o.status} onChange={e=>updateLabelOrder(o.id,{status:e.target.value})}
-                          style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,
-                            padding:"4px 8px",fontSize:12,color:"var(--text)",cursor:"pointer"}}>
-                          {["pending","processing","shipped","delivered"].map(s=>(
-                            <option key={s} value={s}>
-                              {s==="pending"?"⏳ Pending":s==="processing"?"🔄 Processing":s==="shipped"?"✈ Shipped":"✓ Delivered"}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Code range */}
-                    {o.code_start&&(
-                      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8,flexWrap:"wrap"}}>
-                        <span style={{fontSize:11,color:"var(--muted)",textTransform:"uppercase",letterSpacing:.5}}>Label range:</span>
-                        <code style={{fontSize:12,fontFamily:"monospace",color:"var(--amber)",
-                          background:"rgba(196,118,26,.1)",padding:"2px 8px",borderRadius:4}}>
-                          {o.code_start} → {o.code_end}
-                        </code>
-                        <span style={{fontSize:11,color:"var(--muted)"}}>({o.item_count} labels)</span>
-                        <button className="btn btn-o btn-sm" style={{fontSize:11,padding:"2px 8px"}}
-                          onClick={async()=>{
-                            // Export just this order's labels as CSV
-                            const {data:labels} = await SB.from("label_pool")
-                              .select("code,seq")
-                              .eq("order_id",o.id)
-                              .order("seq");
-                            if(!labels||labels.length===0){alert("No labels found for this order.");return;}
-                            const rows=["QR_Data,Label_Text"];
-                            labels.forEach(l=>{
-                              rows.push(`"https://theatre4u.org/item?code=${l.code}","${l.code}"`);
-                            });
-                            const blob=new Blob([rows.join("\n")],{type:"text/csv"});
-                            const a=document.createElement("a");
-                            a.href=URL.createObjectURL(blob);
-                            a.download=`labels_${o.org_name.replace(/\s+/g,"_")}_${o.code_start}-${o.code_end}.csv`;
-                            a.click();
-                            URL.revokeObjectURL(a.href);
-                          }}>
-                          ⬇ Export This Order
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Ship-to address */}
-                    {addr&&addr.street&&(
-                      <div style={{fontSize:12,color:"var(--muted)",marginBottom:8,
-                        display:"flex",gap:6,alignItems:"flex-start"}}>
-                        <span>📦</span>
-                        <span>{addr.name} · {addr.street}, {addr.city}, {addr.state} {addr.zip}</span>
-                      </div>
-                    )}
-
-                    {/* Logo indicator */}
-                    {o.include_logo&&(
-                      <div style={{fontSize:12,color:"var(--gold)",marginBottom:8,
-                        display:"flex",gap:6,alignItems:"center"}}>
-                        <span>🖼</span>
-                        <span>Logo requested{o.logo_url?" — ":""}</span>
-                        {o.logo_url&&<a href={o.logo_url} target="_blank" rel="noreferrer"
-                          style={{color:"var(--gold)",fontSize:11}}>View logo ↗</a>}
-                        <span style={{fontSize:11,color:"var(--muted)"}}>
-                          Include in WePrintBarcodes order as header graphic
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Tracking number input */}
-                    <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                      <input
-                        defaultValue={o.tracking||""}
-                        placeholder="Add tracking number…"
-                        onBlur={async e=>{
-                          const v=e.target.value.trim();
-                          if(v&&v!==o.tracking){
-                            await updateLabelOrder(o.id,{tracking:v,
-                              status:o.status==="pending"||o.status==="processing"?"shipped":o.status});
-                          }
-                        }}
-                        style={{flex:1,minWidth:180,background:"var(--white)",border:"1px solid var(--border)",
-                          borderRadius:6,padding:"5px 10px",fontSize:12,color:"var(--text)",fontFamily:"monospace"}}/>
-                      <span style={{fontSize:11,color:"var(--faint)"}}>
-                        {new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
-                      </span>
-                      {o.amount_cents>0&&<span style={{fontSize:12,fontWeight:700,color:"#4caf50"}}>
-                        ${(o.amount_cents/100).toFixed(2)}
-                      </span>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Pool health */}
-          <PoolHealthWidget/>
-        </div>
-      )}
-
-      {/* ── TOOLS ── */}
-      {!loading&&tab==="tools"&&(
-        <div>
-          <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>Admin Tools & Quick Actions</h3>
-          <p style={{fontSize:13,color:"var(--muted)",marginBottom:20}}>Common tasks and reference SQL for managing the platform.</p>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
-            {[
-              { icon:"⭐", title:"Grant Beta Pro Access",
-                body:"Go to Users tab → find the program → set plan to 'pro' → toggle ⭐ LP to on.",
-                sql:null },
-              { icon:"✉️", title:"Email a Tester",
-                body:"Go to Users tab → click the ✉ Email link next to any program to open a pre-addressed email.",
-                sql:null },
-              { icon:"🔧", title:"Fix Email Typo in Lead",
-                body:"Run in Supabase SQL editor:",
-                sql:"UPDATE beta_leads SET email='correct@email.com'\nWHERE email='wrong@email.com';" },
-              { icon:"🔄", title:"Mark Lead as Converted",
-                body:"Run after a beta lead creates their Theatre4u account:",
-                sql:"UPDATE beta_leads SET converted=true\nWHERE email='their@email.com';" },
-              { icon:"💰", title:"Award Stage Points",
-                body:"Grant Stage Points to a tester for feedback or referral:",
-                sql:"INSERT INTO credit_ledger (org_id, amount, note)\nVALUES ('org-uuid-here', 150, 'Beta feedback reward');" },
-              { icon:"🏷", title:"Label Order Pricing Guide",
-                body:"Standard vinyl QR labels: ~$0.10–0.15/label. Weatherproof: ~$0.20–0.25/label. Minimum order: 30 labels ($3–7.50). Shipping: USPS First Class ~$4–6. Suggested retail: $12 for 30 standard, $18 for 30 weatherproof.",
-                sql:null },
-              { icon:"📊", title:"Export All Orgs as CSV",
-                body:"Run in Supabase SQL, then download results:",
-                sql:"SELECT name,email,plan,is_leading_player,director_name,city,created_at\nFROM orgs ORDER BY created_at DESC;" },
-              { icon:"🗑", title:"Remove Test Accounts",
-                body:"Go to Users tab → find test orgs → use Supabase auth dashboard to delete the user.",
-                sql:null },
-            ].map(tool=>(
-              <div key={tool.title} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px"}}>
-                <div style={{fontSize:28,marginBottom:8}}>{tool.icon}</div>
-                <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>{tool.title}</div>
-                <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:tool.sql?8:0}}>{tool.body}</div>
-                {tool.sql&&<code style={{display:"block",background:"rgba(0,0,0,.2)",borderRadius:6,padding:"8px 10px",fontSize:11,fontFamily:"monospace",color:"var(--text)",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{tool.sql}</code>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function AdminDashboard({ currentUser }) {
   const [orgs,      setOrgs]      = useState([]);
   const [counts,    setCounts]    = useState({});
@@ -6843,9 +5696,7 @@ function AdminDashboard({ currentUser }) {
   const [planF,     setPlanF]     = useState("all");
   const [saving,    setSaving]    = useState(null);
   const [msg,       setMsg]       = useState("");
-  const [adminTab,  setAdminTab]  = useState("orgs");  // orgs | analytics | feedback | codes
-  const [analytics, setAnalytics] = useState(null);
-  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [adminTab,  setAdminTab]  = useState("orgs");  // orgs | feedback | codes
   const [feedback,  setFeedback]  = useState([]);
   const [fbLoading, setFbLoading] = useState(false);
   const [codes,     setCodes]     = useState([]);
@@ -6910,7 +5761,7 @@ function AdminDashboard({ currentUser }) {
   const mrr = (byPlan.pro * 12) + (byPlan.district * 49);
 
   const planColor = { free: "rgba(255,255,255,.2)", pro: "var(--gold)", district: "#42a5f5" };
-  const planLabel = { free: "Free", pro: "Pro", district: "District S", district_m: "District M", district_l: "District L" };
+  const planLabel = { free: "Free", pro: "Pro", district: "District" };
 
   return (
     <div style={{ position: "relative" }}>
@@ -6933,7 +5784,7 @@ function AdminDashboard({ currentUser }) {
 
         {/* Tab nav */}
         <div className="tabs" style={{ marginBottom: 20 }}>
-          {[["orgs","🏛 Organizations"],["analytics","📈 Analytics"],["inventory","📦 Inventories"],["accounts","⚠️ Accounts"],["feedback","💬 Feedback"],["codes","🎟 Beta Codes"]].map(([id,lbl])=>(
+          {[["orgs","🏛 Organizations"],["inventory","📦 Inventories"],["accounts","⚠️ Accounts"],["feedback","💬 Feedback"],["codes","🎟 Beta Codes"]].map(([id,lbl])=>(
             <button key={id} className={`tab ${adminTab===id?"on":""}`} onClick={()=>setAdminTab(id)}>{lbl}
               {id==="feedback"&&feedback.filter(f=>f.status==="new").length>0&&(
                 <span style={{background:"var(--red)",color:"#fff",borderRadius:8,padding:"1px 6px",fontSize:10,fontWeight:800,marginLeft:5}}>
@@ -6943,32 +5794,6 @@ function AdminDashboard({ currentUser }) {
             </button>
           ))}
         </div>
-
-        {adminTab==="analytics"&&(
-          <AdminAnalyticsTab analytics={analytics} loading={analyticsLoading}
-            onLoad={async()=>{
-              setAnalyticsLoading(true);
-              // Page views by day and page
-              const { data: pvDay } = await SB.from("page_views")
-                .select("page,created_at")
-                .gte("created_at", new Date(Date.now()-30*864e5).toISOString())
-                .order("created_at");
-              // Unique sessions last 7 days
-              const { data: pvWeek } = await SB.from("page_views")
-                .select("session_id,page,utm_source,created_at")
-                .gte("created_at", new Date(Date.now()-7*864e5).toISOString());
-              // Recent signups
-              const { data: recentOrgs } = await SB.from("orgs")
-                .select("id,name,email,plan,created_at")
-                .order("created_at", { ascending:false }).limit(20);
-              // Total counts
-              const { count: totalViews } = await SB.from("page_views").select("*",{count:"exact",head:true});
-              const { count: totalSessions } = await SB.from("page_views").select("session_id",{count:"exact",head:true});
-              setAnalytics({ pvDay: pvDay||[], pvWeek: pvWeek||[], recentOrgs: recentOrgs||[], totalViews, totalSessions });
-              setAnalyticsLoading(false);
-            }}
-          />
-        )}
 
         {adminTab==="orgs"&&(<>
         {/* District Assignment Panel */}
@@ -7599,8 +6424,617 @@ function ProductionForm({ prod, onSave, onCancel }) {
   );
 }
 
+// ── Shared: Print Production Report ──────────────────────────────────────────
+async function printProductionReport(prod, needs, prodItems, allItems, org) {
+  const today = new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
+  const orgName = org?.name || "Theatre Program";
+
+  // Status helpers
+  const statusLabel = { needed:"Still Needed", searching:"Searching", found:"Found",
+    acquired:"Acquired", not_needed:"Not Needed" };
+  const sourceLabel  = { unknown:"TBD", in_house:"From Our Inventory",
+    exchange:"Backstage Exchange", borrow:"Borrowing", buy:"Purchasing", donate:"Donated" };
+
+  // Stats
+  const totalNeeds = needs.length;
+  const acquiredN  = needs.filter(n=>n.status==="acquired").length;
+  const pct        = totalNeeds > 0 ? Math.round(acquiredN/totalNeeds*100) : 0;
+  const estCost    = needs.reduce((s,n)=>s+(parseFloat(n.estimated_cost)||0),0);
+  const actCost    = needs.reduce((s,n)=>s+(parseFloat(n.actual_cost)||0),0);
+
+  // Group needs by category
+  const needsByCat = {};
+  needs.forEach(n=>{
+    const cat = n.category||"other";
+    if(!needsByCat[cat]) needsByCat[cat]=[];
+    needsByCat[cat].push(n);
+  });
+
+  // Group inventory items by category
+  const enriched = prodItems.map(pi=>({...pi, item:allItems.find(i=>i.id===pi.item_id)}))
+    .filter(pi=>pi.item);
+  const invByCat = {};
+  enriched.forEach(pi=>{
+    const cat = pi.item?.category||"other";
+    if(!invByCat[cat]) invByCat[cat]=[];
+    invByCat[cat].push(pi);
+  });
+
+  const statusColor = { needed:"#c0392b", searching:"#e67e22", found:"#2980b9",
+    acquired:"#27ae60", not_needed:"#95a5a6" };
+
+  const needsHTML = Object.entries(needsByCat).map(([catId, catNeeds])=>{
+    const cat = catId.charAt(0).toUpperCase()+catId.slice(1);
+    const rows = catNeeds.map((n,i)=>`
+      <tr style="background:${i%2===0?"#fff":"#faf7f2"}">
+        <td style="padding:7px 12px;border-bottom:1px solid #eee">${n.name}${n.qty_needed>1?` ×${n.qty_needed}`:""}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid #eee">
+          <span style="color:${statusColor[n.status]||"#666"};font-weight:700;font-size:11px">
+            ${statusLabel[n.status]||n.status}
+          </span>
+        </td>
+        <td style="padding:7px 12px;border-bottom:1px solid #eee;font-size:12px;color:#666">
+          ${sourceLabel[n.source]||n.source}
+        </td>
+        <td style="padding:7px 12px;border-bottom:1px solid #eee;font-size:12px;color:#666">
+          ${n.resolved_notes||n.notes||"—"}
+        </td>
+        <td style="padding:7px 12px;border-bottom:1px solid #eee;text-align:right;font-size:12px">
+          ${n.actual_cost?`$${parseFloat(n.actual_cost).toFixed(2)}`:n.estimated_cost?`~$${parseFloat(n.estimated_cost).toFixed(2)}`:"—"}
+        </td>
+      </tr>`).join("");
+    return `
+      <div style="margin-bottom:24px;break-inside:avoid">
+        <div style="background:#f5ede0;padding:7px 12px;font-weight:700;font-size:12px;
+          text-transform:uppercase;letter-spacing:1px;color:#8a6a20;border-radius:4px 4px 0 0">
+          ${cat} (${catNeeds.length})
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:#fff8ef">
+            <th style="padding:6px 12px;text-align:left;border-bottom:2px solid #e8d89a;color:#666;font-size:11px">Item</th>
+            <th style="padding:6px 12px;text-align:left;border-bottom:2px solid #e8d89a;color:#666;font-size:11px">Status</th>
+            <th style="padding:6px 12px;text-align:left;border-bottom:2px solid #e8d89a;color:#666;font-size:11px">Source</th>
+            <th style="padding:6px 12px;text-align:left;border-bottom:2px solid #e8d89a;color:#666;font-size:11px">Notes</th>
+            <th style="padding:6px 12px;text-align:right;border-bottom:2px solid #e8d89a;color:#666;font-size:11px">Cost</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }).join("");
+
+  const invHTML = Object.entries(invByCat).length > 0 ? Object.entries(invByCat).map(([catId,items])=>{
+    const cat = catId.charAt(0).toUpperCase()+catId.slice(1);
+    const rows = items.map((pi,i)=>`
+      <tr style="background:${i%2===0?"#fff":"#faf7f2"}">
+        <td style="padding:7px 12px;border-bottom:1px solid #eee">${pi.item?.name||"—"}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid #eee;font-size:12px;color:#666">${pi.item?.condition||"—"}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid #eee;font-size:12px;color:#666">${pi.item?.location||"—"}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid #eee">
+          <span style="font-size:11px;font-weight:700;color:${
+            pi.status==="confirmed"||pi.status==="returned"?"#27ae60":
+            pi.status==="needed"?"#c0392b":"#e67e22"}">
+            ${pi.status||"needed"}
+          </span>
+        </td>
+      </tr>`).join("");
+    return `
+      <div style="margin-bottom:24px;break-inside:avoid">
+        <div style="background:#f5ede0;padding:7px 12px;font-weight:700;font-size:12px;
+          text-transform:uppercase;letter-spacing:1px;color:#8a6a20;border-radius:4px 4px 0 0">
+          ${cat} (${items.length})
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:#fff8ef">
+            <th style="padding:6px 12px;text-align:left;border-bottom:2px solid #e8d89a;color:#666;font-size:11px">Item</th>
+            <th style="padding:6px 12px;text-align:left;border-bottom:2px solid #e8d89a;color:#666;font-size:11px">Condition</th>
+            <th style="padding:6px 12px;text-align:left;border-bottom:2px solid #e8d89a;color:#666;font-size:11px">Location</th>
+            <th style="padding:6px 12px;text-align:left;border-bottom:2px solid #e8d89a;color:#666;font-size:11px">Status</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }).join("") : '<p style="color:#888;font-style:italic;font-size:13px">No inventory items assigned to this production.</p>';
+
+  const html = `<!DOCTYPE html><html><head><title>${prod.name} — Production Report</title>
+  <style>
+    body{font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1008;margin:0;padding:0}
+    @media print{body{margin:0}.no-print{display:none}}
+    h1,h2,h3{font-family:Georgia,serif}
+  </style></head><body>
+  <div style="max-width:860px;margin:0 auto;padding:40px 32px">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;
+      margin-bottom:32px;padding-bottom:20px;border-bottom:3px solid #1a1200">
+      <div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;
+          color:#c4922a;margin-bottom:6px">Production Report · Theatre4u™</div>
+        <h1 style="font-size:32px;font-weight:700;color:#1a1200;margin:0 0 4px">${prod.name}</h1>
+        ${prod.show_title?`<div style="font-size:16px;color:#666;margin-bottom:4px">${prod.show_title}</div>`:""}
+        <div style="font-size:13px;color:#888">${orgName}</div>
+      </div>
+      <div style="text-align:right">
+        ${prod.opening_date?`<div style="font-size:13px;color:#444;margin-bottom:3px">
+          <strong>Opens:</strong> ${new Date(prod.opening_date).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}
+        </div>`:""}
+        ${prod.closing_date?`<div style="font-size:13px;color:#444;margin-bottom:3px">
+          <strong>Closes:</strong> ${new Date(prod.closing_date).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}
+        </div>`:""}
+        <div style="font-size:11px;color:#aaa;margin-top:8px">Generated ${today}</div>
+      </div>
+    </div>
+
+    <!-- Summary stats -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:32px">
+      ${[
+        ["Needs List Items", totalNeeds],
+        ["Items Sourced",    acquiredN],
+        ["Progress",         pct+"%"],
+        ["Items from Inventory", enriched.length],
+      ].map(([l,v])=>`
+        <div style="border:1px solid #e8dcc8;border-radius:8px;padding:14px;text-align:center;background:#fffcf7">
+          <div style="font-size:26px;font-weight:700;font-family:Georgia,serif;color:#c4922a">${v}</div>
+          <div style="font-size:10px;color:#8a7a60;margin-top:3px;text-transform:uppercase;letter-spacing:.5px">${l}</div>
+        </div>`).join("")}
+    </div>
+
+    ${(estCost>0||actCost>0)?`
+    <!-- Cost summary -->
+    <div style="background:#fffcf7;border:1px solid #e8d89a;border-radius:8px;padding:16px 20px;
+      margin-bottom:28px;display:flex;gap:32px">
+      ${estCost>0?`<div><div style="font-size:11px;color:#8a7a60;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Estimated Budget</div>
+        <div style="font-size:22px;font-weight:700;font-family:Georgia,serif;color:#c4922a">$${estCost.toFixed(2)}</div></div>`:""}
+      ${actCost>0?`<div><div style="font-size:11px;color:#8a7a60;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Actual Spent</div>
+        <div style="font-size:22px;font-weight:700;font-family:Georgia,serif;color:#1a1200">$${actCost.toFixed(2)}</div></div>`:""}
+    </div>`:""}
+
+    ${prod.notes?`
+    <!-- Director notes -->
+    <div style="background:#f5f5f5;border-left:4px solid #c4922a;padding:12px 16px;
+      border-radius:0 6px 6px 0;margin-bottom:28px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+        color:#8a7a60;margin-bottom:6px">Director's Notes</div>
+      <div style="font-size:13px;color:#444;line-height:1.7">${prod.notes}</div>
+    </div>`:""}
+
+    <!-- Needs List -->
+    ${totalNeeds>0?`
+    <h2 style="font-size:20px;font-weight:700;color:#1a1200;margin:0 0 16px;
+      padding-bottom:8px;border-bottom:2px solid #e8dcc8">
+      📋 Needs List — What This Production Requires
+    </h2>
+    ${needsHTML}`:""}
+
+    <!-- From Inventory -->
+    <h2 style="font-size:20px;font-weight:700;color:#1a1200;margin:28px 0 16px;
+      padding-bottom:8px;border-bottom:2px solid #e8dcc8">
+      📦 Items from Your Inventory
+    </h2>
+    ${invHTML}
+
+    <!-- Footer -->
+    <div style="margin-top:40px;padding-top:16px;border-top:1px solid #eee;
+      font-size:11px;color:#aaa;text-align:center">
+      Generated by Theatre4u™ · theatre4u.org · ${today}
+    </div>
+  </div>
+  <script>window.onload=function(){window.print()}</script>
+  </body></html>`;
+
+  const w = window.open("","_blank","width=1000,height=750");
+  if(w){ w.document.write(html); w.document.close(); }
+}
+
+// ── Production Needs Checklist ────────────────────────────────────────────────
+// Planning layer: list what you need BEFORE you have it, then track how you source it
+
+const NEED_STATUSES = [
+  { key:"needed",     label:"Still Needed",  color:"var(--red)",   icon:"🔴" },
+  { key:"searching",  label:"Searching",     color:"var(--gold)",  icon:"🟡" },
+  { key:"found",      label:"Found",         color:"var(--blue)",  icon:"🔵" },
+  { key:"acquired",   label:"Acquired",      color:"var(--green)", icon:"🟢" },
+  { key:"not_needed", label:"Not Needed",    color:"var(--muted)", icon:"⚫" },
+];
+const NEED_SOURCES = [
+  { key:"unknown",   label:"Source TBD"      },
+  { key:"in_house",  label:"From Our Inventory" },
+  { key:"exchange",  label:"Backstage Exchange" },
+  { key:"borrow",    label:"Borrowing"       },
+  { key:"buy",       label:"Purchasing"      },
+  { key:"donate",    label:"Donated"         },
+];
+
+function ProductionNeedsChecklist({ prod, allItems, userId, org, onNavigateToExchange }) {
+  const [needs,    setNeeds]   = useState([]);
+  const [loading,  setLoading] = useState(true);
+  const [adding,   setAdding]  = useState(false);
+  const [editing,  setEditing] = useState(null);
+  const [filter,   setFilter]  = useState("all"); // all | needed | acquired
+  const [catFilter,setCatFilter]= useState("all");
+
+  // Blank need form
+  const blank = () => ({
+    name:"", category:"costumes", qty_needed:1,
+    notes:"", status:"needed", source:"unknown",
+    resolved_item_id:null, resolved_notes:"",
+    estimated_cost:"", actual_cost:"",
+  });
+  const [form, setForm] = useState(blank());
+  const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+
+  const load = async () => {
+    const { data } = await SB.from("production_needs")
+      .select("*")
+      .eq("production_id", prod.id)
+      .order("added_at");
+    setNeeds(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, [prod.id]);
+
+  const save = async () => {
+    if (!form.name.trim()) return;
+    const payload = {
+      ...form,
+      production_id: prod.id,
+      org_id: userId,
+      qty_needed: parseInt(form.qty_needed) || 1,
+      estimated_cost: form.estimated_cost ? parseFloat(form.estimated_cost) : null,
+      actual_cost: form.actual_cost ? parseFloat(form.actual_cost) : null,
+      updated_at: new Date().toISOString(),
+    };
+    // Strip id from payload
+    const { id: _id, ...rest } = payload;
+    if (editing) {
+      await SB.from("production_needs").update(rest).eq("id", editing.id);
+      setNeeds(p => p.map(n => n.id === editing.id ? { ...n, ...rest, id:editing.id } : n));
+    } else {
+      const { data } = await SB.from("production_needs").insert(payload).select().single();
+      if (data) setNeeds(p => [...p, data]);
+    }
+    setAdding(false); setEditing(null); setForm(blank());
+  };
+
+  const deleteNeed = async (id) => {
+    await SB.from("production_needs").delete().eq("id", id);
+    setNeeds(p => p.filter(n => n.id !== id));
+  };
+
+  const quickStatus = async (id, status) => {
+    await SB.from("production_needs").update({ status, updated_at:new Date().toISOString() }).eq("id", id);
+    setNeeds(p => p.map(n => n.id === id ? { ...n, status } : n));
+  };
+
+  const linkToInventory = async (needId, itemId) => {
+    await SB.from("production_needs").update({
+      resolved_item_id: itemId,
+      source: "in_house",
+      status: "acquired",
+      updated_at: new Date().toISOString()
+    }).eq("id", needId);
+    setNeeds(p => p.map(n => n.id === needId
+      ? { ...n, resolved_item_id:itemId, source:"in_house", status:"acquired" } : n));
+  };
+
+  // Filtered view
+  const filtered = needs.filter(n => {
+    if (filter === "needed" && (n.status === "acquired" || n.status === "not_needed")) return false;
+    if (filter === "acquired" && n.status !== "acquired") return false;
+    if (catFilter !== "all" && n.category !== catFilter) return false;
+    return true;
+  });
+
+  // Stats
+  const total    = needs.length;
+  const acquired = needs.filter(n => n.status === "acquired").length;
+  const pct      = total > 0 ? Math.round(acquired / total * 100) : 0;
+
+  // Categories present in this needs list
+  const catsUsed = [...new Set(needs.map(n => n.category))];
+
+  const card = { background:"var(--parch)", border:"1px solid var(--border)",
+    borderRadius:10, overflow:"hidden" };
+
+  const NeedForm = ({ onDone }) => (
+    <div style={{ ...card, padding:20, marginBottom:16 }}>
+      <div style={{ fontWeight:700, fontSize:14, marginBottom:16, color:"var(--gold)" }}>
+        {editing ? "Edit Item" : "Add to Needs List"}
+      </div>
+
+      {/* Name + Qty row */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr auto", gap:10, marginBottom:12 }}>
+        <div className="fg" style={{ margin:0 }}>
+          <label className="fl">Item Name *</label>
+          <input className="fi" value={form.name} autoFocus
+            onChange={e=>upd("name",e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&save()}
+            placeholder="e.g. Victorian Ball Gown, Magic Wand, Crown (3)"/>
+        </div>
+        <div className="fg" style={{ margin:0, width:70 }}>
+          <label className="fl">Qty</label>
+          <input className="fi" type="number" min="1" value={form.qty_needed}
+            onChange={e=>upd("qty_needed",e.target.value)}/>
+        </div>
+      </div>
+
+      {/* Category */}
+      <div className="fg" style={{ marginBottom:12 }}>
+        <label className="fl">Category</label>
+        <select className="fs" value={form.category} onChange={e=>upd("category",e.target.value)}>
+          {CATS.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+        </select>
+      </div>
+
+      {/* Source + Status row */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
+        <div className="fg" style={{ margin:0 }}>
+          <label className="fl">How will you source it?</label>
+          <select className="fs" value={form.source} onChange={e=>upd("source",e.target.value)}>
+            {NEED_SOURCES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+          </select>
+        </div>
+        <div className="fg" style={{ margin:0 }}>
+          <label className="fl">Status</label>
+          <select className="fs" value={form.status} onChange={e=>upd("status",e.target.value)}>
+            {NEED_STATUSES.map(s => <option key={s.key} value={s.key}>{s.icon} {s.label}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* Cost estimates — show only if buying */}
+      {(form.source === "buy" || form.source === "borrow") && (
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
+          <div className="fg" style={{ margin:0 }}>
+            <label className="fl">Est. Cost ($)</label>
+            <input className="fi" type="number" min="0" step="0.01"
+              value={form.estimated_cost} onChange={e=>upd("estimated_cost",e.target.value)}
+              placeholder="0.00"/>
+          </div>
+          <div className="fg" style={{ margin:0 }}>
+            <label className="fl">Actual Cost ($)</label>
+            <input className="fi" type="number" min="0" step="0.01"
+              value={form.actual_cost} onChange={e=>upd("actual_cost",e.target.value)}
+              placeholder="0.00"/>
+          </div>
+        </div>
+      )}
+
+      {/* Resolved notes */}
+      <div className="fg" style={{ marginBottom:16 }}>
+        <label className="fl">Notes</label>
+        <input className="fi" value={form.resolved_notes||form.notes||""}
+          onChange={e=>upd("resolved_notes",e.target.value)}
+          placeholder='e.g. "Check with Lincoln High", "Order from Amazon", "Grandma has one"'/>
+      </div>
+
+      <div style={{ display:"flex", gap:8, justifyContent:"flex-end" }}>
+        <button className="btn btn-o btn-sm" onClick={onDone}>Cancel</button>
+        <button className="btn btn-g btn-sm" disabled={!form.name.trim()} onClick={save}>
+          {editing ? "Save Changes" : "Add to List"}
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div>
+      {/* Stats row */}
+      {total > 0 && (
+        <div style={{ marginBottom:16 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", fontSize:12,
+            color:"var(--muted)", marginBottom:5 }}>
+            <span>{acquired} of {total} items sourced</span>
+            <span style={{ fontWeight:700, color:pct===100?"var(--green)":"var(--ink)" }}>{pct}%</span>
+          </div>
+          <div style={{ height:6, background:"rgba(255,255,255,.08)", borderRadius:4, overflow:"hidden" }}>
+            <div style={{ height:"100%", width:pct+"%", borderRadius:4,
+              background: pct===100 ? "var(--green)" : prod.color||"var(--gold)",
+              transition:"width .5s ease" }}/>
+          </div>
+
+          {/* Cost summary */}
+          {needs.some(n=>n.estimated_cost||n.actual_cost) && (
+            <div style={{ display:"flex", gap:16, marginTop:10 }}>
+              {[
+                { label:"Estimated", val: needs.reduce((s,n)=>s+(parseFloat(n.estimated_cost)||0),0) },
+                { label:"Actual",    val: needs.reduce((s,n)=>s+(parseFloat(n.actual_cost)||0),0) },
+              ].map(s => s.val > 0 && (
+                <div key={s.label} style={{ fontSize:12, color:"var(--muted)" }}>
+                  {s.label}: <strong style={{ color:"var(--text)" }}>${s.val.toFixed(2)}</strong>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Toolbar */}
+      <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:14, flexWrap:"wrap" }}>
+        {/* Filter pills */}
+        <div style={{ display:"flex", gap:5 }}>
+          {[["all","All"],["needed","Still Needed"],["acquired","Acquired"]].map(([k,l])=>(
+            <button key={k} onClick={()=>setFilter(k)}
+              className={"btn btn-o btn-sm"+(filter===k?" btn-active":"")}
+              style={{ padding:"4px 10px", fontSize:11,
+                background:filter===k?"var(--gold)":"var(--parch)",
+                color:filter===k?"#1a1000":"var(--muted)",
+                borderColor:filter===k?"var(--gold)":"var(--border)" }}>
+              {l}
+            </button>
+          ))}
+        </div>
+
+        <button className="btn btn-g btn-sm" style={{ marginLeft:"auto" }}
+          onClick={()=>{ setEditing(null); setForm(blank()); setAdding(true); }}>
+          + Add Item
+        </button>
+      </div>
+
+      {/* Add / Edit form */}
+      {(adding || editing) && (
+        <NeedForm onDone={()=>{ setAdding(false); setEditing(null); setForm(blank()); }}/>
+      )}
+
+      {/* Exchange shortcut callout */}
+      {needs.some(n=>n.status==="needed"||n.status==="searching") && org?.marketplace_enabled && (
+        <div style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px",
+          background:"rgba(82,153,224,.08)", border:"1px solid rgba(82,153,224,.2)",
+          borderRadius:8, marginBottom:14, cursor:"pointer" }}
+          onClick={onNavigateToExchange}>
+          <span style={{ fontSize:20 }}>🏪</span>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:"var(--blue)" }}>Check Backstage Exchange</div>
+            <div style={{ fontSize:11, color:"var(--muted)" }}>
+              Other programs near you may have items on your needs list available to borrow or rent.
+            </div>
+          </div>
+          <span style={{ color:"var(--blue)", fontSize:18 }}>→</span>
+        </div>
+      )}
+
+      {/* Needs list */}
+      {loading ? (
+        <div style={{ textAlign:"center", padding:32, color:"var(--muted)" }}>Loading…</div>
+      ) : total === 0 ? (
+        <div style={{ textAlign:"center", padding:36 }}>
+          <div style={{ fontSize:36, marginBottom:10 }}>📋</div>
+          <h3 style={{ fontFamily:"var(--serif)", marginBottom:8 }}>Start Your Needs List</h3>
+          <p style={{ color:"var(--muted)", fontSize:13, lineHeight:1.7, maxWidth:380, margin:"0 auto 16px" }}>
+            Add every prop, costume, and piece of gear your production needs —
+            even before you know where it's coming from. Then track how you source each one.
+          </p>
+          <button className="btn btn-g" onClick={()=>{ setForm(blank()); setAdding(true); }}>
+            + Add Your First Item
+          </button>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div style={{ textAlign:"center", padding:20, color:"var(--muted)", fontSize:13 }}>
+          No items match this filter.
+        </div>
+      ) : (
+        // Group by category
+        Object.entries(
+          filtered.reduce((acc, n) => {
+            const cat = n.category || "other";
+            if (!acc[cat]) acc[cat] = [];
+            acc[cat].push(n);
+            return acc;
+          }, {})
+        ).map(([catId, catNeeds]) => {
+          const cat = CAT[catId] || CAT.other;
+          return (
+            <div key={catId} style={{ marginBottom:20 }}>
+              <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase",
+                letterSpacing:1.5, color:cat.color, marginBottom:8,
+                display:"flex", alignItems:"center", gap:6 }}>
+                {cat.icon} {cat.label} ({catNeeds.length})
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                {catNeeds.map(need => {
+                  const st  = NEED_STATUSES.find(s=>s.key===need.status)||NEED_STATUSES[0];
+                  const src = NEED_SOURCES.find(s=>s.key===need.source)||NEED_SOURCES[0];
+                  const linkedItem = need.resolved_item_id
+                    ? allItems.find(i=>i.id===need.resolved_item_id) : null;
+
+                  return (
+                    <div key={need.id} style={{
+                      padding:"10px 12px", borderRadius:8,
+                      background:"rgba(255,255,255,.03)",
+                      border:`1px solid ${need.status==="acquired"
+                        ? "rgba(82,199,132,.25)"
+                        : need.status==="not_needed"
+                        ? "var(--border)"
+                        : "var(--border)"}`,
+                      opacity: need.status==="not_needed" ? 0.5 : 1,
+                    }}>
+                      <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+                        {/* Status icon — click to cycle */}
+                        <div style={{ fontSize:16, cursor:"pointer", flexShrink:0, marginTop:1 }}
+                          title="Click to mark acquired"
+                          onClick={()=>{
+                            const next = need.status==="needed"?"searching"
+                              :need.status==="searching"?"found"
+                              :need.status==="found"?"acquired"
+                              :"needed";
+                            quickStatus(need.id, next);
+                          }}>
+                          {st.icon}
+                        </div>
+
+                        {/* Main info */}
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontWeight:600, fontSize:13,
+                            textDecoration:need.status==="not_needed"?"line-through":"none",
+                            color:need.status==="acquired"?"var(--green)":"var(--text)" }}>
+                            {need.name}
+                            {need.qty_needed > 1 && (
+                              <span style={{ fontSize:11, color:"var(--muted)",
+                                marginLeft:6, fontWeight:400 }}>×{need.qty_needed}</span>
+                            )}
+                          </div>
+                          <div style={{ fontSize:11, color:"var(--muted)", marginTop:2,
+                            display:"flex", gap:8, flexWrap:"wrap" }}>
+                            <span>{src.label}</span>
+                            {need.resolved_notes && <span>· {need.resolved_notes}</span>}
+                            {linkedItem && (
+                              <span style={{ color:"var(--green)" }}>
+                                · Linked: {linkedItem.name}
+                              </span>
+                            )}
+                            {(need.estimated_cost||need.actual_cost) && (
+                              <span>
+                                {need.actual_cost
+                                  ? `· Actual $${parseFloat(need.actual_cost).toFixed(2)}`
+                                  : `· Est. $${parseFloat(need.estimated_cost).toFixed(2)}`}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{ display:"flex", gap:5, flexShrink:0 }}>
+                          {/* Link to inventory */}
+                          {need.status !== "acquired" && allItems.length > 0 && (
+                            <select
+                              onChange={e=>{ if(e.target.value) linkToInventory(need.id, e.target.value); }}
+                              value=""
+                              style={{ background:"var(--parch)", border:"1px solid var(--border)",
+                                borderRadius:6, padding:"2px 6px", fontSize:10,
+                                color:"var(--muted)", fontFamily:"inherit", cursor:"pointer" }}
+                              title="Link to an item in your inventory">
+                              <option value="">Link inventory…</option>
+                              {allItems
+                                .filter(i=>i.category===need.category || need.category==="other")
+                                .slice(0,30)
+                                .map(i=>(
+                                  <option key={i.id} value={i.id}>{i.name}</option>
+                                ))}
+                            </select>
+                          )}
+                          <button onClick={()=>{ setEditing(need); setForm({...need, estimated_cost:need.estimated_cost||"", actual_cost:need.actual_cost||""}); setAdding(false); }}
+                            style={{ background:"none", border:"none", color:"var(--muted)",
+                              cursor:"pointer", fontSize:13, padding:"0 3px" }}>✏️</button>
+                          <button onClick={()=>deleteNeed(need.id)}
+                            style={{ background:"none", border:"none", color:"var(--muted)",
+                              cursor:"pointer", fontSize:14, padding:"0 3px" }}>✕</button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
 // ── Production Detail (the folder view) ────────────────────────────────────
-function ProductionDetail({ prod, allItems, userId, onEdit, onDelete, onClose }) {
+function ProductionDetail({ prod, allItems, userId, onEdit, onDelete, onClose, onNavigateTo, org }) {
+  const [detailTab, setDetailTab] = useState("needs"); // needs | inventory
   const [prodItems, setProdItems] = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [search,    setSearch]    = useState("");
@@ -7680,6 +7114,17 @@ function ProductionDetail({ prod, allItems, userId, onEdit, onDelete, onClose })
         </div>
         <div style={{ display:"flex", gap:6 }}>
           <button className="btn btn-o btn-sm" onClick={onEdit}>Edit</button>
+          <button className="btn btn-o btn-sm"
+            onClick={async()=>{
+              const { data:needsData } = await SB.from("production_needs")
+                .select("*").eq("production_id", prod.id).order("added_at");
+              const { data:piData } = await SB.from("production_items")
+                .select("*").eq("production_id", prod.id).order("added_at");
+              printProductionReport(prod, needsData||[], piData||[], allItems, org);
+            }}
+            style={{ color:"var(--gold)", borderColor:"rgba(212,168,67,.3)" }}>
+            🖨 Print Report
+          </button>
           <button className="btn btn-o btn-sm" style={{ color:"var(--red)" }}
             onClick={()=>{ if(window.confirm("Delete this production?")) onDelete(prod.id); }}>
             Delete
@@ -7702,6 +7147,38 @@ function ProductionDetail({ prod, allItems, userId, onEdit, onDelete, onClose })
           </div>
         </div>
       )}
+
+      {/* Tabs */}
+      <div style={{ display:"flex", gap:2, marginBottom:18, borderBottom:"1px solid var(--border)", paddingBottom:0 }}>
+        {[
+          { key:"needs",     label:"📋 Needs List",      desc:"Plan what you need" },
+          { key:"inventory", label:"📦 From Inventory",  desc:"Items from your collection" },
+        ].map(t => (
+          <button key={t.key} onClick={()=>setDetailTab(t.key)}
+            style={{ padding:"8px 16px", background:"none", border:"none",
+              borderBottom: detailTab===t.key ? "2px solid var(--gold)" : "2px solid transparent",
+              color: detailTab===t.key ? "var(--gold)" : "var(--muted)",
+              fontWeight: detailTab===t.key ? 700 : 400,
+              fontSize:13, cursor:"pointer", fontFamily:"inherit",
+              marginBottom:-1, transition:"all .15s" }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Needs List tab */}
+      {detailTab === "needs" && (
+        <ProductionNeedsChecklist
+          prod={prod}
+          allItems={allItems}
+          userId={userId}
+          org={org}
+          onNavigateToExchange={()=>onNavigateTo&&onNavigateTo("marketplace")}
+        />
+      )}
+
+      {/* From Inventory tab */}
+      {detailTab === "inventory" && (<>
 
       {/* Search */}
       {total > 3 && (
@@ -7780,12 +7257,13 @@ function ProductionDetail({ prod, allItems, userId, onEdit, onDelete, onClose })
           <div style={{ fontSize:13, color:"var(--ink)", lineHeight:1.6 }}>{prod.notes}</div>
         </div>
       )}
+      </>)}
     </div>
   );
 }
 
 // ── Productions Page ───────────────────────────────────────────────────────
-function Productions({ userId, allItems }) {
+function Productions({ userId, allItems, org, onNavigateTo }) {
   const [productions, setProductions] = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [modal,       setModal]       = useState(null); // "new" | "edit" | "detail"
@@ -7960,6 +7438,8 @@ function Productions({ userId, allItems }) {
             prod={active}
             allItems={allItems}
             userId={userId}
+            org={org}
+            onNavigateTo={onNavigateTo}
             onEdit={()=>setModal("edit")}
             onDelete={deleteProd}
             onClose={()=>{ setModal(null); setActive(null); load(); }}
@@ -9273,63 +8753,6 @@ function CommunityGate({userId, org, setOrg, plan}) {
     // no need to setJoining(false) — component will re-render as CommunityPage
   };
 
-  // Free plan — show page blurred with upgrade overlay
-  if (plan === "free" && !org?.community_enabled) {
-    return (
-      <div style={{position:"relative",minHeight:"80vh",overflow:"hidden"}}>
-        {/* Blurred background preview */}
-        <div style={{filter:"blur(3px)",opacity:.45,pointerEvents:"none",userSelect:"none"}}>
-          <img src={usp("photo-1503095396549-807759245b35",1400,900)} alt="" className="page-bg-img"/>
-          <div style={{padding:"32px 36px 0"}}>
-            <div className="hero-wrap" style={{height:230}}>
-              <img src={usp("photo-1503095396549-807759245b35",1100,290)} alt="Community" loading="eager"/>
-              <div className="hero-fade"/>
-              <div className="hero-body">
-                <div className="hero-eyebrow">🎪 Theatre Community</div>
-                <h1 className="hero-title" style={{fontSize:44}}>Community Board</h1>
-              </div>
-              <div className="hero-bar"/>
-            </div>
-          </div>
-          <div style={{padding:"24px 36px",display:"flex",flexDirection:"column",gap:12}}>
-            {["Opening Night — The Wizard of Oz · Ocean View Drama","Fall Musical Auditions Open — Lakewood Drama","Seeking: Fog machine for June · Edison Arts","Free to good home: 30 costume pieces · Valley PAC"].map(p=>(
-              <div key={p} className="card card-p" style={{opacity:.8}}>
-                <div style={{fontSize:13,fontWeight:600}}>{p}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-        {/* Upgrade overlay */}
-        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"flex-start",justifyContent:"center",
-          background:"rgba(10,7,18,.65)",backdropFilter:"blur(2px)",zIndex:10,
-          padding:"clamp(12px,4vw,40px)",overflowY:"auto"}}>
-          <div className="card card-p" style={{maxWidth:420,width:"100%",textAlign:"center",
-            background:"linear-gradient(135deg,#1e1208,#150f1f)",
-            border:"1.5px solid rgba(212,168,67,.4)",boxShadow:"0 12px 48px rgba(0,0,0,.6)",
-            margin:"auto"}}>
-            <div style={{fontSize:36,marginBottom:8}}>🎪</div>
-            <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:8,color:"var(--linen)"}}>
-              Community Board
-            </h2>
-            <p style={{color:"var(--muted)",fontSize:13,margin:"0 auto 16px",lineHeight:1.6}}>
-              Connect with theatre programs in your area. Post show announcements, audition notices, wanted items, and production photos.
-            </p>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:18,textAlign:"left"}}>
-              {[["🎭","Show announcements"],["🎤","Audition notices"],["📸","Production photos"],["🔍","Wanted items"]].map(([icon,text])=>(
-                <div key={text} style={{display:"flex",gap:6,alignItems:"flex-start",padding:"7px 9px",
-                  background:"rgba(255,255,255,.04)",borderRadius:8,border:"1px solid rgba(255,255,255,.06)"}}>
-                  <span style={{fontSize:15,flexShrink:0}}>{icon}</span>
-                  <span style={{fontSize:11,color:"var(--muted)",lineHeight:1.4}}>{text}</span>
-                </div>
-              ))}
-            </div>
-            <UpgradePlans compact={true}/>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (org?.community_enabled) {
     return <CommunityPage userId={userId} org={org} plan={plan}/>;
   }
@@ -9805,8 +9228,7 @@ const ROLE_MAP = Object.fromEntries(ROLES.map(r => [r.id, r]));
 function TeamSettings({ userId, orgName, plan }) {
   const [members,  setMembers]  = useState([]);
   const [invites,  setInvites]  = useState([]);
-  const [joinCode,  setJoinCode]  = useState(null);
-  const [qrPoster,  setQrPoster]  = useState(null);
+  const [joinCode, setJoinCode] = useState(null);
   const [loading,  setLoading]  = useState(true);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole,  setInviteRole]  = useState("crew");
@@ -9843,8 +9265,6 @@ function TeamSettings({ userId, orgName, plan }) {
       org_id: userId,
       role: "crew",
       invite_type: "code",
-      is_permanent: true,
-      expires_at: new Date(Date.now() + 365 * 864e5).toISOString(),
     });
     if (error) { flash("❌ Could not generate join code. Try again."); return; }
     // Re-fetch the newly created code invite (RLS: org_id = auth.uid())
@@ -10056,11 +9476,9 @@ function TeamSettings({ userId, orgName, plan }) {
             🔑 Generate Join Code
           </button>
         ) : (
-          <div style={{ background: "var(--parch)", border: "1px solid var(--border)", borderRadius: 12,
+          <div style={{ background: "var(--parch)", border: "1px solid var(--bd)", borderRadius: 12,
             padding: "16px 20px" }}>
-
-            {/* Code + link row */}
-            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
               <div>
                 <div style={{ fontSize: 11, color: "var(--faint)", marginBottom: 4 }}>Share this code</div>
                 <div style={{ fontFamily: "monospace", fontSize: 28, fontWeight: 900,
@@ -10074,47 +9492,14 @@ function TeamSettings({ userId, orgName, plan }) {
               </div>
               <button className="btn bs bsm" onClick={() => {
                 navigator.clipboard?.writeText(`https://theatre4u.org/join.html?code=${joinCode}`)
-                  .then(() => flash("✓ Link copied!"))
-                  .catch(() => flash("Link: https://theatre4u.org/join.html?code=" + joinCode));
+                  .then(() => flash("✓ Link copied to clipboard!"))
+                  .catch(() => flash("✓ Link: https://theatre4u.org/join.html?code=" + joinCode));
+                flash("✓ Link copied!");
               }}>Copy Link</button>
             </div>
-
-            {/* Action buttons */}
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-              {/* QR Poster button — renders in-app modal then triggers browser print */}
-              <button className="btn btn-g btn-sm" onClick={async () => {
-                const joinUrl = `https://theatre4u.org/join.html?code=${joinCode}`;
-                const orgName = org?.name || "Our Theatre Program";
-                const qrSrc  = await QR.toDataURL(joinUrl, 240);
-                if (!qrSrc) { flash("❌ Could not generate QR — try again"); return; }
-                setQrPoster({ joinUrl, orgName, qrSrc, joinCode });
-              }}>
-                📄 Print QR Poster
-              </button>
-
-              {/* Copy link */}
-              <button className="btn bs bsm" onClick={() => {
-                navigator.clipboard?.writeText(`https://theatre4u.org/join.html?code=${joinCode}`)
-                  .then(() => flash("✓ Link copied!"))
-                  .catch(() => flash("Link: https://theatre4u.org/join.html?code=" + joinCode));
-              }}>📋 Copy Link</button>
-
-              {/* Share via text/email on mobile */}
-              <button className="btn bs bsm" onClick={() => {
-                const url = `https://theatre4u.org/join.html?code=${joinCode}`;
-                const text = `Join ${org?.name||"our"} team on Theatre4u: ${url}`;
-                if (navigator.share) {
-                  navigator.share({ title: "Join our Theatre4u team", text, url }).catch(()=>{});
-                } else {
-                  navigator.clipboard?.writeText(text).then(()=>flash("✓ Copied!"));
-                }
-              }}>📤 Share</button>
-            </div>
-
-            <div style={{ fontSize: 11, color: "var(--faint)", lineHeight: 1.6 }}>
-              Anyone with this code or link joins as <strong>Crew</strong> — view and scan inventory.
-              Post the QR poster in your green room, costume closet, or scene shop.
-              This code never expires — revoke it from this page if needed.
+            <div style={{ fontSize: 11, color: "var(--faint)", marginTop: 12, lineHeight: 1.5 }}>
+              Anyone with this code joins as <strong>Crew</strong> — they can add and edit items.
+              Post it in your costume room or send it to your team. Expires in 30 days.
             </div>
           </div>
         )}
@@ -10131,86 +9516,6 @@ function TeamSettings({ userId, orgName, plan }) {
           {msg}
         </div>
       )}
-
-      {/* QR Poster modal — renders in-app, uses window.print() */}
-      {qrPoster && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:9000,
-          display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
-          onClick={e=>e.target===e.currentTarget&&setQrPoster(null)}>
-          <div style={{background:"#fdf6ec",borderRadius:16,padding:32,
-            width:"min(480px,95vw)",textAlign:"center",
-            boxShadow:"0 12px 60px rgba(0,0,0,.5)",position:"relative"}}>
-            {/* Close */}
-            <button onClick={()=>setQrPoster(null)}
-              style={{position:"absolute",top:12,right:14,background:"none",border:"none",
-                fontSize:22,cursor:"pointer",color:"#888",lineHeight:1}}>×</button>
-            {/* Poster content */}
-            <div id="t4u-qr-poster-inner">
-              <div style={{fontFamily:"Georgia,serif",fontSize:22,fontWeight:700,
-                color:"#d4a843",marginBottom:2}}>Theatre4u™</div>
-              <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:2,
-                color:"#888",marginBottom:18}}>Crew Access</div>
-              <h2 style={{fontFamily:"Georgia,serif",fontSize:20,color:"#1a0f00",
-                margin:"0 0 8px"}}>Join {qrPoster.orgName}</h2>
-              <p style={{fontSize:12,color:"#666",marginBottom:18,lineHeight:1.5}}>
-                Scan the QR code to join our theatre team.<br/>
-                Create a free account — takes under a minute.
-              </p>
-              {/* QR image */}
-              <div style={{display:"flex",justifyContent:"center",marginBottom:16}}>
-                <img src={qrPoster.qrSrc} width={200} height={200} alt="QR Code"
-                  style={{border:"4px solid #1a0f00",borderRadius:10}}/>
-              </div>
-              {/* Code */}
-              <div style={{background:"#1a0f00",borderRadius:10,padding:"10px 22px",
-                display:"inline-block",marginBottom:12}}>
-                <div style={{fontFamily:"monospace",fontSize:28,fontWeight:900,
-                  letterSpacing:6,color:"#d4a843"}}>{qrPoster.joinCode}</div>
-              </div>
-              <div style={{fontSize:11,color:"#999",marginBottom:18,wordBreak:"break-all"}}>
-                theatre4u.org/join.html?code={qrPoster.joinCode}
-              </div>
-              {/* Steps */}
-              <div style={{textAlign:"left",background:"#f5f0e8",borderRadius:10,
-                padding:"14px 16px",marginBottom:18}}>
-                {[
-                  "Scan the QR code with your phone camera",
-                  "Create your free Theatre4u account (name, email, password)",
-                  "You're in! Scan item QR codes and access our inventory",
-                ].map((step,i)=>(
-                  <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",
-                    marginBottom:i<2?8:0,fontSize:12,color:"#444"}}>
-                    <div style={{background:"#d4a843",color:"#1a0f00",borderRadius:"50%",
-                      width:20,height:20,minWidth:20,display:"flex",alignItems:"center",
-                      justifyContent:"center",fontWeight:800,fontSize:10,marginTop:1}}>
-                      {i+1}
-                    </div>
-                    <div>{step}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Print + close buttons */}
-            <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
-              <button onClick={()=>window.print()}
-                style={{background:"#1a0f00",color:"#d4a843",border:"none",
-                  borderRadius:8,padding:"10px 24px",fontSize:14,fontWeight:700,
-                  cursor:"pointer",fontFamily:"inherit"}}>
-                🖨 Print Poster
-              </button>
-              <button onClick={()=>setQrPoster(null)}
-                style={{background:"transparent",color:"#888",border:"1px solid #ddd",
-                  borderRadius:8,padding:"10px 20px",fontSize:14,cursor:"pointer",
-                  fontFamily:"inherit"}}>
-                Close
-              </button>
-            </div>
-            <div style={{fontSize:10,color:"#bbb",marginTop:12}}>
-              Theatre4u™ · theatre4u.org
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -10218,280 +9523,6 @@ function TeamSettings({ userId, orgName, plan }) {
 
 
 // ── QR Code Privacy Settings ─────────────────────────────────────────────────
-// ── Label Order Panel — shown in Settings for programs to request physical labels ─
-function LabelOrderPanel({ org, userId, items=[] }) {
-  const [step, setStep]       = useState("intro");  // intro | select | preview | order
-  const [labelItems, setLabelItems] = useState([]);
-  const [allItems,   setAllItems]   = useState([]);
-  const [labelSize,  setLabelSize]  = useState("2x2");
-  const [labelStyle, setLabelStyle] = useState("standard");
-  const [searching,  setSearching]  = useState("");
-  const [previewing, setPreviewing] = useState(false);
-  const [existing,   setExisting]   = useState([]);
-  const [saving,     setSaving]     = useState(false);
-  const [requestDone,setRequestDone]= useState(false);
-
-  useEffect(()=>{
-    SB.from("items").select("id,name,category,location,display_id,img")
-      .eq("org_id",userId).order("added",{ascending:false}).limit(200)
-      .then(({data})=>setAllItems(data||[]));
-    SB.from("label_orders").select("id,item_count,label_type,status,created_at,tracking")
-      .eq("org_id",userId).order("created_at",{ascending:false})
-      .then(({data})=>setExisting(data||[]));
-  },[userId]);
-
-  const toggleItem = id => setLabelItems(prev =>
-    prev.includes(id) ? prev.filter(x=>x!==id) : [...prev,id]
-  );
-  const selectAll  = () => setLabelItems(allItems.map(i=>i.id));
-  const clearAll   = () => setLabelItems([]);
-
-  const SIZES = { "2x2":"2\" x 2\" (recommended)", "2x3":"2\" x 3\" (portrait)", "3x3":"3\" x 3\" (large)", "1x3":"1\" x 3\" (strip)" };
-  const STYLES = {
-    standard:    { name:"Standard Vinyl", desc:"Indoor use · Matte finish · Waterproof · ~$0.25/label" },
-    weatherproof:{ name:"Weatherproof",   desc:"Outdoor/heavy use · Extra durable · ~$0.40/label" },
-    "color-coded":{ name:"Color-Coded",  desc:"Color by category · Easier visual sorting · ~$0.35/label" },
-  };
-
-  const selectedItems = allItems.filter(i=>labelItems.includes(i.id));
-  const count = selectedItems.length;
-  const pricePerLabel = labelStyle==="standard"?0.25:labelStyle==="weatherproof"?0.40:0.35;
-  const estTotal = (count * pricePerLabel + 7).toFixed(2); // +$7 shipping estimate
-
-  // Generate a label preview for one item
-  const LabelPreview = ({item}) => {
-    const cat = CAT[item.category]||CAT.other;
-    const url = `https://theatre4u.org/#/item/${item.id}`;
-    const [qrSrc, setQrSrc] = useState(null);
-    useEffect(()=>{
-      QR.toDataURL(url,80).then(setQrSrc);
-    },[item.id]);
-    return(
-      <div style={{width:96,height:96,border:"2px solid #1a0f00",borderRadius:6,
-        padding:6,background:"#fff",display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
-        <div style={{fontSize:8,fontWeight:800,color:"#d4a843",textTransform:"uppercase",
-          letterSpacing:.5,lineHeight:1}}>{cat.icon} {cat.label}</div>
-        <div style={{fontSize:9,fontWeight:700,color:"#1a0f00",lineHeight:1.2,flex:1,
-          overflow:"hidden"}}>{item.name}</div>
-        <div style={{display:"flex",gap:4,alignItems:"flex-end",justifyContent:"space-between"}}>
-          <div>
-            {item.location&&<div style={{fontSize:7,color:"#666"}}>📍{item.location.slice(0,12)}</div>}
-            {item.display_id&&<div style={{fontSize:7,fontWeight:700,color:"#d4a843",fontFamily:"monospace"}}>{item.display_id}</div>}
-            <div style={{fontSize:7,color:"#999"}}>theatre4u.org</div>
-          </div>
-          {qrSrc&&<img src={qrSrc} width={30} height={30} alt="QR"/>}
-        </div>
-      </div>
-    );
-  };
-
-  const submitRequest = async () => {
-    setSaving(true);
-    await SB.from("label_orders").insert({
-      org_id:        userId,
-      org_name:      org?.name||"",
-      contact_email: org?.email||"",
-      contact_name:  org?.director_name||"",
-      item_count:    count,
-      label_type:    labelStyle,
-      notes:         `Size: ${labelSize}. Items: ${selectedItems.map(i=>i.name).join(", ")}`,
-    });
-    setSaving(false);
-    setRequestDone(true);
-    setExisting(prev=>[{item_count:count,label_type:labelStyle,status:"pending",
-      created_at:new Date().toISOString()},...prev]);
-  };
-
-  return(
-    <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,
-      padding:20,marginTop:16}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:16}}>
-        <div>
-          <div style={{fontWeight:700,fontSize:15,marginBottom:3}}>🏷 QR Label Printing</div>
-          <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>
-            Order professional QR label stickers for your inventory bins, racks, and props.
-            We design them, you order direct from Sticker Mule — shipped to your door.
-          </div>
-        </div>
-        {step!=="intro"&&<button onClick={()=>{setStep("intro");setRequestDone(false);}} className="btn btn-o btn-sm">← Back</button>}
-      </div>
-
-      {/* Existing orders */}
-      {existing.length>0&&step==="intro"&&(
-        <div style={{marginBottom:14,display:"flex",flexDirection:"column",gap:4}}>
-          <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:4}}>Previous Orders</div>
-          {existing.slice(0,3).map((o,i)=>(
-            <div key={i} style={{fontSize:12,color:"var(--muted)",display:"flex",gap:12,alignItems:"center"}}>
-              <span>{new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>
-              <span>{o.item_count} labels · {o.label_type}</span>
-              {o.tracking&&<span style={{fontSize:11}}>📦 {o.tracking}</span>}
-              <span style={{fontWeight:600,
-                color:o.status==="shipped"||o.status==="delivered"?"#4caf50":o.status==="processing"?"#2196f3":"var(--gold)",
-                textTransform:"capitalize"}}>
-                {o.status==="pending"?"⏳ Pending":o.status==="processing"?"🔄 Processing":o.status==="shipped"?"✈ Shipped":"✓ Delivered"}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* INTRO */}
-      {step==="intro"&&(
-        <div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
-            {[
-              { icon:"🎨", title:"We design the labels", body:"Your item name, category icon, QR code, storage location, and Theatre4u branding on every label." },
-              { icon:"🏷", title:"You order from Sticker Mule", body:"We'll email you a print-ready file. Upload it to Sticker Mule, choose weatherproof vinyl, done." },
-              { icon:"📦", title:"Ships to your door", body:"Sticker Mule ships in 4–6 days. Weatherproof labels survive costume closets and scene shops." },
-            ].map(s=>(
-              <div key={s.title} style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:8,padding:"12px 14px"}}>
-                <div style={{fontSize:22,marginBottom:6}}>{s.icon}</div>
-                <div style={{fontWeight:700,fontSize:12,marginBottom:4}}>{s.title}</div>
-                <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.5}}>{s.body}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"10px 14px",fontSize:12,color:"var(--muted)",marginBottom:14,lineHeight:1.6}}>
-            <strong style={{color:"var(--text)"}}>Estimated cost at Sticker Mule:</strong>
-            {" "}~$19 for 50 labels · ~$36 for 100 labels · ~$65 for 200 labels.
-            Prices include free worldwide shipping. Weatherproof vinyl is ~30% more.
-          </div>
-          <div style={{display:"flex",gap:8,alignItems:"center"}}>
-            <button className="btn btn-g" onClick={()=>setStep("select")}>
-              Design My Labels →
-            </button>
-            <a href="https://www.stickermule.com/custom-labels" target="_blank" rel="noreferrer"
-              style={{fontSize:12,color:"var(--gold)"}}>View Sticker Mule pricing ↗</a>
-          </div>
-        </div>
-      )}
-
-      {/* SELECT ITEMS */}
-      {step==="select"&&(
-        <div>
-          <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
-            <input value={searching} onChange={e=>setSearching(e.target.value)}
-              placeholder="Search items…" className="fi" style={{flex:1,minWidth:180,padding:"6px 10px"}}/>
-            <button className="btn btn-o btn-sm" onClick={selectAll}>Select All</button>
-            <button className="btn btn-o btn-sm" onClick={clearAll}>Clear</button>
-            <span style={{fontSize:12,color:"var(--muted)"}}>{count} selected</span>
-          </div>
-          <div style={{maxHeight:260,overflowY:"auto",border:"1px solid var(--border)",borderRadius:8,
-            background:"var(--white)",marginBottom:14}}>
-            {allItems
-              .filter(i=>!searching||i.name.toLowerCase().includes(searching.toLowerCase())||
-                (i.location||"").toLowerCase().includes(searching.toLowerCase()))
-              .map(i=>(
-              <div key={i.id} onClick={()=>toggleItem(i.id)}
-                style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",
-                  borderBottom:"1px solid var(--border)",
-                  background:labelItems.includes(i.id)?"rgba(212,168,67,.08)":"transparent"}}>
-                <div style={{width:16,height:16,borderRadius:4,border:"1.5px solid var(--border)",
-                  background:labelItems.includes(i.id)?"var(--gold)":"transparent",flexShrink:0,
-                  display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  {labelItems.includes(i.id)&&<span style={{color:"#1a0f00",fontSize:11,fontWeight:900}}>✓</span>}
-                </div>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:13,fontWeight:600}}>{i.name}</div>
-                  {i.location&&<div style={{fontSize:11,color:"var(--muted)"}}>📍 {i.location}</div>}
-                </div>
-                {i.display_id&&<span style={{fontFamily:"monospace",fontSize:11,color:"var(--amber)"}}>{i.display_id}</span>}
-              </div>
-            ))}
-            {allItems.length===0&&<div style={{padding:20,textAlign:"center",color:"var(--muted)",fontSize:13}}>No items in inventory yet.</div>}
-          </div>
-          {/* Label options */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
-            <div>
-              <label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Label Size</label>
-              <select value={labelSize} onChange={e=>setLabelSize(e.target.value)} className="fld" style={{width:"100%"}}>
-                {Object.entries(SIZES).map(([v,l])=><option key={v} value={v}>{l}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Label Material</label>
-              <select value={labelStyle} onChange={e=>setLabelStyle(e.target.value)} className="fld" style={{width:"100%"}}>
-                {Object.entries(STYLES).map(([v,s])=><option key={v} value={v}>{s.name}</option>)}
-              </select>
-            </div>
-          </div>
-          <div style={{fontSize:12,color:"var(--muted)",marginBottom:14}}>
-            {STYLES[labelStyle]?.desc}
-          </div>
-          <div style={{display:"flex",gap:10,alignItems:"center"}}>
-            <button className="btn btn-g" disabled={count===0} onClick={()=>setStep("preview")}>
-              Preview Labels ({count}) →
-            </button>
-            {count>0&&<span style={{fontSize:12,color:"var(--muted)"}}>Est. ~${estTotal} at Sticker Mule</span>}
-          </div>
-        </div>
-      )}
-
-      {/* PREVIEW + ORDER */}
-      {step==="preview"&&(
-        <div>
-          <div style={{fontSize:13,color:"var(--muted)",marginBottom:14,lineHeight:1.5}}>
-            Preview of your {count} labels at {SIZES[labelSize]} size.
-            We'll send you a print-ready PDF to upload to Sticker Mule.
-          </div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20,
-            maxHeight:320,overflowY:"auto",padding:4}}>
-            {selectedItems.slice(0,20).map(item=>(
-              <LabelPreview key={item.id} item={item}/>
-            ))}
-            {count>20&&<div style={{width:96,height:96,border:"2px dashed var(--border)",borderRadius:6,
-              display:"flex",alignItems:"center",justifyContent:"center",
-              fontSize:13,color:"var(--muted)",textAlign:"center",padding:8}}>
-              +{count-20} more labels
-            </div>}
-          </div>
-          {!requestDone?(
-            <div>
-              <div style={{background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.2)",
-                borderRadius:8,padding:"12px 14px",fontSize:12,color:"var(--muted)",marginBottom:14,lineHeight:1.6}}>
-                <strong style={{color:"var(--text)"}}>How this works:</strong>{" "}
-                Submit your request below. We'll generate a print-ready PDF file and email it to{" "}
-                <strong>{org?.email}</strong> within 1–2 business days.
-                Upload it to <a href="https://www.stickermule.com/custom-labels" target="_blank" rel="noreferrer"
-                  style={{color:"var(--gold)"}}>Sticker Mule</a>, choose vinyl labels, and order directly.
-                No Theatre4u transaction fee — you pay Sticker Mule directly.
-              </div>
-              <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                <button onClick={submitRequest} disabled={saving} className="btn btn-g">
-                  {saving?"Submitting…":"📧 Send Me the Print File →"}
-                </button>
-                <button onClick={()=>setStep("select")} className="btn btn-o btn-sm">← Edit Selection</button>
-                <span style={{fontSize:11,color:"var(--faint)"}}>Free · No charge until you order from Sticker Mule</span>
-              </div>
-            </div>
-          ):(
-            <div style={{background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.25)",
-              borderRadius:8,padding:"14px 16px",fontSize:13,color:"var(--text)"}}>
-              <div style={{fontWeight:700,marginBottom:4}}>✓ Request received!</div>
-              <div style={{lineHeight:1.6,color:"var(--muted)"}}>
-                We'll email a print-ready PDF to <strong>{org?.email}</strong> within 1–2 business days.
-                Then just upload it to{" "}
-                <a href="https://www.stickermule.com/custom-labels" target="_blank" rel="noreferrer"
-                  style={{color:"var(--gold)"}}>stickermule.com/custom-labels</a>{" "}
-                and order the size that matches your labels. Ships in 4–6 days.
-              </div>
-              <div style={{marginTop:10,display:"flex",gap:8}}>
-                <button onClick={()=>{setStep("intro");setRequestDone(false);}} className="btn btn-o btn-sm">
-                  Order More Labels
-                </button>
-                <a href="https://www.stickermule.com/custom-labels" target="_blank" rel="noreferrer"
-                  className="btn btn-g btn-sm" style={{textDecoration:"none"}}>
-                  Go to Sticker Mule ↗
-                </a>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function QRPrivacySettings({ org, setOrg, userId }) {
   const [saving, setSaving] = useState(false);
   const [saved,  setSaved]  = useState(false);
@@ -10799,7 +9830,7 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
               ))}
             </div>
             <div style={{marginTop:10,fontSize:11.5,color:"var(--faint)",lineHeight:1.6}}>
-              <strong>Free:</strong> 25 item cap, no Exchange or Reports · <strong>Pro:</strong> unlimited items, Exchange, Reports, Stage Points · <strong>District:</strong> all Pro features + multi-org
+              <strong>Free:</strong> 50 item cap, no Backstage Exchange access · <strong>Pro:</strong> unlimited items, Backstage Exchange · <strong>District:</strong> all Pro features + multi-org (future)
             </div>
           </div>
         )}
@@ -10851,7 +9882,6 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
         <div className="card card-p">
           <div className="sh"><h2>🔒 QR Code Privacy</h2><p>Control what others see when they scan your item QR labels.</p></div>
           <QRPrivacySettings org={org} setOrg={setOrg} userId={userId}/>
-          <LabelOrderPanel org={org} userId={userId}/>
         </div>
 
         <div className="sc">
@@ -10922,7 +9952,7 @@ const TERMS_CONTENT = [
   ["1. Acceptance of Terms","By accessing or using Theatre4u at theatre4u.org, you agree to be bound by these Terms of Service. If you do not agree, please do not use the Service. Theatre4u™ is a product of Artstracker LLC, a California limited liability company (theatre4u.org)."],
   ["2. Description of Service","Theatre4u™ is a cloud-based inventory management, resource-sharing, and community platform for theatre programs, schools, community theatres, and performing arts organizations. We reserve the right to modify or discontinue the Service at any time with reasonable notice."],
   ["3. Account Registration","You must create an account with accurate information and are responsible for maintaining confidentiality of your credentials. You must be at least 18 years old, or have authorization of a parent, guardian, or school administrator if a minor acting on behalf of an organization."],
-  ["4. Subscription Plans and Payments","Theatre4u offers Free (up to 25 items), Pro ($15/month or $150/year), and District ($49/month or $500/year) plans billed via Stripe. Free accounts do not include Backstage Exchange, Reports, or Stage Points. Subscriptions auto-renew unless cancelled. We may change pricing with 30 days notice to current subscribers."],
+  ["4. Subscription Plans and Payments","Theatre4u offers Free, Pro ($15/month or $150/year), and District ($49/month or $500/year) plans billed via Stripe. Subscriptions auto-renew unless cancelled. We may change pricing with 30 days notice to current subscribers."],
   ["4a. Cancellation Policy","You may cancel your subscription at any time through Settings → Plans → Manage Billing, or by emailing hello@theatre4u.org. Upon cancellation, your access continues until the end of the current billing period — no partial refunds are issued for unused time. For annual plans, a full refund is available within 30 days of purchase if you have added fewer than 10 items. After 30 days, annual plan fees are non-refundable. Your inventory data is preserved for 90 days after your plan downgrades to Free; you may export a full CSV backup at any time from the Reports page. Leading Players have guaranteed free Pro access through April 9, 2027 and are not affected by this policy."],
   ["5. User Content & License Grant","You retain all ownership of content you upload to Theatre4u™, including text, photos, images, and other materials ('User Content'). By uploading User Content, you grant Theatre4u a worldwide, non-exclusive, royalty-free, perpetual, irrevocable license to store, display, reproduce, and use that content to operate, improve, and promote the Service. This license persists even if you later remove the content or close your account. You represent that you have all necessary rights to grant this license, that your content does not infringe any third-party rights, and that you have obtained appropriate permissions for any photographs or images of identifiable individuals. Theatre4u may remove any content that violates these Terms or applicable law."],
   ["6. Exchange Transactions","Theatre4u™ provides the Backstage Exchange platform for listing items for rent, sale, or loan. We are not a party to any transaction between users. All agreements are solely between listing users and interested parties. We do not handle payments between users."],
@@ -10973,7 +10003,7 @@ function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
   ];
 
   const steps=[
-    {n:"1",title:"Create your free account",desc:"Sign up in 60 seconds. No credit card needed. Free accounts include up to 25 items — upgrade to Pro for unlimited."},
+    {n:"1",title:"Create your free account",desc:"Sign up in 60 seconds. No credit card needed. Your first 50 items are always free."},
     {n:"2",title:"Build your inventory",desc:"Take photos on your phone or upload from your computer. Add name, category, condition, and location. Print QR labels for bins and racks."},
     {n:"3",title:"Track your productions",desc:"Create a show folder and pull items straight from your inventory. See what's assigned, what's checked out, and what you still need."},
     {n:"4",title:"Optionally join Backstage Exchange",desc:"When you're ready, opt in to Backstage Exchange. Post selected items for rent, loan, or sale. Browse what other programs near you have available."},
@@ -11017,7 +10047,7 @@ function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
             Sign In
           </button>
           {onTakeTour && (
-            <button onClick={onTakeTour} style={{background:"transparent",border:"1px solid rgba(212,168,67,.5)",color:"rgba(212,168,67,.9)",padding:"14px 24px",borderRadius:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:15,fontWeight:600,transition:"all .2s"}}>
+            <button onClick={onTakeTour} style={{background:"transparent",border:"1px solid rgba(212,168,67,.5)",color:"rgba(212,168,67,.9)",padding:"14px 24px",borderRadius:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:15,fontWeight:600}}>
               👁 Preview the Platform
             </button>
           )}
@@ -11130,50 +10160,37 @@ function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
         Our Story
       </div>
       <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(26px,4vw,40px)",marginBottom:24,lineHeight:1.2}}>
-        Built by a Theatre Person,<br/><span style={{color:"var(--gold)"}}>For Theatre People.</span>
+        Thirty Years in the Theatre,<br/><span style={{color:"var(--gold)"}}>Building Something Better.</span>
       </h2>
-
-      {/* Two-column story */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,textAlign:"left",marginBottom:48}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,textAlign:"left",marginBottom:40}}>
         <div>
-          <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)",marginBottom:16}}>
-            After spending over 30 years in the theatre and 18+ years in the classroom, I know how quickly props and costumes can seem to explode out of control. As theatre artists moving from one production to the next, we need to know which box that magic wand for Puffs lives in — and what size and color the Victorian dress is — without making the trek out to the costume annex.
+          <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)",marginBottom:16}}>
+            Theatre4u™ was built by someone who found theatre in high school and never looked back. Over thirty years — studying the craft, performing in New Hampshire, San Francisco, New York City, and finally Southern California — the stage has always been home.
           </p>
-          <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)"}}>
-            And we need a chance to connect with other theatre programs that may have something we need, or need something we have.
+          <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)"}}>
+            That journey led to the classroom and to a simple realization: theatre programs everywhere are filled with talented, dedicated people doing extraordinary work — and they deserve tools that help them do even more of it.
           </p>
         </div>
         <div>
-          <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)",marginBottom:16}}>
-            Theatre4u keeps track of everything your program owns — and opens the door to a community of programs ready to share resources, collaborate, and support each other.
+          <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)",marginBottom:16}}>
+            Theatre4u™ keeps track of everything your program owns — and opens the door to a community of programs ready to share resources, collaborate, and support each other across the region.
           </p>
-          <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)"}}>
+          <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)"}}>
             <strong style={{color:"#fff"}}>Theatre is always better together.</strong> This platform was built to help make that connection easier — from the wings to the whole community.
           </p>
-          {/* Attribution */}
-          <div style={{marginTop:28,paddingTop:20,borderTop:"1px solid rgba(255,255,255,.1)",display:"flex",alignItems:"center",gap:12}}>
-            <div style={{width:40,height:40,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),#8a6a20)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1000" strokeWidth="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-            </div>
-            <div>
-              <div style={{fontWeight:700,fontSize:14,color:"#fff"}}>Bob Zick</div>
-              <div style={{fontSize:12,color:"rgba(255,255,255,.45)"}}>Founder, Theatre4u™ &amp; Artstracker · Ocean View High School Drama, 18 years</div>
-            </div>
-          </div>
         </div>
       </div>
-
-      {/* Trust badges */}
-      <div style={{display:"flex",gap:16,justifyContent:"center",flexWrap:"wrap"}}>
+      <div style={{display:"flex",gap:24,justifyContent:"center",flexWrap:"wrap"}}>
         {[
-          {val:"30+",lbl:"Years in Theatre"},
-          {val:"18+",lbl:"Years in the Classroom"},
-          {val:"K–12",lbl:"Built for Educators"},
-          {lbl:"Teacher to Teacher"},
+          {ico:"🎭",val:"30+",lbl:"Years in theatre"},
+          {ico:"🎓",lbl:"Studied & performed theatre"},
+          {ico:"🏫",lbl:"Built for the classroom"},
+          {ico:"🤝",lbl:"Teacher to teacher"},
         ].map(s=>(
-          <div key={s.lbl} style={{textAlign:"center",padding:"16px 24px",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,minWidth:130}}>
-            {s.val&&<div style={{fontFamily:"'Playfair Display',serif",fontSize:28,color:"var(--gold)",marginBottom:4}}>{s.val}</div>}
-            <div style={{fontSize:12,color:"rgba(255,255,255,.5)",fontWeight:600,textTransform:"uppercase",letterSpacing:.5}}>{s.lbl}</div>
+          <div key={s.lbl} style={{textAlign:"center",padding:"16px 20px",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,minWidth:130}}>
+            <div style={{fontSize:26,marginBottom:6}}>{s.ico}</div>
+            {s.val&&<div style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:"var(--gold)",marginBottom:2}}>{s.val}</div>}
+            <div style={{fontSize:12,color:"rgba(255,255,255,.5)",fontWeight:600}}>{s.lbl}</div>
           </div>
         ))}
       </div>
@@ -11409,7 +10426,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
         </div>
         {mode==="signup"&&(
           <p style={{textAlign:"center",fontSize:11,color:"#685f76",marginTop:14,lineHeight:1.5}}>
-            Free plan includes up to 25 items. No credit card required.
+            Free plan includes 50 items. No credit card required.
           </p>
         )}
       </div>
@@ -11458,7 +10475,7 @@ function AuthScreen({onAuth}){
           }
           if(data.session){
             // Email confirmation is OFF — user is already logged in
-            if(typeof onAuth==="function") onAuth(data.user, true); // true = new signup
+            if(typeof onAuth==="function") onAuth(data.user);
           } else {
             setDone(true);
           }
@@ -12430,12 +11447,9 @@ export default AppWithBoundary;
 // ══════════════════════════════════════════════════════════════════════════════
 // ── AI Help Bubble ────────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════════════
-function AIHelpBubble({ user = null }) {
+function AIHelpBubble({ user }) {
   const [open, setOpen]       = useState(false);
-  const greeting = user
-    ? "Hi! Ask me anything about Theatre4u — inventory, QR labels, Exchange, Funding Tracker, or any feature!"
-    : "Hi! Ask me anything about Theatre4u, or visit theatre4u.org/help.html for our full Help Center.";
-  const [msgs, setMsgs]       = useState([{role:"assistant",content:greeting}]);
+  const [msgs, setMsgs]       = useState([]);
   const [input, setInput]     = useState("");
   const [loading, setLoading] = useState(false);
   const [unread, setUnread]   = useState(false);
@@ -12580,24 +11594,28 @@ function AIHelpBubble({ user = null }) {
   );
 }
 
-// ── PREVIEW MODE — sample data for guest exploration ─────────────────────────
+
+// PREVIEW MODE -- guest exploration before sign-up
+// Accessed via theatre4u.org?preview=1 or the "Take a Tour" button
+// Shows sample inventory, demo UI, and a persistent sign-up prompt
 const PREVIEW_ITEMS = [
-  { id:"p1",  name:"Victorian Ball Gown — Blue",      category:"costumes",  condition:"Good",      qty:1,  location:"Costume Closet A",  notes:"Used in A Christmas Carol 2024", mkt:"For Rent",    avail:"In Stock", sale:0,  rent:25 },
-  { id:"p2",  name:"Pirate Hat Collection (6pc)",     category:"costumes",  condition:"Fair",      qty:6,  location:"Costume Closet B",  notes:"Assorted styles",               mkt:"Not Listed",  avail:"In Stock", sale:0,  rent:0  },
-  { id:"p3",  name:"Wireless Handheld Mic — Shure",  category:"sound",     condition:"Excellent", qty:4,  location:"Sound Booth",       notes:"SM58 compatible, 4 channels",   mkt:"For Rent",    avail:"In Stock", sale:0,  rent:15 },
-  { id:"p4",  name:"LED Par Can RGBW 54x3W",          category:"lighting",  condition:"New",       qty:12, location:"Lighting Storage",  notes:"DMX controllable",              mkt:"Rent or Sale",avail:"In Stock", sale:85, rent:10 },
-  { id:"p5",  name:"Wooden Throne Chair",             category:"furniture", condition:"Good",      qty:1,  location:"Scene Shop",        notes:"Gold painted, red velvet",      mkt:"For Rent",    avail:"In Stock", sale:0,  rent:30 },
-  { id:"p6",  name:"Fog Machine 1000W",               category:"effects",   condition:"Good",      qty:2,  location:"Effects Cage",      notes:"Includes remote",               mkt:"For Rent",    avail:"In Stock", sale:0,  rent:20 },
-  { id:"p7",  name:"Romeo and Juliet Scripts (30)",   category:"scripts",   condition:"Fair",      qty:30, location:"Library",           notes:"Director annotated",            mkt:"For Sale",    avail:"In Stock", sale:5,  rent:0  },
-  { id:"p8",  name:"Ben Nye Master Makeup Kit",       category:"makeup",    condition:"Good",      qty:3,  location:"Dressing Room 1",   notes:"Full spectrum",                 mkt:"Not Listed",  avail:"In Stock", sale:0,  rent:0  },
-  { id:"p9",  name:"Forest Backdrop Flat 8x12ft",     category:"sets",      condition:"Good",      qty:2,  location:"Scene Shop",        notes:"Painted muslin on frame",       mkt:"For Rent",    avail:"In Stock", sale:0,  rent:40 },
-  { id:"p10", name:"DeWalt Cordless Drill 20V",       category:"tools",     condition:"Good",      qty:2,  location:"Tool Cabinet",      notes:"With charger and bits",         mkt:"Not Listed",  avail:"In Stock", sale:0,  rent:0  },
-  { id:"p11", name:"Foam Rubber Swords (8pc)",        category:"props",     condition:"Fair",      qty:8,  location:"Props Table",       notes:"Safe for stage combat",         mkt:"For Sale",    avail:"In Stock", sale:12, rent:0  },
-  { id:"p12", name:"Black Velvet Main Drape 20x40",   category:"fabrics",   condition:"Excellent", qty:1,  location:"Fly Loft",          notes:"Flame retardant",               mkt:"Not Listed",  avail:"In Use",   sale:0,  rent:0  },
+  { id:"p1",  name:"Victorian Ball Gown — Blue",      category:"costumes",  condition:"Good",      size:"M",       qty:1,  location:"Costume Closet A",  notes:"Used in A Christmas Carol 2024", mkt:"For Rent",    avail:"In Stock", sale:0,  rent:25, tags:["period","formal"] },
+  { id:"p2",  name:"Pirate Hat Collection (6pc)",     category:"costumes",  condition:"Fair",      size:"One Size",qty:6,  location:"Costume Closet B",  notes:"Assorted styles",               mkt:"Not Listed",  avail:"In Stock", sale:0,  rent:0,  tags:["adventure"] },
+  { id:"p3",  name:"Wireless Handheld Mic — Shure",  category:"sound",     condition:"Excellent", size:"N/A",     qty:4,  location:"Sound Booth",       notes:"SM58 compatible, 4 channels",   mkt:"For Rent",    avail:"In Stock", sale:0,  rent:15, tags:["audio"] },
+  { id:"p4",  name:"LED Par Can RGBW 54x3W",          category:"lighting",  condition:"New",       size:"N/A",     qty:12, location:"Lighting Storage",  notes:"DMX controllable",              mkt:"Rent or Sale",avail:"In Stock", sale:85, rent:10, tags:["dmx","led"] },
+  { id:"p5",  name:"Wooden Throne Chair",             category:"furniture", condition:"Good",      size:"N/A",     qty:1,  location:"Scene Shop",        notes:"Gold painted, red velvet",      mkt:"For Rent",    avail:"In Stock", sale:0,  rent:30, tags:["royalty"] },
+  { id:"p6",  name:"Fog Machine 1000W",              category:"effects",   condition:"Good",      size:"N/A",     qty:2,  location:"Effects Cage",      notes:"Includes remote",               mkt:"For Rent",    avail:"In Stock", sale:0,  rent:20, tags:["atmosphere"] },
+  { id:"p7",  name:"Romeo and Juliet Scripts (30)",   category:"scripts",   condition:"Fair",      size:"N/A",     qty:30, location:"Library",           notes:"Director annotated",            mkt:"For Sale",    avail:"In Stock", sale:5,  rent:0,  tags:["shakespeare"] },
+  { id:"p8",  name:"Ben Nye Master Makeup Kit",       category:"makeup",    condition:"Good",      size:"N/A",     qty:3,  location:"Dressing Room 1",   notes:"Full spectrum",                 mkt:"Not Listed",  avail:"In Stock", sale:0,  rent:0,  tags:["professional"] },
+  { id:"p9",  name:"Forest Backdrop Flat 8x12ft",     category:"sets",      condition:"Good",      size:"N/A",     qty:2,  location:"Scene Shop",        notes:"Painted muslin on frame",       mkt:"For Rent",    avail:"In Stock", sale:0,  rent:40, tags:["outdoor"] },
+  { id:"p10", name:"DeWalt Cordless Drill 20V",       category:"tools",     condition:"Good",      size:"N/A",     qty:2,  location:"Tool Cabinet",      notes:"With charger and bits",         mkt:"Not Listed",  avail:"In Stock", sale:0,  rent:0,  tags:["power tool"] },
+  { id:"p11", name:"Foam Rubber Swords (8pc)",        category:"props",     condition:"Fair",      size:"N/A",     qty:8,  location:"Props Table",       notes:"Safe for stage combat",         mkt:"For Sale",    avail:"In Stock", sale:12, rent:0,  tags:["combat"] },
+  { id:"p12", name:"Black Velvet Main Drape 20x40",   category:"fabrics",   condition:"Excellent", size:"N/A",     qty:1,  location:"Fly Loft",          notes:"Flame retardant",               mkt:"Not Listed",  avail:"In Use",   sale:0,  rent:0,  tags:["main stage"] },
 ];
+
 const PREVIEW_CATS = {
-  costumes:"🥻", props:"🎭", sets:"🏗️", lighting:"💡", sound:"🔊",
-  scripts:"📜", makeup:"💄", furniture:"🪑", fabrics:"🧵", tools:"🔧", effects:"✨", other:"📦"
+  costumes:"🥻",props:"🎭",sets:"🏗️",lighting:"💡",sound:"🔊",
+  scripts:"📜",makeup:"💄",furniture:"🪑",fabrics:"🧵",tools:"🔧",effects:"✨",other:"📦"
 };
 
 function PreviewMode({ onSignUp }) {
@@ -12607,11 +11625,15 @@ function PreviewMode({ onSignUp }) {
   const [detail,  setDetail]  = React.useState(null);
   const [showCTA, setShowCTA] = React.useState(false);
 
-  React.useEffect(() => { const t = setTimeout(() => setShowCTA(true), 20000); return () => clearTimeout(t); }, []);
+  React.useEffect(() => {
+    const t = setTimeout(() => setShowCTA(true), 20000);
+    return () => clearTimeout(t);
+  }, []);
 
   const filtered = PREVIEW_ITEMS.filter(i => {
     if (catF !== "all" && i.category !== catF) return false;
-    if (search && !i.name.toLowerCase().includes(search.toLowerCase()) && !(i.location||"").toLowerCase().includes(search.toLowerCase())) return false;
+    if (search && !i.name.toLowerCase().includes(search.toLowerCase())
+        && !i.location.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
@@ -12620,92 +11642,127 @@ function PreviewMode({ onSignUp }) {
   const totalQty   = PREVIEW_ITEMS.reduce((s, i) => s + i.qty, 0);
   const estValue   = PREVIEW_ITEMS.reduce((s, i) => s + (i.sale * i.qty), 0);
 
-  const gold = "#d4a843", dark = "#1a0f00", bg = "#0d0b11", bg2 = "#15121b", bd = "#282333", t1 = "#ede8df", t2 = "#9b93a8", t3 = "#685f76";
+  const gold = "#d4a843", dark = "#1a0f00", bg = "#0d0b11", bg2 = "#15121b";
+  const bd = "#282333", t1 = "#ede8df", t2 = "#9b93a8", t3 = "#685f76";
 
   const navs = [
-    { id:"dashboard",   label:"Dashboard",         icon:"⌂"  },
-    { id:"inventory",   label:"Inventory",          icon:"📦" },
-    { id:"marketplace", label:"Backstage Exchange", icon:"🏪" },
-    { id:"community",   label:"Community Board",    icon:"🎪" },
-    { id:"messages",    label:"Messages",           icon:"💬" },
-    { id:"requests",    label:"Requests",           icon:"📋" },
-    { id:"productions", label:"Productions",        icon:"🎭" },
-    { id:"reports",     label:"Reports",            icon:"📊" },
-    { id:"funding",     label:"Funding Tracker",    icon:"💰" },
+    { id:"dashboard",  label:"Dashboard",         icon:"⌂" },
+    { id:"inventory",  label:"Inventory",          icon:"📦" },
+    { id:"marketplace",label:"Backstage Exchange", icon:"🏪" },
+    { id:"reports",    label:"Reports",            icon:"📊" },
+    { id:"funding",    label:"Funding Tracker",    icon:"💰" },
   ];
 
   const GoldBtn = ({ label, onClick, style = {} }) => (
-    <button onClick={onClick} style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6,
-      padding:"9px 20px", borderRadius:8, fontFamily:"'DM Sans',sans-serif", fontSize:14, fontWeight:700,
-      cursor:"pointer", border:"none", background:`linear-gradient(135deg,${gold},#a37f2c)`, color:dark, ...style }}>{label}</button>
+    <button onClick={onClick} style={{
+      display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6,
+      padding:"9px 20px", borderRadius:8, fontFamily:"'DM Sans',sans-serif",
+      fontSize:14, fontWeight:700, cursor:"pointer", border:"none",
+      background:`linear-gradient(135deg,${gold},#a37f2c)`, color:dark,
+      transition:"all .2s", ...style
+    }}>{label}</button>
   );
 
-  const mktColor = mkt => mkt === "Not Listed" ? "rgba(107,100,120,.5)" : mkt.includes("Rent") ? "rgba(66,165,245,.8)" : "rgba(76,175,80,.8)";
+  const mktColor = (mkt) =>
+    mkt === "Not Listed" ? "rgba(107,100,120,.5)"
+    : mkt.includes("Rent") ? "rgba(66,165,245,.8)"
+    : "rgba(76,175,80,.8)";
 
   return (
-    <div style={{ display:"flex", height:"100vh", overflow:"hidden", background:bg, color:t1, fontFamily:"'DM Sans',sans-serif", fontSize:14 }}>
+    <div style={{ display:"flex", height:"100vh", overflow:"hidden",
+      background:bg, color:t1, fontFamily:"'DM Sans',sans-serif", fontSize:14 }}>
 
-      {/* Gold preview banner */}
+      {/* Preview banner */}
       <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:9999,
         background:"linear-gradient(135deg,rgba(212,168,67,.97),rgba(163,127,44,.97))",
-        padding:"9px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap",
+        padding:"9px 20px", display:"flex", alignItems:"center",
+        justifyContent:"space-between", gap:12, flexWrap:"wrap",
         boxShadow:"0 2px 12px rgba(0,0,0,.4)" }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
           <span style={{ fontSize:18 }}>🎭</span>
           <span style={{ fontWeight:800, color:dark, fontSize:14 }}>Preview Mode</span>
-          <span style={{ color:"rgba(26,15,0,.65)", fontSize:12 }}>— Explore Theatre4u with sample data. No account needed.</span>
+          <span style={{ color:"rgba(26,15,0,.65)", fontSize:12 }}>
+            — Explore Theatre4u with sample data. No account needed.
+          </span>
         </div>
         <div style={{ display:"flex", gap:8 }}>
           <button onClick={() => window.location.href = "https://theatre4u.org"}
-            style={{ padding:"6px 14px", borderRadius:6, fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:600,
-              cursor:"pointer", background:"rgba(0,0,0,.15)", border:"1px solid rgba(0,0,0,.2)", color:dark }}>Sign In</button>
-          <GoldBtn label="Start Free Account →" onClick={onSignUp} style={{ padding:"6px 18px", fontSize:13 }}/>
+            style={{ padding:"6px 14px", borderRadius:6, fontFamily:"'DM Sans',sans-serif",
+              fontSize:12, fontWeight:600, cursor:"pointer",
+              background:"rgba(0,0,0,.15)", border:"1px solid rgba(0,0,0,.2)", color:dark }}>
+            Sign In
+          </button>
+          <GoldBtn label="Start Free Account →" onClick={onSignUp}
+            style={{ padding:"6px 18px", fontSize:13 }}/>
         </div>
       </div>
 
       {/* Sidebar */}
-      <aside style={{ width:224, minWidth:224, background:bg2, borderRight:`1px solid ${bd}`, display:"flex",
-        flexDirection:"column", paddingTop:48, overflowY:"auto", zIndex:100 }}>
-        <div style={{ padding:"18px 14px", borderBottom:`1px solid ${bd}`, display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:38, height:38, borderRadius:8, fontSize:20, background:`linear-gradient(135deg,${gold},#a37f2c)`,
+      <aside style={{ width:224, minWidth:224, background:bg2,
+        borderRight:`1px solid ${bd}`, display:"flex", flexDirection:"column",
+        paddingTop:48, overflowY:"auto", zIndex:100 }}>
+        <div style={{ padding:"18px 14px", borderBottom:`1px solid ${bd}`,
+          display:"flex", alignItems:"center", gap:10 }}>
+          <div style={{ width:38, height:38, borderRadius:8, fontSize:20,
+            background:`linear-gradient(135deg,${gold},#a37f2c)`,
             display:"flex", alignItems:"center", justifyContent:"center" }}>🎭</div>
           <div>
-            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700, color:gold }}>Theatre4u™</div>
-            <div style={{ fontSize:9, color:t3, textTransform:"uppercase", letterSpacing:2 }}>Ocean View Drama</div>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16,
+              fontWeight:700, color:gold }}>Theatre4u™</div>
+            <div style={{ fontSize:9, color:t3, textTransform:"uppercase", letterSpacing:2 }}>
+              Ocean View Drama
+            </div>
           </div>
         </div>
+
         <nav style={{ padding:"12px 8px", flex:1 }}>
-          <div style={{ fontSize:9, textTransform:"uppercase", letterSpacing:2, color:t3, padding:"8px 10px 4px" }}>Main</div>
+          <div style={{ fontSize:9, textTransform:"uppercase", letterSpacing:2,
+            color:t3, padding:"8px 10px 4px" }}>Main</div>
           {navs.map(n => (
-            <div key={n.id} onClick={() => setTab(n.id)} style={{ display:"flex", alignItems:"center", gap:8,
-              padding:"8px 10px", borderRadius:6, cursor:"pointer", fontSize:13, fontWeight:500, marginBottom:1,
-              color: tab === n.id ? gold : t2,
-              background: tab === n.id ? "linear-gradient(135deg,rgba(212,168,67,.12),rgba(212,168,67,.04))" : "transparent",
-              border: `1px solid ${tab === n.id ? "rgba(212,168,67,.2)" : "transparent"}` }}>
+            <div key={n.id} onClick={() => setTab(n.id)}
+              style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px",
+                borderRadius:6, cursor:"pointer", fontSize:13, fontWeight:500, marginBottom:1,
+                color: tab === n.id ? gold : t2,
+                background: tab === n.id
+                  ? "linear-gradient(135deg,rgba(212,168,67,.12),rgba(212,168,67,.04))"
+                  : "transparent",
+                border: `1px solid ${tab === n.id ? "rgba(212,168,67,.2)" : "transparent"}` }}>
               <span style={{ fontSize:15 }}>{n.icon}</span>
               {n.label}
-              {n.id === "inventory" && <span style={{ marginLeft:"auto", background:bg, padding:"1px 6px", borderRadius:9, fontSize:10, color:t3 }}>{totalItems}</span>}
+              {n.id === "inventory" && (
+                <span style={{ marginLeft:"auto", background:bg, padding:"1px 6px",
+                  borderRadius:9, fontSize:10, color:t3 }}>{totalItems}</span>
+              )}
             </div>
           ))}
         </nav>
+
         <div style={{ padding:12, borderTop:`1px solid ${bd}` }}>
-          <div style={{ background:"rgba(212,168,67,.08)", border:"1px solid rgba(212,168,67,.2)", borderRadius:10, padding:12 }}>
-            <div style={{ fontSize:12, fontWeight:700, color:gold, marginBottom:4 }}>🎟 Join for Free</div>
-            <div style={{ fontSize:11, color:t2, lineHeight:1.5, marginBottom:8 }}>Create your program's inventory, earn Stage Points, and share with nearby schools.</div>
-            <GoldBtn label="Start Free →" onClick={onSignUp} style={{ width:"100%", fontSize:12, padding:"8px 12px" }}/>
+          <div style={{ background:"rgba(212,168,67,.08)", border:"1px solid rgba(212,168,67,.2)",
+            borderRadius:10, padding:12 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:gold, marginBottom:4 }}>
+              🎟 Join for Free
+            </div>
+            <div style={{ fontSize:11, color:t2, lineHeight:1.5, marginBottom:8 }}>
+              Create your program's inventory, earn Stage Points, and share with nearby schools.
+            </div>
+            <GoldBtn label="Start Free →" onClick={onSignUp}
+              style={{ width:"100%", fontSize:12, padding:"8px 12px" }}/>
           </div>
         </div>
       </aside>
 
       {/* Main content */}
-      <main style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", paddingTop:42 }}>
-        <div style={{ padding:"12px 24px", borderBottom:`1px solid ${bd}`, background:bg2,
-          display:"flex", alignItems:"center", gap:12 }}>
+      <main style={{ flex:1, display:"flex", flexDirection:"column",
+        overflow:"hidden", paddingTop:42 }}>
+        <div style={{ padding:"12px 24px", borderBottom:`1px solid ${bd}`,
+          background:bg2, display:"flex", alignItems:"center", gap:12 }}>
           <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700 }}>
             {navs.find(n => n.id === tab)?.label}
           </h1>
           <span style={{ marginLeft:"auto", fontSize:11, color:gold, fontWeight:600,
-            background:"rgba(212,168,67,.1)", border:"1px solid rgba(212,168,67,.2)", padding:"3px 10px", borderRadius:12 }}>
+            background:"rgba(212,168,67,.1)", border:"1px solid rgba(212,168,67,.2)",
+            padding:"3px 10px", borderRadius:12 }}>
             👁 Preview — sample data only
           </span>
         </div>
@@ -12715,35 +11772,56 @@ function PreviewMode({ onSignUp }) {
           {/* DASHBOARD */}
           {tab === "dashboard" && (
             <div>
-              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>Welcome to Ocean View Drama</h2>
-              <p style={{ color:t2, fontSize:13, marginBottom:20 }}>Your theatre inventory at a glance. (Sample data)</p>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))", gap:12, marginBottom:20 }}>
-                {[{icon:"📦",label:"Cataloged Items",val:totalItems},{icon:"🔢",label:"Total Quantity",val:totalQty},
-                  {icon:"🏪",label:"Listed / Shared",val:listed},{icon:"💰",label:"Est. Sale Value",val:"$"+estValue.toLocaleString()}].map(s => (
-                  <div key={s.label} style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:16, textAlign:"center" }}>
+              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>
+                Welcome to Ocean View Drama
+              </h2>
+              <p style={{ color:t2, fontSize:13, marginBottom:20 }}>
+                Your theatre inventory at a glance. (Sample data)
+              </p>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",
+                gap:12, marginBottom:20 }}>
+                {[
+                  { icon:"📦", label:"Cataloged Items",  val:totalItems },
+                  { icon:"🔢", label:"Total Quantity",    val:totalQty },
+                  { icon:"🏪", label:"Listed / Shared",   val:listed },
+                  { icon:"💰", label:"Est. Sale Value",   val:"$"+estValue.toLocaleString() },
+                ].map(s => (
+                  <div key={s.label} style={{ background:bg2, border:`1px solid ${bd}`,
+                    borderRadius:10, padding:16, textAlign:"center" }}>
                     <div style={{ fontSize:24, marginBottom:4 }}>{s.icon}</div>
-                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700, color:gold }}>{s.val}</div>
+                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22,
+                      fontWeight:700, color:gold }}>{s.val}</div>
                     <div style={{ fontSize:11, color:t3, marginTop:2 }}>{s.label}</div>
                   </div>
                 ))}
               </div>
               <div style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:16, marginBottom:20 }}>
-                <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:16, marginBottom:12 }}>What Theatre4u™ Does</h3>
-                {[["📦","Inventory Management","Catalog every costume, prop, light, and piece of gear with photos, QR labels, and condition tracking."],
-                  ["🔲","QR Code Labels","Print scannable labels for any item. Any phone camera looks it up instantly — no app download needed."],
-                  ["🏪","Backstage Exchange","Share items with other theatre programs near you — rent, loan, or sell gear."],
+                <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:16, marginBottom:12 }}>
+                  What Theatre4u™ Does
+                </h3>
+                {[
+                  ["📦","Inventory Management","Catalog every costume, prop, light, and piece of gear with photos, QR labels, and condition tracking."],
+                  ["🔲","QR Code Labels","Print scannable labels for any item. Any phone camera looks it up instantly."],
+                  ["🏪","Backstage Exchange","Share items with other theatre programs near you — rent, loan, or sell gear to your neighbours."],
                   ["🪙","Stage Points","Earn points for cataloging and sharing inventory. Redeem for free months or Exchange discounts."],
-                  ["💰","Funding Tracker","Track grants, donations, and district funds. Log expenditures and generate accountability reports."]].map(([icon,title,desc]) => (
-                  <div key={title} style={{ display:"flex", gap:12, padding:"10px 0", borderBottom:`1px solid rgba(255,255,255,.05)` }}>
+                  ["💰","Funding Tracker","Track grants, Prop 28 funds, and spending. Generate accountability reports for principals and boards."],
+                ].map(([icon, title, desc]) => (
+                  <div key={title} style={{ display:"flex", gap:12, padding:"10px 0",
+                    borderBottom:`1px solid rgba(255,255,255,.05)` }}>
                     <span style={{ fontSize:20, flexShrink:0 }}>{icon}</span>
-                    <div><div style={{ fontWeight:700, fontSize:13, marginBottom:2 }}>{title}</div>
-                      <div style={{ fontSize:12, color:t2, lineHeight:1.5 }}>{desc}</div></div>
+                    <div>
+                      <div style={{ fontWeight:700, fontSize:13, marginBottom:2 }}>{title}</div>
+                      <div style={{ fontSize:12, color:t2, lineHeight:1.5 }}>{desc}</div>
+                    </div>
                   </div>
                 ))}
               </div>
               <div style={{ textAlign:"center", padding:"16px 0" }}>
-                <GoldBtn label="🎟 Create Your Free Account →" onClick={onSignUp} style={{ fontSize:15, padding:"12px 32px" }}/>
-                <div style={{ fontSize:12, color:t3, marginTop:8 }}>No credit card required · Free forever for basic use</div>
+                <GoldBtn label="🎟 Create Your Free Account →" onClick={onSignUp}
+                  style={{ fontSize:15, padding:"12px 32px" }}/>
+                <div style={{ fontSize:12, color:t3, marginTop:8 }}>
+                  No credit card required · Free forever for basic use
+                </div>
               </div>
             </div>
           )}
@@ -12753,82 +11831,116 @@ function PreviewMode({ onSignUp }) {
             <div>
               <div style={{ display:"flex", gap:10, marginBottom:14, flexWrap:"wrap", alignItems:"center" }}>
                 <div style={{ position:"relative" }}>
-                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search items…"
-                    style={{ background:"#110f18", border:`1px solid ${bd}`, borderRadius:8, padding:"7px 10px 7px 32px",
-                      color:t1, fontSize:13, width:220, outline:"none" }}/>
-                  <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", fontSize:14, color:t3 }}>🔍</span>
+                  <input value={search} onChange={e => setSearch(e.target.value)}
+                    placeholder="Search items…"
+                    style={{ background:"#110f18", border:`1px solid ${bd}`, borderRadius:8,
+                      padding:"7px 10px 7px 32px", color:t1, fontSize:13, width:220, outline:"none" }}/>
+                  <span style={{ position:"absolute", left:10, top:"50%",
+                    transform:"translateY(-50%)", fontSize:14, color:t3 }}>🔍</span>
                 </div>
                 <select value={catF} onChange={e => setCatF(e.target.value)}
-                  style={{ background:"#110f18", border:`1px solid ${bd}`, borderRadius:8, padding:"7px 10px", color:t1, fontSize:13, outline:"none" }}>
+                  style={{ background:"#110f18", border:`1px solid ${bd}`, borderRadius:8,
+                    padding:"7px 10px", color:t1, fontSize:13, outline:"none" }}>
                   <option value="all">All Categories</option>
-                  {Object.keys(PREVIEW_CATS).map(c => <option key={c} value={c}>{PREVIEW_CATS[c]} {c[0].toUpperCase()+c.slice(1)}</option>)}
+                  {Object.keys(PREVIEW_CATS).map(c => (
+                    <option key={c} value={c}>
+                      {PREVIEW_CATS[c]} {c[0].toUpperCase() + c.slice(1)}
+                    </option>
+                  ))}
                 </select>
                 <span style={{ fontSize:12, color:t3 }}>{filtered.length} items</span>
-                <button onClick={() => setShowCTA(true)} style={{ marginLeft:"auto", padding:"7px 14px", borderRadius:8,
-                  fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:700, cursor:"pointer",
-                  background:"rgba(212,168,67,.12)", border:"1px solid rgba(212,168,67,.25)", color:gold }}>
+                <button onClick={() => setShowCTA(true)}
+                  style={{ marginLeft:"auto", padding:"7px 14px", borderRadius:8,
+                    fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:700,
+                    cursor:"pointer", background:"rgba(212,168,67,.12)",
+                    border:"1px solid rgba(212,168,67,.25)", color:gold }}>
                   + Add Item (sign up first)
                 </button>
               </div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:12 }}>
+
+              <div style={{ display:"grid",
+                gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:12 }}>
                 {filtered.map(item => (
                   <div key={item.id} onClick={() => setDetail(item)}
-                    style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:14, cursor:"pointer", transition:"border-color .2s" }}
+                    style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10,
+                      padding:14, cursor:"pointer", transition:"border-color .2s" }}
                     onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(212,168,67,.4)"}
                     onMouseLeave={e => e.currentTarget.style.borderColor = bd}>
                     <div style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:8 }}>
-                      <div style={{ fontSize:24, flexShrink:0 }}>{PREVIEW_CATS[item.category]||"📦"}</div>
-                      <div><div style={{ fontWeight:700, fontSize:14, lineHeight:1.3 }}>{item.name}</div>
-                        <div style={{ fontSize:11, color:t3, marginTop:2 }}>{item.location}</div></div>
+                      <div style={{ fontSize:24, flexShrink:0 }}>{PREVIEW_CATS[item.category] || "📦"}</div>
+                      <div>
+                        <div style={{ fontWeight:700, fontSize:14, lineHeight:1.3 }}>{item.name}</div>
+                        <div style={{ fontSize:11, color:t3, marginTop:2 }}>{item.location}</div>
+                      </div>
                     </div>
                     <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:8 }}>
                       {[item.condition, `x${item.qty}`, item.avail].map(tag => (
-                        <span key={tag} style={{ fontSize:10, padding:"2px 7px", background:"rgba(255,255,255,.05)", borderRadius:4, color:t2 }}>{tag}</span>
+                        <span key={tag} style={{ fontSize:10, padding:"2px 7px",
+                          background:"rgba(255,255,255,.05)", borderRadius:4, color:t2 }}>{tag}</span>
                       ))}
                     </div>
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                       <span style={{ fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:10,
-                        background: mktColor(item.mkt)+"22", color: mktColor(item.mkt) }}>{item.mkt}</span>
+                        background: mktColor(item.mkt) + "22", color: mktColor(item.mkt) }}>
+                        {item.mkt}
+                      </span>
                       {(item.rent > 0 || item.sale > 0) && (
                         <span style={{ fontSize:12, fontWeight:700, color:gold }}>
-                          {item.rent>0?`$${item.rent}/wk`:""}
-                          {item.rent>0&&item.sale>0?" · ":""}
-                          {item.sale>0?`$${item.sale}`:""}
+                          {item.rent > 0 ? `$${item.rent}/wk` : ""}
+                          {item.rent > 0 && item.sale > 0 ? " · " : ""}
+                          {item.sale > 0 ? `$${item.sale}` : ""}
                         </span>
                       )}
                     </div>
                   </div>
                 ))}
               </div>
+
               {detail && (
-                <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", zIndex:3000,
-                  display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
+                <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)",
+                  zIndex:3000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
                   onClick={e => e.target === e.currentTarget && setDetail(null)}>
-                  <div style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:14, width:"100%", maxWidth:520,
-                    padding:24, boxShadow:"0 8px 48px rgba(0,0,0,.5)" }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16 }}>
+                  <div style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:14,
+                    width:"100%", maxWidth:520, padding:24, boxShadow:"0 8px 48px rgba(0,0,0,.5)" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between",
+                      alignItems:"flex-start", marginBottom:16 }}>
                       <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
-                        <div style={{ fontSize:32 }}>{PREVIEW_CATS[detail.category]||"📦"}</div>
-                        <div><div style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700 }}>{detail.name}</div>
-                          <div style={{ fontSize:12, color:t3, marginTop:2 }}>{detail.category} · {detail.condition}</div></div>
+                        <div style={{ fontSize:32 }}>{PREVIEW_CATS[detail.category] || "📦"}</div>
+                        <div>
+                          <div style={{ fontFamily:"'Playfair Display',serif",
+                            fontSize:18, fontWeight:700 }}>{detail.name}</div>
+                          <div style={{ fontSize:12, color:t3, marginTop:2 }}>
+                            {detail.category} · {detail.condition}
+                          </div>
+                        </div>
                       </div>
-                      <button onClick={() => setDetail(null)} style={{ background:"none", border:`1px solid ${bd}`, color:t2,
-                        borderRadius:6, width:28, height:28, cursor:"pointer", fontSize:16,
-                        display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+                      <button onClick={() => setDetail(null)}
+                        style={{ background:"none", border:`1px solid ${bd}`, color:t2,
+                          borderRadius:6, width:28, height:28, cursor:"pointer", fontSize:16,
+                          display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
                     </div>
-                    {[["Location",detail.location||"—"],["Quantity",detail.qty],["Availability",detail.avail],["Market Status",detail.mkt],
-                      ...(detail.rent>0?[["Rental Price",`$${detail.rent}/week`]]:[]),
-                      ...(detail.sale>0?[["Sale Price",`$${detail.sale}`]]:[]),
-                      ...(detail.notes?[["Notes",detail.notes]]:[])
-                    ].map(([l,v]) => (
-                      <div key={l} style={{ display:"flex", padding:"7px 0", borderBottom:"1px solid rgba(255,255,255,.05)" }}>
+                    {[
+                      ["Location",      detail.location || "—"],
+                      ["Quantity",      detail.qty],
+                      ["Availability",  detail.avail],
+                      ["Market Status", detail.mkt],
+                      ...(detail.rent > 0 ? [["Rental Price", `$${detail.rent}/week`]] : []),
+                      ...(detail.sale > 0 ? [["Sale Price",   `$${detail.sale}`]]      : []),
+                      ...(detail.notes    ? [["Notes",        detail.notes]]            : []),
+                    ].map(([l, v]) => (
+                      <div key={l} style={{ display:"flex", padding:"7px 0",
+                        borderBottom:"1px solid rgba(255,255,255,.05)" }}>
                         <span style={{ width:130, color:t3, fontSize:12, flexShrink:0 }}>{l}</span>
                         <span style={{ fontSize:13 }}>{v}</span>
                       </div>
                     ))}
-                    <div style={{ marginTop:16, padding:12, background:"rgba(212,168,67,.06)", border:"1px solid rgba(212,168,67,.15)", borderRadius:9, textAlign:"center" }}>
-                      <div style={{ fontSize:12, color:t2, marginBottom:8 }}>Sign up to manage your own inventory, add photos, and print QR labels.</div>
-                      <GoldBtn label="🎟 Start Free Account →" onClick={onSignUp} style={{ width:"100%" }}/>
+                    <div style={{ marginTop:16, padding:12, background:"rgba(212,168,67,.06)",
+                      border:"1px solid rgba(212,168,67,.15)", borderRadius:9, textAlign:"center" }}>
+                      <div style={{ fontSize:12, color:t2, marginBottom:8 }}>
+                        Sign up to manage your own inventory, add photos, and print QR labels.
+                      </div>
+                      <GoldBtn label="🎟 Start Free Account →" onClick={onSignUp}
+                        style={{ width:"100%" }}/>
                     </div>
                   </div>
                 </div>
@@ -12836,233 +11948,27 @@ function PreviewMode({ onSignUp }) {
             </div>
           )}
 
-          {/* BACKSTAGE EXCHANGE */}
-          {tab === "marketplace" && (
-            <div>
-              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>Backstage Exchange</h2>
-              <p style={{ color:t2, fontSize:13, marginBottom:20 }}>Browse and request gear from theatre programs nearby. (Sample listings)</p>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:14, marginBottom:24 }}>
-                {[{title:"LED Par Cans (set of 8)",prog:"Edison Arts Academy",type:"For Rent",price:"$80/wk",icon:"💡"},
-                  {title:"Victorian Costume Collection (12pc)",prog:"Lakewood Drama",type:"For Loan",price:"Free loan",icon:"🥻"},
-                  {title:"Fog Machine + Fluid (2gal)",prog:"Valley Performing Arts",type:"For Rent",price:"$20/wk",icon:"🌫️"},
-                  {title:"Romeo & Juliet Script Sets (25)",prog:"Ocean View Drama",type:"For Sale",price:"$5 each",icon:"📜"},
-                  {title:"Wireless Mic Pack (4ch)",prog:"Sunset High Theatre",type:"For Rent",price:"$45/wk",icon:"🎤"},
-                  {title:"12ft Forest Backdrop Flat",prog:"Riverside High Drama",type:"For Rent",price:"$40/wk",icon:"🌲"},
-                ].map((item, i) => (
-                  <div key={i} style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:16 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
-                      <div style={{ fontSize:28 }}>{item.icon}</div>
-                      <span style={{ fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:10,
-                        background: item.type.includes("Loan")?"rgba(76,175,80,.15)":item.type.includes("Sale")?"rgba(156,39,176,.15)":"rgba(66,165,245,.15)",
-                        color: item.type.includes("Loan")?"#81c784":item.type.includes("Sale")?"#ce93d8":"#64b5f6" }}>{item.type}</span>
-                    </div>
-                    <div style={{ fontWeight:700, fontSize:14, marginBottom:3 }}>{item.title}</div>
-                    <div style={{ fontSize:12, color:t3, marginBottom:8 }}>{item.prog}</div>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                      <span style={{ fontWeight:700, color:gold, fontSize:13 }}>{item.price}</span>
-                      <button onClick={() => setShowCTA(true)} style={{ padding:"5px 12px", borderRadius:6,
-                        fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:700, cursor:"pointer",
-                        background:"rgba(212,168,67,.12)", border:"1px solid rgba(212,168,67,.25)", color:gold }}>Request →</button>
-                    </div>
-                  </div>
-                ))}
+          {/* OTHER TABS — teaser */}
+          {(tab === "marketplace" || tab === "reports" || tab === "funding") && (
+            <div style={{ textAlign:"center", padding:"60px 20px" }}>
+              <div style={{ fontSize:56, marginBottom:16 }}>
+                {tab === "marketplace" ? "🏪" : tab === "reports" ? "📊" : "💰"}
               </div>
-              <div style={{ textAlign:"center" }}>
-                <GoldBtn label="🎟 Join to Browse All Listings →" onClick={onSignUp} style={{ fontSize:14 }}/>
-                <div style={{ fontSize:12, color:t3, marginTop:8 }}>Free loans between district schools · No platform fee on intra-district transactions</div>
+              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:26,
+                fontWeight:700, marginBottom:10 }}>
+                {tab === "marketplace" ? "Backstage Exchange"
+                  : tab === "reports"    ? "Reports & Analytics"
+                  : "Funding Tracker"}
               </div>
-            </div>
-          )}
-
-          {/* COMMUNITY BOARD */}
-          {tab === "community" && (
-            <div>
-              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>Community Board</h2>
-              <p style={{ color:t2, fontSize:13, marginBottom:20 }}>Announcements, auditions, and show postings from your theatre network. (Sample posts)</p>
-              <div style={{ display:"flex", flexDirection:"column", gap:12, marginBottom:24 }}>
-                {[{type:"🎭 Show Announcement",author:"Ocean View Drama",time:"2 hours ago",title:"Opening Night — The Wizard of Oz",body:"Join us May 17–19 at the Ocean View PAC. Tickets $8 students / $12 general. Featuring a cast of 42 students and a live pit orchestra."},
-                  {type:"🎤 Auditions",author:"Lakewood Drama",time:"Yesterday",title:"Fall Musical Auditions Open — Mamma Mia!",body:"Auditions June 3–4 at Lakewood High. All students welcome. No experience required. Callbacks June 6."},
-                  {type:"📢 Wanted",author:"Edison Arts Academy",time:"3 days ago",title:"Seeking: Fog machine rental for 2 weeks in June",body:"We're looking to rent a 1000W fog machine for our June production. Happy to trade — we have LED par cans available for loan."},
-                  {type:"📦 Free Items",author:"Valley Performing Arts",time:"Last week",title:"Free to good home: 30 assorted costume pieces",body:"Clearing space — 30+ costume pieces available for pickup. Period, contemporary, and fantasy. First come first served."},
-                ].map((post, i) => (
-                  <div key={i} style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:16 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-                      <span style={{ fontSize:10, fontWeight:700, color:gold, textTransform:"uppercase", letterSpacing:1 }}>{post.type}</span>
-                      <span style={{ fontSize:11, color:t3 }}>{post.time}</span>
-                    </div>
-                    <div style={{ fontWeight:700, fontSize:15, marginBottom:4 }}>{post.title}</div>
-                    <div style={{ fontSize:12, color:t3, marginBottom:6 }}>Posted by {post.author}</div>
-                    <div style={{ fontSize:13, color:t2, lineHeight:1.6 }}>{post.body}</div>
-                  </div>
-                ))}
+              <div style={{ color:t2, fontSize:14, maxWidth:480, margin:"0 auto 28px", lineHeight:1.8 }}>
+                {tab === "marketplace" && "Browse and request items from theatre programs near you — or list your own inventory to share with the community. Free loans between district schools, rentals, and sales."}
+                {tab === "reports"    && "Category breakdowns, condition reports, platform utilization reports for principals, and CSV export. The Platform Usage Report is designed to hand to an administrator showing how Theatre4u protects program assets."}
+                {tab === "funding"    && "Track grants, Prop 28 funds, and all program spending. Generate accountability reports for principals, arts directors, and boards — formatted and print-ready in one click."}
               </div>
-              <div style={{ textAlign:"center" }}>
-                <GoldBtn label="🎟 Join to Post & Comment →" onClick={onSignUp} style={{ fontSize:14 }}/>
-              </div>
-            </div>
-          )}
-
-          {/* MESSAGES */}
-          {tab === "messages" && (
-            <div>
-              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>Messages</h2>
-              <p style={{ color:t2, fontSize:13, marginBottom:20 }}>Direct conversations with other theatre programs. (Sample)</p>
-              <div style={{ display:"flex", flexDirection:"column", gap:8, maxWidth:600, marginBottom:24 }}>
-                {[{from:"Lakewood Drama",preview:"Hi! We saw your LED par cans listed — are they available the week of June 10?",time:"10:24 AM",unread:true},
-                  {from:"Edison Arts Academy",preview:"Thanks for the quick turnaround on the costumes. Our cast loved them!",time:"Yesterday",unread:false},
-                  {from:"Sunset High Theatre",preview:"We have fog machines available if you still need them for your spring show.",time:"Mon",unread:false},
-                ].map((msg, i) => (
-                  <div key={i} onClick={() => setShowCTA(true)} style={{ background:msg.unread?"rgba(212,168,67,.06)":bg2,
-                    border:`1px solid ${msg.unread?"rgba(212,168,67,.25)":bd}`, borderRadius:10, padding:"12px 14px",
-                    cursor:"pointer", display:"flex", gap:12, alignItems:"center" }}>
-                    <div style={{ width:40, height:40, borderRadius:"50%", flexShrink:0, fontSize:18,
-                      background:`linear-gradient(135deg,${gold},#a37f2c)`, display:"flex", alignItems:"center", justifyContent:"center" }}>🎭</div>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:2 }}>
-                        <span style={{ fontWeight:msg.unread?800:600, fontSize:14 }}>{msg.from}</span>
-                        <span style={{ fontSize:11, color:t3 }}>{msg.time}</span>
-                      </div>
-                      <div style={{ fontSize:12, color:t2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{msg.preview}</div>
-                    </div>
-                    {msg.unread && <div style={{ width:8, height:8, borderRadius:"50%", background:gold, flexShrink:0 }}/>}
-                  </div>
-                ))}
-              </div>
-              <div style={{ textAlign:"center" }}>
-                <GoldBtn label="🎟 Join to Send Messages →" onClick={onSignUp} style={{ fontSize:14 }}/>
-              </div>
-            </div>
-          )}
-
-          {/* REQUESTS */}
-          {tab === "requests" && (
-            <div>
-              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>Requests</h2>
-              <p style={{ color:t2, fontSize:13, marginBottom:20 }}>Manage incoming and outgoing Exchange requests. (Sample)</p>
-              <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
-                {[{item:"Victorian Ball Gown — Blue",from:"Lakewood Drama",type:"Rental",status:"pending",price:"$25/wk",date:"Requested Apr 22"},
-                  {item:"LED Par Can RGBW (4 units)",from:"Edison Arts Academy",type:"Loan",status:"accepted",price:"Free",date:"Accepted Apr 20"},
-                ].map((req, i) => (
-                  <div key={i} style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:16 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
-                      <div>
-                        <div style={{ fontWeight:700, fontSize:14, marginBottom:3 }}>{req.item}</div>
-                        <div style={{ fontSize:12, color:t3 }}>from {req.from} · {req.type} · {req.date}</div>
-                      </div>
-                      <div style={{ textAlign:"right", flexShrink:0 }}>
-                        <span style={{ fontSize:11, fontWeight:700, padding:"3px 8px", borderRadius:8,
-                          background:req.status==="accepted"?"rgba(76,175,80,.15)":"rgba(212,168,67,.15)",
-                          color:req.status==="accepted"?"#81c784":gold }}>{req.status}</span>
-                        <div style={{ fontSize:12, fontWeight:700, color:gold, marginTop:4 }}>{req.price}</div>
-                      </div>
-                    </div>
-                    <div style={{ display:"flex", gap:8, marginTop:12 }}>
-                      {["Accept","Decline","Message"].map(a => (
-                        <button key={a} onClick={() => setShowCTA(true)} style={{ padding:"6px 14px", borderRadius:6,
-                          fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:700, cursor:"pointer",
-                          background:"rgba(107,100,120,.1)", border:`1px solid ${bd}`, color:t2 }}>{a}</button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ textAlign:"center" }}>
-                <GoldBtn label="🎟 Join to Manage Requests →" onClick={onSignUp} style={{ fontSize:14 }}/>
-              </div>
-            </div>
-          )}
-
-          {/* PRODUCTIONS */}
-          {tab === "productions" && (
-            <div>
-              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>Productions</h2>
-              <p style={{ color:t2, fontSize:13, marginBottom:20 }}>Track items assigned to each show. (Sample productions)</p>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:14, marginBottom:24 }}>
-                {[{title:"The Wizard of Oz",date:"May 17–19, 2026",status:"In Production",items:34,icon:"🌈"},
-                  {title:"Mamma Mia!",date:"Fall 2026",status:"Planning",items:8,icon:"🎵"},
-                  {title:"A Christmas Carol",date:"Dec 2025",status:"Archived",items:67,icon:"🎄"},
-                ].map((prod, i) => (
-                  <div key={i} style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:18 }}>
-                    <div style={{ fontSize:32, marginBottom:10 }}>{prod.icon}</div>
-                    <div style={{ fontWeight:800, fontSize:16, marginBottom:3 }}>{prod.title}</div>
-                    <div style={{ fontSize:12, color:t3, marginBottom:10 }}>{prod.date}</div>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                      <span style={{ fontSize:11, fontWeight:700, padding:"3px 9px", borderRadius:8,
-                        background:prod.status==="In Production"?"rgba(212,168,67,.2)":prod.status==="Planning"?"rgba(66,165,245,.15)":"rgba(107,100,120,.15)",
-                        color:prod.status==="In Production"?gold:prod.status==="Planning"?"#64b5f6":t3 }}>{prod.status}</span>
-                      <span style={{ fontSize:12, color:t2 }}>📦 {prod.items} items</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ textAlign:"center" }}>
-                <GoldBtn label="🎟 Join to Track Productions →" onClick={onSignUp} style={{ fontSize:14 }}/>
-              </div>
-            </div>
-          )}
-
-          {/* REPORTS */}
-          {tab === "reports" && (
-            <div>
-              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>Reports & Analytics</h2>
-              <p style={{ color:t2, fontSize:13, marginBottom:20 }}>Inventory breakdowns and reports for administrators. (Sample data)</p>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:12, marginBottom:20 }}>
-                {[{icon:"📦",label:"Total Items",val:"12"},{icon:"💰",label:"Est. Value",val:"$1,240"},
-                  {icon:"🏪",label:"Items Shared",val:"7"},{icon:"📊",label:"Categories",val:"9"}].map(s => (
-                  <div key={s.label} style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:16, textAlign:"center" }}>
-                    <div style={{ fontSize:24, marginBottom:4 }}>{s.icon}</div>
-                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:24, fontWeight:800, color:gold }}>{s.val}</div>
-                    <div style={{ fontSize:12, fontWeight:700, marginTop:2 }}>{s.label}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:16, marginBottom:16 }}>
-                <div style={{ fontWeight:700, fontSize:13, marginBottom:12 }}>Inventory by Category</div>
-                {[["Costumes",3],["Lighting",12],["Sound",4],["Props",8],["Sets",2]].map(([cat,n]) => (
-                  <div key={cat} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
-                    <div style={{ width:100, fontSize:12, color:t2, flexShrink:0 }}>{cat}</div>
-                    <div style={{ flex:1, height:6, background:"rgba(255,255,255,.05)", borderRadius:3, overflow:"hidden" }}>
-                      <div style={{ height:"100%", width:(n/12*100)+"%", background:gold, borderRadius:3 }}/>
-                    </div>
-                    <div style={{ fontSize:12, fontWeight:700, width:24, textAlign:"right" }}>{n}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ textAlign:"center" }}>
-                <GoldBtn label="🎟 Join for Full Reports →" onClick={onSignUp} style={{ fontSize:14 }}/>
-              </div>
-            </div>
-          )}
-
-          {/* FUNDING TRACKER */}
-          {tab === "funding" && (
-            <div>
-              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>Funding Tracker</h2>
-              <p style={{ color:t2, fontSize:13, marginBottom:20 }}>Track grants, Prop 28, and program spending. (Sample data)</p>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))", gap:12, marginBottom:20 }}>
-                {[{label:"Total Allocated",val:"$18,400",color:gold},{label:"Total Spent",val:"$11,250",color:"#64b5f6"},
-                  {label:"Remaining",val:"$7,150",color:"#81c784"},{label:"Sources",val:"3",color:t1}].map(s => (
-                  <div key={s.label} style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:14, textAlign:"center" }}>
-                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:800, color:s.color }}>{s.val}</div>
-                    <div style={{ fontSize:10, color:t3, marginTop:3, textTransform:"uppercase", letterSpacing:1 }}>{s.label}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, overflow:"hidden", marginBottom:20 }}>
-                {[{name:"Prop 28 — Arts",alloc:"$12,000",spent:"$8,400",bal:"$3,600"},
-                  {name:"Booster Donations",alloc:"$4,400",spent:"$2,850",bal:"$1,550"},
-                  {name:"Drama Dept Budget",alloc:"$2,000",spent:"$0",bal:"$2,000"}].map((r,i) => (
-                  <div key={i} style={{ padding:"10px 14px", display:"grid", gridTemplateColumns:"1fr 80px 80px 80px", gap:8,
-                    borderTop:i===0?"none":`1px solid ${bd}`, background:i%2===0?"rgba(255,255,255,.01)":"transparent" }}>
-                    <div style={{ fontWeight:600, fontSize:13 }}>{r.name}</div>
-                    <div style={{ fontSize:13, color:gold, fontWeight:700 }}>{r.alloc}</div>
-                    <div style={{ fontSize:13 }}>{r.spent}</div>
-                    <div style={{ fontSize:13, color:"#81c784", fontWeight:700 }}>{r.bal}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ textAlign:"center" }}>
-                <GoldBtn label="🎟 Join to Track Your Funding →" onClick={onSignUp} style={{ fontSize:14 }}/>
+              <GoldBtn label="🎟 Create Free Account to Access →" onClick={onSignUp}
+                style={{ fontSize:14, padding:"12px 32px" }}/>
+              <div style={{ fontSize:12, color:t3, marginTop:10 }}>
+                Full platform access · No credit card required
               </div>
             </div>
           )}
@@ -13070,64 +11976,31 @@ function PreviewMode({ onSignUp }) {
         </div>
       </main>
 
-      {/* Floating CTA after 20s */}
+      {/* Floating CTA (appears after 20s) */}
       {showCTA && (
-        <div style={{ position:"fixed", bottom:20, right:20, zIndex:9998, background:bg2,
-          border:"1px solid rgba(212,168,67,.4)", borderRadius:14, padding:"16px 18px", maxWidth:280,
-          boxShadow:"0 8px 32px rgba(0,0,0,.5)" }}>
-          <button onClick={() => setShowCTA(false)} style={{ position:"absolute", top:8, right:10,
-            background:"none", border:"none", color:t3, cursor:"pointer", fontSize:16 }}>×</button>
+        <div style={{ position:"fixed", bottom:20, right:20, zIndex:9998,
+          background:bg2, border:"1px solid rgba(212,168,67,.4)", borderRadius:14,
+          padding:"16px 18px", maxWidth:280, boxShadow:"0 8px 32px rgba(0,0,0,.5)" }}>
+          <button onClick={() => setShowCTA(false)}
+            style={{ position:"absolute", top:8, right:10, background:"none",
+              border:"none", color:t3, cursor:"pointer", fontSize:16 }}>×</button>
           <div style={{ fontSize:24, marginBottom:8 }}>🎟</div>
-          <div style={{ fontWeight:800, fontSize:14, marginBottom:4, color:t1 }}>Ready to try it for your program?</div>
-          <div style={{ fontSize:12, color:t2, lineHeight:1.5, marginBottom:12 }}>Free to start. No credit card. Your inventory, QR labels, and Backstage Exchange in under 5 minutes.</div>
-          <GoldBtn label="Start Free Account →" onClick={onSignUp} style={{ width:"100%", fontSize:13 }}/>
+          <div style={{ fontWeight:800, fontSize:14, marginBottom:4, color:t1 }}>
+            Ready to try it for your program?
+          </div>
+          <div style={{ fontSize:12, color:t2, lineHeight:1.5, marginBottom:12 }}>
+            Free to start. No credit card. Your inventory, QR labels, and Backstage Exchange access in under 5 minutes.
+          </div>
+          <GoldBtn label="Start Free Account →" onClick={onSignUp}
+            style={{ width:"100%", fontSize:13 }}/>
         </div>
       )}
-      <AIHelpBubble user={null} />
     </div>
   );
 }
 
-// ── Visit tracking helper ────────────────────────────────────────────────────
-const TRACK_URL = "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/track-visit";
-function getSessionId() {
-  let sid = sessionStorage.getItem("t4u_sid");
-  if (!sid) { sid = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem("t4u_sid", sid); }
-  return sid;
-}
-function trackVisit(page, extra = {}) {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    fetch(TRACK_URL, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        page,
-        session_id:   getSessionId(),
-        referrer:     document.referrer || null,
-        utm_source:   params.get("utm_source"),
-        utm_medium:   params.get("utm_medium"),
-        utm_campaign: params.get("utm_campaign"),
-        ...extra
-      })
-    }).catch(() => {});
-  } catch(e) {}
-}
-
 function AppRoot(){
   const [user,setUser]     = useState(null);
-
-  // ── Handle Stripe label checkout returns ──────────────────────────────────
-  const [stripeReturn, setStripeReturn] = useState(()=>{
-    const p = new URLSearchParams(window.location.search);
-    if(p.get("labels_success")) return "success";
-    if(p.get("labels_cancelled")) return "cancelled";
-    return null;
-  });
-  useEffect(()=>{
-    if(stripeReturn && user){
-      nav("labels");
-    }
-  },[stripeReturn, user]);
   // ── Hash routing — handles #/item/:id for public QR scans ─────────────────
   // ── Hash routing: #/item/:id and #/location/:id (storage location QR codes) ──
   const _parseHash = (h) => ({
@@ -13165,12 +12038,10 @@ function AppRoot(){
   const [mob,setMob]       = useState(false);
   const [loaded,setLoaded] = useState(false);
   const [authChk,setAuthChk] = useState(false);
-  // Preview mode -- ?preview=1 lets anyone explore with sample data before signing up
+  // Preview mode -- ?preview=1 in URL shows the platform with sample data (no login required)
   const [previewMode, setPreviewMode] = useState(() =>
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview") === "1"
   );
-  // Track page visit — must be here at top with all hooks, never after a return
-  useEffect(() => { trackVisit("landing"); }, []);
   // District: activeSchool = null means "own account", otherwise = school org object
   const [activeSchool,setActiveSchool]   = useState(null);
   const [memberRole,  setMemberRole]    = useState(null); // null=owner/director, or stage_manager/crew/house
@@ -13320,9 +12191,7 @@ function AppRoot(){
 
   // ── CRUD ─────────────────────────────────────────────────────────────────
   const add = useCallback(async(item)=>{
-    // For team members, org.id is the director's org — not user.id
-    const targetOrgId = org?.id || user.id;
-    const row={...item,org_id:targetOrgId};
+    const row={...item,org_id:user.id};
     // Sanitize optional numeric/date/uuid fields — empty string → null
     if(!row.purchase_cost || row.purchase_cost==="")    row.purchase_cost    = null;
     else row.purchase_cost = parseFloat(row.purchase_cost) || null;
@@ -13455,9 +12324,8 @@ function AppRoot(){
   // Redirect to dashboard if current page's flag gets turned off
 
   useEffect(()=>{
-    // Free plan users CAN navigate to community/marketplace — they see the upgrade overlay
-    if(page==="community"  && !org?.community_enabled && plan !== "free")   setPage("dashboard");
-    if(page==="marketplace"&& !org?.marketplace_enabled && plan !== "free") setPage("dashboard");
+    if(page==="community"  && !org?.community_enabled)   setPage("dashboard");
+    if(page==="marketplace"&& !org?.marketplace_enabled) setPage("dashboard");
   },[org?.community_enabled, org?.marketplace_enabled, page]);
   // Expose for cross-component navigation
   useEffect(()=>{
@@ -13598,13 +12466,12 @@ function AppRoot(){
       ...(!isCrew && org?.community_enabled   ? [{ id:"community",   label:"Community",   ico:"🎪", community:true }] : []),
       ...(!isCrew  ? [{ id:"productions", label:"Productions", ico:"🎭"       }] : []),
       ...(!isMember? [{ id:"reports",     label:"Reports",     ico:Ic.chart   }] : []),
-      ...(!isMember? [{ id:"labels", label:"QR Labels", ico:"🏷", disabled:true }] : []),
       ...(!isMember? [{ id:"funding",     label:"Funding Tracker", ico:"💰"  }] : []),
       // Prop 28 nav hidden — legacy data accessible via Funding Tracker migration banner
       { id:"profile",     label:"My Profile",  ico:"👤"       },
       ...(!isMember ? [{ id:"points", label:"Stage Points", ico:"🪙" }] : []),
       ...(!isMember && plan === "district" ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
-      ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin Hub", ico:"🎛", admin:true }] : []),
+      ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
     ];
   })();
   const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Backstage Exchange", productions:"Productions", reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:"Stage Points", points:"Stage Points", community:"Community Board" };
@@ -13622,10 +12489,7 @@ function AppRoot(){
     </div>
   );
 
-  // Show preview mode if ?preview=1 and not logged in
-  if (!user && previewMode) return (
-    <PreviewMode onSignUp={() => { setPreviewMode(false); window.__t4u_show_auth && window.__t4u_show_auth("signup"); }}/>
-  );
+  if(!user && previewMode) return <PreviewMode onSignUp={()=>{ setPreviewMode(false); window.__t4u_show_auth&&window.__t4u_show_auth("signup"); }}/>;
 
   if(!user) return(
     <>
@@ -13643,17 +12507,9 @@ function AppRoot(){
         }}
         onTakeTour={()=>{ window.location.href = window.location.href.split("?")[0] + "?preview=1"; }}
       />
-      <AuthOverlay onAuth={(u, isNew=false)=>{
-        setUser(u);
-        trackVisit("app", { org_id: u.id });
-        // Always call signup-notify — server deduplicates, only emails once per org
-        fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/signup-notify", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ org_id: u.id })
-        }).catch(() => {});
-      }} pendingInvite={pendingInvite} inviteInfo={inviteInfo}/>
+      <AuthOverlay onAuth={u=>{setUser(u);}} pendingInvite={pendingInvite} inviteInfo={inviteInfo}/>
       {user && <FeedbackWidget userId={user.id} orgName={org?.name||""} isLeadingPlayer={org?.is_leading_player||false}/>}
-      <AIHelpBubble user={user} />
+      {user && <AIHelpBubble user={user} />}
     </>
   );
 
@@ -13752,17 +12608,18 @@ function AppRoot(){
 
               <div className="sb-foot">
                 <div style={{display:"flex",gap:5,flexDirection:"column"}}>
-                  {/* Mobile App — all plans */}
-                  <a href="/app.html" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
-                    style={{color:"var(--gold)",borderColor:"rgba(212,168,67,.3)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
-                    📱 Mobile App
-                  </a>
-                  {/* Help & Tutorials — all plans */}
-                  <a href="/help.html" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
-                    style={{color:"rgba(255,255,255,.6)",borderColor:"rgba(255,255,255,.12)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
-                    ❓ Help & Tutorials
-                  </a>
-                  {/* Upgrade prompt — free plan only */}
+                  {(plan==="pro"||plan==="district"||isAdmin)&&(
+                    <a href="/app.html" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
+                      style={{color:"var(--gold)",borderColor:"rgba(212,168,67,.3)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                      📱 Mobile App
+                    </a>
+                  )}
+                  {(plan==="pro"||plan==="district"||isAdmin)&&(
+                    <a href="/help.html" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
+                      style={{color:"rgba(255,255,255,.6)",borderColor:"rgba(255,255,255,.12)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                      ❓ Help & Tutorials
+                    </a>
+                  )}
                   {plan==="free"&&!isAdmin&&(
                     <button className="btn btn-sm btn-full" style={{background:"linear-gradient(135deg,var(--gold),var(--amber))",border:"none",color:"#1a0f00",fontSize:13,fontWeight:800,padding:"9px 12px",letterSpacing:.2}} onClick={()=>nav("settings")}>
                       ⭐ Upgrade Plan
@@ -13810,8 +12667,8 @@ function AppRoot(){
                       setPendingReqCount(count||0);
                     }}/>}
                   {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
-                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} pointBalance={creditBalance} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")} goLabels={()=>nav("labels")}/>}
-                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} onGoReports={()=>nav("reports")}/>}
+                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} pointBalance={creditBalance} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
+                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
                       ? <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading {activeSchool.name}…</div>
@@ -13825,9 +12682,8 @@ function AppRoot(){
                         />
                   )}
                   {page==="marketplace" && <MarketplaceGate items={items} org={org} setOrg={setOrg} plan={plan} userId={user?.id} activeSchool={activeSchool} allSchoolsMode={plan==="district"} onEdit={edit} onDelete={del}/>}
-                  {page==="productions" && <Productions userId={user?.id} allItems={items}/>}
+                  {page==="productions" && <Productions userId={user?.id} allItems={items} org={org} onNavigateTo={nav}/>}
                   {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan} org={org}/>}
-                  {page==="labels"      && <LabelsPage  org={org} userId={user?.id} items={items} stripeReturn={stripeReturn} onClearReturn={()=>setStripeReturn(null)}/>}
                   {page==="funding"     && <FundingPage userId={user?.id} org={org} plan={plan}/>}
                   {page==="prop28"      && <Prop28Page  userId={user?.id} org={org} onNav={nav}/>}
                   {page==="profile"     && <OrgProfilePage userId={user?.id} org={org} setOrg={saveOrg} plan={plan} items={items}/>}
@@ -13838,7 +12694,7 @@ function AppRoot(){
                   {page==="points"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>Stage Points is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true}/></div>}
 
 
-                  {page==="admin"       && isAdmin && <AdminHub currentUser={user} org={org}/>}
+                  {page==="admin"       && isAdmin && <AdminDashboard currentUser={user}/>}
                 </div>
             }
           </div>
