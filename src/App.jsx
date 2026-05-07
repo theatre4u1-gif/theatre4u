@@ -73,7 +73,7 @@ const EM = {
   marketplaceNotJoined:{ title:"Not in Backstage Exchange",   body:"Your program hasn't joined Backstage Exchange yet. Go to the Exchange page to opt in and start sharing items with other programs.",                                                                 cta:"Go to Backstage Exchange" },
   communityNotJoined:  { title:"Not in Community Board",      body:"Your program hasn't joined the Community Board yet. Go to the Community page to opt in and start posting.",                                                                                         cta:"Go to Community" },
   fundingHasExps:      { title:"Source Has Expenditures",     body:"This funding source has expenditures attached and can't be deleted. Remove all expenditures from it first, then delete the source.",                                                               cta:"OK" },
-  planItemLimit:       { title:"Item Limit Reached",          body:"Your free plan includes up to 50 items. Upgrade to Pro for unlimited inventory and the full feature set your program deserves.",                                                                    cta:"Upgrade to Pro" },
+  planItemLimit:       { title:"Item Limit Reached",          body:"Your free plan includes up to 25 items. Upgrade to Pro for unlimited inventory and the full feature set your program deserves.",                                                                    cta:"Upgrade to Pro" },
   generic:             { title:"Something Went Wrong",        body:"An unexpected error occurred. Check your internet connection and try again. If this keeps happening, contact support at theatre4u.org.",                                                            cta:"Try Again" },
   sendInvite:          { title:"Invite Couldn't Send",        body:"The invite email couldn't be sent right now. Check your connection and try again in a moment.",                                                                                                     cta:"Try Again" },
   msgSend:             { title:"Message Not Sent",            body:"Your message couldn't be sent right now. Check your connection and try again.",                                                                                                                     cta:"Try Again" },
@@ -1855,9 +1855,9 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
     }
     setModal(null);setActive(null);
   };
-  const maxItems = PLANS_DEF[plan]?.maxItems ?? 50;
-  const nearLimit = plan==="free" && items.length >= 40 && items.length < 50;
-  const atLimit   = plan==="free" && items.length >= 50;
+  const maxItems = PLANS_DEF[plan]?.maxItems ?? 25;
+  const nearLimit = plan==="free" && items.length >= 20 && items.length < 25;
+  const atLimit   = plan==="free" && items.length >= 25;
 
   return(<>
     {upgradeReason&&<UpgradePrompt reason={upgradeReason} onClose={()=>setUpgradeReason(null)} userId={user?.id} userEmail={user?.email}/>}
@@ -1876,7 +1876,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
     {(nearLimit||atLimit)&&(
       <div style={{background:atLimit?"rgba(194,24,91,.12)":"rgba(212,168,67,.1)",border:"1px solid "+(atLimit?"rgba(194,24,91,.3)":"rgba(212,168,67,.25)"),borderRadius:8,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
         <span style={{fontSize:13,color:atLimit?"var(--red)":"var(--gold)",fontWeight:600}}>
-          {atLimit?"⚠️ Item limit reached — upgrade to add more items.":"⚡ "+items.length+"/50 items used on free plan."}
+          {atLimit?"⚠️ Item limit reached — upgrade to add more items.":"⚡ "+items.length+"/25 items used on free plan."}
         </span>
         <button className="btn btn-g" style={{padding:"5px 14px",fontSize:12}} onClick={()=>setUpgradeReason("Upgrade to Pro for unlimited inventory, Backstage Exchange access, Stage Points, and more.")}>Upgrade →</button>
       </div>
@@ -1904,7 +1904,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
             <button className="btn btn-o" style={{fontSize:12,padding:"6px 12px"}} onClick={()=>setShowImport(true)}
               title="Import from CSV">⬆ Import CSV</button>
             {canAdd&&<button className="btn btn-g" onClick={()=>{
-              const max=PLANS_DEF[plan]?.maxItems??50;
+              const max=PLANS_DEF[plan]?.maxItems??25;
               if(items.length>=max){setUpgradeReason(EM.planItemLimit.body);return;}
               setActive(null);setModal("a");
             }}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add Item</button>}
@@ -3851,7 +3851,7 @@ function Reports({ items, plan="free", org=null }) {
   if(plan==="free") return(
     <div style={{padding:"40px 20px",textAlign:"center"}}>
       <div style={{fontSize:44,marginBottom:14}}>📊</div>
-      <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>Reports is a Pro Feature</h2>
+      <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>Reports require a Pro account</h2>
       <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Get detailed analytics, condition reports, location breakdowns, and CSV export. Upgrade to Pro to unlock Reports.</p>
       <UpgradePlans compact={true}/>
     </div>
@@ -4039,8 +4039,8 @@ function stripeLink(baseUrl, userId, userEmail) {
 }
 // ── Plan definitions ─────────────────────────────────────────────────────────
 const PLANS_DEF = {
-  free:     { label:"Free",     maxItems:50,  marketplace:false, reports:false, monthlyPrice:0,  annualPrice:0   },
-  pro:      { label:"Pro",      maxItems:Infinity, marketplace:true,  reports:true,  monthlyPrice:12, annualPrice:120 },
+  free:     { label:"Free",     maxItems:25,  marketplace:false, reports:false, monthlyPrice:0,  annualPrice:0   },
+  pro:      { label:"Pro",      maxItems:Infinity, marketplace:true,  reports:true,  monthlyPrice:15, annualPrice:150 },
   district: { label:"District", maxItems:Infinity, marketplace:true,  reports:true,  monthlyPrice:49, annualPrice:500 },
 };
 // ── Admin accounts — add emails here for free District access + admin dashboard
@@ -4080,7 +4080,7 @@ const ADMIN_EMAIL  = ADMIN_EMAILS[0]; // legacy alias
 // ══════════════════════════════════════════════════════════════════════════════
 const UPGRADE_PLANS = [
   { id:"free",     name:"Free",     monthlyPrice:"$0",  annualPrice:"Free",   per:"/forever", annualNote:null,       desc:"Perfect for getting started.",     hot:false,
-    feats:["Up to 50 items","QR code labels","Photo uploads","CSV export"] },
+    feats:["Up to 25 items","QR code generation","Photo uploads","Basic CSV export"] },
   { id:"pro",      name:"Pro",      monthlyPrice:"$15", annualPrice:"$12.50",  annualTotal:"$150/yr", per:"/month", annualNote:"save $30", desc:"For active programs & companies.", hot:true,
     feats:["Unlimited inventory","Full Backstage Exchange access","Photo storage 5GB","Analytics dashboard","Email support"] },
   { id:"district", name:"District (up to 6 schools)", monthlyPrice:"$49", annualPrice:"$42",  annualTotal:"$500/yr", per:"/month", annualNote:"save $88", desc:"Multiple schools, one platform.",  hot:false,
@@ -4289,6 +4289,233 @@ function UpgradePlans({ compact = false, userId = null, userEmail = null }) {
         </div>
       ) : (
         <p style={{textAlign:compact?"left":"center",marginTop:12,fontSize:11.5,color:"var(--faint)"}}>All paid plans include a 14-day free trial · No credit card required to start · Cancel any time</p>
+      )}
+    </div>
+  );
+}
+
+// ── Admin Daily Digest ───────────────────────────────────────────────────────
+function AdminDailyDigest() {
+  const [digest,  setDigest]  = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(()=>{
+    (async()=>{
+      const since = new Date(Date.now()-24*60*60*1000).toISOString();
+      const [
+        {data:newOrgs}, {data:newItems}, {data:newLeads},
+        {data:newEmails},{data:pvToday},  {data:newMsgs},
+        {data:newFb}
+      ] = await Promise.all([
+        SB.from("orgs").select("id,name,email,plan,created_at").gte("created_at",since),
+        SB.from("items").select("id,name,category,org_id,added").gte("added",since).order("added",{ascending:false}),
+        SB.from("beta_leads").select("id,name,email,org,created_at").gte("created_at",since),
+        SB.from("email_sequence").select("id,org_id,email_num,sent_at").gte("sent_at",since),
+        SB.from("page_views").select("page,session_id,created_at").gte("created_at",since),
+        SB.from("messages").select("id,created_at").gte("created_at",since),
+        SB.from("beta_feedback").select("id,category,org_name,message,created_at").gte("created_at",since),
+      ]);
+
+      // Enrich items with org names
+      const orgNames = {};
+      if((newItems||[]).length>0){
+        const ids=[...new Set((newItems||[]).map(i=>i.org_id))];
+        const {data:od}=await SB.from("orgs").select("id,name").in("id",ids);
+        (od||[]).forEach(o=>{orgNames[o.id]=o.name;});
+      }
+
+      // Page view counts
+      const pvByPage = {};
+      const sessions = new Set();
+      (pvToday||[]).forEach(v=>{
+        pvByPage[v.page]=(pvByPage[v.page]||0)+1;
+        sessions.add(v.session_id);
+      });
+
+      // Email org names
+      const emailsByOrg = {};
+      const emailLabels = {1:"Welcome",2:"First Item",3:"Tour",4:"Exchange",5:"Funding",6:"Reports",7:"Free Year"};
+      (newEmails||[]).forEach(e=>{
+        if(!emailsByOrg[e.org_id]) emailsByOrg[e.org_id]={name:"",emails:[]};
+        emailsByOrg[e.org_id].emails.push(e.email_num);
+      });
+      if(Object.keys(emailsByOrg).length>0){
+        const {data:en}=await SB.from("orgs").select("id,name").in("id",Object.keys(emailsByOrg));
+        (en||[]).forEach(o=>{if(emailsByOrg[o.id])emailsByOrg[o.id].name=o.name;});
+      }
+
+      setDigest({
+        newOrgs:    newOrgs||[],
+        newItems:   (newItems||[]).map(i=>({...i,orgName:orgNames[i.org_id]||""})),
+        newLeads:   newLeads||[],
+        emailsSent: newEmails||[],
+        emailsByOrg, emailLabels,
+        pageViews:  pvToday?.length||0,
+        uniqueSessions: sessions.size,
+        pvByPage,
+        messages:   newMsgs||[],
+        newFeedback:newFb||[],
+        generatedAt:new Date().toLocaleString("en-US",{timeZone:"America/Los_Angeles",
+          month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",timeZoneName:"short"}),
+      });
+      setLoading(false);
+    })();
+  },[]);
+
+  if(loading) return <div style={{textAlign:"center",padding:40,color:"var(--muted)"}}>Loading digest…</div>;
+  if(!digest)  return null;
+
+  const KPI = ({icon,label,n,color}) => (
+    <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,
+      padding:"12px 14px",textAlign:"center"}}>
+      <div style={{fontSize:20,marginBottom:4}}>{icon}</div>
+      <div style={{fontSize:26,fontWeight:800,color:color||"var(--gold)",lineHeight:1}}>{n}</div>
+      <div style={{fontSize:10,color:"var(--muted)",marginTop:3,textTransform:"uppercase",letterSpacing:.5}}>{label}</div>
+    </div>
+  );
+
+  const Section = ({icon,title,children}) => (
+    <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden",marginBottom:14}}>
+      <div style={{padding:"10px 14px",borderBottom:"1px solid var(--border)",display:"flex",gap:8,alignItems:"center"}}>
+        <span style={{fontSize:16}}>{icon}</span>
+        <span style={{fontWeight:700,fontSize:14}}>{title}</span>
+      </div>
+      {children}
+    </div>
+  );
+
+  const Row = ({children}) => (
+    <div style={{padding:"9px 14px",borderBottom:"1px solid var(--border)",
+      display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>{children}</div>
+  );
+
+  const allQuiet = !digest.newOrgs.length && !digest.newItems.length &&
+    !digest.newLeads.length && !digest.emailsSent.length &&
+    !digest.pageViews && !digest.newFeedback.length;
+
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20,flexWrap:"wrap",gap:10}}>
+        <div>
+          <h3 style={{fontFamily:"var(--serif)",fontSize:20,margin:"0 0 3px"}}>Daily Activity Digest</h3>
+          <p style={{fontSize:12,color:"var(--muted)",margin:0}}>
+            Everything that happened on Theatre4u in the last 24 hours.
+            {digest.generatedAt&&<span> · Generated {digest.generatedAt}</span>}
+          </p>
+        </div>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:10,marginBottom:24}}>
+        <KPI icon="🎭" label="New Signups"      n={digest.newOrgs.length}      color="var(--gold)"/>
+        <KPI icon="📦" label="Items Added"      n={digest.newItems.length}      color="#4caf50"/>
+        <KPI icon="📥" label="New Leads"        n={digest.newLeads.length}      color="#2196f3"/>
+        <KPI icon="✉️" label="Emails Sent"     n={digest.emailsSent.length}    color="#9c27b0"/>
+        <KPI icon="👁"  label="Page Views"      n={digest.pageViews}            color="var(--muted)"/>
+        <KPI icon="🔗" label="Unique Sessions"  n={digest.uniqueSessions}       color="var(--muted)"/>
+        <KPI icon="💬" label="Messages"         n={digest.messages.length}      color="#ff9800"/>
+        <KPI icon="📋" label="Feedback"         n={digest.newFeedback.length}   color="#e91e63"/>
+      </div>
+
+      {allQuiet ? (
+        <div style={{textAlign:"center",padding:"40px 0",color:"var(--muted)"}}>
+          <div style={{fontSize:40,marginBottom:12}}>🌙</div>
+          <div style={{fontWeight:700,fontSize:16,marginBottom:6}}>All quiet in the last 24 hours</div>
+          <div style={{fontSize:13}}>No new signups, items, leads, or feedback.</div>
+        </div>
+      ) : (
+        <div style={{display:"flex",flexDirection:"column",gap:2}}>
+          {digest.newOrgs.length>0&&(
+            <Section icon="🎭" title={`New Signups (${digest.newOrgs.length})`}>
+              {digest.newOrgs.map(o=>(
+                <Row key={o.id}>
+                  <span style={{fontWeight:600,fontSize:13}}>{o.name}</span>
+                  <a href={"mailto:"+o.email} style={{fontSize:12,color:"var(--gold)"}}>{o.email}</a>
+                  <span style={{fontSize:11,padding:"1px 6px",borderRadius:4,
+                    background:o.plan==="free"?"rgba(100,100,100,.1)":"rgba(76,175,80,.1)",
+                    color:o.plan==="free"?"var(--muted)":"#4caf50",textTransform:"capitalize"}}>{o.plan}</span>
+                  <span style={{fontSize:11,color:"var(--muted)",marginLeft:"auto"}}>
+                    {new Date(o.created_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/Los_Angeles"})}
+                  </span>
+                </Row>
+              ))}
+            </Section>
+          )}
+          {digest.newItems.length>0&&(
+            <Section icon="📦" title={`Items Added (${digest.newItems.length})`}>
+              {digest.newItems.map(i=>{
+                const cat=CAT[i.category]||CAT.other;
+                return(
+                  <Row key={i.id}>
+                    <span style={{fontSize:13,fontWeight:600}}>{i.name}</span>
+                    <span style={{fontSize:11,color:cat.color}}>{cat.icon} {cat.label}</span>
+                    <span style={{fontSize:11,color:"var(--muted)"}}>by {i.orgName}</span>
+                    <span style={{fontSize:11,color:"var(--muted)",marginLeft:"auto"}}>
+                      {new Date(i.added).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/Los_Angeles"})}
+                    </span>
+                  </Row>
+                );
+              })}
+            </Section>
+          )}
+          {digest.newLeads.length>0&&(
+            <Section icon="📥" title={`New Beta Leads (${digest.newLeads.length})`}>
+              {digest.newLeads.map(l=>(
+                <Row key={l.id}>
+                  <span style={{fontWeight:600,fontSize:13}}>{l.name}</span>
+                  <span style={{fontSize:12,color:"var(--muted)"}}>{l.org}</span>
+                  <a href={"mailto:"+l.email} style={{fontSize:12,color:"var(--gold)"}}>{l.email}</a>
+                  <span style={{fontSize:11,color:"var(--muted)",marginLeft:"auto"}}>
+                    {new Date(l.created_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/Los_Angeles"})}
+                  </span>
+                </Row>
+              ))}
+            </Section>
+          )}
+          {digest.emailsSent.length>0&&(
+            <Section icon="✉️" title={`Emails Sent (${digest.emailsSent.length})`}>
+              {Object.entries(digest.emailsByOrg).map(([orgId,entry])=>(
+                <Row key={orgId}>
+                  <span style={{fontSize:13,fontWeight:600}}>{entry.name||orgId.slice(0,8)}</span>
+                  <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                    {entry.emails.map(n=>(
+                      <span key={n} style={{fontSize:11,padding:"1px 7px",borderRadius:5,
+                        background:"rgba(212,168,67,.12)",color:"var(--gold)",fontWeight:600}}>
+                        #{n} {digest.emailLabels[n]||""}
+                      </span>
+                    ))}
+                  </div>
+                </Row>
+              ))}
+            </Section>
+          )}
+          {digest.pageViews>0&&(
+            <Section icon="👁" title={`Page Views (${digest.pageViews} · ${digest.uniqueSessions} sessions)`}>
+              <div style={{padding:"10px 14px",display:"flex",flexWrap:"wrap",gap:10}}>
+                {Object.entries(digest.pvByPage).sort(([,a],[,b])=>b-a).map(([page,count])=>(
+                  <div key={page} style={{display:"flex",gap:6,alignItems:"center"}}>
+                    <span style={{fontSize:12,color:"var(--text)",textTransform:"capitalize"}}>{page}</span>
+                    <span style={{fontSize:13,fontWeight:700,color:"var(--gold)",
+                      background:"rgba(212,168,67,.1)",padding:"1px 8px",borderRadius:5}}>{count}</span>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+          {digest.newFeedback.length>0&&(
+            <Section icon="📋" title={`New Feedback (${digest.newFeedback.length})`}>
+              {digest.newFeedback.map(f=>(
+                <div key={f.id} style={{padding:"10px 14px",borderBottom:"1px solid var(--border)"}}>
+                  <div style={{display:"flex",gap:8,marginBottom:4,alignItems:"center"}}>
+                    <span style={{fontSize:14}}>{f.category==="bug"?"🐛":f.category==="feature"?"✨":"💬"}</span>
+                    <span style={{fontWeight:600,fontSize:13}}>{f.org_name||"Anonymous"}</span>
+                    <span style={{fontSize:11,color:"var(--muted)",textTransform:"capitalize"}}>{f.category}</span>
+                  </div>
+                  <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.5}}>{f.message}</div>
+                </div>
+              ))}
+            </Section>
+          )}
+        </div>
       )}
     </div>
   );
@@ -5784,7 +6011,7 @@ function AdminDashboard({ currentUser }) {
 
         {/* Tab nav */}
         <div className="tabs" style={{ marginBottom: 20 }}>
-          {[["orgs","🏛 Organizations"],["inventory","📦 Inventories"],["accounts","⚠️ Accounts"],["feedback","💬 Feedback"],["codes","🎟 Beta Codes"]].map(([id,lbl])=>(
+          {[["digest","📋 Daily Digest"],["orgs","🏛 Organizations"],["inventory","📦 Inventories"],["accounts","⚠️ Accounts"],["feedback","💬 Feedback"],["codes","🎟 Beta Codes"]].map(([id,lbl])=>(
             <button key={id} className={`tab ${adminTab===id?"on":""}`} onClick={()=>setAdminTab(id)}>{lbl}
               {id==="feedback"&&feedback.filter(f=>f.status==="new").length>0&&(
                 <span style={{background:"var(--red)",color:"#fff",borderRadius:8,padding:"1px 6px",fontSize:10,fontWeight:800,marginLeft:5}}>
@@ -5795,6 +6022,7 @@ function AdminDashboard({ currentUser }) {
           ))}
         </div>
 
+        {adminTab==="digest" && <AdminDailyDigest/>}
         {adminTab==="orgs"&&(<>
         {/* District Assignment Panel */}
         <AdminDistrictAssignPanel orgs={orgs} onUpdated={load} />
@@ -10175,7 +10403,7 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
               ))}
             </div>
             <div style={{marginTop:10,fontSize:11.5,color:"var(--faint)",lineHeight:1.6}}>
-              <strong>Free:</strong> 50 item cap, no Backstage Exchange access · <strong>Pro:</strong> unlimited items, Backstage Exchange · <strong>District:</strong> all Pro features + multi-org (future)
+              <strong>Free:</strong> 25 item cap, no Exchange or Reports · <strong>Pro:</strong> unlimited items, Backstage Exchange · <strong>District:</strong> all Pro features + multi-org (future)
             </div>
           </div>
         )}
@@ -10505,24 +10733,33 @@ function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
         Our Story
       </div>
       <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(26px,4vw,40px)",marginBottom:24,lineHeight:1.2}}>
-        Thirty Years in the Theatre,<br/><span style={{color:"var(--gold)"}}>Building Something Better.</span>
+        Built by a Theatre Person,<br/><span style={{color:"var(--gold)"}}>For Theatre People.</span>
       </h2>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,textAlign:"left",marginBottom:40}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,textAlign:"left",marginBottom:48}}>
         <div>
-          <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)",marginBottom:16}}>
-            Theatre4u™ was built by someone who found theatre in high school and never looked back. Over thirty years — studying the craft, performing in New Hampshire, San Francisco, New York City, and finally Southern California — the stage has always been home.
+          <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)",marginBottom:16}}>
+            After spending over 30 years in the theatre and 18+ years in the classroom, I know how quickly props and costumes can seem to explode out of control. As theatre artists moving from one production to the next, we need to know which box that magic wand for Puffs lives in.
           </p>
-          <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)"}}>
-            That journey led to the classroom and to a simple realization: theatre programs everywhere are filled with talented, dedicated people doing extraordinary work — and they deserve tools that help them do even more of it.
+          <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)"}}>
+            And we need a chance to connect with other theatre programs that may have something we need, or need something we have. This is why Theatre4u was started.
           </p>
         </div>
         <div>
-          <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)",marginBottom:16}}>
-            Theatre4u™ keeps track of everything your program owns — and opens the door to a community of programs ready to share resources, collaborate, and support each other across the region.
+          <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)",marginBottom:16}}>
+            Theatre4u keeps track of everything your program owns — and opens the door to a community of programs ready to share resources, collaborate, and support each other.
           </p>
-          <p style={{fontSize:16,lineHeight:1.8,color:"rgba(255,255,255,.7)"}}>
+          <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)"}}>
             <strong style={{color:"#fff"}}>Theatre is always better together.</strong> This platform was built to help make that connection easier — from the wings to the whole community.
           </p>
+          <div style={{marginTop:28,paddingTop:20,borderTop:"1px solid rgba(255,255,255,.1)",display:"flex",alignItems:"center",gap:12}}>
+            <div style={{width:40,height:40,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),#8a6a20)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1000" strokeWidth="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            </div>
+            <div>
+              <div style={{fontWeight:700,fontSize:14,color:"#fff"}}>Robert Zick</div>
+              <div style={{fontSize:12,color:"rgba(255,255,255,.45)"}}>Founder, Theatre4u™ &amp; Artstracker · 18+ years in the classroom</div>
+            </div>
+          </div>
         </div>
       </div>
       <div style={{display:"flex",gap:24,justifyContent:"center",flexWrap:"wrap"}}>
@@ -10771,7 +11008,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
         </div>
         {mode==="signup"&&(
           <p style={{textAlign:"center",fontSize:11,color:"#685f76",marginTop:14,lineHeight:1.5}}>
-            Free plan includes 50 items. No credit card required.
+            Free plan includes up to 25 items. No credit card required.
           </p>
         )}
       </div>
