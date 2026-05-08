@@ -4294,6 +4294,998 @@ function UpgradePlans({ compact = false, userId = null, userEmail = null }) {
   );
 }
 
+function LabelStoreBanner({ onGoLabels }) {
+  return(
+    <div style={{background:"linear-gradient(135deg,rgba(212,168,67,.1),rgba(212,168,67,.04))",
+      border:"1px solid rgba(212,168,67,.25)",borderRadius:12,padding:"14px 18px",
+      display:"flex",gap:14,alignItems:"flex-start",marginBottom:18}}>
+      <div style={{fontSize:28,flexShrink:0}}>🏷</div>
+      <div style={{flex:1}}>
+        <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>
+          Get pre-printed QR labels for your inventory
+        </div>
+        <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
+          Stick them on costumes, props, set pieces, equipment, and storage bins.
+          Scan any label with a phone camera to instantly pull up the item.
+          Polyester labels for indoor use · Weatherproof for scene shops and storage.
+        </div>
+        <button className="btn btn-g btn-sm" onClick={onGoLabels}>
+          Shop Label Packs →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LabelsPage({ org, userId, items=[], stripeReturn=null, onClearReturn=null }) {
+  // LABELS PAUSED — vendor research in progress. Full purchase/claim/link UI
+  // is preserved in git. Re-enable when vendor is confirmed.
+  return (
+    <div style={{padding:"28px 32px 64px",maxWidth:640}}>
+      <h1 style={{fontFamily:"var(--serif)",fontSize:28,margin:"0 0 4px"}}>🏷 QR Labels</h1>
+      <p style={{fontSize:13,color:"var(--muted)",margin:"0 0 24px"}}>
+        Physical QR labels for your inventory — coming soon.
+      </p>
+      <div style={{background:"var(--parch)",border:"1px solid var(--border)",
+        borderRadius:12,padding:"32px 28px"}}>
+        <div style={{fontSize:48,marginBottom:16}}>🏷</div>
+        <div style={{fontFamily:"var(--serif)",fontSize:20,marginBottom:12}}>
+          Label ordering is coming soon
+        </div>
+        <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.7,marginBottom:12}}>
+          We're finalizing our label printing partnership so you can order pre-printed
+          QR labels for your inventory — costumes, props, set pieces, equipment, and
+          storage bins. Each label will have a unique code tied exclusively to your program.
+        </p>
+        <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.7}}>
+          Once the program launches you'll be able to order directly from this page and
+          receive labels in the mail within a week. We'll notify you by email when ordering opens.
+        </p>
+        <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid var(--border)",
+          fontSize:12,color:"var(--faint)"}}>
+          Questions? Email{" "}
+          <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)"}}>
+            hello@theatre4u.org
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Pool health indicator for Admin Hub
+function PoolHealthWidget() {
+  const [stats, setStats] = useState(null);
+  useEffect(()=>{
+    Promise.all([
+      SB.from("label_pool").select("*",{count:"exact",head:true}).eq("status","available"),
+      SB.from("label_pool").select("*",{count:"exact",head:true}).eq("status","assigned"),
+      SB.from("label_pool").select("*",{count:"exact",head:true}).eq("status","claimed"),
+    ]).then(([a,b,c])=>setStats({available:a.count||0,assigned:b.count||0,claimed:c.count||0}));
+  },[]);
+  if(!stats) return null;
+  const total = stats.available+stats.assigned+stats.claimed;
+  const pctLeft = Math.round(stats.available/Math.max(total,1)*100);
+  return(
+    <div style={{marginTop:20,background:"var(--parch)",border:"1px solid var(--border)",
+      borderRadius:10,padding:"14px 16px"}}>
+      <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>Label Pool Health</div>
+      <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:10}}>
+        {[
+          {n:stats.available,label:"Available",color:"#4caf50"},
+          {n:stats.assigned, label:"Assigned (ordered)",color:"#2196f3"},
+          {n:stats.claimed,  label:"Claimed (in use)",color:"var(--gold)"},
+        ].map(s=>(
+          <div key={s.label} style={{textAlign:"center",minWidth:100}}>
+            <div style={{fontSize:22,fontWeight:800,color:s.color}}>{s.n.toLocaleString()}</div>
+            <div style={{fontSize:11,color:"var(--muted)"}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{height:8,background:"var(--border)",borderRadius:4,overflow:"hidden",marginBottom:8}}>
+        <div style={{height:"100%",width:pctLeft+"%",background:"#4caf50",borderRadius:4,transition:"width .4s"}}/>
+      </div>
+      <div style={{fontSize:11,color:"var(--muted)"}}>
+        {pctLeft}% of pool available · {stats.available.toLocaleString()} labels ready to assign
+        {stats.available<500&&<span style={{color:"#e53935",fontWeight:700}}> ⚠ Pool getting low — seed more labels in Supabase SQL.</span>}
+      </div>
+      {stats.available<500&&(
+        <div style={{marginTop:8,background:"rgba(229,57,53,.08)",border:"1px solid rgba(229,57,53,.2)",
+          borderRadius:6,padding:"8px 10px",fontSize:11,color:"var(--muted)",fontFamily:"monospace",lineHeight:1.5}}>
+          Run in Supabase SQL to add 10,000 more labels:<br/>
+          {"SELECT seed_label_pool("+(total+1)+", "+(total+10000)+");"}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminAnalyticsTab({ analytics, loading, onLoad }) {
+  React.useEffect(() => { if (!analytics && !loading) onLoad(); }, []);
+
+  const card = { background:"var(--parch)", border:"1px solid var(--border)", borderRadius:10, padding:16 };
+
+  if (loading) return <div style={{textAlign:"center",padding:60,color:"var(--muted)"}}>Loading analytics…</div>;
+  if (!analytics) return null;
+
+  const { pvDay, pvWeek, recentOrgs, totalViews, totalSessions } = analytics;
+
+  // Aggregate by page
+  const byPage = {};
+  pvWeek.forEach(v => { byPage[v.page] = (byPage[v.page]||0) + 1; });
+
+  // Unique sessions this week
+  const uniqSessions = new Set(pvWeek.map(v => v.session_id)).size;
+
+  // Sessions by day (last 14 days)
+  const dayMap = {};
+  pvDay.forEach(v => {
+    const d = v.created_at.slice(0,10);
+    dayMap[d] = (dayMap[d]||0) + 1;
+  });
+  const dayEntries = Object.entries(dayMap).sort((a,b) => a[0].localeCompare(b[0])).slice(-14);
+  const maxDay = Math.max(...dayEntries.map(d=>d[1]), 1);
+
+  // UTM sources this week
+  const srcMap = {};
+  pvWeek.filter(v=>v.utm_source).forEach(v => { srcMap[v.utm_source] = (srcMap[v.utm_source]||0)+1; });
+  const srcEntries = Object.entries(srcMap).sort((a,b)=>b[1]-a[1]);
+
+  return (
+    <div>
+      {/* Summary tiles */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:20}}>
+        {[
+          {icon:"👁",  label:"Total Pageviews",    val:(totalViews||0).toLocaleString()},
+          {icon:"🧑",  label:"Unique Sessions",     val:(totalSessions||0).toLocaleString()},
+          {icon:"📅",  label:"Views This Week",     val:pvWeek.length.toLocaleString()},
+          {icon:"🔥",  label:"Sessions This Week",  val:uniqSessions.toLocaleString(), color:"var(--gold)"},
+        ].map(s=>(
+          <div key={s.label} style={{...card,textAlign:"center"}}>
+            <div style={{fontSize:24,marginBottom:4}}>{s.icon}</div>
+            <div style={{fontFamily:"var(--serif)",fontSize:22,fontWeight:800,color:s.color||"var(--linen)"}}>{s.val}</div>
+            <div style={{fontSize:11,color:"var(--muted)",marginTop:3}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
+        {/* Views by page */}
+        <div style={card}>
+          <div style={{fontWeight:700,fontSize:13,marginBottom:12}}>Views by Page (7 days)</div>
+          {Object.keys(byPage).length === 0
+            ? <div style={{fontSize:12,color:"var(--muted)"}}>No data yet — visits will appear here once users land on the site.</div>
+            : Object.entries(byPage).sort((a,b)=>b[1]-a[1]).map(([page,n])=>(
+            <div key={page} style={{display:"flex",alignItems:"center",gap:10,marginBottom:7}}>
+              <div style={{width:80,fontSize:12,color:"var(--muted)",flexShrink:0,textTransform:"capitalize"}}>{page}</div>
+              <div style={{flex:1,height:6,background:"var(--white)",borderRadius:3,overflow:"hidden"}}>
+                <div style={{height:"100%",width:(n/Math.max(...Object.values(byPage))*100)+"%",
+                  background:"var(--gold)",borderRadius:3}}/>
+              </div>
+              <div style={{fontSize:12,fontWeight:700,width:28,textAlign:"right",flexShrink:0}}>{n}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Traffic sources */}
+        <div style={card}>
+          <div style={{fontWeight:700,fontSize:13,marginBottom:12}}>Traffic Sources (7 days)</div>
+          {srcEntries.length === 0
+            ? <div style={{fontSize:12,color:"var(--muted)"}}>No UTM-tagged traffic yet. Add <code>?utm_source=facebook</code> to your ad links to track sources.</div>
+            : srcEntries.map(([src,n])=>(
+            <div key={src} style={{display:"flex",alignItems:"center",gap:10,marginBottom:7}}>
+              <div style={{flex:1,fontSize:12,color:"var(--muted)"}}>{src}</div>
+              <span style={{fontSize:12,fontWeight:700,background:"rgba(212,168,67,.12)",
+                color:"var(--gold)",padding:"1px 8px",borderRadius:6}}>{n} visits</span>
+            </div>
+          ))}
+          <div style={{marginTop:12,fontSize:11,color:"var(--muted)",lineHeight:1.5,borderTop:"1px solid var(--border)",paddingTop:8}}>
+            Tag your Facebook ad URLs:<br/>
+            <code style={{fontSize:10}}>theatre4u.org?utm_source=facebook&utm_campaign=beta</code>
+          </div>
+        </div>
+      </div>
+
+      {/* Daily chart */}
+      <div style={{...card,marginBottom:20}}>
+        <div style={{fontWeight:700,fontSize:13,marginBottom:16}}>Daily Pageviews (last 14 days)</div>
+        {dayEntries.length === 0
+          ? <div style={{fontSize:12,color:"var(--muted)"}}>No data yet.</div>
+          : (
+          <div style={{display:"flex",alignItems:"flex-end",gap:4,height:80,overflowX:"auto"}}>
+            {dayEntries.map(([day,n])=>(
+              <div key={day} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,flex:1,minWidth:28}}>
+                <div style={{fontSize:9,color:"var(--muted)",fontWeight:700}}>{n}</div>
+                <div style={{width:"100%",background:"var(--gold)",borderRadius:"3px 3px 0 0",
+                  height:Math.max(4,n/maxDay*60)+"px",minHeight:4}}/>
+                <div style={{fontSize:8,color:"var(--muted)",whiteSpace:"nowrap"}}>
+                  {new Date(day+"T12:00").toLocaleDateString("en-US",{month:"numeric",day:"numeric"})}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Recent signups */}
+      <div style={card}>
+        <div style={{fontWeight:700,fontSize:13,marginBottom:12}}>Recent Signups</div>
+        {recentOrgs.length === 0
+          ? <div style={{fontSize:12,color:"var(--muted)"}}>No signups yet.</div>
+          : recentOrgs.map(org=>(
+          <div key={org.id} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",
+            borderBottom:"1px solid var(--border)"}}>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:600,fontSize:13}}>{org.name||"Unnamed"}</div>
+              <div style={{fontSize:11,color:"var(--muted)"}}>{org.email}</div>
+            </div>
+            <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:8,
+              background:org.plan==="free"?"rgba(255,255,255,.08)":"rgba(212,168,67,.15)",
+              color:org.plan==="free"?"var(--muted)":"var(--gold)"}}>
+              {org.plan||"free"}
+            </span>
+            <div style={{fontSize:11,color:"var(--muted)",whiteSpace:"nowrap",flexShrink:0}}>
+              {new Date(org.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{marginTop:12,display:"flex",justifyContent:"flex-end"}}>
+        <button onClick={onLoad} className="btn btn-o btn-sm">↺ Refresh</button>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ADMIN HUB — Single consolidated admin page replacing dual sidebar items
+// Tabs: Overview · Users · Analytics · Feedback · Labels · Tools
+// ══════════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════
+// LABELS PAGE — full label purchase, management, and claim system
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Small banner shown on dashboard and after signup to prompt label purchase
+function LabelStoreBanner({ onGoLabels }) {
+  return(
+    <div style={{background:"linear-gradient(135deg,rgba(212,168,67,.1),rgba(212,168,67,.04))",
+      border:"1px solid rgba(212,168,67,.25)",borderRadius:12,padding:"14px 18px",
+      display:"flex",gap:14,alignItems:"flex-start",marginBottom:18}}>
+      <div style={{fontSize:28,flexShrink:0}}>🏷</div>
+      <div style={{flex:1}}>
+        <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>
+          Get pre-printed QR labels for your inventory
+        </div>
+        <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
+          Stick them on costumes, props, set pieces, equipment, and storage bins.
+          Scan any label with a phone camera to instantly pull up the item.
+          Polyester labels for indoor use · Weatherproof for scene shops and storage.
+        </div>
+        <button className="btn btn-g btn-sm" onClick={onGoLabels}>
+          Shop Label Packs →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LabelsPage({ org, userId, items=[], stripeReturn=null, onClearReturn=null }) {
+  // LABELS PAUSED — vendor research in progress. Full purchase/claim/link UI
+  // is preserved in git. Re-enable when vendor is confirmed.
+  return (
+    <div style={{padding:"28px 32px 64px",maxWidth:640}}>
+      <h1 style={{fontFamily:"var(--serif)",fontSize:28,margin:"0 0 4px"}}>🏷 QR Labels</h1>
+      <p style={{fontSize:13,color:"var(--muted)",margin:"0 0 24px"}}>
+        Physical QR labels for your inventory — coming soon.
+      </p>
+      <div style={{background:"var(--parch)",border:"1px solid var(--border)",
+        borderRadius:12,padding:"32px 28px"}}>
+        <div style={{fontSize:48,marginBottom:16}}>🏷</div>
+        <div style={{fontFamily:"var(--serif)",fontSize:20,marginBottom:12}}>
+          Label ordering is coming soon
+        </div>
+        <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.7,marginBottom:12}}>
+          We're finalizing our label printing partnership so you can order pre-printed
+          QR labels for your inventory — costumes, props, set pieces, equipment, and
+          storage bins. Each label will have a unique code tied exclusively to your program.
+        </p>
+        <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.7}}>
+          Once the program launches you'll be able to order directly from this page and
+          receive labels in the mail within a week. We'll notify you by email when ordering opens.
+        </p>
+        <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid var(--border)",
+          fontSize:12,color:"var(--faint)"}}>
+          Questions? Email{" "}
+          <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)"}}>
+            hello@theatre4u.org
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Pool health indicator for Admin Hub
+function PoolHealthWidget() {
+  const [stats, setStats] = useState(null);
+  useEffect(()=>{
+    Promise.all([
+      SB.from("label_pool").select("*",{count:"exact",head:true}).eq("status","available"),
+      SB.from("label_pool").select("*",{count:"exact",head:true}).eq("status","assigned"),
+      SB.from("label_pool").select("*",{count:"exact",head:true}).eq("status","claimed"),
+    ]).then(([a,b,c])=>setStats({available:a.count||0,assigned:b.count||0,claimed:c.count||0}));
+  },[]);
+  if(!stats) return null;
+  const total = stats.available+stats.assigned+stats.claimed;
+  const pctLeft = Math.round(stats.available/Math.max(total,1)*100);
+  return(
+    <div style={{marginTop:20,background:"var(--parch)",border:"1px solid var(--border)",
+      borderRadius:10,padding:"14px 16px"}}>
+      <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>Label Pool Health</div>
+      <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:10}}>
+        {[
+          {n:stats.available,label:"Available",color:"#4caf50"},
+          {n:stats.assigned, label:"Assigned (ordered)",color:"#2196f3"},
+          {n:stats.claimed,  label:"Claimed (in use)",color:"var(--gold)"},
+        ].map(s=>(
+          <div key={s.label} style={{textAlign:"center",minWidth:100}}>
+            <div style={{fontSize:22,fontWeight:800,color:s.color}}>{s.n.toLocaleString()}</div>
+            <div style={{fontSize:11,color:"var(--muted)"}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{height:8,background:"var(--border)",borderRadius:4,overflow:"hidden",marginBottom:8}}>
+        <div style={{height:"100%",width:pctLeft+"%",background:"#4caf50",borderRadius:4,transition:"width .4s"}}/>
+      </div>
+      <div style={{fontSize:11,color:"var(--muted)"}}>
+        {pctLeft}% of pool available · {stats.available.toLocaleString()} labels ready to assign
+        {stats.available<500&&<span style={{color:"#e53935",fontWeight:700}}> ⚠ Pool getting low — seed more labels in Supabase SQL.</span>}
+      </div>
+      {stats.available<500&&(
+        <div style={{marginTop:8,background:"rgba(229,57,53,.08)",border:"1px solid rgba(229,57,53,.2)",
+          borderRadius:6,padding:"8px 10px",fontSize:11,color:"var(--muted)",fontFamily:"monospace",lineHeight:1.5}}>
+          Run in Supabase SQL to add 10,000 more labels:<br/>
+          {"SELECT seed_label_pool("+(total+1)+", "+(total+10000)+");"}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+function AdminHub({ currentUser, org }) {
+
+function AdminHub({ currentUser, org }) {
+  const [tab, setTab]             = useState("overview");
+  const [orgs, setOrgs]           = useState([]);
+  const [leads, setLeads]         = useState([]);
+  const [feedback, setFeedback]   = useState([]);
+  const [analytics, setAnalytics] = useState({ views:0, sessions:0, byPage:[], byDay:[] });
+  const [labelOrders, setLabelOrders] = useState([]);
+  const [query, setQuery]         = useState("");
+  const [loading, setLoading]     = useState(false);
+  const [msg, setMsg]             = useState("");
+  const flash = m => { setMsg(m); setTimeout(()=>setMsg(""), 3000); };
+
+  // Load data when tab changes
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      if (tab === "overview" || tab === "users") {
+        const { data } = await SB.from("orgs")
+          .select("id,name,email,plan,is_leading_player,director_name,director_title,city,location,created_at")
+          .order("created_at", { ascending: false }).limit(100);
+        setOrgs(data || []);
+      }
+      if (tab === "overview" || tab === "feedback") {
+        const { data } = await SB.from("beta_feedback")
+          .select("*").order("created_at", { ascending: false }).limit(50);
+        setFeedback(data || []);
+      }
+      if (tab === "overview" || tab === "users") {
+        const { data } = await SB.from("beta_leads")
+          .select("*").order("created_at", { ascending: false }).limit(50);
+        setLeads(data || []);
+      }
+      if (tab === "analytics") {
+        const { data: pv } = await SB.from("page_views")
+          .select("page,session_id,created_at,utm_source,utm_campaign")
+          .order("created_at", { ascending: false }).limit(2000);
+        if (pv) {
+          const byPage = {};
+          const bySess = {};
+          const byDay  = {};
+          pv.forEach(v => {
+            byPage[v.page] = (byPage[v.page]||0) + 1;
+            bySess[v.session_id] = true;
+            const day = (v.created_at||"").slice(0,10);
+            if (day) byDay[day] = (byDay[day]||0) + 1;
+          });
+          const dayEntries = Object.entries(byDay)
+            .sort(([a],[b]) => a > b ? 1 : -1).slice(-14);
+          const maxDay = Math.max(1, ...dayEntries.map(([,v])=>v));
+          setAnalytics({
+            views: pv.length,
+            sessions: Object.keys(bySess).length,
+            byPage: Object.entries(byPage).sort(([,a],[,b])=>b-a),
+            byDay: dayEntries,
+            maxDay,
+          });
+        }
+      }
+      if (tab === "labels") {
+        const { data } = await SB.from("label_orders")
+          .select("*").order("created_at", { ascending: false });
+        setLabelOrders(data || []);
+      }
+      setLoading(false);
+    })();
+  }, [tab]);
+
+  const upgradeOrg = async (orgId, plan, isLP) => {
+    const { error } = await SB.from("orgs").update({ plan, is_leading_player: isLP }).eq("id", orgId);
+    if (!error) {
+      setOrgs(prev => prev.map(o => o.id===orgId ? {...o, plan, is_leading_player:isLP} : o));
+      flash("✓ Updated");
+    }
+  };
+
+  const updateFeedback = async (id, status) => {
+    await SB.from("beta_feedback").update({ status }).eq("id", id);
+    setFeedback(prev => prev.map(f => f.id===id ? {...f, status} : f));
+    flash("✓ Status updated");
+  };
+
+  const updateLabelOrder = async (id, updates) => {
+    await SB.from("label_orders").update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id);
+    setLabelOrders(prev => prev.map(o => o.id===id ? {...o,...updates} : o));
+    flash("✓ Order updated");
+  };
+
+  const filteredOrgs = orgs.filter(o =>
+    !query || [o.name,o.email,o.director_name,o.city,o.location]
+      .some(v => v?.toLowerCase().includes(query.toLowerCase()))
+  );
+
+  // Stats for overview
+  const totalOrgs   = orgs.length;
+  const paidOrgs    = orgs.filter(o=>o.plan!=="free").length;
+  const leadingPlayers = orgs.filter(o=>o.is_leading_player).length;
+  const newFeedback = feedback.filter(f=>f.status==="new").length;
+  const newLeads    = leads.filter(l=>!l.converted).length;
+
+  const TABS = [
+    ["overview",  "🏠 Overview"],
+    ["users",     "👥 Users & Leads"],
+    ["analytics", "📈 Analytics"],
+    ["feedback",  "💬 Feedback"],
+    ["labels",    "🏷 Label Orders"],
+    ["tools",     "🔧 Tools"],
+  ];
+
+  return (
+    <div style={{padding:"28px 32px 64px",minHeight:"80vh"}}>
+      <div style={{marginBottom:22}}>
+        <h1 style={{fontFamily:"var(--serif)",fontSize:28,margin:"0 0 4px"}}>🎛 Admin Hub</h1>
+        <p style={{fontSize:13,color:"var(--muted)",margin:0}}>Theatre4u™ platform administration — everything in one place.</p>
+      </div>
+
+      {/* Tab bar */}
+      <div style={{display:"flex",gap:5,marginBottom:24,flexWrap:"wrap",borderBottom:"1px solid var(--border)",paddingBottom:12}}>
+        {TABS.map(([id,lbl])=>(
+          <button key={id} onClick={()=>setTab(id)}
+            style={{padding:"7px 14px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:tab===id?700:500,
+              background:tab===id?"var(--gold)":"transparent",
+              color:tab===id?"#1a0f00":"var(--muted)",fontFamily:"inherit",transition:"all .15s"}}>
+            {lbl}{id==="feedback"&&newFeedback>0?` (${newFeedback})`:""}{id==="users"&&newLeads>0?` (${newLeads})`:""}{id==="labels"&&labelOrders.filter(o=>o.status==="pending").length>0?` (${labelOrders.filter(o=>o.status==="pending").length})`:""}
+          </button>
+        ))}
+      </div>
+
+      {msg&&<div style={{background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.3)",borderRadius:8,padding:"8px 14px",marginBottom:16,fontSize:13,color:"#4caf50"}}>{msg}</div>}
+      {loading&&<div style={{color:"var(--muted)",padding:20,textAlign:"center"}}>Loading…</div>}
+
+      {/* ── OVERVIEW ── */}
+      {!loading&&tab==="overview"&&(
+        <div>
+          {/* KPI cards */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:24}}>
+            {[
+              { n:totalOrgs,      label:"Total Programs",   color:"var(--gold)", icon:"🎭" },
+              { n:paidOrgs,       label:"Paid Plans",       color:"#4caf50",     icon:"💳" },
+              { n:leadingPlayers, label:"Leading Players",  color:"#9c27b0",     icon:"⭐" },
+              { n:newLeads,       label:"New Beta Leads",   color:"#2196f3",     icon:"📥" },
+              { n:newFeedback,    label:"New Feedback",     color:"#ff9800",     icon:"💬" },
+              { n:analytics.views,label:"Page Views",       color:"var(--muted)",icon:"👁" },
+            ].map(k=>(
+              <div key={k.label} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px"}}>
+                <div style={{fontSize:22,marginBottom:4}}>{k.icon}</div>
+                <div style={{fontSize:28,fontWeight:800,color:k.color,lineHeight:1}}>{k.n}</div>
+                <div style={{fontSize:11,color:"var(--muted)",marginTop:2,textTransform:"uppercase",letterSpacing:.5}}>{k.label}</div>
+              </div>
+            ))}
+          </div>
+          {/* Recent signups */}
+          <div style={{marginBottom:24}}>
+            <h3 style={{fontFamily:"var(--serif)",fontSize:16,marginBottom:10}}>Recent Signups</h3>
+            <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                <thead><tr style={{background:"rgba(0,0,0,.1)"}}>
+                  {["Program","Director","Email","Plan","Joined"].map(h=>(
+                    <th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)"}}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {orgs.slice(0,8).map(o=>(
+                    <tr key={o.id} style={{borderTop:"1px solid var(--border)"}}>
+                      <td style={{padding:"8px 12px",fontWeight:600}}>{o.name}</td>
+                      <td style={{padding:"8px 12px",color:"var(--muted)",fontSize:12}}>{o.director_name||"—"}</td>
+                      <td style={{padding:"8px 12px"}}><a href={"mailto:"+o.email} style={{color:"var(--gold)",fontSize:12}}>{o.email}</a></td>
+                      <td style={{padding:"8px 12px"}}>
+                        <span style={{fontSize:11,fontWeight:700,padding:"2px 7px",borderRadius:6,
+                          background:o.plan==="free"?"rgba(100,100,100,.15)":"rgba(76,175,80,.15)",
+                          color:o.plan==="free"?"var(--muted)":"#4caf50",textTransform:"capitalize"}}>{o.plan}</span>
+                      </td>
+                      <td style={{padding:"8px 12px",color:"var(--muted)",fontSize:12}}>{new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {/* Recent feedback */}
+          {feedback.length>0&&(
+            <div>
+              <h3 style={{fontFamily:"var(--serif)",fontSize:16,marginBottom:10}}>Recent Feedback</h3>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {feedback.slice(0,4).map(f=>(
+                  <div key={f.id} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:8,padding:"10px 14px",display:"flex",gap:12,alignItems:"flex-start"}}>
+                    <div style={{fontSize:18,flexShrink:0}}>{f.category==="bug"?"🐛":f.category==="feature"?"✨":f.category==="ux"?"👁":"💬"}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"var(--gold)",marginBottom:2}}>{f.org_name||"Anonymous"} · {f.category}</div>
+                      <div style={{fontSize:13,color:"var(--text)",lineHeight:1.5}}>{f.message||"(no message)"}</div>
+                    </div>
+                    <span style={{fontSize:10,color:"var(--muted)",flexShrink:0,marginTop:2}}>{new Date(f.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── USERS & LEADS ── */}
+      {!loading&&tab==="users"&&(
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
+            <div>
+              <h3 style={{fontFamily:"var(--serif)",fontSize:18,margin:"0 0 2px"}}>Programs & Beta Leads</h3>
+              <p style={{fontSize:12,color:"var(--muted)",margin:0}}>{orgs.length} programs · {leads.length} beta leads · {leads.filter(l=>!l.converted).length} not yet converted</p>
+            </div>
+            <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name, email, director…"
+              style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:8,padding:"7px 12px",fontSize:13,color:"var(--text)",width:260,outline:"none"}}/>
+          </div>
+
+          {/* Active programs */}
+          <h4 style={{fontSize:13,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:8}}>Active Accounts</h4>
+          <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden",marginBottom:20}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+              <thead><tr style={{background:"rgba(0,0,0,.08)"}}>
+                {["Program","Director","Contact","Plan","⭐ LP","Actions"].map(h=>(
+                  <th key={h} style={{padding:"9px 12px",textAlign:"left",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)"}}>{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {filteredOrgs.map(o=>(
+                  <tr key={o.id} style={{borderTop:"1px solid var(--border)"}}>
+                    <td style={{padding:"9px 12px"}}>
+                      <div style={{fontWeight:700}}>{o.name}</div>
+                      <div style={{fontSize:11,color:"var(--muted)"}}>{o.city||o.location||""}</div>
+                    </td>
+                    <td style={{padding:"9px 12px",fontSize:12}}>
+                      <div>{o.director_name||"—"}</div>
+                      {o.director_title&&<div style={{fontSize:11,color:"var(--muted)"}}>{o.director_title}</div>}
+                    </td>
+                    <td style={{padding:"9px 12px"}}><a href={"mailto:"+o.email} style={{color:"var(--gold)",fontSize:12}}>{o.email}</a></td>
+                    <td style={{padding:"9px 12px"}}>
+                      <select value={o.plan} onChange={e=>upgradeOrg(o.id,e.target.value,o.is_leading_player)}
+                        style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,padding:"3px 7px",fontSize:12,color:"var(--text)",cursor:"pointer"}}>
+                        {["free","pro","district","district_m","district_l"].map(p=><option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </td>
+                    <td style={{padding:"9px 12px",textAlign:"center"}}>
+                      <button onClick={()=>upgradeOrg(o.id,o.plan,!o.is_leading_player)}
+                        style={{background:o.is_leading_player?"rgba(212,168,67,.15)":"transparent",
+                          border:"1px solid",borderColor:o.is_leading_player?"var(--gold)":"var(--border)",
+                          borderRadius:6,padding:"3px 9px",fontSize:11,fontWeight:700,cursor:"pointer",
+                          color:o.is_leading_player?"var(--gold)":"var(--muted)"}}>
+                        {o.is_leading_player?"⭐":"○"}
+                      </button>
+                    </td>
+                    <td style={{padding:"9px 12px"}}>
+                      <a href={"mailto:"+o.email+"?subject=Theatre4u — Following up"}
+                        style={{fontSize:11,color:"var(--gold)",textDecoration:"none",fontWeight:700}}>✉ Email</a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Beta leads */}
+          <h4 style={{fontSize:13,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:8}}>Beta Leads (beta.html submissions)</h4>
+          {leads.length===0
+            ?<div style={{color:"var(--muted)",fontSize:13,padding:16,textAlign:"center"}}>No beta leads yet. Share theatre4u.org/beta.html to collect leads.</div>
+            :<div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                <thead><tr style={{background:"rgba(0,0,0,.08)"}}>
+                  {["Program","Name","Email","Type","Location","Status","Date"].map(h=>(
+                    <th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)"}}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {leads.filter(l=>!query||[l.org,l.name,l.email].some(v=>v?.toLowerCase().includes(query.toLowerCase()))).map(l=>(
+                    <tr key={l.id} style={{borderTop:"1px solid var(--border)"}}>
+                      <td style={{padding:"8px 12px",fontWeight:600}}>{l.org}</td>
+                      <td style={{padding:"8px 12px"}}>{l.name}</td>
+                      <td style={{padding:"8px 12px"}}><a href={"mailto:"+l.email} style={{color:"var(--gold)",fontSize:12}}>{l.email}</a></td>
+                      <td style={{padding:"8px 12px",color:"var(--muted)",fontSize:12}}>{l.type||"—"}</td>
+                      <td style={{padding:"8px 12px",color:"var(--muted)",fontSize:12}}>{l.location||"—"}</td>
+                      <td style={{padding:"8px 12px"}}>
+                        {l.converted
+                          ?<span style={{fontSize:11,fontWeight:700,color:"#4caf50"}}>✓ Converted</span>
+                          :<span style={{fontSize:11,color:"var(--muted)"}}>Lead only</span>}
+                      </td>
+                      <td style={{padding:"8px 12px",color:"var(--muted)",fontSize:12}}>{new Date(l.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      )}
+
+      {/* ── ANALYTICS ── */}
+      {!loading&&tab==="analytics"&&(
+        <div>
+          <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>Platform Analytics</h3>
+          <p style={{fontSize:13,color:"var(--muted)",marginBottom:20}}>Page view data from the track-visit edge function. All time.</p>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:24}}>
+            <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:20,textAlign:"center"}}>
+              <div style={{fontSize:40,fontWeight:800,color:"var(--gold)"}}>{analytics.views}</div>
+              <div style={{fontSize:12,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1}}>Total Page Views</div>
+            </div>
+            <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:20,textAlign:"center"}}>
+              <div style={{fontSize:40,fontWeight:800,color:"var(--gold)"}}>{analytics.sessions}</div>
+              <div style={{fontSize:12,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1}}>Unique Sessions</div>
+            </div>
+          </div>
+          {/* Views by page */}
+          <h4 style={{fontSize:13,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Views by Page</h4>
+          <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:24}}>
+            {analytics.byPage.map(([page,count])=>(
+              <div key={page} style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{fontSize:13,width:100,color:"var(--text)",textTransform:"capitalize",flexShrink:0}}>{page}</div>
+                <div style={{flex:1,height:20,background:"var(--border)",borderRadius:4,overflow:"hidden"}}>
+                  <div style={{width:(count/Math.max(...analytics.byPage.map(([,v])=>v))*100)+"%",height:"100%",background:"var(--gold)",borderRadius:4,transition:"width .4s"}}/>
+                </div>
+                <div style={{fontSize:13,fontWeight:700,color:"var(--gold)",width:40,textAlign:"right"}}>{count}</div>
+              </div>
+            ))}
+          </div>
+          {/* Daily chart */}
+          <h4 style={{fontSize:13,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Daily Views (Last 14 days)</h4>
+          <div style={{display:"flex",gap:4,alignItems:"flex-end",height:120,padding:"0 4px",background:"var(--parch)",borderRadius:10,border:"1px solid var(--border)"}}>
+            {analytics.byDay.map(([day,count])=>(
+              <div key={day} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4,paddingBottom:8}}>
+                <div style={{fontSize:9,color:"var(--muted)",fontWeight:700}}>{count}</div>
+                <div style={{width:"100%",background:"var(--gold)",borderRadius:"3px 3px 0 0",height:Math.max(4,(count/analytics.maxDay*80))+"px",transition:"height .4s"}}/>
+                <div style={{fontSize:8,color:"var(--faint)",transform:"rotate(-45deg)",whiteSpace:"nowrap"}}>{day.slice(5)}</div>
+              </div>
+            ))}
+            {analytics.byDay.length===0&&<div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",color:"var(--muted)",fontSize:13}}>No daily data yet</div>}
+          </div>
+          <div style={{marginTop:16,background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"12px 16px",fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
+            <strong style={{color:"var(--text)"}}>💡 To track traffic sources:</strong> Add UTM parameters to your links.
+            Example: <code style={{background:"var(--parch)",padding:"1px 5px",borderRadius:4}}>theatre4u.org/beta.html?utm_source=reddit&utm_campaign=beta_launch</code>
+            The source will appear in the page_views table for analysis.
+          </div>
+        </div>
+      )}
+
+      {/* ── FEEDBACK ── */}
+      {!loading&&tab==="feedback"&&(
+        <div>
+          <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>User Feedback</h3>
+          <p style={{fontSize:13,color:"var(--muted)",marginBottom:16}}>Submitted via the feedback button in the app. Use status to track resolution.</p>
+          {feedback.length===0
+            ?<div style={{color:"var(--muted)",fontSize:13,padding:32,textAlign:"center"}}>No feedback yet.</div>
+            :<div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {feedback.map(f=>(
+                <div key={f.id} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
+                    <div style={{flex:1}}>
+                      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:6,flexWrap:"wrap"}}>
+                        <span style={{fontSize:18}}>{f.category==="bug"?"🐛":f.category==="feature"?"✨":f.category==="ux"?"👁":"💬"}</span>
+                        <span style={{fontWeight:700,fontSize:13}}>{f.org_name||"Anonymous"}</span>
+                        <span style={{fontSize:11,color:"var(--muted)",textTransform:"capitalize",background:"var(--border)",padding:"1px 6px",borderRadius:4}}>{f.category}</span>
+                        {f.rating&&<span style={{fontSize:11,color:"var(--gold)"}}>{"★".repeat(f.rating)}{"☆".repeat(5-f.rating)}</span>}
+                        <span style={{fontSize:11,color:"var(--muted)"}}>{new Date(f.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</span>
+                      </div>
+                      <div style={{fontSize:13,color:"var(--text)",lineHeight:1.6}}>{f.message||"(no message)"}</div>
+                      {f.page_context&&<div style={{fontSize:11,color:"var(--muted)",marginTop:4}}>Page: {f.page_context}</div>}
+                    </div>
+                    <select value={f.status||"new"} onChange={e=>updateFeedback(f.id,e.target.value)}
+                      style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,padding:"4px 8px",fontSize:12,color:"var(--text)",cursor:"pointer",flexShrink:0}}>
+                      {["new","reviewing","resolved","wont_fix"].map(s=><option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
+          }
+        </div>
+      )}
+
+      {/* ── LABEL ORDERS ── */}
+      {!loading&&tab==="labels"&&(
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16,flexWrap:"wrap",gap:12}}>
+            <div>
+              <h3 style={{fontFamily:"var(--serif)",fontSize:18,margin:"0 0 2px"}}>🏷 Label Orders</h3>
+              <p style={{fontSize:13,color:"var(--muted)",margin:0}}>
+                {labelOrders.length} orders · {labelOrders.filter(o=>o.status==="pending").length} pending fulfillment
+              </p>
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button className="btn btn-o btn-sm" onClick={async()=>{
+                // Export ALL unfulfilled orders with code ranges as CSV for WePrintBarcodes
+                const pending = labelOrders.filter(o=>o.status==="pending"||o.status==="processing");
+                if(pending.length===0){alert("No pending orders to export.");return;}
+                // Get all labels for pending orders
+                const orderIds = pending.map(o=>o.id);
+                const {data:labels} = await SB.from("label_pool")
+                  .select("code,seq,order_id,org_id")
+                  .in("order_id",orderIds)
+                  .eq("status","assigned")
+                  .order("seq");
+                if(!labels||labels.length===0){alert("No labels found for pending orders.");return;}
+                // WePrintBarcodes CSV format: QR_Data, Label_Text (optional)
+                const rows = ["QR_Data,Label_Text,Order_ID,Org"];
+                labels.forEach(l=>{
+                  const order = pending.find(o=>o.id===l.order_id);
+                  const url = `https://theatre4u.org/item?code=${l.code}`;
+                  rows.push(`"${url}","${l.code}","${l.order_id}","${order?.org_name||""}"`);
+                });
+                const csv = rows.join("\n");
+                const blob = new Blob([csv],{type:"text/csv"});
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = `theatre4u_labels_${new Date().toISOString().slice(0,10)}.csv`;
+                a.click();
+                URL.revokeObjectURL(a.href);
+              }}>
+                ⬇ Export CSV for WePrintBarcodes
+              </button>
+              <button className="btn btn-o btn-sm" onClick={()=>setTab("labels")}>↺ Refresh</button>
+            </div>
+          </div>
+
+          {/* WePrintBarcodes workflow guide */}
+          <div style={{background:"rgba(33,150,243,.05)",border:"1px solid rgba(33,150,243,.2)",
+            borderRadius:10,padding:"14px 16px",marginBottom:20}}>
+            <div style={{fontWeight:700,fontSize:13,marginBottom:10,color:"var(--text)"}}>
+              📋 Fulfillment Workflow — WePrintBarcodes.com
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
+              {[
+                {n:"1",t:"Export CSV",b:'Click "Export CSV for WePrintBarcodes" above. The file contains one row per label with the QR URL and label text.'},
+                {n:"2",t:"Go to WePrintBarcodes",b:"Visit weprintbarcodes.com → QR Code Labels. Select your label size (1.5\"×1.5\" recommended) and material (polyester or weatherproof)."},
+                {n:"3",t:"Upload CSV",b:"Choose \"Variable Data\" or \"Sequential QR Codes\". Upload your CSV file. The QR_Data column becomes the encoded URL on each label."},
+                {n:"4",t:"Proof & order",b:"Review the digital proof. Set ship-to as the program's address (from the delivery_addr column in each order). Place order."},
+                {n:"5",t:"Update status",b:"Once shipped, paste the tracking number below and change status to Shipped. The program sees this in their Labels tab."},
+              ].map(s=>(
+                <div key={s.n} style={{background:"var(--white)",borderRadius:8,padding:"10px 12px",
+                  border:"1px solid var(--border)"}}>
+                  <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                    <div style={{background:"#2196f3",color:"#fff",borderRadius:"50%",width:22,height:22,
+                      minWidth:22,display:"flex",alignItems:"center",justifyContent:"center",
+                      fontSize:11,fontWeight:800,flexShrink:0}}>{s.n}</div>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:12,marginBottom:3}}>{s.t}</div>
+                      <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.4}}>{s.b}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{marginTop:12,display:"flex",gap:12,flexWrap:"wrap",fontSize:12,color:"var(--muted)"}}>
+              <span>🔗 <a href="https://www.weprintbarcodes.com/qr-code-labels.html" target="_blank" rel="noreferrer" style={{color:"var(--gold)"}}>WePrintBarcodes QR Labels ↗</a></span>
+              <span>📏 Recommended size: 1.5" × 1.5"</span>
+              <span>🏷 Material: polyester matte (indoor) or vinyl weatherproof</span>
+              <span>📦 Ships on rolls — easier to apply than sheets</span>
+            </div>
+          </div>
+
+          {/* Pool stats */}
+          {/* Pool stats shown in PoolHealthWidget below */}
+
+          {/* Orders list */}
+          {labelOrders.length===0?(
+            <div style={{color:"var(--muted)",fontSize:13,padding:32,textAlign:"center",
+              background:"var(--parch)",borderRadius:10,border:"1px solid var(--border)"}}>
+              No label orders yet. Once programs order labels from the Labels page, they'll appear here.
+            </div>
+          ):(
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              {labelOrders.map(o=>{
+                let addr = null;
+                try { addr = JSON.parse(o.delivery_addr||"{}"); } catch(e){}
+                return(
+                  <div key={o.id} style={{background:"var(--parch)",border:"1px solid var(--border)",
+                    borderRadius:10,padding:"14px 16px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",
+                      alignItems:"flex-start",gap:12,flexWrap:"wrap",marginBottom:10}}>
+                      <div>
+                        <div style={{fontWeight:700,fontSize:15}}>{o.org_name}</div>
+                        <div style={{fontSize:12,color:"var(--muted)"}}>
+                          <a href={"mailto:"+o.contact_email} style={{color:"var(--gold)"}}>{o.contact_email}</a>
+                        </div>
+                      </div>
+                      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                        <span style={{fontWeight:800,fontSize:18,color:"var(--gold)"}}>{o.item_count}</span>
+                        <span style={{fontSize:12,color:"var(--muted)",textTransform:"capitalize"}}>{o.label_type} labels</span>
+                        <select value={o.status} onChange={e=>updateLabelOrder(o.id,{status:e.target.value})}
+                          style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,
+                            padding:"4px 8px",fontSize:12,color:"var(--text)",cursor:"pointer"}}>
+                          {["pending","processing","shipped","delivered"].map(s=>(
+                            <option key={s} value={s}>
+                              {s==="pending"?"⏳ Pending":s==="processing"?"🔄 Processing":s==="shipped"?"✈ Shipped":"✓ Delivered"}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Code range */}
+                    {o.code_start&&(
+                      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8,flexWrap:"wrap"}}>
+                        <span style={{fontSize:11,color:"var(--muted)",textTransform:"uppercase",letterSpacing:.5}}>Label range:</span>
+                        <code style={{fontSize:12,fontFamily:"monospace",color:"var(--amber)",
+                          background:"rgba(196,118,26,.1)",padding:"2px 8px",borderRadius:4}}>
+                          {o.code_start} → {o.code_end}
+                        </code>
+                        <span style={{fontSize:11,color:"var(--muted)"}}>({o.item_count} labels)</span>
+                        <button className="btn btn-o btn-sm" style={{fontSize:11,padding:"2px 8px"}}
+                          onClick={async()=>{
+                            // Export just this order's labels as CSV
+                            const {data:labels} = await SB.from("label_pool")
+                              .select("code,seq")
+                              .eq("order_id",o.id)
+                              .order("seq");
+                            if(!labels||labels.length===0){alert("No labels found for this order.");return;}
+                            const rows=["QR_Data,Label_Text"];
+                            labels.forEach(l=>{
+                              rows.push(`"https://theatre4u.org/item?code=${l.code}","${l.code}"`);
+                            });
+                            const blob=new Blob([rows.join("\n")],{type:"text/csv"});
+                            const a=document.createElement("a");
+                            a.href=URL.createObjectURL(blob);
+                            a.download=`labels_${o.org_name.replace(/\s+/g,"_")}_${o.code_start}-${o.code_end}.csv`;
+                            a.click();
+                            URL.revokeObjectURL(a.href);
+                          }}>
+                          ⬇ Export This Order
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Ship-to address */}
+                    {addr&&addr.street&&(
+                      <div style={{fontSize:12,color:"var(--muted)",marginBottom:8,
+                        display:"flex",gap:6,alignItems:"flex-start"}}>
+                        <span>📦</span>
+                        <span>{addr.name} · {addr.street}, {addr.city}, {addr.state} {addr.zip}</span>
+                      </div>
+                    )}
+
+                    {/* Logo indicator */}
+                    {o.include_logo&&(
+                      <div style={{fontSize:12,color:"var(--gold)",marginBottom:8,
+                        display:"flex",gap:6,alignItems:"center"}}>
+                        <span>🖼</span>
+                        <span>Logo requested{o.logo_url?" — ":""}</span>
+                        {o.logo_url&&<a href={o.logo_url} target="_blank" rel="noreferrer"
+                          style={{color:"var(--gold)",fontSize:11}}>View logo ↗</a>}
+                        <span style={{fontSize:11,color:"var(--muted)"}}>
+                          Include in WePrintBarcodes order as header graphic
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Tracking number input */}
+                    <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                      <input
+                        defaultValue={o.tracking||""}
+                        placeholder="Add tracking number…"
+                        onBlur={async e=>{
+                          const v=e.target.value.trim();
+                          if(v&&v!==o.tracking){
+                            await updateLabelOrder(o.id,{tracking:v,
+                              status:o.status==="pending"||o.status==="processing"?"shipped":o.status});
+                          }
+                        }}
+                        style={{flex:1,minWidth:180,background:"var(--white)",border:"1px solid var(--border)",
+                          borderRadius:6,padding:"5px 10px",fontSize:12,color:"var(--text)",fontFamily:"monospace"}}/>
+                      <span style={{fontSize:11,color:"var(--faint)"}}>
+                        {new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
+                      </span>
+                      {o.amount_cents>0&&<span style={{fontSize:12,fontWeight:700,color:"#4caf50"}}>
+                        ${(o.amount_cents/100).toFixed(2)}
+                      </span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Pool health */}
+          <PoolHealthWidget/>
+        </div>
+      )}
+
+      {/* ── TOOLS ── */}
+      {!loading&&tab==="tools"&&(
+        <div>
+          <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>Admin Tools & Quick Actions</h3>
+          <p style={{fontSize:13,color:"var(--muted)",marginBottom:20}}>Common tasks and reference SQL for managing the platform.</p>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+            {[
+              { icon:"⭐", title:"Grant Beta Pro Access",
+                body:"Go to Users tab → find the program → set plan to 'pro' → toggle ⭐ LP to on.",
+                sql:null },
+              { icon:"✉️", title:"Email a Tester",
+                body:"Go to Users tab → click the ✉ Email link next to any program to open a pre-addressed email.",
+                sql:null },
+              { icon:"🔧", title:"Fix Email Typo in Lead",
+                body:"Run in Supabase SQL editor:",
+                sql:"UPDATE beta_leads SET email='correct@email.com'\nWHERE email='wrong@email.com';" },
+              { icon:"🔄", title:"Mark Lead as Converted",
+                body:"Run after a beta lead creates their Theatre4u account:",
+                sql:"UPDATE beta_leads SET converted=true\nWHERE email='their@email.com';" },
+              { icon:"💰", title:"Award Stage Points",
+                body:"Grant Stage Points to a tester for feedback or referral:",
+                sql:"INSERT INTO credit_ledger (org_id, amount, note)\nVALUES ('org-uuid-here', 150, 'Beta feedback reward');" },
+              { icon:"🏷", title:"Label Order Pricing Guide",
+                body:"Standard vinyl QR labels: ~$0.10–0.15/label. Weatherproof: ~$0.20–0.25/label. Minimum order: 30 labels ($3–7.50). Shipping: USPS First Class ~$4–6. Suggested retail: $12 for 30 standard, $18 for 30 weatherproof.",
+                sql:null },
+              { icon:"📊", title:"Export All Orgs as CSV",
+                body:"Run in Supabase SQL, then download results:",
+                sql:"SELECT name,email,plan,is_leading_player,director_name,city,created_at\nFROM orgs ORDER BY created_at DESC;" },
+              { icon:"🗑", title:"Remove Test Accounts",
+                body:"Go to Users tab → find test orgs → use Supabase auth dashboard to delete the user.",
+                sql:null },
+            ].map(tool=>(
+              <div key={tool.title} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px"}}>
+                <div style={{fontSize:28,marginBottom:8}}>{tool.icon}</div>
+                <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>{tool.title}</div>
+                <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:tool.sql?8:0}}>{tool.body}</div>
+                {tool.sql&&<code style={{display:"block",background:"rgba(0,0,0,.2)",borderRadius:6,padding:"8px 10px",fontSize:11,fontFamily:"monospace",color:"var(--text)",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{tool.sql}</code>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminDashboard({ currentUser }) {
+
+
 // ── Admin Daily Digest ───────────────────────────────────────────────────────
 function AdminDailyDigest() {
   const [digest,  setDigest]  = useState(null);
@@ -6988,6 +7980,281 @@ async function printProductionReport(prod, needs, prodItems, allItems, org) {
 }
 
 // ── Production Needs CSV Import ───────────────────────────────────────────────
+function LabelOrderPanel({ org, userId, items=[] }) {
+  const [step, setStep]       = useState("intro");  // intro | select | preview | order
+  const [labelItems, setLabelItems] = useState([]);
+  const [allItems,   setAllItems]   = useState([]);
+  const [labelSize,  setLabelSize]  = useState("2x2");
+  const [labelStyle, setLabelStyle] = useState("standard");
+  const [searching,  setSearching]  = useState("");
+  const [previewing, setPreviewing] = useState(false);
+  const [existing,   setExisting]   = useState([]);
+  const [saving,     setSaving]     = useState(false);
+  const [requestDone,setRequestDone]= useState(false);
+
+  useEffect(()=>{
+    SB.from("items").select("id,name,category,location,display_id,img")
+      .eq("org_id",userId).order("added",{ascending:false}).limit(200)
+      .then(({data})=>setAllItems(data||[]));
+    SB.from("label_orders").select("id,item_count,label_type,status,created_at,tracking")
+      .eq("org_id",userId).order("created_at",{ascending:false})
+      .then(({data})=>setExisting(data||[]));
+  },[userId]);
+
+  const toggleItem = id => setLabelItems(prev =>
+    prev.includes(id) ? prev.filter(x=>x!==id) : [...prev,id]
+  );
+  const selectAll  = () => setLabelItems(allItems.map(i=>i.id));
+  const clearAll   = () => setLabelItems([]);
+
+  const SIZES = { "2x2":"2\" x 2\" (recommended)", "2x3":"2\" x 3\" (portrait)", "3x3":"3\" x 3\" (large)", "1x3":"1\" x 3\" (strip)" };
+  const STYLES = {
+    standard:    { name:"Standard Vinyl", desc:"Indoor use · Matte finish · Waterproof · ~$0.25/label" },
+    weatherproof:{ name:"Weatherproof",   desc:"Outdoor/heavy use · Extra durable · ~$0.40/label" },
+    "color-coded":{ name:"Color-Coded",  desc:"Color by category · Easier visual sorting · ~$0.35/label" },
+  };
+
+  const selectedItems = allItems.filter(i=>labelItems.includes(i.id));
+  const count = selectedItems.length;
+  const pricePerLabel = labelStyle==="standard"?0.25:labelStyle==="weatherproof"?0.40:0.35;
+  const estTotal = (count * pricePerLabel + 7).toFixed(2); // +$7 shipping estimate
+
+  // Generate a label preview for one item
+  const LabelPreview = ({item}) => {
+    const cat = CAT[item.category]||CAT.other;
+    const url = `https://theatre4u.org/#/item/${item.id}`;
+    const [qrSrc, setQrSrc] = useState(null);
+    useEffect(()=>{
+      QR.toDataURL(url,80).then(setQrSrc);
+    },[item.id]);
+    return(
+      <div style={{width:96,height:96,border:"2px solid #1a0f00",borderRadius:6,
+        padding:6,background:"#fff",display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
+        <div style={{fontSize:8,fontWeight:800,color:"#d4a843",textTransform:"uppercase",
+          letterSpacing:.5,lineHeight:1}}>{cat.icon} {cat.label}</div>
+        <div style={{fontSize:9,fontWeight:700,color:"#1a0f00",lineHeight:1.2,flex:1,
+          overflow:"hidden"}}>{item.name}</div>
+        <div style={{display:"flex",gap:4,alignItems:"flex-end",justifyContent:"space-between"}}>
+          <div>
+            {item.location&&<div style={{fontSize:7,color:"#666"}}>📍{item.location.slice(0,12)}</div>}
+            {item.display_id&&<div style={{fontSize:7,fontWeight:700,color:"#d4a843",fontFamily:"monospace"}}>{item.display_id}</div>}
+            <div style={{fontSize:7,color:"#999"}}>theatre4u.org</div>
+          </div>
+          {qrSrc&&<img src={qrSrc} width={30} height={30} alt="QR"/>}
+        </div>
+      </div>
+    );
+  };
+
+  const submitRequest = async () => {
+    setSaving(true);
+    await SB.from("label_orders").insert({
+      org_id:        userId,
+      org_name:      org?.name||"",
+      contact_email: org?.email||"",
+      contact_name:  org?.director_name||"",
+      item_count:    count,
+      label_type:    labelStyle,
+      notes:         `Size: ${labelSize}. Items: ${selectedItems.map(i=>i.name).join(", ")}`,
+    });
+    setSaving(false);
+    setRequestDone(true);
+    setExisting(prev=>[{item_count:count,label_type:labelStyle,status:"pending",
+      created_at:new Date().toISOString()},...prev]);
+  };
+
+  return(
+    <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,
+      padding:20,marginTop:16}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:16}}>
+        <div>
+          <div style={{fontWeight:700,fontSize:15,marginBottom:3}}>🏷 QR Label Printing</div>
+          <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>
+            Order professional QR label stickers for your inventory bins, racks, and props.
+            We design them, you order direct from Sticker Mule — shipped to your door.
+          </div>
+        </div>
+        {step!=="intro"&&<button onClick={()=>{setStep("intro");setRequestDone(false);}} className="btn btn-o btn-sm">← Back</button>}
+      </div>
+
+      {/* Existing orders */}
+      {existing.length>0&&step==="intro"&&(
+        <div style={{marginBottom:14,display:"flex",flexDirection:"column",gap:4}}>
+          <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:4}}>Previous Orders</div>
+          {existing.slice(0,3).map((o,i)=>(
+            <div key={i} style={{fontSize:12,color:"var(--muted)",display:"flex",gap:12,alignItems:"center"}}>
+              <span>{new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>
+              <span>{o.item_count} labels · {o.label_type}</span>
+              {o.tracking&&<span style={{fontSize:11}}>📦 {o.tracking}</span>}
+              <span style={{fontWeight:600,
+                color:o.status==="shipped"||o.status==="delivered"?"#4caf50":o.status==="processing"?"#2196f3":"var(--gold)",
+                textTransform:"capitalize"}}>
+                {o.status==="pending"?"⏳ Pending":o.status==="processing"?"🔄 Processing":o.status==="shipped"?"✈ Shipped":"✓ Delivered"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* INTRO */}
+      {step==="intro"&&(
+        <div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+            {[
+              { icon:"🎨", title:"We design the labels", body:"Your item name, category icon, QR code, storage location, and Theatre4u branding on every label." },
+              { icon:"🏷", title:"You order from Sticker Mule", body:"We'll email you a print-ready file. Upload it to Sticker Mule, choose weatherproof vinyl, done." },
+              { icon:"📦", title:"Ships to your door", body:"Sticker Mule ships in 4–6 days. Weatherproof labels survive costume closets and scene shops." },
+            ].map(s=>(
+              <div key={s.title} style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:8,padding:"12px 14px"}}>
+                <div style={{fontSize:22,marginBottom:6}}>{s.icon}</div>
+                <div style={{fontWeight:700,fontSize:12,marginBottom:4}}>{s.title}</div>
+                <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.5}}>{s.body}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"10px 14px",fontSize:12,color:"var(--muted)",marginBottom:14,lineHeight:1.6}}>
+            <strong style={{color:"var(--text)"}}>Estimated cost at Sticker Mule:</strong>
+            {" "}~$19 for 50 labels · ~$36 for 100 labels · ~$65 for 200 labels.
+            Prices include free worldwide shipping. Weatherproof vinyl is ~30% more.
+          </div>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <button className="btn btn-g" onClick={()=>setStep("select")}>
+              Design My Labels →
+            </button>
+            <a href="https://www.stickermule.com/custom-labels" target="_blank" rel="noreferrer"
+              style={{fontSize:12,color:"var(--gold)"}}>View Sticker Mule pricing ↗</a>
+          </div>
+        </div>
+      )}
+
+      {/* SELECT ITEMS */}
+      {step==="select"&&(
+        <div>
+          <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
+            <input value={searching} onChange={e=>setSearching(e.target.value)}
+              placeholder="Search items…" className="fi" style={{flex:1,minWidth:180,padding:"6px 10px"}}/>
+            <button className="btn btn-o btn-sm" onClick={selectAll}>Select All</button>
+            <button className="btn btn-o btn-sm" onClick={clearAll}>Clear</button>
+            <span style={{fontSize:12,color:"var(--muted)"}}>{count} selected</span>
+          </div>
+          <div style={{maxHeight:260,overflowY:"auto",border:"1px solid var(--border)",borderRadius:8,
+            background:"var(--white)",marginBottom:14}}>
+            {allItems
+              .filter(i=>!searching||i.name.toLowerCase().includes(searching.toLowerCase())||
+                (i.location||"").toLowerCase().includes(searching.toLowerCase()))
+              .map(i=>(
+              <div key={i.id} onClick={()=>toggleItem(i.id)}
+                style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",cursor:"pointer",
+                  borderBottom:"1px solid var(--border)",
+                  background:labelItems.includes(i.id)?"rgba(212,168,67,.08)":"transparent"}}>
+                <div style={{width:16,height:16,borderRadius:4,border:"1.5px solid var(--border)",
+                  background:labelItems.includes(i.id)?"var(--gold)":"transparent",flexShrink:0,
+                  display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  {labelItems.includes(i.id)&&<span style={{color:"#1a0f00",fontSize:11,fontWeight:900}}>✓</span>}
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:600}}>{i.name}</div>
+                  {i.location&&<div style={{fontSize:11,color:"var(--muted)"}}>📍 {i.location}</div>}
+                </div>
+                {i.display_id&&<span style={{fontFamily:"monospace",fontSize:11,color:"var(--amber)"}}>{i.display_id}</span>}
+              </div>
+            ))}
+            {allItems.length===0&&<div style={{padding:20,textAlign:"center",color:"var(--muted)",fontSize:13}}>No items in inventory yet.</div>}
+          </div>
+          {/* Label options */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+            <div>
+              <label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Label Size</label>
+              <select value={labelSize} onChange={e=>setLabelSize(e.target.value)} className="fld" style={{width:"100%"}}>
+                {Object.entries(SIZES).map(([v,l])=><option key={v} value={v}>{l}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Label Material</label>
+              <select value={labelStyle} onChange={e=>setLabelStyle(e.target.value)} className="fld" style={{width:"100%"}}>
+                {Object.entries(STYLES).map(([v,s])=><option key={v} value={v}>{s.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{fontSize:12,color:"var(--muted)",marginBottom:14}}>
+            {STYLES[labelStyle]?.desc}
+          </div>
+          <div style={{display:"flex",gap:10,alignItems:"center"}}>
+            <button className="btn btn-g" disabled={count===0} onClick={()=>setStep("preview")}>
+              Preview Labels ({count}) →
+            </button>
+            {count>0&&<span style={{fontSize:12,color:"var(--muted)"}}>Est. ~${estTotal} at Sticker Mule</span>}
+          </div>
+        </div>
+      )}
+
+      {/* PREVIEW + ORDER */}
+      {step==="preview"&&(
+        <div>
+          <div style={{fontSize:13,color:"var(--muted)",marginBottom:14,lineHeight:1.5}}>
+            Preview of your {count} labels at {SIZES[labelSize]} size.
+            We'll send you a print-ready PDF to upload to Sticker Mule.
+          </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20,
+            maxHeight:320,overflowY:"auto",padding:4}}>
+            {selectedItems.slice(0,20).map(item=>(
+              <LabelPreview key={item.id} item={item}/>
+            ))}
+            {count>20&&<div style={{width:96,height:96,border:"2px dashed var(--border)",borderRadius:6,
+              display:"flex",alignItems:"center",justifyContent:"center",
+              fontSize:13,color:"var(--muted)",textAlign:"center",padding:8}}>
+              +{count-20} more labels
+            </div>}
+          </div>
+          {!requestDone?(
+            <div>
+              <div style={{background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.2)",
+                borderRadius:8,padding:"12px 14px",fontSize:12,color:"var(--muted)",marginBottom:14,lineHeight:1.6}}>
+                <strong style={{color:"var(--text)"}}>How this works:</strong>{" "}
+                Submit your request below. We'll generate a print-ready PDF file and email it to{" "}
+                <strong>{org?.email}</strong> within 1–2 business days.
+                Upload it to <a href="https://www.stickermule.com/custom-labels" target="_blank" rel="noreferrer"
+                  style={{color:"var(--gold)"}}>Sticker Mule</a>, choose vinyl labels, and order directly.
+                No Theatre4u transaction fee — you pay Sticker Mule directly.
+              </div>
+              <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                <button onClick={submitRequest} disabled={saving} className="btn btn-g">
+                  {saving?"Submitting…":"📧 Send Me the Print File →"}
+                </button>
+                <button onClick={()=>setStep("select")} className="btn btn-o btn-sm">← Edit Selection</button>
+                <span style={{fontSize:11,color:"var(--faint)"}}>Free · No charge until you order from Sticker Mule</span>
+              </div>
+            </div>
+          ):(
+            <div style={{background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.25)",
+              borderRadius:8,padding:"14px 16px",fontSize:13,color:"var(--text)"}}>
+              <div style={{fontWeight:700,marginBottom:4}}>✓ Request received!</div>
+              <div style={{lineHeight:1.6,color:"var(--muted)"}}>
+                We'll email a print-ready PDF to <strong>{org?.email}</strong> within 1–2 business days.
+                Then just upload it to{" "}
+                <a href="https://www.stickermule.com/custom-labels" target="_blank" rel="noreferrer"
+                  style={{color:"var(--gold)"}}>stickermule.com/custom-labels</a>{" "}
+                and order the size that matches your labels. Ships in 4–6 days.
+              </div>
+              <div style={{marginTop:10,display:"flex",gap:8}}>
+                <button onClick={()=>{setStep("intro");setRequestDone(false);}} className="btn btn-o btn-sm">
+                  Order More Labels
+                </button>
+                <a href="https://www.stickermule.com/custom-labels" target="_blank" rel="noreferrer"
+                  className="btn btn-g btn-sm" style={{textDecoration:"none"}}>
+                  Go to Sticker Mule ↗
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QRPrivacySettings({ org, setOrg, userId }) {
+
 function ProductionNeedsImport({ prod, userId, onImported, onClose }) {
   const [step,      setStep]      = useState("upload"); // upload → preview → done
   const [rows,      setRows]      = useState([]);
@@ -12730,6 +13997,43 @@ function PreviewMode({ onSignUp }) {
   );
 }
 
+const TRACK_URL = "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/track-visit";
+function getSessionId() {
+  let sid = sessionStorage.getItem("t4u_sid");
+  if (!sid) { sid = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem("t4u_sid", sid); }
+  return sid;
+}
+function trackVisit(page, extra = {}) {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    fetch(TRACK_URL, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        page,
+        session_id:   getSessionId(),
+        referrer:     document.referrer || null,
+        utm_source:   params.get("utm_source"),
+        utm_medium:   params.get("utm_medium"),
+        utm_campaign: params.get("utm_campaign"),
+        ...extra
+      })
+    }).catch(() => {});
+  } catch(e) {}
+}
+
+function AppRoot(){
+  const [user,setUser]     = useState(null);
+  // ── Handle Stripe label checkout returns ──────────────────────────────────
+  const [stripeReturn, setStripeReturn] = useState(()=>{
+    const p = new URLSearchParams(window.location.search);
+    if(p.get("labels_success")) return "success";
+    if(p.get("labels_cancelled")) return "cancelled";
+    return null;
+  });
+  useEffect(()=>{
+    if(stripeReturn && user){
+      nav("labels");
+
 function AppRoot(){
   const [user,setUser]     = useState(null);
   // ── Hash routing — handles #/item/:id for public QR scans ─────────────────
@@ -13425,7 +14729,7 @@ function AppRoot(){
                   {page==="points"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>Stage Points is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true}/></div>}
 
 
-                  {page==="admin"       && isAdmin && <AdminDashboard currentUser={user}/>}
+                  {page==="admin"       && isAdmin && <AdminHub currentUser={user} org={org}/>}
                 </div>
             }
           </div>
