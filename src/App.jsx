@@ -7449,9 +7449,9 @@ function ProductionDetail({ prod, allItems, userId, onEdit, onDelete, onClose, o
                 background: daysUntil !== null && daysUntil <= 14 ? "rgba(212,168,67,.2)" : "rgba(255,255,255,.08)",
                 color: daysUntil !== null && daysUntil <= 14 ? "var(--gold)" : "var(--muted)" }}>
                 {daysUntil !== null && daysUntil > 0
-                  ? `Opens in ${daysUntil} day${daysUntil!==1?"s":""}`
+                  ? ("Opens in "+daysUntil+" day"+(daysUntil!==1?"s":""))
                   : daysUntil === 0 ? "Opens today!"
-                  : `Opened ${new Date(prod.opening_date).toLocaleDateString()}`}
+                  : ("Opened "+new Date(prod.opening_date).toLocaleDateString())}
               </span>
             )}
           </div>
@@ -7569,7 +7569,7 @@ function ProductionDetail({ prod, allItems, userId, onEdit, onDelete, onClose, o
                         </div>
                         <div style={{ fontSize:11, color:"var(--muted)", marginTop:1 }}>
                           {pi.item?.location || pi.item?.condition || ""}
-                          {pi.qty_needed > 1 ? ` · Need ${pi.qty_needed}` : ""}
+                          {pi.qty_needed > 1 ? " · Need "+pi.qty_needed : ""}
                         </div>
                       </div>
                       {/* Status toggle */}
@@ -7686,12 +7686,12 @@ function Productions({ userId, allItems, org, onNavigateTo }) {
           <div style={{ textAlign:"center", padding:56 }}>
             <div style={{ fontSize:48, marginBottom:14 }}>🎭</div>
             <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:8 }}>
-              {filter==="all" ? "No Productions Yet" : `No ${filter} productions`}
+              {filter==="all" ? "No Productions Yet" : ("No "+filter+" productions")}
             </h3>
             <p style={{ color:"var(--muted)", fontSize:13, maxWidth:380, margin:"0 auto 20px", lineHeight:1.6 }}>
               {filter==="all"
                 ? "Create a production folder for each show. Save items from your inventory to track exactly what you need."
-                : `No shows in ${filter} status.`}
+                : ("No shows in "+filter+" status.")}
             </p>
             {filter==="all" && (
               <button className="btn btn-g" onClick={()=>{ setActive(null); setModal("new"); }}>
@@ -7750,7 +7750,7 @@ function Productions({ userId, allItems, org, onNavigateTo }) {
                     {prod.opening_date && (
                       <span style={{ fontSize:11, color:"var(--muted)" }}>
                         📅 {daysUntil !== null && daysUntil > 0
-                          ? `Opens in ${daysUntil}d`
+                          ? ("Opens in "+daysUntil+"d")
                           : new Date(prod.opening_date).toLocaleDateString()}
                       </span>
                     )}
@@ -12883,259 +12883,69 @@ function LabelsPage({ org, userId, items=[] }) {
       {/* ══ ORDER TAB ══ */}
       {tab==="order"&&(
         <div>
-          {orderDone?(
-            <div style={{...card,padding:"32px 28px",textAlign:"center",maxWidth:520}}>
-              <div style={{fontSize:44,marginBottom:12}}>📬</div>
-              <div style={{fontFamily:"var(--serif)",fontSize:22,marginBottom:12}}>Order Submitted!</div>
-              <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.8,marginBottom:16}}>
-                We'll confirm your order by email at <strong>{org?.email}</strong> within 1 business day
-                and send an invoice before processing payment. Labels ship via WePrintBarcodes within 5–7 business days once confirmed.
-              </p>
-              <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.8,marginBottom:24}}>
-                When your labels arrive, use the <strong>Assign tab</strong> to link each label code to an inventory item.
-                Or stick them on bins and racks now — you can assign codes to items anytime later.
-              </p>
-              <button onClick={()=>{setOrderDone(false);setSelPack(null);}}
-                style={{padding:"9px 22px",borderRadius:8,border:"1px solid var(--border)",
-                  background:"transparent",color:"var(--text)",fontSize:13,fontWeight:600,
-                  cursor:"pointer",fontFamily:"inherit"}}>
-                Order More Labels
+          <div style={{...card,padding:"32px 28px",maxWidth:560,textAlign:"center"}}>
+            <div style={{fontSize:48,marginBottom:16}}>🏷</div>
+            <div style={{fontFamily:"var(--serif)",fontSize:22,marginBottom:12}}>
+              Physical Label Ordering — Coming Soon
+            </div>
+            <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.8,marginBottom:16,maxWidth:440,margin:"0 auto 16px"}}>
+              We're finalizing our label printing partnership so you can order
+              pre-printed, pre-coded QR label stickers mailed directly to your school.
+              Stick them on bins, racks, and props now — then assign each code to a
+              specific inventory item at any time.
+            </p>
+            <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.8,marginBottom:24,maxWidth:440,margin:"0 auto 24px"}}>
+              In the meantime, use the <strong>Print tab</strong> to generate and print
+              QR labels instantly from any printer. They work just as well for
+              getting organized right now.
+            </p>
+            <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+              <button onClick={()=>setTab("print")}
+                style={{padding:"10px 22px",borderRadius:8,border:"none",fontFamily:"inherit",
+                  fontSize:13,fontWeight:700,cursor:"pointer",
+                  background:"var(--gold)",color:"#1a0f00"}}>
+                🖨 Print Labels Now
               </button>
+              <a href="mailto:hello@theatre4u.org?subject=Label Ordering Interest"
+                style={{padding:"10px 22px",borderRadius:8,border:"1px solid var(--border)",
+                  fontFamily:"inherit",fontSize:13,fontWeight:600,cursor:"pointer",
+                  background:"transparent",color:"var(--text)",textDecoration:"none",
+                  display:"inline-flex",alignItems:"center"}}>
+                ✉ Notify Me When Ready
+              </a>
             </div>
-          ):(
-            <div style={{display:"grid",gridTemplateColumns:"1fr 340px",gap:24,alignItems:"start"}}>
-
-              {/* Left: Pack selection + options */}
-              <div>
-                <div style={{fontWeight:700,fontSize:14,marginBottom:12}}>Choose a label pack</div>
-
-                {/* Standard packs */}
-                <div style={{fontWeight:600,fontSize:12,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>
-                  Standard Polyester — Indoor use, costume racks, prop bins
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
-                  {LABEL_PACKS.filter(p=>p.type==="standard").map((p,i)=>{
-                    const idx = LABEL_PACKS.indexOf(p);
-                    const isSel = selPack===idx;
-                    return(
-                      <div key={idx} onClick={()=>setSelPack(idx)}
-                        style={{...card,padding:"12px 14px",cursor:"pointer",
-                          borderColor:isSel?"var(--gold)":"var(--border)",
-                          background:isSel?"rgba(212,168,67,.08)":"var(--parch)"}}>
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
-                          <div style={{fontWeight:700,fontSize:14}}>{p.qty} labels</div>
-                          <div style={{fontWeight:800,fontSize:16,color:isSel?"var(--gold)":"var(--text)"}}>
-                            ${(p.retail/100).toFixed(0)}
-                          </div>
-                        </div>
-                        <div style={{fontSize:11,color:"var(--muted)"}}>
-                          ${(p.retail/p.qty/100).toFixed(2)}/label · shipping included
-                        </div>
-                        {isSel&&<div style={{fontSize:10,color:"var(--gold)",fontWeight:700,marginTop:4}}>✓ Selected</div>}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Weatherproof packs */}
-                <div style={{fontWeight:600,fontSize:12,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>
-                  Weatherproof Vinyl — Scene shops, outdoor storage, heavy-use gear
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:20}}>
-                  {LABEL_PACKS.filter(p=>p.type==="weatherproof").map((p,i)=>{
-                    const idx = LABEL_PACKS.indexOf(p);
-                    const isSel = selPack===idx;
-                    return(
-                      <div key={idx} onClick={()=>setSelPack(idx)}
-                        style={{...card,padding:"12px 14px",cursor:"pointer",
-                          borderColor:isSel?"var(--gold)":"var(--border)",
-                          background:isSel?"rgba(212,168,67,.08)":"var(--parch)"}}>
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
-                          <div style={{fontWeight:700,fontSize:14}}>{p.qty} labels</div>
-                          <div style={{fontWeight:800,fontSize:16,color:isSel?"var(--gold)":"var(--text)"}}>
-                            ${(p.retail/100).toFixed(0)}
-                          </div>
-                        </div>
-                        <div style={{fontSize:11,color:"var(--muted)"}}>
-                          ${(p.retail/p.qty/100).toFixed(2)}/label · shipping included
-                        </div>
-                        {isSel&&<div style={{fontSize:10,color:"var(--gold)",fontWeight:700,marginTop:4}}>✓ Selected</div>}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Logo add-on */}
-                <div style={{...card,padding:"14px 16px",marginBottom:20}}>
-                  <div onClick={()=>setIncludeLogo(!includeLogo)}
-                    style={{display:"flex",gap:12,alignItems:"flex-start",cursor:"pointer",marginBottom:includeLogo?12:0}}>
-                    <div style={{width:20,height:20,borderRadius:5,border:"1.5px solid",flexShrink:0,marginTop:1,
-                      borderColor:includeLogo?"var(--gold)":"var(--border)",
-                      background:includeLogo?"var(--gold)":"transparent",
-                      display:"flex",alignItems:"center",justifyContent:"center"}}>
-                      {includeLogo&&<span style={{color:"#1a0f00",fontSize:12,fontWeight:900}}>✓</span>}
-                    </div>
-                    <div>
-                      <div style={{fontWeight:700,fontSize:13}}>Add program logo (+${(LOGO_ADDON_CENTS/100).toFixed(0)})</div>
-                      <div style={{fontSize:12,color:"var(--muted)",marginTop:2,lineHeight:1.5}}>
-                        Include your school or program logo on every label. Provide a URL to your logo image below.
-                      </div>
-                    </div>
-                  </div>
-                  {includeLogo&&(
-                    <div>
-                      <label style={labelStyle}>Logo Image URL</label>
-                      <input value={logoUrl} onChange={e=>setLogoUrl(e.target.value)}
-                        placeholder="https://yourschool.edu/logo.png or Google Drive direct link"
-                        style={inputStyle}/>
-                      {org?.logo_url&&!logoUrl&&(
-                        <button onClick={()=>setLogoUrl(org.logo_url)}
-                          style={{marginTop:6,fontSize:11,color:"var(--gold)",background:"none",
-                            border:"none",cursor:"pointer",padding:0,fontFamily:"inherit"}}>
-                          Use logo from your profile ↗
-                        </button>
-                      )}
-                      {logoUrl&&<div style={{marginTop:8,fontSize:11,color:"var(--muted)"}}>
-                        Preview: <a href={logoUrl} target="_blank" rel="noreferrer" style={{color:"var(--gold)"}}>View image ↗</a>
-                      </div>}
-                    </div>
-                  )}
-                </div>
-
-                {/* Shipping info */}
-                <div style={{fontWeight:700,fontSize:14,marginBottom:12}}>Shipping address</div>
-                <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:20}}>
-                  <div>
-                    <label style={labelStyle}>Contact Name</label>
-                    <input value={orderName} onChange={e=>setOrderName(e.target.value)}
-                      placeholder="Your name" style={inputStyle}/>
-                  </div>
-                  <div>
-                    <label style={labelStyle}>Street Address *</label>
-                    <input value={orderAddrLine} onChange={e=>setOrderAddrLine(e.target.value)}
-                      placeholder="1234 School Blvd, Attn: Drama Dept" style={inputStyle}/>
-                  </div>
-                  <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:8}}>
-                    <div>
-                      <label style={labelStyle}>City *</label>
-                      <input value={orderCity} onChange={e=>setOrderCity(e.target.value)}
-                        placeholder="City" style={inputStyle}/>
-                    </div>
-                    <div>
-                      <label style={labelStyle}>State</label>
-                      <input value={orderState} onChange={e=>setOrderState(e.target.value)}
-                        placeholder="CA" style={inputStyle}/>
-                    </div>
-                    <div>
-                      <label style={labelStyle}>ZIP</label>
-                      <input value={orderZip} onChange={e=>setOrderZip(e.target.value)}
-                        placeholder="90000" style={inputStyle}/>
-                    </div>
-                  </div>
-                  <div>
-                    <label style={labelStyle}>Order Notes (optional)</label>
-                    <input value={orderNotes} onChange={e=>setOrderNotes(e.target.value)}
-                      placeholder="Special instructions, preferred label size, etc."
-                      style={inputStyle}/>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right: Order summary */}
-              <div style={{position:"sticky",top:20}}>
-                <div style={{...card,padding:"18px 20px"}}>
-                  <div style={{fontWeight:700,fontSize:15,marginBottom:14}}>Order Summary</div>
-
-                  {!pack?(
-                    <div style={{textAlign:"center",padding:"20px 0",color:"var(--muted)",fontSize:13}}>
-                      ← Select a label pack to continue
-                    </div>
-                  ):(
-                    <>
-                      <div style={{marginBottom:12}}>
-                        <div style={{fontWeight:700,fontSize:14}}>{pack.label}</div>
-                        <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>{pack.desc}</div>
-                      </div>
-                      <div style={{borderTop:"1px solid var(--border)",paddingTop:12,marginBottom:12}}>
-                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:13}}>
-                          <span style={{color:"var(--muted)"}}>{pack.qty} labels</span>
-                          <span>${(pack.retail/100).toFixed(2)}</span>
-                        </div>
-                        {includeLogo&&(
-                          <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:13}}>
-                            <span style={{color:"var(--muted)"}}>Logo add-on</span>
-                            <span>+${(LOGO_ADDON_CENTS/100).toFixed(2)}</span>
-                          </div>
-                        )}
-                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:12}}>
-                          <span style={{color:"var(--muted)"}}>Shipping</span>
-                          <span style={{color:"var(--muted)"}}>Included</span>
-                        </div>
-                        <div style={{display:"flex",justifyContent:"space-between",
-                          borderTop:"1px solid var(--border)",paddingTop:10,fontSize:15,fontWeight:800}}>
-                          <span>Total</span>
-                          <span style={{color:"var(--gold)"}}>${(totalCents/100).toFixed(2)}</span>
-                        </div>
-                      </div>
-
-                      <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.6,marginBottom:14,
-                        padding:"8px 10px",background:"rgba(212,168,67,.05)",borderRadius:6,
-                        border:"1px solid rgba(212,168,67,.15)"}}>
-                        No payment now. We'll email you a confirmation and invoice within 1 business day.
-                        Labels are printed by WePrintBarcodes and shipped within 5–7 days of payment.
-                      </div>
-
-                      {orderMsg&&<div style={{fontSize:13,color:"#e53935",marginBottom:10,
-                        padding:"7px 10px",borderRadius:6,background:"rgba(229,57,53,.08)",
-                        border:"1px solid rgba(229,57,53,.2)"}}>{orderMsg}</div>}
-
-                      <button onClick={submitOrder}
-                        disabled={orderSubmitting||!pack||!orderAddrLine.trim()||!orderCity.trim()}
-                        style={{width:"100%",padding:"11px",borderRadius:8,border:"none",fontFamily:"inherit",
-                          fontSize:14,fontWeight:700,
-                          cursor:pack&&orderAddrLine&&orderCity&&!orderSubmitting?"pointer":"not-allowed",
-                          background:pack&&orderAddrLine&&orderCity?"var(--gold)":"var(--border)",
-                          color:pack&&orderAddrLine&&orderCity?"#1a0f00":"var(--muted)"}}>
-                        {orderSubmitting?"Submitting…":"📬 Submit Order Request"}
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                {/* WePrintBarcodes note */}
-                <div style={{marginTop:12,fontSize:11,color:"var(--muted)",lineHeight:1.6,textAlign:"center"}}>
-                  Labels printed by{" "}
-                  <a href="https://www.weprintbarcodes.com" target="_blank" rel="noreferrer"
-                    style={{color:"var(--gold)"}}>WePrintBarcodes.com</a>
-                  {" "}· Polyester matte or weatherproof vinyl · Pre-coded unique QR stickers
-                </div>
-              </div>
+            <div style={{marginTop:24,paddingTop:20,borderTop:"1px solid var(--border)",
+              fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
+              Questions? Email{" "}
+              <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)"}}>
+                hello@theatre4u.org
+              </a>
             </div>
-          )}
+          </div>
 
-          {/* Previous orders */}
-          {orders.length>0&&!orderDone&&(
-            <div style={{marginTop:32}}>
-              <div style={{fontWeight:700,fontSize:14,marginBottom:12}}>Your Label Orders</div>
-              <div style={{...card,overflow:"hidden",maxWidth:700}}>
+          {/* Previous orders — show if any exist */}
+          {orders.length>0&&(
+            <div style={{marginTop:28,maxWidth:560}}>
+              <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>Your Label Orders</div>
+              <div style={{...card,overflow:"hidden"}}>
                 {orders.map((o,i)=>(
                   <div key={i} style={{padding:"12px 16px",borderBottom:"1px solid var(--border)",
                     display:"flex",gap:12,alignItems:"flex-start",flexWrap:"wrap"}}>
                     <div style={{flex:1}}>
                       <div style={{fontSize:13,fontWeight:700}}>
-                        {o.item_count} {o.label_type} labels
+                        {o.item_count+" "+o.label_type+" labels"}
                         {o.include_logo&&<span style={{marginLeft:8,fontSize:11,color:"var(--gold)"}}>🖼 logo</span>}
                       </div>
                       {o.code_start&&(
                         <div style={{fontSize:12,fontFamily:"monospace",color:"var(--amber)",marginTop:2}}>
-                          Codes: {o.code_start} → {o.code_end}
+                          {"Codes: "+o.code_start+" → "+o.code_end}
                         </div>
                       )}
-                      {o.tracking&&<div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>📦 {o.tracking}</div>}
+                      {o.tracking&&<div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{"📦 "+o.tracking}</div>}
                     </div>
                     {o.amount_cents>0&&(
                       <div style={{fontWeight:700,fontSize:14,color:"var(--gold)",flexShrink:0}}>
-                        ${(o.amount_cents/100).toFixed(2)}
+                        {"$"+(o.amount_cents/100).toFixed(2)}
                       </div>
                     )}
                     <span style={{fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:6,flexShrink:0,
