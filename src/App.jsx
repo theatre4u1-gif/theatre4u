@@ -13567,7 +13567,7 @@ function LabelOrderPanel({ org, userId, items=[] }) {
     const url = `https://theatre4u.org/#/item/${item.id}`;
     const [qrSrc, setQrSrc] = useState(null);
     useEffect(()=>{
-      QR.toDataURL(url,80).then ? QR.toDataURL(url,80).then(setQrSrc) : setQrSrc(QR.toDataURL(url,80));
+      QR.toDataURL(url,80).then(setQrSrc).catch(()=>{});
     },[item.id]);
     return(
       <div style={{width:96,height:96,border:"2px solid #1a0f00",borderRadius:6,
@@ -14193,9 +14193,8 @@ function AppRoot(){
   // Redirect to dashboard if current page's flag gets turned off
 
   useEffect(()=>{
-    if(page==="community"  && !org?.community_enabled)   setPage("dashboard");
     if(page==="marketplace"&& !org?.marketplace_enabled) setPage("dashboard");
-  },[org?.community_enabled, org?.marketplace_enabled, page]);
+  },[org?.marketplace_enabled, page]);
   // Expose for cross-component navigation
   useEffect(()=>{
     window.__t4u_nav_messages = (convId) => { setOpenConvId(convId); setPage("messages"); setMob(false); };
