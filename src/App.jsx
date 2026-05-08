@@ -7635,7 +7635,7 @@ function Productions({ userId, allItems, org, onNavigateTo }) {
     const { id: _id, org_id: _org, created_at: _ca, production_items: _pi, ...payload } = form;
     if (active && modal === "edit") {
       const { data, error } = await SB.from("productions")
-        .update({ ...payload, updated_at: new Date().toISOString() })
+        .update({ ...payload })
         .eq("id", active.id).select().single();
       if (error) { alert("Save failed: " + error.message); return; }
       if (data) {
