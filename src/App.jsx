@@ -13272,7 +13272,7 @@ function AdminDailyDigest() {
   const sectionHead = (icon, title, count) => (
     <div style={{padding:"10px 14px",borderBottom:"1px solid var(--border)",display:"flex",gap:8,alignItems:"center"}}>
       <span style={{fontSize:16}}>{icon}</span>
-      <span style={{fontWeight:700,fontSize:14}}>{title}{count!=null?` (${count})`:""}</span>
+      <span style={{fontWeight:700,fontSize:14}}>{title}{count!=null?" ("+count+")":""}</span>
     </div>
   );
 
