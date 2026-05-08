@@ -1857,6 +1857,63 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
   };
   const maxItems = PLANS_DEF[plan]?.maxItems ?? 25;
   const nearLimit = plan==="free" && items.length >= 20 && items.length < 25;
+
+  const [printingQR, setPrintingQR] = useState(false);
+
+  const printQRFiltered = async () => {
+    const toPrint = filtered.length > 0 ? filtered : items;
+    if (!toPrint.length) { alert("No items to print."); return; }
+    setPrintingQR(true);
+    try {
+      const w = window.open("", "_blank", "width=950,height=720");
+      if (!w) { alert("Pop-up blocked — please allow pop-ups for theatre4u.org and try again."); setPrintingQR(false); return; }
+      w.document.write(`<html><head><title>QR Labels</title>
+      <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:Arial,sans-serif;background:#fff;padding:14px}
+        .controls{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+        .controls h2{font-size:14px;color:#333;flex:1}
+        .btn{padding:6px 16px;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px}
+        .btn-p{background:#d4a843;color:#1a0800}
+        .btn-c{background:#eee;color:#333;border:1px solid #ccc}
+        .grid{display:flex;flex-wrap:wrap;gap:8px}
+        .lbl{width:170px;height:170px;border:1.5px solid #222;border-radius:7px;padding:9px;display:flex;flex-direction:column;gap:2px;page-break-inside:avoid;background:#fff}
+        .lbl-cat{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;overflow:hidden;white-space:nowrap}
+        .lbl-name{font-size:10px;font-weight:700;color:#111;line-height:1.25;flex:1;overflow:hidden;word-break:break-word}
+        .lbl-loc{font-size:8.5px;color:#444;font-weight:600}
+        .lbl-id{font-size:9px;font-weight:800;color:#c4761a;font-family:monospace;letter-spacing:.5px}
+        .lbl-row{display:flex;align-items:flex-end;justify-content:space-between;margin-top:auto}
+        .lbl-brand{font-size:7px;color:#bbb}
+        .lbl-qr{width:62px;height:62px}
+        @media print{.controls{display:none!important}.grid{gap:7px}.lbl{width:162px;height:162px}}
+      </style></head><body>
+      <div class="controls">
+        <h2>${toPrint.length} label${toPrint.length!==1?"s":""}</h2>
+        <button class="btn btn-p" onclick="window.print()">Print</button>
+        <button class="btn btn-c" onclick="window.close()">Close</button>
+        <span style="font-size:11px;color:#888">Tip: set margins to None in print dialog</span>
+      </div>
+      <div class="grid" id="lbl">Generating labels…</div>
+      </body></html>`);
+      w.document.close();
+      const srcs = await Promise.all(toPrint.map(i => QR.toDataURL("https://theatre4u.org/#/item/" + i.id, 140)));
+      const labels = toPrint.map((item, n) => {
+        const cat = CAT[item.category] || CAT.other;
+        const dispId = item.display_id || item.id.slice(0,8).toUpperCase();
+        return "<div class=\"lbl\">"
+          + "<div class=\"lbl-cat\" style=\"color:"+( cat.color||"#888")+"\">" + cat.icon + " " + cat.label + "</div>"
+          + "<div class=\"lbl-name\">" + item.name + "</div>"
+          + (item.location ? "<div class=\"lbl-loc\">📍 " + item.location + "</div>" : "")
+          + "<div class=\"lbl-id\">" + dispId + "</div>"
+          + "<div class=\"lbl-row\"><div><div class=\"lbl-brand\">theatre4u.org</div></div>"
+          + (srcs[n] ? "<img class=\"lbl-qr\" src=\"" + srcs[n] + "\" alt=\"QR\"/>" : "")
+          + "</div></div>";
+      }).join("");
+      const el = w.document.getElementById("lbl");
+      if (el) { el.outerHTML = "<div class=\"grid\">" + labels + "</div>"; setTimeout(() => w.print(), 500); }
+    } finally { setPrintingQR(false); }
+  };
+
   const atLimit   = plan==="free" && items.length >= 25;
 
   return(<>
@@ -1901,6 +1958,10 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
           <button className="ico-btn" style={showF?{borderColor:"var(--gold)",color:"var(--cog)"}:{}} onClick={()=>setShowF(!showF)}>{Ic.filter}</button>
           <div className="vtog"><button className={view==="grid"?"on":""} onClick={()=>setView("grid")}>Grid</button><button className={view==="table"?"on":""} onClick={()=>setView("table")}>Table</button><button className={view==="locations"?"on":""} onClick={()=>setView("locations")}>📦 Locations</button></div>
           <div style={{marginLeft:"auto",display:"flex",gap:7}}>
+            <button className="btn btn-o" style={{fontSize:12,padding:"6px 12px"}} disabled={printingQR}
+              onClick={printQRFiltered} title="Print QR labels for visible items">
+              {printingQR ? "Generating…" : ("🖨 Print QR" + (filtered.length < items.length ? " ("+filtered.length+")" : ""))}
+            </button>
             <button className="btn btn-o" style={{fontSize:12,padding:"6px 12px"}} onClick={()=>setShowImport(true)}
               title="Import from CSV">⬆ Import CSV</button>
             {canAdd&&<button className="btn btn-g" onClick={()=>{
@@ -10661,6 +10722,13 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             beta_code:betaCode.trim().toUpperCase()||null,
             is_leading_player:isLeadingPlayer,
           },{onConflict:"id",ignoreDuplicates:false});
+          // Auto-generate label prefix for this org
+          try {
+            const { data: pfxData } = await SB.rpc("generate_label_prefix", { p_name: orgName });
+            if (pfxData) {
+              await SB.from("orgs").update({ label_prefix: pfxData }).eq("id", data.user.id);
+            }
+          } catch(e) { /* non-fatal — admin can assign manually */ }
           // Increment code usage
           if(betaCode.trim()){
             await SB.from("beta_codes").update({used_count:codeData.used_count+1}).eq("code",betaCode.trim().toUpperCase());
@@ -10974,15 +11042,14 @@ function PublicItemPage({ itemId }) {
   const [err,     setErr]     = useState(null);
   const [legacy,  setLegacy]  = useState(false);
   const [lb,      setLb]      = useState(null);
-  const [access,  setAccess]  = useState("full");  // "full" | "contact"
-  const [contact, setContact] = useState(null);    // org contact fields
+  const [access,  setAccess]  = useState("full"); // "full" | "loan" | "guest" | "contact"
+  const [contact, setContact] = useState(null);
 
   useEffect(()=>{
     (async()=>{
       const cleanId = (itemId || "").trim();
       if(!cleanId) return;
       try {
-        // Pass auth token so edge function can check org membership
         const { data: { session } } = await SB.auth.getSession();
         const token = session?.access_token;
         const headers = token ? { "x-t4u-token": token } : {};
@@ -10998,11 +11065,6 @@ function PublicItemPage({ itemId }) {
         }
         setAccess(json.access || "full");
         if (json.contact) setContact(json.contact);
-        if (json.access === "contact") {
-          setItem(json.item); // minimal item (name + display_id only)
-          return;
-        }
-        // Full access: map column names to UI field names
         const raw = json.item;
         setItem({
           ...raw,
@@ -11012,195 +11074,281 @@ function PublicItemPage({ itemId }) {
         });
         if (json.org) setOrg(json.org);
       } catch(e) {
-        console.error("public-item fetch:", e);
         setErr("Item not found.");
       }
     })();
   }, [itemId]);
 
-  const cat = item ? (CAT_MAP[item.category] || CAT_MAP.other) : null;
-  const mkt = item?.mkt || item?.market_status || item?.marketStatus || "Not Listed";
-  const rentalPrice = item?.rent || item?.rental_price || item?.rentalPrice || 0;
-  const salePrice   = item?.sale || item?.sale_price  || item?.salePrice   || 0;
-  const mB  = mkt==="For Rent"?"r":mkt==="For Sale"?"s":mkt==="Rent or Sale"?"b":"n";
-  const imgs = item?.images || [];
+  const cat    = item ? (CAT_MAP[item.category] || CAT_MAP.other) : null;
+  const mkt    = item?.mkt || item?.marketStatus || "Not Listed";
+  const rentalPrice = item?.rent || item?.rentalPrice || 0;
+  const salePrice   = item?.sale || item?.salePrice  || 0;
+  const mB     = mkt==="For Rent"?"r":mkt==="For Sale"?"s":mkt==="Rent or Sale"?"b":"n";
+  const imgs   = item?.images || [];
+  const prefix = org?.label_prefix || "";
+
+  // Header bar — same for all access levels
+  const Header = () => (
+    <div style={{background:"linear-gradient(135deg,#1a0d2e,#0d1829)",borderBottom:"1px solid rgba(255,255,255,.08)",padding:"14px 20px",display:"flex",alignItems:"center",gap:10}}>
+      <span style={{fontSize:26}}>🎭</span>
+      <div>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"var(--gold)",lineHeight:1}}>Theatre4u™</div>
+        <div style={{fontSize:10,color:"rgba(255,255,255,.4)",letterSpacing:2,textTransform:"uppercase"}}>Inventory · Backstage Exchange · Community</div>
+      </div>
+      <a href="https://theatre4u.org" style={{marginLeft:"auto",fontSize:12,color:"var(--gold)",textDecoration:"none",border:"1px solid rgba(212,168,67,.3)",borderRadius:6,padding:"5px 12px"}}>Visit Site →</a>
+    </div>
+  );
+
+  // Owner badge shown on guest + loan views
+  const OwnerBadge = () => (
+    <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",
+      background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",
+      borderRadius:8,marginBottom:16}}>
+      <div style={{fontFamily:"monospace",fontSize:13,fontWeight:800,color:"var(--gold)",
+        background:"rgba(212,168,67,.15)",padding:"3px 10px",borderRadius:5,letterSpacing:1}}>
+        {prefix || "T4U"}
+      </div>
+      <div>
+        <div style={{fontSize:13,fontWeight:700}}>{org?.name || "Theatre4u Program"}</div>
+        {org?.city && <div style={{fontSize:11,color:"rgba(255,255,255,.45)"}}>📍 {org.city}</div>}
+      </div>
+    </div>
+  );
 
   return (
     <>
       <style>{CSS}</style>
       <div style={{minHeight:"100vh",background:"var(--ink)",color:"var(--linen)",fontFamily:"'DM Sans',sans-serif",padding:"0 0 60px"}}>
-      {lb && <div className="lightbox" onClick={()=>setLb(null)}><img src={lb} alt=""/></div>}
+        {lb && <div className="lightbox" onClick={()=>setLb(null)}><img src={lb} alt=""/></div>}
+        <Header/>
 
-      {/* Header */}
-      <div style={{background:"linear-gradient(135deg,#1a0d2e,#0d1829)",borderBottom:"1px solid rgba(255,255,255,.08)",padding:"14px 20px",display:"flex",alignItems:"center",gap:10}}>
-        <span style={{fontSize:26}}>🎭</span>
-        <div>
-          <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"var(--gold)",lineHeight:1}}>Theatre4u™</div>
-          <div style={{fontSize:10,color:"rgba(255,255,255,.4)",letterSpacing:2,textTransform:"uppercase"}}>Inventory · Backstage Exchange · Community</div>
-        </div>
-        <a href="https://theatre4u.org" style={{marginLeft:"auto",fontSize:12,color:"var(--gold)",textDecoration:"none",border:"1px solid rgba(212,168,67,.3)",borderRadius:6,padding:"5px 12px"}}>Visit Site →</a>
-      </div>
+        <div style={{maxWidth:640,margin:"0 auto",padding:"24px 16px"}}>
 
-      <div style={{maxWidth:640,margin:"0 auto",padding:"24px 16px"}}>
-        {!item && !err && (
-          <div style={{textAlign:"center",padding:60,color:"rgba(255,255,255,.4)"}}>
-            <div style={{fontSize:42,marginBottom:12}}>🎭</div>
-            <div>Loading item…</div>
-          </div>
-        )}
+          {/* Loading */}
+          {!item && !err && (
+            <div style={{textAlign:"center",padding:60,color:"rgba(255,255,255,.4)"}}>
+              <div style={{fontSize:42,marginBottom:12}}>🎭</div>
+              <div>Loading item…</div>
+            </div>
+          )}
 
-        {err && (
-          <div style={{textAlign:"center",padding:"40px 16px"}}>
-            <div style={{fontSize:42,marginBottom:12}}>🔍</div>
-            <div style={{fontSize:20,fontFamily:"'Playfair Display',serif",marginBottom:10,color:"var(--gold)"}}>Item Not Found</div>
-            {legacy ? (<>
+          {/* Not found */}
+          {err && (
+            <div style={{textAlign:"center",padding:"40px 16px"}}>
+              <div style={{fontSize:42,marginBottom:12}}>🔍</div>
+              <div style={{fontSize:20,fontFamily:"'Playfair Display',serif",marginBottom:10,color:"var(--gold)"}}>Item Not Found</div>
               <div style={{color:"rgba(255,255,255,.6)",fontSize:14,lineHeight:1.7,marginBottom:20}}>
-                This QR label was printed with an older format and can no longer be looked up automatically.<br/>
-                <span style={{fontSize:12,color:"rgba(255,255,255,.35)"}}>The item owner needs to reprint the label from their Theatre4u inventory.</span>
+                {legacy
+                  ? "This QR label was printed with an older format. The item owner needs to reprint the label from their Theatre4u inventory."
+                  : "This item may have been deleted or the QR label may be damaged."}
               </div>
-            </>) : (<>
-              <div style={{color:"rgba(255,255,255,.6)",fontSize:14,lineHeight:1.7,marginBottom:20}}>
-                This item may have been deleted or the QR label may be damaged.<br/>
-                <span style={{fontSize:12,color:"rgba(255,255,255,.35)"}}>If you own this item, check your inventory and reprint the label.</span>
-              </div>
-            </>)}
-            <div style={{display:"flex",flexDirection:"column",gap:10,alignItems:"center"}}>
               <a href="https://theatre4u.org?signin=1" style={{display:"inline-block",padding:"10px 24px",background:"linear-gradient(135deg,#c4922a,#8b6914)",borderRadius:8,color:"#1a0f00",fontWeight:700,textDecoration:"none",fontSize:14}}>
                 Sign In to Theatre4u →
               </a>
-              <a href="mailto:hello@theatre4u.org" style={{display:"inline-block",padding:"8px 18px",background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,color:"rgba(255,255,255,.6)",textDecoration:"none",fontSize:13}}>
-                Contact Support
-              </a>
             </div>
-          </div>
-        )}
+          )}
 
-        {item && access === "contact" && (
-          <div style={{padding:"28px 0"}}>
-            <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:20,marginBottom:16}}>
-              <div style={{fontSize:13,color:"rgba(255,255,255,.4)",textTransform:"uppercase",letterSpacing:1,fontWeight:700,marginBottom:4}}>Item Scanned</div>
-              <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:4}}>{item.name}</div>
-              {item.display_id && <div style={{fontSize:12,color:"var(--gold)",fontWeight:700}}>{item.display_id}</div>}
-            </div>
-            <div style={{background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.2)",borderRadius:12,padding:20,marginBottom:16}}>
-              <div style={{fontFamily:"'Playfair Display',serif",fontSize:17,color:"var(--gold)",marginBottom:12}}>🔒 Private Inventory</div>
-              <p style={{fontSize:13.5,color:"rgba(255,255,255,.65)",lineHeight:1.7,marginBottom:0}}>This item belongs to a private inventory. To view full details you must be a team member of this program, or contact the owner to request access.</p>
-            </div>
-            {contact && Object.keys(contact).length > 0 && (
-              <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:20,marginBottom:16}}>
-                <div style={{fontSize:12,color:"rgba(255,255,255,.4)",textTransform:"uppercase",letterSpacing:1,fontWeight:700,marginBottom:10}}>Program Contact</div>
-                {contact.name     && <div style={{fontSize:16,fontWeight:700,marginBottom:4}}>{contact.name}</div>}
-                {contact.location && <div style={{fontSize:13,color:"rgba(255,255,255,.5)",marginBottom:8}}>📍 {contact.location}</div>}
-                {contact.bio      && <div style={{fontSize:13,color:"rgba(255,255,255,.55)",lineHeight:1.6,marginBottom:10}}>{contact.bio}</div>}
-                {contact.email && (
-                  <a href={"mailto:"+contact.email+"?subject=Item Inquiry: "+encodeURIComponent(item.name||"")+"&body=Hi, I scanned a QR code for the item "+encodeURIComponent(item.name||"")+" (ID: "+(item.display_id||item.id)+") and would like to learn more or request access."}
-                    style={{display:"flex",alignItems:"center",gap:8,background:"var(--gold)",color:"#1a0f00",padding:"10px 16px",borderRadius:8,textDecoration:"none",fontWeight:700,fontSize:14,marginBottom:8}}>
-                    ✉️ Email to Request Access
-                  </a>
-                )}
-                {contact.phone && (
-                  <a href={"tel:"+contact.phone} style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",color:"#fff",padding:"10px 16px",borderRadius:8,textDecoration:"none",fontWeight:600,fontSize:14}}>
-                    📞 {contact.phone}
-                  </a>
-                )}
+          {/* ── FULL ACCESS (owner or team member) ─────────────────────────── */}
+          {item && access === "full" && (<>
+            {imgs.length > 0 && (
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:20}}>
+                {imgs.map((src,i)=>(
+                  <img key={i} src={src} alt="" onClick={()=>setLb(src)}
+                    style={{width:i===0?"100%":"calc(33% - 6px)",height:i===0?260:90,
+                      objectFit:"cover",borderRadius:i===0?10:6,cursor:"pointer",
+                      border:"1px solid rgba(255,255,255,.08)"}}/>
+                ))}
               </div>
             )}
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              <a href={"https://theatre4u.org?signin=1&next="+encodeURIComponent("#/item/"+itemId)}
-                onClick={()=>{ try{ localStorage.setItem("t4u_post_auth_hash","#/item/"+itemId); }catch(e){} }}
-                style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"linear-gradient(135deg,#c4922a,#8b6914)",color:"#1a0f00",padding:"12px 16px",borderRadius:8,textDecoration:"none",fontSize:14,fontWeight:700}}>
-                🎭 Sign In — Team Members Click Here
-              </a>
-              <p style={{fontSize:11.5,color:"rgba(255,255,255,.3)",textAlign:"center",lineHeight:1.5}}>If you are a Stage Manager, Crew, or House member of this program, sign in to view full item details.</p>
+            <div style={{display:"flex",alignItems:"flex-start",gap:12,marginBottom:16}}>
+              <div style={{width:44,height:44,borderRadius:8,background:cat.color+"33",
+                display:"flex",alignItems:"center",justifyContent:72,fontSize:22,flexShrink:0}}>
+                {cat.icon}
+              </div>
+              <div>
+                <div style={{fontSize:11,color:cat.color,fontWeight:700,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>{cat.label}</div>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,lineHeight:1.2}}>{item.name}</div>
+                {prefix && <div style={{fontFamily:"monospace",fontSize:11,color:"var(--gold)",marginTop:3,letterSpacing:1}}>{prefix}-{(item.display_id||"").replace(/[^0-9]/g,"").padStart(4,"0") || "—"}</div>}
+              </div>
             </div>
-          </div>
-        )}
-
-        {item && access === "full" && (<>
-          {/* Photos */}
-          {imgs.length > 0 && (
-            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:20}}>
-              {imgs.map((src,i)=>(
-                <img key={i} src={src} alt="" onClick={()=>setLb(src)}
-                  style={{width:i===0?"100%":"calc(33% - 6px)",height:i===0?260:90,objectFit:"cover",borderRadius:i===0?10:6,cursor:"pointer",border:"1px solid rgba(255,255,255,.08)"}}/>
+            {(item.tags||[]).length>0 && (
+              <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:14}}>
+                {item.tags.map(t=><span key={t} style={{padding:"2px 8px",background:"rgba(212,168,67,.12)",color:"var(--gold)",borderRadius:4,fontSize:11}}>#{t}</span>)}
+              </div>
+            )}
+            <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:10,padding:16,marginBottom:14}}>
+              <div style={{fontWeight:700,fontSize:12,textTransform:"uppercase",letterSpacing:1,color:"rgba(255,255,255,.4)",marginBottom:10}}>Item Details</div>
+              {[
+                ["Condition",    item.condition],
+                ["Size",         item.size!=="N/A"?item.size:null],
+                ["Quantity",     item.quantity],
+                ["Location",     item.location],
+                ["Availability", item.availability],
+                item.notes && ["Notes", item.notes],
+              ].filter(r=>r&&r[1]).map(([l,v])=>(
+                <div key={l} style={{display:"flex",padding:"5px 0",borderTop:"1px solid rgba(255,255,255,.05)"}}>
+                  <span style={{width:120,color:"rgba(255,255,255,.4)",fontSize:12,flexShrink:0}}>{l}</span>
+                  <span style={{fontSize:13}}>{v}</span>
+                </div>
               ))}
             </div>
-          )}
+            {mkt !== "Not Listed" && (
+              <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:10,padding:16,marginBottom:14}}>
+                <div style={{fontWeight:700,fontSize:12,textTransform:"uppercase",letterSpacing:1,color:"rgba(255,255,255,.4)",marginBottom:10}}>Backstage Exchange</div>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <span className={"mb "+mB}>{mkt}</span>
+                  <span style={{fontWeight:700,color:"var(--gold)",fontSize:15}}>
+                    {rentalPrice>0 ? ("$"+Number(rentalPrice).toFixed(2)+"/wk") : ""}
+                    {rentalPrice>0&&salePrice>0 ? " · " : ""}
+                    {salePrice>0 ? ("$"+Number(salePrice).toFixed(2)) : ""}
+                  </span>
+                </div>
+              </div>
+            )}
+            {org && (
+              <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid rgba(255,255,255,.08)",fontSize:12,color:"rgba(255,255,255,.35)",textAlign:"center"}}>
+                {org.name} · Theatre4u™
+              </div>
+            )}
+          </>)}
 
-          {/* Title row */}
-          <div style={{display:"flex",alignItems:"flex-start",gap:12,marginBottom:16}}>
-            <div style={{width:44,height:44,borderRadius:8,background:cat.color+"33",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{cat.icon}</div>
+          {/* ── LOAN ACCESS (another Theatre4u program borrowing this item) ─── */}
+          {item && access === "loan" && (
             <div>
-              <div style={{fontSize:11,color:cat.color,fontWeight:700,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>{cat.label}</div>
-              <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,lineHeight:1.2}}>{item.name}</div>
-            </div>
-          </div>
-
-          {/* Tags */}
-          {(item.tags||[]).length>0 && (
-            <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:14}}>
-              {item.tags.map(t=><span key={t} style={{padding:"2px 8px",background:"rgba(212,168,67,.12)",color:"var(--gold)",borderRadius:4,fontSize:11}}>#{t}</span>)}
+              {org && <OwnerBadge/>}
+              <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:20,marginBottom:14}}>
+                <div style={{fontSize:11,color:"rgba(255,255,255,.4)",textTransform:"uppercase",letterSpacing:1,fontWeight:700,marginBottom:6}}>Item on Loan</div>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                  {cat && <div style={{width:36,height:36,borderRadius:7,background:cat.color+"33",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{cat.icon}</div>}
+                  <div>
+                    <div style={{fontFamily:"'Playfair Display',serif",fontSize:20}}>{item.name}</div>
+                    <div style={{fontSize:11,color:"rgba(255,255,255,.4)"}}>{cat?.label}</div>
+                  </div>
+                </div>
+                {[
+                  ["Condition",  item.condition],
+                  ["Quantity",   item.quantity],
+                ].filter(r=>r&&r[1]).map(([l,v])=>(
+                  <div key={l} style={{display:"flex",padding:"5px 0",borderTop:"1px solid rgba(255,255,255,.05)"}}>
+                    <span style={{width:120,color:"rgba(255,255,255,.4)",fontSize:12}}>{l}</span>
+                    <span style={{fontSize:13}}>{v}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{background:"rgba(66,165,245,.08)",border:"1px solid rgba(66,165,245,.2)",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
+                <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>📋 On Loan via Backstage Exchange</div>
+                <p style={{fontSize:13,color:"rgba(255,255,255,.6)",lineHeight:1.7,margin:0}}>
+                  {"This item is currently on loan from "+( org?.name||"another program")+". " +
+                   "You can manage this loan through the Backstage Exchange in your Theatre4u account."}
+                </p>
+              </div>
+              <a href={"https://theatre4u.org?signin=1&next="+encodeURIComponent("#/item/"+itemId)}
+                style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"linear-gradient(135deg,#c4922a,#8b6914)",color:"#1a0f00",padding:"12px 16px",borderRadius:8,textDecoration:"none",fontSize:14,fontWeight:700}}>
+                🎭 Open in Theatre4u →
+              </a>
             </div>
           )}
 
-          {/* Details card */}
-          <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:10,padding:16,marginBottom:14}}>
-            <div style={{fontWeight:700,fontSize:12,textTransform:"uppercase",letterSpacing:1,color:"rgba(255,255,255,.4)",marginBottom:10}}>Item Details</div>
-            {[
-              ["Condition",   item.condition],
-              ["Size",        item.size!=="N/A"?item.size:null],
-              ["Quantity",    item.quantity],
-              ["Location",    item.location],
-              ["Availability",item.availability],
-              item.notes && ["Notes", item.notes],
-            ].filter(r=>r&&r[1]).map(([l,v])=>(
-              <div key={l} style={{display:"flex",padding:"5px 0",borderTop:"1px solid rgba(255,255,255,.05)"}}>
-                <span style={{width:120,color:"rgba(255,255,255,.4)",fontSize:12,flexShrink:0}}>{l}</span>
-                <span style={{fontSize:13}}>{v}</span>
+          {/* ── GUEST ACCESS (Theatre4u member, not the owner, not borrowing) ─ */}
+          {item && access === "guest" && (
+            <div>
+              {org && <OwnerBadge/>}
+              <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:20,marginBottom:14}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                  {cat && <div style={{width:36,height:36,borderRadius:7,background:cat.color+"33",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{cat.icon}</div>}
+                  <div>
+                    <div style={{fontFamily:"'Playfair Display',serif",fontSize:20}}>{item.name}</div>
+                    <div style={{fontSize:11,color:"rgba(255,255,255,.4)"}}>{cat?.label} · {item.condition}</div>
+                  </div>
+                </div>
+                {prefix && item.display_id && (
+                  <div style={{fontFamily:"monospace",fontSize:12,color:"var(--gold)",letterSpacing:1,marginBottom:8}}>
+                    {prefix+"-"+((item.display_id||"").replace(/[^0-9]/g,"").padStart(4,"0"))}
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-
-          {/* Backstage Exchange */}
-          {mkt !== "Not Listed" && (
-            <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:10,padding:16,marginBottom:14}}>
-              <div style={{fontWeight:700,fontSize:12,textTransform:"uppercase",letterSpacing:1,color:"rgba(255,255,255,.4)",marginBottom:10}}>Backstage Exchange</div>
-              <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-                <span className={"badge "+mB}>{mkt}</span>
-                {rentalPrice>0 && <span style={{color:"var(--gold)",fontWeight:700}}>{fmt$(rentalPrice)}/week</span>}
-                {salePrice>0 && <span style={{color:"var(--gold)",fontWeight:700}}>{fmt$(salePrice)} to buy</span>}
-              </div>
-            </div>
-          )}
-
-          {/* Org contact */}
-          {org && (
-            <div style={{background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.15)",borderRadius:10,padding:16}}>
-              <div style={{fontWeight:700,fontSize:12,textTransform:"uppercase",letterSpacing:1,color:"var(--gold)",marginBottom:8}}>Listed by</div>
-              <div style={{fontSize:15,fontWeight:600,marginBottom:3}}>{org.name||"Theatre Organization"}</div>
-              {org.location && <div style={{fontSize:12,color:"rgba(255,255,255,.5)",marginBottom:6}}>📍 {org.location}</div>}
-              {org.email && (
-                <a href={"mailto:"+org.email} style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:4,background:"var(--gold)",color:"#1a1200",padding:"7px 14px",borderRadius:6,fontSize:13,fontWeight:700,textDecoration:"none"}}>
-                  ✉️ Contact about this item
-                </a>
+              {mkt !== "Not Listed" && (
+                <div style={{background:"rgba(76,175,80,.08)",border:"1px solid rgba(76,175,80,.2)",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
+                  <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>🏪 Available on Backstage Exchange</div>
+                  <p style={{fontSize:13,color:"rgba(255,255,255,.65)",lineHeight:1.7,margin:"0 0 12px"}}>
+                    {"This item is listed for "+mkt.toLowerCase()+" on the Backstage Exchange. " +
+                     "Sign in to Theatre4u to request it for your program."}
+                  </p>
+                  <div style={{fontWeight:700,color:"var(--gold)",fontSize:16,marginBottom:10}}>
+                    {rentalPrice>0 ? ("$"+Number(rentalPrice).toFixed(2)+"/wk") : ""}
+                    {rentalPrice>0&&salePrice>0 ? " · " : ""}
+                    {salePrice>0 ? ("$"+Number(salePrice).toFixed(2)) : ""}
+                  </div>
+                  <a href={"https://theatre4u.org?signin=1&next="+encodeURIComponent("#/item/"+itemId)}
+                    style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"linear-gradient(135deg,#c4922a,#8b6914)",color:"#1a0f00",padding:"10px 16px",borderRadius:8,textDecoration:"none",fontSize:13,fontWeight:700}}>
+                    Request via Backstage Exchange →
+                  </a>
+                </div>
               )}
+              {mkt === "Not Listed" && (
+                <div style={{background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.2)",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
+                  <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>💬 Not Currently Listed</div>
+                  <p style={{fontSize:13,color:"rgba(255,255,255,.6)",lineHeight:1.7,margin:"0 0 12px"}}>
+                    {"This item isn't listed on the Backstage Exchange right now, but you can reach out to "+( org?.name||"this program")+" directly to ask about borrowing or purchasing it."}
+                  </p>
+                  {contact?.email && (
+                    <a href={"mailto:"+contact.email+"?subject=Item Inquiry: "+encodeURIComponent(item.name||"")+"&body=Hi, I scanned a Theatre4u QR code for '"+encodeURIComponent(item.name||"")+"' and am interested in borrowing it for our program. Could we discuss this through the Backstage Exchange?"}
+                      style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",color:"#fff",padding:"10px 16px",borderRadius:8,textDecoration:"none",fontSize:13,fontWeight:600}}>
+                      ✉️ Contact {org?.name||"this program"}
+                    </a>
+                  )}
+                </div>
+              )}
+              <a href={"https://theatre4u.org?signin=1&next="+encodeURIComponent("#/item/"+itemId)}
+                style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"linear-gradient(135deg,#1a3a2a,#0d2419)",border:"1px solid rgba(76,175,80,.3)",color:"rgba(255,255,255,.8)",padding:"10px 16px",borderRadius:8,textDecoration:"none",fontSize:13,fontWeight:600,marginTop:8}}>
+                🎭 Open in Theatre4u
+              </a>
             </div>
           )}
 
-          {/* Sign-in CTA for anyone scanning */}
-          <div style={{marginTop:16,background:"rgba(196,146,42,.08)",border:"1px solid rgba(196,146,42,.2)",borderRadius:10,padding:"14px 16px",textAlign:"center"}}>
-            <div style={{fontSize:13,fontWeight:600,color:"var(--gold)",marginBottom:4}}>Manage your theatre inventory with Theatre4u™</div>
-            <div style={{fontSize:12,color:"rgba(255,255,255,.45)",marginBottom:12,lineHeight:1.5}}>Track costumes, props, sets and more. Print QR labels. Share on the Backstage Exchange.</div>
-            <a href="https://theatre4u.org" style={{display:"inline-block",padding:"9px 22px",background:"linear-gradient(135deg,#c4922a,#8b6914)",borderRadius:8,color:"#1a0f00",fontWeight:700,textDecoration:"none",fontSize:13}}>
-              Sign In or Create Free Account →
-            </a>
-          </div>
-          <div style={{marginTop:16,textAlign:"center",fontSize:11,color:"rgba(255,255,255,.2)"}}>
-            Item ID: {item.display_id||item.id} · Powered by <a href="https://theatre4u.org" style={{color:"var(--gold)",textDecoration:"none"}}>Theatre4u</a>
-          </div>
-        </>)}
+          {/* ── CONTACT ONLY (private inventory, not a Theatre4u member) ────── */}
+          {item && access === "contact" && (
+            <div>
+              {org && <OwnerBadge/>}
+              <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:20,marginBottom:14}}>
+                <div style={{fontSize:11,color:"rgba(255,255,255,.4)",textTransform:"uppercase",letterSpacing:1,fontWeight:700,marginBottom:4}}>Item Scanned</div>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:4}}>{item.name}</div>
+                {item.display_id && <div style={{fontSize:12,color:"var(--gold)",fontWeight:700}}>{item.display_id}</div>}
+              </div>
+              <div style={{background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.2)",borderRadius:12,padding:20,marginBottom:14}}>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:17,color:"var(--gold)",marginBottom:10}}>🔒 Private Inventory</div>
+                <p style={{fontSize:13.5,color:"rgba(255,255,255,.65)",lineHeight:1.7,margin:0}}>
+                  This item belongs to a private Theatre4u inventory. To view full details, sign in to Theatre4u or contact the program directly.
+                </p>
+              </div>
+              {contact && Object.keys(contact).length > 0 && (
+                <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:20,marginBottom:14}}>
+                  <div style={{fontSize:12,color:"rgba(255,255,255,.4)",textTransform:"uppercase",letterSpacing:1,fontWeight:700,marginBottom:10}}>Program Contact</div>
+                  {contact.name     && <div style={{fontSize:16,fontWeight:700,marginBottom:4}}>{contact.name}</div>}
+                  {contact.location && <div style={{fontSize:13,color:"rgba(255,255,255,.5)",marginBottom:8}}>📍 {contact.location}</div>}
+                  {contact.bio      && <div style={{fontSize:13,color:"rgba(255,255,255,.55)",lineHeight:1.6,marginBottom:10}}>{contact.bio}</div>}
+                  {contact.email && (
+                    <a href={"mailto:"+contact.email+"?subject=Item Inquiry: "+encodeURIComponent(item.name||"")+"&body=Hi, I scanned a Theatre4u QR code for '"+encodeURIComponent(item.name||"")+"' and would like to learn more or request access."}
+                      style={{display:"flex",alignItems:"center",gap:8,background:"var(--gold)",color:"#1a0f00",padding:"10px 16px",borderRadius:8,textDecoration:"none",fontWeight:700,fontSize:14,marginBottom:8}}>
+                      ✉️ Email to Request Access
+                    </a>
+                  )}
+                  {contact.phone && (
+                    <a href={"tel:"+contact.phone} style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",color:"#fff",padding:"10px 16px",borderRadius:8,textDecoration:"none",fontWeight:600,fontSize:14}}>
+                      📞 {contact.phone}
+                    </a>
+                  )}
+                </div>
+              )}
+              <a href={"https://theatre4u.org?signin=1&next="+encodeURIComponent("#/item/"+itemId)}
+                style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"linear-gradient(135deg,#c4922a,#8b6914)",color:"#1a0f00",padding:"12px 16px",borderRadius:8,textDecoration:"none",fontSize:14,fontWeight:700}}>
+                🎭 Sign In to Theatre4u
+              </a>
+            </div>
+          )}
+
+        </div>
       </div>
-    </div>
     </>
   );
 }
@@ -12475,6 +12623,8 @@ function LabelsPage({ org, userId, items=[] }) {
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderDone, setOrderDone] = useState(false);
   const [orderMsg, setOrderMsg]   = useState("");
+  const [extraSticky, setExtraSticky] = useState(0);
+  const [extraIronOn, setExtraIronOn] = useState(0);
 
   useEffect(()=>{
     (async()=>{
@@ -12482,7 +12632,20 @@ function LabelsPage({ org, userId, items=[] }) {
       const {data} = await SB.from("items")
         .select("id,name,category,location,display_id,added,condition,qty")
         .eq("org_id",userId).order("added",{ascending:false}).limit(500);
-      setMyItems(data||[]);
+
+      // Also load claimed labels so we know which items already have a physical label
+      const {data:claimed} = await SB.from("label_pool")
+        .select("code,item_id")
+        .eq("org_id",userId)
+        .eq("status","claimed");
+
+      // Build a map: item_id → label code
+      const labelMap = {};
+      (claimed||[]).forEach(l => { if(l.item_id) labelMap[l.item_id] = l.code; });
+
+      // Attach label_code to each item
+      setMyItems((data||[]).map(i => ({ ...i, label_code: labelMap[i.id] || null })));
+
       const {data:ords} = await SB.from("label_orders")
         .select("id,item_count,label_type,status,created_at,tracking,code_start,code_end,amount_cents,include_logo")
         .eq("org_id",userId).order("created_at",{ascending:false});
@@ -12560,28 +12723,35 @@ function LabelsPage({ org, userId, items=[] }) {
     setAssignSaving(true);
     setAssignMsg("");
     try {
-      const {error} = await SB.from("items")
-        .update({display_id: code}).eq("id",itemId).eq("org_id",userId);
+      // Only update label_pool — do NOT touch display_id (that's the human-readable ID)
+      const { error } = await SB.from("label_pool")
+        .update({
+          status:     "claimed",
+          item_id:    itemId,
+          claimed_at: new Date().toISOString()
+        })
+        .eq("code", code)
+        .eq("org_id", userId);
       if(error) throw error;
-      await SB.from("label_pool")
-        .update({status:"claimed",org_id:userId,item_id:itemId,claimed_at:new Date().toISOString()})
-        .eq("code",code).eq("org_id",userId);
-      setMyItems(p=>p.map(i=>i.id===itemId?{...i,display_id:code}:i));
-      setAssignMsg("✅ Label "+code+" assigned!");
+      setMyItems(p => p.map(i => i.id === itemId ? { ...i, label_code: code } : i));
+      setAssignMsg("✅ Label " + code + " linked! Scanning it will now pull up that item.");
       setAssignCode(""); setAssignItem("");
     } catch(e) {
-      setAssignMsg("❌ "+e.message);
+      setAssignMsg("❌ " + (e.message || "Label not found. Check the code matches your T4U pool."));
     }
     setAssignSaving(false);
   };
 
   // Unassign a label from an item
   const doUnassign = async (item) => {
-    if(!confirm(`Remove label ${item.display_id} from "${item.name}"?`)) return;
-    await SB.from("items").update({display_id:null}).eq("id",item.id);
-    await SB.from("label_pool").update({status:"available",item_id:null,claimed_at:null}).eq("code",item.display_id).eq("org_id",userId);
-    setMyItems(p=>p.map(i=>i.id===item.id?{...i,display_id:null}:i));
+    if(!confirm("Unlink label from \"" + item.name + "\"? The code goes back to unassigned.")) return;
+    const { error } = await SB.from("label_pool")
+      .update({ status:"assigned", item_id:null, claimed_at:null })
+      .eq("item_id", item.id)
+      .eq("org_id", userId);
+    if(!error) setMyItems(p => p.map(i => i.id === item.id ? { ...i, label_code: null } : i));
   };
+
 
   // ── ORDER TAB ────────────────────────────────────────────────────────────
   const pack = selPack != null ? LABEL_PACKS[selPack] : null;
@@ -12837,13 +13007,13 @@ function LabelsPage({ org, userId, items=[] }) {
           </div>
 
           {/* Items with assigned labels */}
-          {myItems.filter(i=>i.display_id).length>0&&(
+          {myItems.filter(i=>i.label_code).length>0&&(
             <div>
               <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>
-                Items with assigned labels ({myItems.filter(i=>i.display_id).length})
+                Items with assigned labels ({myItems.filter(i=>i.label_code).length})
               </div>
               <div style={{...card,overflow:"hidden"}}>
-                {myItems.filter(i=>i.display_id).map(item=>{
+                {myItems.filter(i=>i.label_code).map(item=>{
                   const cat = CAT[item.category]||CAT.other;
                   return(
                     <div key={item.id} style={{display:"flex",alignItems:"center",gap:10,
@@ -12856,7 +13026,7 @@ function LabelsPage({ org, userId, items=[] }) {
                       <span style={{fontFamily:"monospace",fontSize:12,fontWeight:800,
                         color:"var(--amber)",background:"rgba(196,118,26,.1)",
                         padding:"3px 9px",borderRadius:5,flexShrink:0}}>
-                        {item.display_id}
+                        {item.label_code||item.display_id}
                       </span>
                       <button onClick={()=>doUnassign(item)}
                         style={{background:"none",border:"1px solid var(--border)",borderRadius:6,
@@ -12901,86 +13071,434 @@ function LabelsPage({ org, userId, items=[] }) {
       {/* ══ ORDER TAB ══ */}
       {tab==="order"&&(
         <div>
-          <div style={{...card,padding:"32px 28px",maxWidth:560,textAlign:"center"}}>
-            <div style={{fontSize:48,marginBottom:16}}>🏷</div>
-            <div style={{fontFamily:"var(--serif)",fontSize:22,marginBottom:12}}>
-              Physical Label Ordering — Coming Soon
-            </div>
-            <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.8,marginBottom:16,maxWidth:440,margin:"0 auto 16px"}}>
-              We're finalizing our label printing partnership so you can order
-              pre-printed, pre-coded QR label stickers mailed directly to your school.
-              Stick them on bins, racks, and props now — then assign each code to a
-              specific inventory item at any time.
-            </p>
-            <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.8,marginBottom:24,maxWidth:440,margin:"0 auto 24px"}}>
-              In the meantime, use the <strong>Print tab</strong> to generate and print
-              QR labels instantly from any printer. They work just as well for
-              getting organized right now.
-            </p>
-            <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
-              <button onClick={()=>setTab("print")}
-                style={{padding:"10px 22px",borderRadius:8,border:"none",fontFamily:"inherit",
-                  fontSize:13,fontWeight:700,cursor:"pointer",
-                  background:"var(--gold)",color:"#1a0f00"}}>
-                🖨 Print Labels Now
-              </button>
-              <a href="mailto:hello@theatre4u.org?subject=Label Ordering Interest"
-                style={{padding:"10px 22px",borderRadius:8,border:"1px solid var(--border)",
-                  fontFamily:"inherit",fontSize:13,fontWeight:600,cursor:"pointer",
-                  background:"transparent",color:"var(--text)",textDecoration:"none",
-                  display:"inline-flex",alignItems:"center"}}>
-                ✉ Notify Me When Ready
-              </a>
-            </div>
-            <div style={{marginTop:24,paddingTop:20,borderTop:"1px solid var(--border)",
-              fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
-              Questions? Email{" "}
-              <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)"}}>
-                hello@theatre4u.org
-              </a>
-            </div>
-          </div>
 
-          {/* Previous orders — show if any exist */}
-          {orders.length>0&&(
-            <div style={{marginTop:28,maxWidth:560}}>
-              <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>Your Label Orders</div>
-              <div style={{...card,overflow:"hidden"}}>
-                {orders.map((o,i)=>(
-                  <div key={i} style={{padding:"12px 16px",borderBottom:"1px solid var(--border)",
-                    display:"flex",gap:12,alignItems:"flex-start",flexWrap:"wrap"}}>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:13,fontWeight:700}}>
-                        {o.item_count+" "+o.label_type+" labels"}
-                        {o.include_logo&&<span style={{marginLeft:8,fontSize:11,color:"var(--gold)"}}>🖼 logo</span>}
+          {orderDone ? (
+            /* ── Success screen ── */
+            <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,
+              padding:"36px 32px",textAlign:"center",maxWidth:520}}>
+              <div style={{fontSize:48,marginBottom:14}}>📬</div>
+              <div style={{fontFamily:"var(--serif)",fontSize:22,marginBottom:12}}>Order Submitted!</div>
+              <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.8,marginBottom:8}}>
+                {"Confirmation will be sent to "}
+                <strong>{org?.email}</strong>
+                {" within 1 business day, along with an invoice before payment is processed."}
+              </p>
+              <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.8,marginBottom:24}}>
+                {"Labels for your existing items are pre-matched — just apply them when they arrive. " +
+                 "Blank labels for future items can be assigned in the Assign tab anytime."}
+              </p>
+              <button onClick={()=>{ setOrderDone(false); setExtraSticky(0); setExtraIronOn(0); }}
+                style={{padding:"9px 22px",borderRadius:8,border:"1px solid var(--border)",
+                  background:"transparent",color:"var(--text)",fontSize:13,
+                  fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+                Place Another Order
+              </button>
+            </div>
+
+          ) : (
+            <div>
+              <p style={{fontSize:13,color:"var(--muted)",marginBottom:22,lineHeight:1.7,maxWidth:680}}>
+                Order professional QR label stickers for your program.
+                Choose <strong>sticky vinyl</strong> for hard goods (equipment, props, storage bins)
+                or <strong>iron-on</strong> for soft goods (costumes, fabric items).
+                You can order labels for items already in your inventory <em>and</em> blank
+                pre-coded labels for items you'll add later — in any combination.
+              </p>
+
+              <div style={{display:"grid",gridTemplateColumns:"1fr 300px",gap:24,alignItems:"start"}}>
+
+                {/* ── LEFT COLUMN ── */}
+                <div>
+
+                  {/* SECTION A: Existing inventory items */}
+                  <div style={{marginBottom:28}}>
+                    <div style={{fontWeight:700,fontSize:15,marginBottom:2}}>
+                      {"A — Labels for existing inventory items"}
+                    </div>
+                    <div style={{fontSize:12,color:"var(--muted)",marginBottom:12,lineHeight:1.6}}>
+                      Tag each item with the label type you want. These labels will be
+                      pre-matched to the item — just apply when they arrive.
+                      Hit Auto-suggest to let Theatre4u make a first pass based on category.
+                    </div>
+
+                    <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
+                      {/* Legend */}
+                      {[
+                        {type:"sticky",  ico:"🏷",  label:"Sticky",   color:"#2196f3"},
+                        {type:"iron_on", ico:"♨️",  label:"Iron-on",  color:"#e91e63"},
+                        {type:"none",    ico:"—",   label:"Skip",     color:"var(--muted)"},
+                      ].map(o=>(
+                        <div key={o.type} style={{display:"flex",alignItems:"center",gap:5,fontSize:12}}>
+                          <div style={{width:20,height:20,borderRadius:4,border:"1.5px solid",
+                            borderColor:o.color,display:"flex",alignItems:"center",
+                            justifyContent:"center",fontSize:10,color:o.color}}>{o.ico}</div>
+                          <span style={{color:"var(--muted)"}}>{o.label}</span>
+                        </div>
+                      ))}
+                      <div style={{marginLeft:"auto",display:"flex",gap:6}}>
+                        <button onClick={()=>{
+                          const SOFT=["costumes","fabrics","makeup"];
+                          setMyItems(p=>p.map(i=>({...i,
+                            label_type:i.label_type||(SOFT.includes(i.category)?"iron_on":"sticky")
+                          })));
+                        }} style={{padding:"5px 10px",borderRadius:6,border:"1px solid var(--border)",
+                          background:"transparent",color:"var(--muted)",fontSize:11,
+                          cursor:"pointer",fontFamily:"inherit"}}>
+                          ✨ Auto-suggest
+                        </button>
+                        <button onClick={()=>setMyItems(p=>p.map(i=>({...i,label_type:null})))}
+                          style={{padding:"5px 10px",borderRadius:6,border:"1px solid var(--border)",
+                            background:"transparent",color:"var(--muted)",fontSize:11,
+                            cursor:"pointer",fontFamily:"inherit"}}>
+                          Clear
+                        </button>
                       </div>
-                      {o.code_start&&(
-                        <div style={{fontSize:12,fontFamily:"monospace",color:"var(--amber)",marginTop:2}}>
-                          {"Codes: "+o.code_start+" → "+o.code_end}
+                    </div>
+
+                    {/* Item list */}
+                    <div style={{border:"1px solid var(--border)",borderRadius:10,
+                      overflow:"hidden",maxHeight:360,overflowY:"auto"}}>
+                      {loadingItems
+                        ? <div style={{padding:24,textAlign:"center",color:"var(--muted)",fontSize:13}}>Loading items…</div>
+                        : myItems.map(item=>{
+                          const cat=CAT[item.category]||CAT.other;
+                          const lt=item.label_type;
+                          return(
+                            <div key={item.id} style={{display:"flex",alignItems:"center",gap:10,
+                              padding:"8px 12px",borderBottom:"1px solid var(--border)",
+                              background:lt==="sticky"?"rgba(33,150,243,.04)":
+                                         lt==="iron_on"?"rgba(233,30,99,.04)":
+                                         lt==="none"?"rgba(0,0,0,.03)":"transparent"}}>
+                              <span style={{fontSize:14,flexShrink:0}}>{cat.icon}</span>
+                              <div style={{flex:1,minWidth:0}}>
+                                <div style={{fontSize:13,fontWeight:600,overflow:"hidden",
+                                  textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</div>
+                                <div style={{fontSize:10,color:"var(--muted)"}}>
+                                  {item.display_id||""}
+                                  {item.location?" · "+item.location:""}
+                                  {item.label_code?" · "+item.label_code+" ✓":""}
+                                </div>
+                              </div>
+                              {/* Type toggle buttons */}
+                              <div style={{display:"flex",gap:3,flexShrink:0}}>
+                                {[
+                                  {type:"sticky",  ico:"🏷",  color:"#2196f3", title:"Sticky vinyl — bins, props, equipment"},
+                                  {type:"iron_on", ico:"♨️",  color:"#e91e63", title:"Iron-on — costumes, fabric, soft goods"},
+                                  {type:"none",    ico:"—",   color:"var(--muted)", title:"No label for this item"},
+                                ].map(o=>(
+                                  <button key={o.type} title={o.title}
+                                    onClick={()=>setMyItems(p=>p.map(i=>
+                                      i.id===item.id?{...i,label_type:lt===o.type?null:o.type}:i
+                                    ))}
+                                    style={{width:26,height:26,borderRadius:5,border:"1.5px solid",
+                                      cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",
+                                      justifyContent:"center",fontFamily:"inherit",transition:"all .12s",
+                                      borderColor:lt===o.type?o.color:"var(--border)",
+                                      background:lt===o.type
+                                        ?(o.type==="sticky"?"rgba(33,150,243,.15)"
+                                          :o.type==="iron_on"?"rgba(233,30,99,.15)"
+                                          :"rgba(0,0,0,.08)")
+                                        :"transparent",
+                                      color:lt===o.type?o.color:"var(--muted)"}}>
+                                    {o.ico}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })
+                      }
+                    </div>
+                  </div>
+
+                  {/* SECTION B: Future / blank labels */}
+                  <div style={{marginBottom:28}}>
+                    <div style={{fontWeight:700,fontSize:15,marginBottom:2}}>
+                      {"B — Blank labels for future items"}
+                    </div>
+                    <div style={{fontSize:12,color:"var(--muted)",marginBottom:14,lineHeight:1.6}}>
+                      Order pre-coded blank labels that aren't assigned to anything yet.
+                      Stick them on storage bins, racks, or new items as you acquire them.
+                      Assign each code to an item in the Assign tab whenever you're ready.
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,maxWidth:400}}>
+                      {[
+                        {key:"extraSticky", val:extraSticky, set:setExtraSticky,
+                         ico:"🏷",label:"Extra sticky",color:"#2196f3",
+                         sub:"For bins, racks, new hard goods"},
+                        {key:"extraIronOn", val:extraIronOn, set:setExtraIronOn,
+                         ico:"♨️",label:"Extra iron-on",color:"#e91e63",
+                         sub:"For costumes you haven't cataloged yet"},
+                      ].map(({val,set,ico,label,color,sub})=>(
+                        <div key={label} style={{background:"var(--parch)",border:"1px solid var(--border)",
+                          borderRadius:9,padding:"12px 14px"}}>
+                          <div style={{fontSize:12,fontWeight:700,color,marginBottom:3}}>{ico} {label}</div>
+                          <div style={{fontSize:10,color:"var(--muted)",marginBottom:10,lineHeight:1.5}}>{sub}</div>
+                          <div style={{display:"flex",alignItems:"center",gap:0,
+                            border:"1px solid var(--border)",borderRadius:7,overflow:"hidden",width:"fit-content"}}>
+                            {[0,5,10,25,50].map(n=>(
+                              <button key={n} onClick={()=>set(n)}
+                                style={{padding:"6px 10px",border:"none",borderRight:"1px solid var(--border)",
+                                  cursor:"pointer",fontSize:12,fontWeight:val===n?700:400,
+                                  background:val===n?color:"transparent",
+                                  color:val===n?"#fff":"var(--muted)",fontFamily:"inherit",
+                                  transition:"all .12s"}}>
+                                {n===0?"None":n}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Shipping address */}
+                  {(()=>{
+                    const totalTagged = myItems.filter(i=>i.label_type==="sticky"||i.label_type==="iron_on").length;
+                    if(totalTagged===0&&extraSticky===0&&extraIronOn===0) return null;
+                    return(
+                      <div>
+                        <div style={{fontWeight:700,fontSize:15,marginBottom:12}}>
+                          {"C — Shipping address"}
+                        </div>
+                        <div style={{display:"flex",flexDirection:"column",gap:10,maxWidth:480}}>
+                          <div>
+                            <label style={{fontSize:11,fontWeight:700,textTransform:"uppercase",
+                              letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:4}}>Contact Name</label>
+                            <input value={orderName} onChange={e=>setOrderName(e.target.value)}
+                              placeholder="Your name"
+                              style={{width:"100%",background:"var(--white)",border:"1.5px solid var(--border)",
+                                borderRadius:7,padding:"8px 12px",fontSize:13,color:"var(--text)",
+                                outline:"none",fontFamily:"inherit"}}/>
+                          </div>
+                          <div>
+                            <label style={{fontSize:11,fontWeight:700,textTransform:"uppercase",
+                              letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:4}}>Street Address *</label>
+                            <input value={orderAddrLine} onChange={e=>setOrderAddrLine(e.target.value)}
+                              placeholder="1234 School Blvd, Attn: Drama Dept"
+                              style={{width:"100%",background:"var(--white)",border:"1.5px solid var(--border)",
+                                borderRadius:7,padding:"8px 12px",fontSize:13,color:"var(--text)",
+                                outline:"none",fontFamily:"inherit"}}/>
+                          </div>
+                          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:8}}>
+                            {[
+                              {label:"City *", val:orderCity,  set:setOrderCity,  ph:"City"},
+                              {label:"State",  val:orderState, set:setOrderState, ph:"CA"},
+                              {label:"ZIP",    val:orderZip,   set:setOrderZip,   ph:"90000"},
+                            ].map(({label,val,set,ph})=>(
+                              <div key={label}>
+                                <label style={{fontSize:11,fontWeight:700,textTransform:"uppercase",
+                                  letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:4}}>{label}</label>
+                                <input value={val} onChange={e=>set(e.target.value)} placeholder={ph}
+                                  style={{width:"100%",background:"var(--white)",border:"1.5px solid var(--border)",
+                                    borderRadius:7,padding:"8px 12px",fontSize:13,color:"var(--text)",
+                                    outline:"none",fontFamily:"inherit"}}/>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* ── RIGHT COLUMN: Sticky summary card ── */}
+                {(()=>{
+                  const stickyItems = myItems.filter(i=>i.label_type==="sticky");
+                  const ironItems   = myItems.filter(i=>i.label_type==="iron_on");
+                  const totalSticky = stickyItems.length + extraSticky;
+                  const totalIronOn = ironItems.length + extraIronOn;
+                  const totalLabels = totalSticky + totalIronOn;
+                  const STICKY_C = 40;  // cents per label
+                  const IRON_C   = 56;  // cents per label
+                  const SHIP_C   = 695; // flat shipping
+                  const subtotal = totalSticky*STICKY_C + totalIronOn*IRON_C;
+                  const grandTotal = subtotal + (totalLabels>0?SHIP_C:0);
+
+                  return(
+                    <div style={{position:"sticky",top:20}}>
+                      <div style={{background:"var(--parch)",border:"1px solid var(--border)",
+                        borderRadius:10,padding:"18px 20px",marginBottom:12}}>
+                        <div style={{fontWeight:700,fontSize:15,marginBottom:14}}>Order Summary</div>
+
+                        {totalLabels===0?(
+                          <div style={{fontSize:13,color:"var(--muted)",textAlign:"center",padding:"12px 0"}}>
+                            Tag items or add extras to build your order
+                          </div>
+                        ):(
+                          <>
+                            {totalSticky>0&&(
+                              <div style={{marginBottom:10}}>
+                                <div style={{display:"flex",justifyContent:"space-between",
+                                  fontSize:13,fontWeight:700,marginBottom:4}}>
+                                  <span>{"🏷 "+totalSticky+" sticky vinyl"}</span>
+                                  <span>{"$"+(totalSticky*STICKY_C/100).toFixed(2)}</span>
+                                </div>
+                                {stickyItems.length>0&&(
+                                  <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.5,
+                                    paddingLeft:8,borderLeft:"2px solid #2196f3"}}>
+                                    {stickyItems.length+" item"+(stickyItems.length!==1?"s":"")+": "}
+                                    {stickyItems.slice(0,3).map(i=>i.name).join(", ")}
+                                    {stickyItems.length>3?" +"+( stickyItems.length-3)+" more":""}
+                                  </div>
+                                )}
+                                {extraSticky>0&&(
+                                  <div style={{fontSize:11,color:"var(--muted)",paddingLeft:8,
+                                    borderLeft:"2px solid #2196f3",marginTop:3}}>
+                                    {extraSticky+" blank (future items)"}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {totalIronOn>0&&(
+                              <div style={{marginBottom:10}}>
+                                <div style={{display:"flex",justifyContent:"space-between",
+                                  fontSize:13,fontWeight:700,marginBottom:4}}>
+                                  <span>{"♨️ "+totalIronOn+" iron-on"}</span>
+                                  <span>{"$"+(totalIronOn*IRON_C/100).toFixed(2)}</span>
+                                </div>
+                                {ironItems.length>0&&(
+                                  <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.5,
+                                    paddingLeft:8,borderLeft:"2px solid #e91e63"}}>
+                                    {ironItems.length+" item"+(ironItems.length!==1?"s":"")+": "}
+                                    {ironItems.slice(0,3).map(i=>i.name).join(", ")}
+                                    {ironItems.length>3?" +"+( ironItems.length-3)+" more":""}
+                                  </div>
+                                )}
+                                {extraIronOn>0&&(
+                                  <div style={{fontSize:11,color:"var(--muted)",paddingLeft:8,
+                                    borderLeft:"2px solid #e91e63",marginTop:3}}>
+                                    {extraIronOn+" blank (future items)"}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            <div style={{display:"flex",justifyContent:"space-between",
+                              fontSize:12,color:"var(--muted)",marginBottom:8}}>
+                              <span>Shipping (USPS)</span>
+                              <span>$6.95</span>
+                            </div>
+                            <div style={{display:"flex",justifyContent:"space-between",
+                              borderTop:"1px solid var(--border)",paddingTop:10,
+                              fontSize:16,fontWeight:800}}>
+                              <span>Total</span>
+                              <span style={{color:"var(--gold)"}}>{"$"+(grandTotal/100).toFixed(2)}</span>
+                            </div>
+                          </>
+                        )}
+
+                        <div style={{marginTop:12,fontSize:11,color:"var(--muted)",lineHeight:1.7,
+                          background:"rgba(212,168,67,.06)",borderRadius:6,padding:"9px 11px",
+                          border:"1px solid rgba(212,168,67,.15)"}}>
+                          {"No payment now. We confirm and send an invoice within 1 business day. " +
+                           "Labels for existing items arrive pre-matched. Blank labels arrive as " +
+                           "unassigned codes ready to apply and link."}
+                        </div>
+
+                        {orderMsg&&(
+                          <div style={{fontSize:12,color:"#e53935",marginTop:10,padding:"7px 10px",
+                            borderRadius:6,background:"rgba(229,57,53,.08)",
+                            border:"1px solid rgba(229,57,53,.2)"}}>{orderMsg}</div>
+                        )}
+
+                        <button disabled={orderSubmitting||totalLabels===0||!orderAddrLine.trim()||!orderCity.trim()}
+                          onClick={async()=>{
+                            if(!orderAddrLine.trim()||!orderCity.trim()){
+                              setOrderMsg("⚠ Please enter a shipping address."); return;
+                            }
+                            setOrderSubmitting(true); setOrderMsg("");
+                            try {
+                              const stickyItems2 = myItems.filter(i=>i.label_type==="sticky");
+                              const ironItems2   = myItems.filter(i=>i.label_type==="iron_on");
+                              const totalS = stickyItems2.length + extraSticky;
+                              const totalI = ironItems2.length + extraIronOn;
+                              const total  = totalS + totalI;
+                              const STICKY_C2=40; const IRON_C2=56; const SHIP_C2=695;
+                              const grandT = totalS*STICKY_C2 + totalI*IRON_C2 + (total>0?SHIP_C2:0);
+
+                              // Save label_type preferences to items table
+                              const tagged = myItems.filter(i=>i.label_type);
+                              await Promise.all(tagged.map(i=>
+                                SB.from("items").update({label_type:i.label_type}).eq("id",i.id)
+                              ));
+
+                              const ltype = totalS>0&&totalI>0?"mixed":totalI>0?"iron_on":"sticky";
+                              const notes =
+                                "Sticky: "+totalS+" ("+stickyItems2.length+" items + "+extraSticky+" blank). "+
+                                "Iron-on: "+totalI+" ("+ironItems2.length+" items + "+extraIronOn+" blank). "+
+                                "Item list: "+tagged.map(i=>i.name+"("+i.label_type+")").join(", ");
+
+                              const {data:ord,error:ordErr} = await SB.from("label_orders").insert({
+                                org_id:        userId,
+                                org_name:      org?.name||"",
+                                contact_email: org?.email||"",
+                                contact_name:  orderName,
+                                item_count:    total,
+                                label_type:    ltype,
+                                delivery_addr: JSON.stringify({
+                                  name:orderName, street:orderAddrLine,
+                                  city:orderCity, state:orderState, zip:orderZip
+                                }),
+                                notes,
+                                amount_cents:  grandT,
+                                status:        "pending",
+                              }).select().single();
+                              if(ordErr) throw ordErr;
+
+                              setOrders(p=>[ord,...p]);
+                              setOrderDone(true);
+                            } catch(e){ setOrderMsg("❌ "+e.message); }
+                            setOrderSubmitting(false);
+                          }}
+                          style={{width:"100%",padding:"11px",borderRadius:8,border:"none",
+                            fontFamily:"inherit",fontSize:14,fontWeight:700,marginTop:10,
+                            cursor:totalLabels>0&&orderAddrLine&&orderCity&&!orderSubmitting?"pointer":"not-allowed",
+                            background:totalLabels>0&&orderAddrLine&&orderCity?"var(--gold)":"var(--border)",
+                            color:totalLabels>0&&orderAddrLine&&orderCity?"#1a0f00":"var(--muted)"}}>
+                          {(()=>{
+                            const stickyItems3 = myItems.filter(i=>i.label_type==="sticky");
+                            const ironItems3   = myItems.filter(i=>i.label_type==="iron_on");
+                            const t = stickyItems3.length+ironItems3.length+extraSticky+extraIronOn;
+                            return orderSubmitting?"Submitting…":t===0?"Select items or add extras":"📬 Submit Order ("+t+" labels)";
+                          })()}
+                        </button>
+                      </div>
+
+                      {/* Previous orders */}
+                      {orders.length>0&&(
+                        <div>
+                          <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>Previous orders</div>
+                          {orders.map((o,i)=>(
+                            <div key={i} style={{background:"var(--parch)",border:"1px solid var(--border)",
+                              borderRadius:8,padding:"10px 12px",marginBottom:6,fontSize:12}}>
+                              <div style={{display:"flex",justifyContent:"space-between",
+                                alignItems:"center",marginBottom:4}}>
+                                <span style={{fontWeight:700}}>{o.item_count+" "+o.label_type+" labels"}</span>
+                                {o.amount_cents>0&&<span style={{color:"var(--gold)",fontWeight:700}}>
+                                  {"$"+(o.amount_cents/100).toFixed(2)}
+                                </span>}
+                              </div>
+                              {o.code_start&&<div style={{fontFamily:"monospace",color:"var(--amber)",fontSize:11}}>
+                                {o.code_start+" → "+o.code_end}
+                              </div>}
+                              <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
+                                <span style={{color:"var(--muted)"}}>
+                                  {new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
+                                </span>
+                                <span style={{fontWeight:700,
+                                  color:o.status==="delivered"?"#4caf50":o.status==="shipped"?"#42a5f5":
+                                        o.status==="processing"?"#2196f3":"var(--gold)"}}>
+                                  {o.status==="pending"?"⏳ Pending":o.status==="processing"?"🔄 Processing":
+                                   o.status==="shipped"?"✈ Shipped":"✓ Delivered"}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       )}
-                      {o.tracking&&<div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{"📦 "+o.tracking}</div>}
                     </div>
-                    {o.amount_cents>0&&(
-                      <div style={{fontWeight:700,fontSize:14,color:"var(--gold)",flexShrink:0}}>
-                        {"$"+(o.amount_cents/100).toFixed(2)}
-                      </div>
-                    )}
-                    <span style={{fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:6,flexShrink:0,
-                      background:o.status==="delivered"?"rgba(76,175,80,.12)":
-                                 o.status==="shipped"?"rgba(66,165,245,.12)":
-                                 o.status==="processing"?"rgba(33,150,243,.12)":"rgba(212,168,67,.1)",
-                      color:o.status==="delivered"?"#4caf50":
-                            o.status==="shipped"?"#42a5f5":
-                            o.status==="processing"?"#2196f3":"var(--gold)"}}>
-                      {o.status==="pending"?"⏳ Pending":o.status==="processing"?"🔄 Processing":
-                       o.status==="shipped"?"✈ Shipped":"✓ Delivered"}
-                    </span>
-                    <span style={{fontSize:11,color:"var(--muted)",flexShrink:0}}>
-                      {new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -13597,7 +14115,7 @@ function AdminHub({ currentUser, org }) {
           <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden",marginBottom:20}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
               <thead><tr style={{background:"rgba(0,0,0,.08)"}}>
-                {["Program","Director","Contact","Plan","⭐ LP","Actions"].map(h=>(
+                {["Program","Director","Contact","Prefix","Plan","⭐ LP","Actions"].map(h=>(
                   <th key={h} style={{padding:"9px 12px",textAlign:"left",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)"}}>{h}</th>
                 ))}
               </tr></thead>
@@ -13613,6 +14131,14 @@ function AdminHub({ currentUser, org }) {
                       {o.director_title&&<div style={{fontSize:11,color:"var(--muted)"}}>{o.director_title}</div>}
                     </td>
                     <td style={{padding:"9px 12px"}}><a href={"mailto:"+o.email} style={{color:"var(--gold)",fontSize:12}}>{o.email}</a></td>
+                    <td style={{padding:"9px 12px"}}>
+                      <div style={{fontFamily:"monospace",fontSize:11,fontWeight:800,letterSpacing:1,
+                        color:o.label_prefix?"var(--gold)":"var(--muted)",
+                        background:o.label_prefix?"rgba(212,168,67,.1)":"rgba(0,0,0,.1)",
+                        padding:"2px 8px",borderRadius:4,display:"inline-block"}}>
+                        {o.label_prefix||"—"}
+                      </div>
+                    </td>
                     <td style={{padding:"9px 12px"}}>
                       <select value={o.plan} onChange={e=>upgradeOrg(o.id,e.target.value,o.is_leading_player)}
                         style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,padding:"3px 7px",fontSize:12,color:"var(--text)",cursor:"pointer"}}>
@@ -13766,16 +14292,20 @@ function AdminHub({ currentUser, org }) {
                 if(pending.length===0){alert("No pending orders to export.");return;}
                 const orderIds = pending.map(o=>o.id);
                 const {data:labels} = await SB.from("label_pool")
-                  .select("code,seq,order_id,org_id")
+                  .select("code,seq,order_id,org_id,label_type,status,item_id,item_name:items(name),item_category:items(category)")
                   .in("order_id",orderIds)
-                  .eq("status","assigned")
+                  .in("status",["assigned","claimed"])
                   .order("seq");
                 if(!labels||labels.length===0){alert("No labels found for pending orders.");return;}
-                const rows = ["QR_Data,Label_Text,Order_ID,Org"];
+                const rows = ["QR_Data,Label_Text,Substrate,Item_Name,Item_Category,Order_ID,Org"];
                 labels.forEach(l=>{
                   const order = pending.find(o=>o.id===l.order_id);
-                  const url = `https://theatre4u.org/item?code=${l.code}`;
-                  rows.push(`"${url}","${l.code}","${l.order_id}","${order?.org_name||""}"`);
+                  const url = "https://theatre4u.org/#/item/"+l.code;
+                  const substrate = l.label_type||order?.label_type||"sticky";
+                  const itemName = l.item_name||"";
+                  const itemCat  = l.item_category||"";
+                  rows.push('"'+url+'","'+l.code+'","'+substrate+'","'+itemName+'","'+itemCat+'","'+l.order_id+'","'+(order?.org_name||"")+'"');
+                });
                 });
                 const csv = rows.join("\n");
                 const blob = new Blob([csv],{type:"text/csv"});
