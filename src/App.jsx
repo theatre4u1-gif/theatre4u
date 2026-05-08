@@ -13437,10 +13437,6 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// Wrap App with ErrorBoundary for export
-const AppWithBoundary = ()=><ErrorBoundary><AppRoot/></ErrorBoundary>;
-export default AppWithBoundary;
-
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ── AI Help Bubble ────────────────────────────────────────────────────────────
