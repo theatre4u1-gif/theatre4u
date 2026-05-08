@@ -7005,33 +7005,36 @@ function ProductionNeedsChecklist({ prod, allItems, userId, org, onNavigateToExc
     // Strip id from payload
     const { id: _id, ...rest } = payload;
     if (editing) {
-      await SB.from("production_needs").update(rest).eq("id", editing.id);
+      const { error } = await SB.from("production_needs").update(rest).eq("id", editing.id);
+      if (error) { alert("Save failed: " + error.message); return; }
       setNeeds(p => p.map(n => n.id === editing.id ? { ...n, ...rest, id:editing.id } : n));
     } else {
-      const { data } = await SB.from("production_needs").insert(payload).select().single();
+      const { data, error } = await SB.from("production_needs").insert(payload).select().single();
+      if (error) { alert("Save failed: " + error.message); return; }
       if (data) setNeeds(p => [...p, data]);
     }
     setAdding(false); setEditing(null); setForm(blank());
   };
 
   const deleteNeed = async (id) => {
-    await SB.from("production_needs").delete().eq("id", id);
+    const { error } = await SB.from("production_needs").delete().eq("id", id);
+    if (error) { alert("Delete failed: " + error.message); return; }
     setNeeds(p => p.filter(n => n.id !== id));
   };
 
   const quickStatus = async (id, status) => {
-    await SB.from("production_needs").update({ status, updated_at:new Date().toISOString() }).eq("id", id);
-    setNeeds(p => p.map(n => n.id === id ? { ...n, status } : n));
+    const { error } = await SB.from("production_needs").update({ status, updated_at:new Date().toISOString() }).eq("id", id);
+    if (!error) setNeeds(p => p.map(n => n.id === id ? { ...n, status } : n));
   };
 
   const linkToInventory = async (needId, itemId) => {
-    await SB.from("production_needs").update({
+    const { error } = await SB.from("production_needs").update({
       resolved_item_id: itemId,
       source: "in_house",
       status: "acquired",
       updated_at: new Date().toISOString()
     }).eq("id", needId);
-    setNeeds(p => p.map(n => n.id === needId
+    if (!error) setNeeds(p => p.map(n => n.id === needId
       ? { ...n, resolved_item_id:itemId, source:"in_house", status:"acquired" } : n));
   };
 
@@ -7396,13 +7399,13 @@ function ProductionDetail({ prod, allItems, userId, onEdit, onDelete, onClose, o
   useEffect(() => { load(); }, [load]);
 
   const updateStatus = async (piId, status) => {
-    await SB.from("production_items").update({ status }).eq("id", piId);
-    setProdItems(p => p.map(x => x.id === piId ? { ...x, status } : x));
+    const { error } = await SB.from("production_items").update({ status }).eq("id", piId);
+    if (!error) setProdItems(p => p.map(x => x.id === piId ? { ...x, status } : x));
   };
 
   const removeItem = async (piId) => {
-    await SB.from("production_items").delete().eq("id", piId);
-    setProdItems(p => p.filter(x => x.id !== piId));
+    const { error } = await SB.from("production_items").delete().eq("id", piId);
+    if (!error) setProdItems(p => p.filter(x => x.id !== piId));
   };
 
   // Join production_items with allItems
@@ -7628,16 +7631,30 @@ function Productions({ userId, allItems, org, onNavigateTo }) {
   useEffect(() => { load(); }, [load]);
 
   const saveProd = async (form) => {
+    // Strip fields that aren't columns (embedded joins, immutable fields)
+    const { id: _id, org_id: _org, created_at: _ca, production_items: _pi, ...payload } = form;
     if (active && modal === "edit") {
-      const { data } = await SB.from("productions")
-        .update(form).eq("id", active.id).select().single();
-      if (data) setProductions(p => p.map(x => x.id === data.id ? { ...x, ...data } : x));
+      const { data, error } = await SB.from("productions")
+        .update({ ...payload, updated_at: new Date().toISOString() })
+        .eq("id", active.id).select().single();
+      if (error) { alert("Save failed: " + error.message); return; }
+      if (data) {
+        setProductions(p => p.map(x => x.id === data.id ? { ...x, ...data } : x));
+        // If we came from detail view, update active so it reflects new dates
+        setActive(prev => prev ? { ...prev, ...data } : prev);
+      }
     } else {
-      const { data } = await SB.from("productions")
-        .insert({ ...form, org_id: userId }).select().single();
+      const { data, error } = await SB.from("productions")
+        .insert({ ...payload, org_id: userId }).select().single();
+      if (error) { alert("Save failed: " + error.message); return; }
       if (data) setProductions(p => [data, ...p]);
     }
-    setModal(null); setActive(null);
+    // If editing from detail, go back to detail not close entirely
+    if (modal === "edit" && active) {
+      setModal("detail");
+    } else {
+      setModal(null); setActive(null);
+    }
   };
 
   const deleteProd = async (id) => {
