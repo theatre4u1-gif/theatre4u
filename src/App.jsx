@@ -1573,22 +1573,55 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
       <div className="page-layer">
 
         {/* Temp Pro beta notice */}
-        {isTempPro&&(
-          <div style={{background:"linear-gradient(135deg,rgba(212,168,67,.12),rgba(212,168,67,.04))",
-            border:"1px solid rgba(212,168,67,.3)",borderRadius:10,padding:"12px 16px",
-            marginBottom:16,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
-            <span style={{fontSize:18}}>⭐</span>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:700,fontSize:13,color:"var(--gold)"}}>
-                You have full Pro access — complimentary during Theatre4u beta
-              </div>
-              <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>
-                All Pro features are unlocked at no charge while we're in beta.
-                When we launch Artstracker you'll receive an email with simple upgrade options to continue.
+        {isTempPro&&(()=>{
+          const itemCount = items.length;
+          const itemsNeeded = Math.max(0, 25 - itemCount);
+          const itemPct = Math.min(100, Math.round(itemCount / 25 * 100));
+          return(
+            <div style={{background:"linear-gradient(135deg,rgba(212,168,67,.12),rgba(212,168,67,.04))",
+              border:"1px solid rgba(212,168,67,.3)",borderRadius:10,padding:"14px 16px",
+              marginBottom:16}}>
+              <div style={{display:"flex",gap:12,alignItems:"flex-start",flexWrap:"wrap"}}>
+                <span style={{fontSize:20,flexShrink:0}}>⭐</span>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:13,color:"var(--gold)",marginBottom:3}}>
+                    Full Pro access — complimentary during Theatre4u beta
+                  </div>
+                  <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
+                    When Theatre4u launches fully you'll have the option to subscribe.
+                    {" "}<strong style={{color:"var(--text)"}}>Earn your first year free</strong>{" "}
+                    by adding 25+ items to your inventory and submitting at least one piece of feedback.
+                  </div>
+                  {/* Progress toward first-year discount */}
+                  <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+                    <div style={{flex:1,minWidth:140}}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:4,fontSize:11}}>
+                        <span style={{color:"var(--muted)"}}>📦 Inventory items</span>
+                        <span style={{fontWeight:700,color:itemCount>=25?"#4caf50":"var(--gold)"}}>
+                          {itemCount}/25
+                        </span>
+                      </div>
+                      <div style={{height:5,background:"rgba(0,0,0,.2)",borderRadius:3,overflow:"hidden"}}>
+                        <div style={{height:"100%",width:itemPct+"%",
+                          background:itemCount>=25?"#4caf50":"var(--gold)",
+                          borderRadius:3,transition:"width .5s"}}/>
+                      </div>
+                      {itemsNeeded>0&&<div style={{fontSize:10,color:"var(--muted)",marginTop:3}}>
+                        {itemsNeeded} more to go
+                      </div>}
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12}}>
+                      <span style={{fontSize:16}}>{org?.temp_pro?"💬":"💬"}</span>
+                      <span style={{color:"var(--muted)"}}>Submit feedback via the</span>
+                      <span style={{fontWeight:700,color:"var(--text)"}}>Leading Players</span>
+                      <span style={{color:"var(--muted)"}}>button</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Incomplete profile banner */}
         {profileIncomplete&&(
@@ -10700,8 +10733,6 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
   const[loading,setLoading]=useState(false);
   const[done,setDone]=useState(false);
   const[legal,setLegal]=useState(null);
-  const[betaCode,setBetaCode]=useState("");
-  const[betaValid,setBetaValid]=useState(null);
   const[showPass,setShowPass]=useState(false);
 
   useEffect(()=>{
@@ -10731,15 +10762,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
     try{
       if(mode==="signup"){
         if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
-        // Validate beta code before signup
-        const code = betaCode.trim().toUpperCase();
-        if(code){
-          const{data:codeData,error:codeErr}=await SB.from("beta_codes")
-            .select("code,max_uses,used_count,active")
-            .eq("code",code).eq("active",true).single();
-          if(codeErr||!codeData){throw new Error("Invalid or expired access code. Please check with your contact.");}
-          if(codeData.used_count>=codeData.max_uses){throw new Error("This access code has reached its limit. Contact hello@theatre4u.org.");}
-        }
+        // All signups during beta get temp_pro — no access code needed
         const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName},emailRedirectTo:"https://theatre4u.org"}});
         if(error){
           if(error.message?.toLowerCase().includes('already registered')||error.message?.toLowerCase().includes('already exists')){
@@ -10750,33 +10773,27 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
           throw error;
         }
         if(data.user){
-          const isLeadingPlayer = !!betaCode.trim(); // any valid beta code = Leading Player
           // Track signup conversion with UTM attribution
           const _sid = window.__t4u_sid || sessionStorage.getItem("t4u_sid") || null;
           const _utm = window.__t4u_utm || JSON.parse(sessionStorage.getItem("t4u_utm")||"{}");
           await SB.from("signup_events").insert({
             session_id: _sid, org_id: data.user.id,
-            beta_code: betaCode.trim().toUpperCase()||null,
             utm_source: _utm.source||null, utm_medium: _utm.medium||null, utm_campaign: _utm.campaign||null,
             referrer: document.referrer||null
           }).then(()=>{}).catch(()=>{}); // fire and forget
           await SB.from("orgs").upsert({
             id:data.user.id, name:orgName, email,
             type:"", phone:"", location:"", bio:"",
-            beta_code:betaCode.trim().toUpperCase()||null,
-            is_leading_player:isLeadingPlayer,
+            // All beta signups get temp_pro — full Pro access during beta period
+            temp_pro: true,
+            temp_pro_granted_at: new Date().toISOString(),
+            temp_pro_note: "Beta signup — auto-granted",
           },{onConflict:"id",ignoreDuplicates:false});
-          // Auto-generate label prefix for this org
+          // Auto-generate label prefix
           try {
             const { data: pfxData } = await SB.rpc("generate_label_prefix", { p_name: orgName });
-            if (pfxData) {
-              await SB.from("orgs").update({ label_prefix: pfxData }).eq("id", data.user.id);
-            }
-          } catch(e) { /* non-fatal — admin can assign manually */ }
-          // Increment code usage
-          if(betaCode.trim()){
-            await SB.from("beta_codes").update({used_count:codeData.used_count+1}).eq("code",betaCode.trim().toUpperCase());
-          }
+            if (pfxData) await SB.from("orgs").update({ label_prefix: pfxData }).eq("id", data.user.id);
+          } catch(e) { /* non-fatal */ }
           setDone(true);
         }
       } else {
@@ -10874,15 +10891,18 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             <div><label style={labelStyle}>Program / Organization Name *</label>
               <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High School Drama" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
             </div>
-            <div style={{marginBottom:4}}>
-              <label style={labelStyle}>Access Code <span style={{fontWeight:400,color:"rgba(255,255,255,.35)",fontSize:11}}>(optional — leave blank if you don't have one)</span></label>
-              <input value={betaCode} onChange={e=>setBetaCode(e.target.value.toUpperCase())}
-                placeholder="e.g. LEADINGPLAYER"
-                style={{...inputStyle,letterSpacing:2,fontFamily:"monospace",fontSize:14}}
-                onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
-              {betaCode.trim()&&<div style={{fontSize:11,color:"rgba(212,168,67,.7)",marginTop:4}}>
-                🎭 Leading Player access — you'll be part of shaping Theatre4u™ from the ground up.
-              </div>}
+            {/* Beta access notice */}
+            <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.25)",
+              borderRadius:9,padding:"12px 14px"}}>
+              <div style={{fontWeight:700,fontSize:13,color:"#d4a843",marginBottom:6}}>
+                ⭐ Free Pro Access During Beta
+              </div>
+              <div style={{fontSize:12,color:"rgba(255,255,255,.65)",lineHeight:1.7}}>
+                All programs that sign up during Theatre4u's beta phase get full Pro access at no charge.
+                When Theatre4u fully launches, you'll have the option to subscribe and
+                {" "}<strong style={{color:"rgba(255,255,255,.85)"}}>save your first year free</strong>{" "}
+                if you've added 25+ items and shared feedback.
+              </div>
             </div>
           </>)}
           <div><label style={labelStyle}>Email</label>
@@ -10925,7 +10945,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
         </div>
         {mode==="signup"&&(
           <p style={{textAlign:"center",fontSize:11,color:"#685f76",marginTop:14,lineHeight:1.5}}>
-            Free plan includes up to 25 items. No credit card required.
+            Full Pro access during beta · No credit card required · Cancel anytime
           </p>
         )}
       </div>
