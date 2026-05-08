@@ -1563,11 +1563,54 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
       setHighlights(data||[]);
     })();
   },[]);
+
+  const profileIncomplete = !org?.director_name;
+  const isTempPro = org?.temp_pro;
+
   return(
     <div style={{position:"relative",padding:"32px 36px 56px"}}>
       <img src={usp(BG.dashboard,1400,900)} alt="" className="page-bg-img"/>
       <div className="page-layer">
-        {/* Hero */}
+
+        {/* Temp Pro beta notice */}
+        {isTempPro&&(
+          <div style={{background:"linear-gradient(135deg,rgba(212,168,67,.12),rgba(212,168,67,.04))",
+            border:"1px solid rgba(212,168,67,.3)",borderRadius:10,padding:"12px 16px",
+            marginBottom:16,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+            <span style={{fontSize:18}}>⭐</span>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:13,color:"var(--gold)"}}>
+                You have full Pro access — complimentary during Theatre4u beta
+              </div>
+              <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>
+                All Pro features are unlocked at no charge while we're in beta.
+                When we launch Artstracker you'll receive an email with simple upgrade options to continue.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Incomplete profile banner */}
+        {profileIncomplete&&(
+          <div style={{background:"rgba(33,150,243,.06)",border:"1px solid rgba(33,150,243,.2)",
+            borderRadius:10,padding:"12px 16px",marginBottom:16,
+            display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+            <span style={{fontSize:18}}>👤</span>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:13}}>Complete your profile</div>
+              <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>
+                Add your name so other programs know who to contact. Takes 30 seconds.
+              </div>
+            </div>
+            <button onClick={goProfile}
+              style={{padding:"6px 14px",borderRadius:7,border:"1px solid rgba(33,150,243,.4)",
+                background:"rgba(33,150,243,.1)",color:"#42a5f5",fontSize:12,fontWeight:700,
+                cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+              Complete Profile →
+            </button>
+          </div>
+        )}
+
         <div className="hero-wrap" style={{height:380,marginBottom:32}}>
           <img src={usp(BG.dashboard,1200,480)} alt="Grand Theatre" loading="eager"/>
           <div className="hero-fade"/>
@@ -10658,7 +10701,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
   const[done,setDone]=useState(false);
   const[legal,setLegal]=useState(null);
   const[betaCode,setBetaCode]=useState("");
-  const[betaValid,setBetaValid]=useState(null); // null=unchecked, true=valid, false=invalid
+  const[betaValid,setBetaValid]=useState(null);
   const[showPass,setShowPass]=useState(false);
 
   useEffect(()=>{
@@ -10718,7 +10761,8 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             referrer: document.referrer||null
           }).then(()=>{}).catch(()=>{}); // fire and forget
           await SB.from("orgs").upsert({
-            id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:"",
+            id:data.user.id, name:orgName, email,
+            type:"", phone:"", location:"", bio:"",
             beta_code:betaCode.trim().toUpperCase()||null,
             is_leading_player:isLeadingPlayer,
           },{onConflict:"id",ignoreDuplicates:false});
@@ -10827,10 +10871,10 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
           {mode==="signup"&&(<>
-            <div><label style={labelStyle}>Organization Name</label>
-              <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High Drama Dept." style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
+            <div><label style={labelStyle}>Program / Organization Name *</label>
+              <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High School Drama" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
             </div>
-            <div style={{marginBottom:14}}>
+            <div style={{marginBottom:4}}>
               <label style={labelStyle}>Access Code <span style={{fontWeight:400,color:"rgba(255,255,255,.35)",fontSize:11}}>(optional — leave blank if you don't have one)</span></label>
               <input value={betaCode} onChange={e=>setBetaCode(e.target.value.toUpperCase())}
                 placeholder="e.g. LEADINGPLAYER"
@@ -13865,7 +13909,7 @@ function AdminHub({ currentUser, org }) {
       setLoading(true);
       if (tab === "overview" || tab === "users") {
         const { data } = await SB.from("orgs")
-          .select("id,name,email,plan,is_leading_player,director_name,director_title,city,location,created_at")
+          .select("id,name,email,plan,is_leading_player,director_name,director_title,city,location,label_prefix,temp_pro,created_at")
           .order("created_at", { ascending: false }).limit(100);
         setOrgs(data || []);
       }
@@ -14155,8 +14199,24 @@ function AdminHub({ currentUser, org }) {
                       </button>
                     </td>
                     <td style={{padding:"9px 12px"}}>
-                      <a href={"mailto:"+o.email+"?subject=Theatre4u — Following up"}
-                        style={{fontSize:11,color:"var(--gold)",textDecoration:"none",fontWeight:700}}>✉ Email</a>
+                      <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                        <a href={"mailto:"+o.email+"?subject=Theatre4u — Following up"}
+                          style={{fontSize:11,color:"var(--gold)",textDecoration:"none",fontWeight:700}}>✉ Email</a>
+                        <button onClick={async()=>{
+                          const {error}=await SB.from("orgs").update({
+                            temp_pro:!o.temp_pro,
+                            temp_pro_granted_at:!o.temp_pro?new Date().toISOString():null,
+                            temp_pro_note:!o.temp_pro?"Granted via admin hub":"",
+                          }).eq("id",o.id);
+                          if(!error){setOrgs(prev=>prev.map(x=>x.id===o.id?{...x,temp_pro:!o.temp_pro}:x));flash("✓ Temp Pro "+(o.temp_pro?"removed":"granted"));}
+                        }} style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:5,
+                          border:"1px solid",cursor:"pointer",fontFamily:"inherit",
+                          borderColor:o.temp_pro?"var(--gold)":"var(--border)",
+                          background:o.temp_pro?"rgba(212,168,67,.12)":"transparent",
+                          color:o.temp_pro?"var(--gold)":"var(--muted)"}}>
+                          {o.temp_pro?"⭐ Pro":"○ Pro"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -15114,7 +15174,10 @@ function AppRoot(){
 
       const{data:orgData}=await SB.from("orgs").select("*").eq("id",targetOrgId).single();
       // Admin emails always get District plan regardless of what is stored
-      const effectivePlan = isAdminEmail(user?.email) ? "district" : (orgData?.plan || "free");
+      // temp_pro = true gives Pro access during beta (no payment required)
+      const effectivePlan = isAdminEmail(user?.email) ? "district"
+        : orgData?.temp_pro ? "pro"
+        : (orgData?.plan || "free");
       if(orgData){
         setOrg({...orgData, _memberRole: memberRole, _isMember: !!memberData});
         setMemberRole(memberRole);
@@ -15708,10 +15771,12 @@ function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav }) {
 
   // Profile form state (step 2)
   const [pf, setPf] = useState({
-    name:     org?.name     || "",
-    type:     org?.type     || "",
-    location: org?.location || "",
-    bio:      org?.bio      || "",
+    name:         org?.name           || "",
+    director_name:org?.director_name  || "",
+    phone:        org?.phone          || "",
+    type:         org?.type           || "",
+    location:     org?.location       || "",
+    bio:          org?.bio            || "",
   });
 
   // Participation toggles (step 4)
@@ -15730,10 +15795,13 @@ function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav }) {
     setSaving(true);
     const update = {
       onboarding_step: 2,
-      name:     pf.name.trim()     || org.name,
-      type:     pf.type            || org.type,
-      location: pf.location.trim() || org.location,
-      bio:      pf.bio.trim()      || org.bio,
+      name:          pf.name.trim()          || org.name,
+      director_name: pf.director_name.trim() || "",
+      director_title:"Theatre Director",
+      phone:         pf.phone.trim()         || "",
+      type:          pf.type                 || org.type,
+      location:      pf.location.trim()      || org.location,
+      bio:           pf.bio.trim()           || org.bio,
     };
     await SB.from("orgs").update(update).eq("id", userId);
     onUpdate({ ...org, ...update });
@@ -15853,6 +15921,16 @@ function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav }) {
               <label style={lbl}>Program / School Name *</label>
               <input style={inp} value={pf.name} onChange={e=>setPf(p=>({...p,name:e.target.value}))}
                 placeholder="Lincoln High Drama · Valley Rep · etc." autoFocus/>
+            </div>
+            <div>
+              <label style={lbl}>Your Name *</label>
+              <input style={inp} value={pf.director_name} onChange={e=>setPf(p=>({...p,director_name:e.target.value}))}
+                placeholder="Jane Smith"/>
+            </div>
+            <div>
+              <label style={lbl}>Your Phone <span style={{fontWeight:400,textTransform:"none",letterSpacing:0}}>(optional)</span></label>
+              <input style={inp} value={pf.phone} onChange={e=>setPf(p=>({...p,phone:e.target.value}))}
+                placeholder="(555) 123-4567" type="tel"/>
             </div>
             <div>
               <label style={lbl}>Program Type</label>
