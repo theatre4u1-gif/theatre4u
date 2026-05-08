@@ -6964,6 +6964,7 @@ function ProductionNeedsChecklist({ prod, allItems, userId, org, onNavigateToExc
   const canImport = !memberRole || memberRole === "director" || memberRole === "stage_manager";
   const [needs,    setNeeds]   = useState([]);
   const [loading,  setLoading] = useState(true);
+  const [adding,   setAdding]  = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editing,  setEditing] = useState(null);
   const [filter,   setFilter]  = useState("all"); // all | needed | acquired
@@ -7325,8 +7326,8 @@ function ProductionNeedsChecklist({ prod, allItems, userId, org, onNavigateToExc
                             {(need.estimated_cost||need.actual_cost) && (
                               <span>
                                 {need.actual_cost
-                                  ? `· Actual $${parseFloat(need.actual_cost).toFixed(2)}`
-                                  : `· Est. $${parseFloat(need.estimated_cost).toFixed(2)}`}
+                                  ? ("· Actual $"+parseFloat(need.actual_cost).toFixed(2))
+                                  : ("· Est. $"+parseFloat(need.estimated_cost).toFixed(2))}
                               </span>
                             )}
                           </div>
