@@ -2283,8 +2283,8 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
         </div>
 
         <div style={{fontSize:13,fontWeight:700,color:"var(--faint)",marginBottom:12}}>
-          {loadingAll?"Loading listings…":`${filtered.length} listing${filtered.length!==1?"s":""}`}
-          {userCoords&&radius!=="all"&&!loadingAll&&` within ${radius==="state"?STATE_NAMES[userCoords.state]||userCoords.state:radius+" miles"}`}
+          {loadingAll?"Loading listings…":(filtered.length+" listing"+(filtered.length!==1?"s":""))}
+          {userCoords&&radius!=="all"&&!loadingAll&&(" within "+(radius==="state"?STATE_NAMES[userCoords.state]||userCoords.state:radius+" miles"))}
         </div>
 
         {/* ── Listings Grid ── */}
@@ -3016,7 +3016,7 @@ function TransactionDocForm({ req, docType, existing, org, onSave, onCancel }) {
         <button className="btn btn-g" onClick={submit} disabled={saving}
           style={{ background:`linear-gradient(135deg,${dt.color},${dt.color}cc)`,
             color:"#fff", border:"none" }}>
-          {saving ? "Saving…" : `${dt.icon} Finalize ${dt.label}`}
+          {saving ? "Saving…" : (dt.icon+" Finalize "+dt.label)}
         </button>
       </div>
     </div>
@@ -12661,7 +12661,7 @@ function LabelsPage({ org, userId, items=[] }) {
             style={{padding:"7px 16px",borderRadius:"8px 8px 0 0",border:"none",cursor:"pointer",fontSize:13,
               fontWeight:tab===id?700:500,background:tab===id?"var(--gold)":"transparent",
               color:tab===id?"#1a0f00":"var(--muted)",fontFamily:"inherit",transition:"all .15s"}}>
-            {lbl}{id==="order"&&orders.length>0?` (${orders.length})`:""}
+            {lbl}{id==="order"&&orders.length>0?" ("+orders.length+")":""}
           </button>
         ))}
       </div>
@@ -12690,7 +12690,7 @@ function LabelsPage({ org, userId, items=[] }) {
                 cursor:selected.length&&!printing?"pointer":"not-allowed",
                 background:selected.length&&!printing?"var(--gold)":"var(--border)",
                 color:selected.length&&!printing?"#1a0f00":"var(--muted)"}}>
-              {printing?"Generating…":selected.length?`🖨 Print ${selected.length} Label${selected.length!==1?"s":""}":"Select items to print"}
+              {printing?"Generating…":selected.length?("🖨 Print "+selected.length+" Label"+(selected.length!==1?"s":"")):"Select items to print"}
             </button>
           </div>
 
@@ -13365,7 +13365,7 @@ function AdminDailyDigest() {
                   ))}
                 </div>
                 <div style={{padding:"8px 14px",borderTop:"1px solid var(--border)",fontSize:11,color:"var(--muted)"}}>
-                  Page views by page: {Object.entries(data.pvByPage).sort(([,a],[,b])=>b-a).map(([p,n])=>`${p} (${n})`).join(" · ")}
+                  Page views by page: {Object.entries(data.pvByPage).sort(([,a],[,b])=>b-a).map(([p,n])=>p+" ("+n+")").join(" · ")}
                 </div>
               </div>
             )}
@@ -15539,7 +15539,7 @@ function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav }) {
             Your inventory is live!
           </h2>
           <p style={{fontSize:14, color:"var(--muted,#685f76)", lineHeight:1.7}}>
-            {org?.name ? `${org.name} now has` : "You now have"} {items.length} item{items.length!==1?"s":""} in Theatre4u™. Here's what to do next:
+            {org?.name ? (org.name+" now has") : "You now have"} {items.length} item{items.length!==1?"s":""} in Theatre4u™. Here's what to do next:
           </p>
         </div>
         <div style={bod}>
