@@ -1804,7 +1804,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
   // Role-based permissions
   const canEdit   = memberRole !== "house";
   const canAdd    = memberRole !== "house";
-  const canDelete = memberRole === "director" || memberRole === "stage_manager";
+  const canDelete = memberRole === null || memberRole === "director" || memberRole === "stage_manager";
 
   // ── Storage location deep link — filter items when QR scanned ────────────────
   const [locFilter,     setLocFilter]     = useState(deepLinkLocationId || "all");
