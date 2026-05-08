@@ -1632,14 +1632,14 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
             <div style={{flex:1}}>
               <div style={{fontWeight:700,fontSize:13}}>Complete your profile</div>
               <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>
-                Add your name so other programs know who to contact. Takes 30 seconds.
+                Add your name under <strong>My Profile → Edit Profile</strong> so other programs know who to contact.
               </div>
             </div>
             <button onClick={goProfile}
               style={{padding:"6px 14px",borderRadius:7,border:"1px solid rgba(33,150,243,.4)",
                 background:"rgba(33,150,243,.1)",color:"#42a5f5",fontSize:12,fontWeight:700,
                 cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
-              Complete Profile →
+              Go to My Profile →
             </button>
           </div>
         )}
@@ -11100,6 +11100,164 @@ function AuthScreen({onAuth}){
 // ══════════════════════════════════════════════════════════════════════════════
 
 // ── Public Item Page (no login required) ─────────────────────────────────────
+function PublicOrgPage({ slug }) {
+  const [org,   setOrg]   = useState(null);
+  const [items, setItems] = useState([]);
+  const [err,   setErr]   = useState(null);
+
+  useEffect(()=>{
+    (async()=>{
+      const { data: orgData, error } = await SB.from("orgs")
+        .select("id,name,type,location,bio,email,phone,website,facebook,instagram,logo_url,founded_year,student_count,profile_public,label_prefix,director_name,director_title")
+        .eq("slug", slug).eq("profile_public", true).single();
+      if (error || !orgData) { setErr("Program not found or profile is private."); return; }
+      setOrg(orgData);
+      const { data: listed } = await SB.from("items")
+        .select("id,name,category,img,mkt,rent,sale,avail,condition,display_id,location")
+        .eq("org_id", orgData.id)
+        .neq("mkt", "Not Listed")
+        .eq("avail", "In Stock")
+        .limit(24);
+      setItems(listed || []);
+    })();
+  }, [slug]);
+
+  const Header = () => (
+    <div style={{background:"linear-gradient(135deg,#1a0d2e,#0d1829)",borderBottom:"1px solid rgba(255,255,255,.08)",padding:"14px 20px",display:"flex",alignItems:"center",gap:10}}>
+      <span style={{fontSize:26}}>🎭</span>
+      <div>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"var(--gold)",lineHeight:1}}>Theatre4u™</div>
+        <div style={{fontSize:10,color:"rgba(255,255,255,.4)",letterSpacing:2,textTransform:"uppercase"}}>Inventory · Backstage Exchange · Community</div>
+      </div>
+      <a href="https://theatre4u.org" style={{marginLeft:"auto",fontSize:12,color:"var(--gold)",textDecoration:"none",border:"1px solid rgba(212,168,67,.3)",borderRadius:6,padding:"5px 12px"}}>Visit Site →</a>
+    </div>
+  );
+
+  return (
+    <>
+      <style>{CSS}</style>
+      <div style={{minHeight:"100vh",background:"var(--ink)",color:"var(--linen)",fontFamily:"'DM Sans',sans-serif",padding:"0 0 60px"}}>
+        <Header/>
+        <div style={{maxWidth:700,margin:"0 auto",padding:"28px 16px"}}>
+
+          {err && (
+            <div style={{textAlign:"center",padding:"40px 16px"}}>
+              <div style={{fontSize:42,marginBottom:12}}>🔍</div>
+              <div style={{fontSize:18,color:"var(--gold)",fontFamily:"'Playfair Display',serif",marginBottom:8}}>Profile Not Found</div>
+              <div style={{fontSize:13,color:"rgba(255,255,255,.5)"}}>{err}</div>
+            </div>
+          )}
+
+          {!org && !err && (
+            <div style={{textAlign:"center",padding:60,color:"rgba(255,255,255,.4)"}}>
+              <div style={{fontSize:42,marginBottom:12}}>🎭</div>
+              <div>Loading…</div>
+            </div>
+          )}
+
+          {org && (<>
+            {/* Org header */}
+            <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:24,
+              background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",
+              borderRadius:14,padding:20}}>
+              <div style={{width:64,height:64,borderRadius:12,flexShrink:0,overflow:"hidden",
+                background:"linear-gradient(135deg,rgba(212,168,67,.3),rgba(212,168,67,.1))",
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:32}}>
+                {org.logo_url
+                  ? <img src={org.logo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  : "🎭"}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,lineHeight:1.2,marginBottom:4}}>
+                  {org.name}
+                </div>
+                <div style={{fontSize:13,color:"rgba(255,255,255,.5)"}}>
+                  {[org.type, org.location].filter(Boolean).join(" · ")}
+                </div>
+                {org.director_name && (
+                  <div style={{fontSize:12,color:"var(--gold)",marginTop:4}}>
+                    {org.director_name}{org.director_title ? " · "+org.director_title : ""}
+                  </div>
+                )}
+                {org.label_prefix && (
+                  <div style={{fontFamily:"monospace",fontSize:11,color:"rgba(212,168,67,.6)",
+                    marginTop:4,letterSpacing:1}}>{org.label_prefix}</div>
+                )}
+              </div>
+            </div>
+
+            {/* Bio + stats */}
+            {org.bio && (
+              <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",
+                borderRadius:10,padding:16,marginBottom:16,fontSize:13.5,
+                color:"rgba(255,255,255,.65)",lineHeight:1.7}}>
+                {org.bio}
+              </div>
+            )}
+
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:20}}>
+              {org.founded_year&&<span style={{padding:"3px 10px",background:"rgba(212,168,67,.1)",color:"var(--gold)",borderRadius:6,fontSize:12,fontWeight:700}}>Est. {org.founded_year}</span>}
+              {org.student_count&&<span style={{padding:"3px 10px",background:"rgba(82,199,132,.1)",color:"#4caf50",borderRadius:6,fontSize:12,fontWeight:700}}>{org.student_count.toLocaleString()} students</span>}
+              {items.length>0&&<span style={{padding:"3px 10px",background:"rgba(66,165,245,.1)",color:"#42a5f5",borderRadius:6,fontSize:12,fontWeight:700}}>{items.length} items on Exchange</span>}
+            </div>
+
+            {/* Contact */}
+            <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:24}}>
+              {org.email&&<a href={"mailto:"+org.email} style={{fontSize:13,color:"var(--gold)",textDecoration:"none"}}>✉️ {org.email}</a>}
+              {org.phone&&<span style={{fontSize:13,color:"rgba(255,255,255,.5)"}}>📞 {org.phone}</span>}
+              {org.website&&<a href={org.website} target="_blank" rel="noreferrer" style={{fontSize:13,color:"var(--gold)",textDecoration:"none"}}>🌐 Website</a>}
+            </div>
+
+            {/* Exchange listings */}
+            {items.length > 0 && (<>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,marginBottom:14}}>
+                Backstage Exchange Listings
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12,marginBottom:24}}>
+                {items.map(item=>{
+                  const cat = CAT_MAP[item.category]||CAT_MAP.other;
+                  const mB  = item.mkt==="For Rent"?"r":item.mkt==="For Sale"?"s":"b";
+                  return(
+                    <a key={item.id} href={"#/item/"+(item.display_id||item.id)}
+                      style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",
+                        borderRadius:10,padding:14,textDecoration:"none",color:"var(--linen)",
+                        display:"block",transition:"border-color .15s"}}
+                      onMouseOver={e=>e.currentTarget.style.borderColor="rgba(212,168,67,.4)"}
+                      onMouseOut={e=>e.currentTarget.style.borderColor="rgba(255,255,255,.08)"}>
+                      {item.img&&<div style={{height:100,borderRadius:7,overflow:"hidden",marginBottom:10,background:"rgba(0,0,0,.2)"}}>
+                        <img src={item.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                      </div>}
+                      <div style={{fontSize:12,color:cat.color,fontWeight:700,marginBottom:3}}>{cat.icon} {cat.label}</div>
+                      <div style={{fontSize:14,fontWeight:600,marginBottom:6,lineHeight:1.3}}>{item.name}</div>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <span className={"mb "+mB} style={{fontSize:10}}>{item.mkt}</span>
+                        <span style={{fontSize:13,fontWeight:700,color:"var(--gold)"}}>
+                          {item.rent>0?"$"+Number(item.rent).toFixed(2)+"/wk":""}
+                          {item.rent>0&&item.sale>0?" · ":""}
+                          {item.sale>0?"$"+Number(item.sale).toFixed(2):""}
+                        </span>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            </>)}
+
+            <div style={{textAlign:"center",marginTop:20}}>
+              <a href="https://theatre4u.org?signin=1"
+                style={{display:"inline-flex",alignItems:"center",gap:8,padding:"11px 24px",
+                  background:"linear-gradient(135deg,#c4922a,#8b6914)",color:"#1a0f00",
+                  borderRadius:8,textDecoration:"none",fontSize:14,fontWeight:700}}>
+                🎭 Browse the Backstage Exchange →
+              </a>
+            </div>
+          </>)}
+        </div>
+      </div>
+    </>
+  );
+}
+
 function PublicItemPage({ itemId }) {
   const [item,    setItem]    = useState(null);
   const [org,     setOrg]     = useState(null);
@@ -11462,6 +11620,7 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
     }
     const { data, error } = await SB.from("orgs").update({
       name: f.name, type: f.type, email: f.email, phone: f.phone,
+      director_name: f.director_name, director_title: f.director_title,
       location: f.location, bio: f.bio, website: f.website,
       facebook: f.facebook, instagram: f.instagram,
       logo_url: f.logo_url, founded_year: f.founded_year,
@@ -11479,7 +11638,7 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
   };
 
   const profileUrl = org?.slug
-    ? `https://theatre4u.org/org/${org.slug}`
+    ? `https://theatre4u.org/#/org/${org.slug}`
     : null;
 
   const copyUrl = () => {
@@ -11615,6 +11774,12 @@ function OrgProfilePage({ userId, org, setOrg, plan, items }) {
             <div className="fg2">
               <div className="fg fu"><label className="fl">Organization Name</label>
                 <input className="fi" value={f.name || ""} onChange={e => upd("name", e.target.value)} placeholder="Lincoln High Drama Dept." /></div>
+
+              <div className="fg"><label className="fl">Your Name (Director)</label>
+                <input className="fi" value={f.director_name || ""} onChange={e => upd("director_name", e.target.value)} placeholder="Jane Smith" /></div>
+
+              <div className="fg"><label className="fl">Your Title</label>
+                <input className="fi" value={f.director_title || ""} onChange={e => upd("director_title", e.target.value)} placeholder="Theatre Director" /></div>
 
               <div className="fg fu">
                 <label className="fl">Profile Photo / Logo URL</label>
@@ -14102,12 +14267,12 @@ function AdminHub({ currentUser, org }) {
         <div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:24}}>
             {[
-              { n:totalOrgs,      label:"Total Programs",   color:"var(--gold)", icon:"🎭" },
-              { n:paidOrgs,       label:"Paid Plans",       color:"#4caf50",     icon:"💳" },
-              { n:leadingPlayers, label:"Leading Players",  color:"#9c27b0",     icon:"⭐" },
-              { n:newLeads,       label:"New Beta Leads",   color:"#2196f3",     icon:"📥" },
-              { n:newFeedback,    label:"New Feedback",     color:"#ff9800",     icon:"💬" },
-              { n:analytics.views,label:"Page Views",       color:"var(--muted)",icon:"👁" },
+              { n:totalOrgs,                                      label:"Total Programs",   color:"var(--gold)", icon:"🎭" },
+              { n:paidOrgs,                                       label:"Paid Plans",       color:"#4caf50",     icon:"💳" },
+              { n:orgs.filter(o=>o.temp_pro).length,              label:"Temp Pro (Beta)",  color:"#9c27b0",     icon:"⭐" },
+              { n:newLeads,                                       label:"New Beta Leads",   color:"#2196f3",     icon:"📥" },
+              { n:newFeedback,                                     label:"New Feedback",     color:"#ff9800",     icon:"💬" },
+              { n:analytics.views,                                label:"Page Views",       color:"var(--muted)",icon:"👁" },
             ].map(k=>(
               <div key={k.label} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px"}}>
                 <div style={{fontSize:22,marginBottom:4}}>{k.icon}</div>
@@ -14116,6 +14281,49 @@ function AdminHub({ currentUser, org }) {
               </div>
             ))}
           </div>
+
+          {/* Beta incentive progress */}
+          <div style={{marginBottom:24}}>
+            <h3 style={{fontFamily:"var(--serif)",fontSize:16,marginBottom:10}}>
+              Beta Incentive Progress — First Year Free
+              <span style={{fontSize:12,fontWeight:400,color:"var(--muted)",marginLeft:8}}>
+                25+ items + 1 feedback = first year free at launch
+              </span>
+            </h3>
+            <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                <thead><tr style={{background:"rgba(0,0,0,.1)"}}>
+                  {["Program","Items","Feedback","Status"].map(h=>(
+                    <th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)"}}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {orgs.filter(o=>o.temp_pro).map(o=>{
+                    // We don't have per-org item counts here — show what we can
+                    // Full counts available via check_beta_incentive_eligibility() RPC
+                    return(
+                      <tr key={o.id} style={{borderTop:"1px solid var(--border)"}}>
+                        <td style={{padding:"8px 12px",fontWeight:600}}>{o.name}</td>
+                        <td style={{padding:"8px 12px",color:"var(--muted)"}}>—</td>
+                        <td style={{padding:"8px 12px",color:"var(--muted)"}}>—</td>
+                        <td style={{padding:"8px 12px"}}>
+                          <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:6,
+                            background:"rgba(212,168,67,.1)",color:"var(--gold)"}}>⭐ Temp Pro</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <div style={{padding:"10px 14px",borderTop:"1px solid var(--border)",fontSize:12,color:"var(--muted)",display:"flex",gap:12,alignItems:"center"}}>
+                <span>Run in Supabase SQL for full counts:</span>
+                <code style={{background:"rgba(0,0,0,.2)",padding:"2px 8px",borderRadius:4,fontSize:11}}>
+                  SELECT * FROM check_beta_incentive_eligibility();
+                </code>
+              </div>
+            </div>
+          </div>
+
           <div style={{marginBottom:24}}>
             <h3 style={{fontFamily:"var(--serif)",fontSize:16,marginBottom:10}}>Recent Signups</h3>
             <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
@@ -15041,14 +15249,17 @@ function AppRoot(){
   const _parseHash = (h) => ({
     itemId:     (h.match(/^#\/item\/(.+)$/)     || [])[1] || null,
     locationId: (h.match(/^#\/location\/(.+)$/) || [])[1] || null,
+    orgSlug:    (h.match(/^#\/org\/(.+)$/)      || [])[1] || null,
   });
   const [publicItemId,     setPublicItemId]     = useState(() => _parseHash(window.location.hash).itemId);
   const [deepLinkLocation, setDeepLinkLocation] = useState(() => _parseHash(window.location.hash).locationId);
+  const [publicOrgSlug,    setPublicOrgSlug]    = useState(() => _parseHash(window.location.hash).orgSlug);
   useEffect(()=>{
     const onHash = () => {
-      const { itemId, locationId } = _parseHash(window.location.hash);
+      const { itemId, locationId, orgSlug } = _parseHash(window.location.hash);
       setPublicItemId(itemId);
       setDeepLinkLocation(locationId);
+      setPublicOrgSlug(orgSlug);
       if (locationId && !itemId) setPage("inventory");
     };
     window.addEventListener("hashchange", onHash);
@@ -15515,6 +15726,7 @@ function AppRoot(){
   const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Backstage Exchange", productions:"Productions", reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:"Stage Points", points:"Stage Points", community:"Community Board", labels:"QR Labels" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
+  if (publicOrgSlug) return <PublicOrgPage slug={publicOrgSlug} />;
   if (publicItemId) return <PublicItemPage itemId={publicItemId} />;
 
   // ── Auth gate ────────────────────────────────────────────────────────────
