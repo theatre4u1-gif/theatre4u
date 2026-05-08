@@ -14306,7 +14306,6 @@ function AdminHub({ currentUser, org }) {
                   const itemCat  = l.item_category||"";
                   rows.push('"'+url+'","'+l.code+'","'+substrate+'","'+itemName+'","'+itemCat+'","'+l.order_id+'","'+(order?.org_name||"")+'"');
                 });
-                });
                 const csv = rows.join("\n");
                 const blob = new Blob([csv],{type:"text/csv"});
                 const a = document.createElement("a");
