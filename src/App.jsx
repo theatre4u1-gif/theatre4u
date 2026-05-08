@@ -12391,41 +12391,777 @@ function LabelStoreBanner({ onGoLabels }) {
   );
 }
 
-function LabelsPage({ org, userId, items=[], stripeReturn=null, onClearReturn=null }) {
-  // LABELS PAUSED — vendor research in progress. Full purchase/claim/link UI
-  // is preserved in git. Re-enable when vendor is confirmed.
+// ══════════════════════════════════════════════════════════════════════════════
+// LABELS PAGE — Three tabs: Print Now · Assign · Order Physical Labels
+// Pricing: WePrintBarcodes cost ~$0.10–0.15/label (standard), ~$0.20–0.25 (WP)
+// Retail packs with margin built in. Logo add-on option.
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Label pack definitions — retail prices with Theatre4u margin baked in
+// Our cost: standard ~$0.12/label + ~$5 shipping. Weatherproof ~$0.22/label + ~$5 shipping.
+// ── Label pack pricing ────────────────────────────────────────────────────────
+// Our cost basis (WePrintBarcodes estimates — update after vendor call):
+//   Standard polyester:  ~$0.12/label + ~$5 shipping
+//   Weatherproof vinyl:  ~$0.22/label + ~$5 shipping
+// Target: ~25% margin on cost. Round to clean buyer-friendly numbers.
+// Update retail cents here after confirming actual WePrintBarcodes pricing.
+//
+//  Pack          Our cost   Retail   Profit   Margin
+//  25 standard   $8.00      $10      $2.00    20%
+//  50 standard   $11.00     $15      $4.00    27%
+//  100 standard  $17.00     $23      $6.00    26%
+//  200 standard  $29.00     $39      $10.00   26%
+//  25 WP         $10.50     $14      $3.50    25%
+//  50 WP         $16.00     $21      $5.00    24%
+//  100 WP        $27.00     $36      $9.00    25%
+//  200 WP        $49.00     $65      $16.00   25%
+const LABEL_PACKS = [
+  { qty:25,  type:"standard",    label:"25 Standard",     retail:1000, desc:"Indoor use · polyester matte · water-resistant" },
+  { qty:50,  type:"standard",    label:"50 Standard",     retail:1500, desc:"Indoor use · polyester matte · water-resistant" },
+  { qty:100, type:"standard",    label:"100 Standard",    retail:2300, desc:"Indoor use · polyester matte · water-resistant" },
+  { qty:200, type:"standard",    label:"200 Standard",    retail:3900, desc:"Indoor use · polyester matte · water-resistant" },
+  { qty:25,  type:"weatherproof",label:"25 Weatherproof", retail:1400, desc:"Scene shop · outdoor storage · heavy-duty vinyl" },
+  { qty:50,  type:"weatherproof",label:"50 Weatherproof", retail:2100, desc:"Scene shop · outdoor storage · heavy-duty vinyl" },
+  { qty:100, type:"weatherproof",label:"100 Weatherproof",retail:3600, desc:"Scene shop · outdoor storage · heavy-duty vinyl" },
+  { qty:200, type:"weatherproof",label:"200 Weatherproof",retail:6500, desc:"Scene shop · outdoor storage · heavy-duty vinyl" },
+];
+const LOGO_ADDON_CENTS = 500; // $5 to include program logo on labels
+
+function LabelsPage({ org, userId, items=[] }) {
+  const [tab, setTab]           = useState("print");
+  const [myItems, setMyItems]   = useState([]);
+  const [orders, setOrders]     = useState([]);
+  const [loadingItems, setLoadingItems] = useState(true);
+
+  // Print tab state
+  const [search, setSearch]     = useState("");
+  const [selected, setSelected] = useState([]);
+  const [printing, setPrinting] = useState(false);
+
+  // Assign tab state
+  const [assignCode, setAssignCode] = useState("");
+  const [assignItem, setAssignItem] = useState("");
+  const [assignMsg, setAssignMsg]   = useState("");
+  const [assignSaving, setAssignSaving] = useState(false);
+
+  // Order tab state
+  const [selPack, setSelPack]     = useState(null);   // index into LABEL_PACKS
+  const [includeLogo, setIncludeLogo] = useState(false);
+  const [logoUrl, setLogoUrl]     = useState(org?.logo_url||"");
+  const [orderName, setOrderName] = useState(org?.director_name||"");
+  const [orderAddrLine, setOrderAddrLine] = useState("");
+  const [orderCity, setOrderCity] = useState("");
+  const [orderState, setOrderState] = useState("");
+  const [orderZip, setOrderZip]   = useState("");
+  const [orderNotes, setOrderNotes] = useState("");
+  const [orderSubmitting, setOrderSubmitting] = useState(false);
+  const [orderDone, setOrderDone] = useState(false);
+  const [orderMsg, setOrderMsg]   = useState("");
+
+  useEffect(()=>{
+    (async()=>{
+      setLoadingItems(true);
+      const {data} = await SB.from("items")
+        .select("id,name,category,location,display_id,added,condition,qty")
+        .eq("org_id",userId).order("added",{ascending:false}).limit(500);
+      setMyItems(data||[]);
+      const {data:ords} = await SB.from("label_orders")
+        .select("id,item_count,label_type,status,created_at,tracking,code_start,code_end,amount_cents,include_logo")
+        .eq("org_id",userId).order("created_at",{ascending:false});
+      setOrders(ords||[]);
+      setLoadingItems(false);
+    })();
+  },[userId]);
+
+  // ── PRINT TAB ────────────────────────────────────────────────────────────
+  const filtered = myItems.filter(i=>
+    !search || i.name.toLowerCase().includes(search.toLowerCase()) ||
+    (i.location||"").toLowerCase().includes(search.toLowerCase()) ||
+    (i.display_id||"").toLowerCase().includes(search.toLowerCase())
+  );
+  const toggleSel = id => setSelected(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
+  const selAll    = () => setSelected(filtered.map(i=>i.id));
+  const clearSel  = () => setSelected([]);
+
+  const printSelected = async () => {
+    const toPrint = myItems.filter(i=>selected.includes(i.id));
+    if(!toPrint.length) return;
+    setPrinting(true);
+    try {
+      const srcs = await Promise.all(toPrint.map(i=>
+        QR.toDataURL("https://theatre4u.org/#/item/"+i.id, 160)
+      ));
+      const w = window.open("","_blank","width=900,height=700");
+      if(!w){setPrinting(false);return;}
+      const labels = toPrint.map((item,n)=>{
+        const cat = CAT[item.category]||CAT.other;
+        const dispId = item.display_id||item.id.slice(0,8).toUpperCase();
+        return `<div class="lbl">
+          <div class="lbl-cat" style="color:${cat.color||"#888"}">${cat.icon} ${cat.label}</div>
+          <div class="lbl-name">${item.name}</div>
+          ${item.location?`<div class="lbl-loc">📍 ${item.location}</div>`:""}
+          <div class="lbl-id">${dispId}</div>
+          ${srcs[n]?`<img src="${srcs[n]}" class="lbl-qr"/>`:""}
+          <div class="lbl-brand">theatre4u.org</div>
+        </div>`;
+      }).join("");
+      w.document.write(`<!DOCTYPE html><html><head><title>QR Labels — ${org?.name||"Theatre4u"}</title>
+      <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:Arial,sans-serif;background:#fff;padding:12px}
+        .controls{text-align:center;margin-bottom:12px;font-size:13px}
+        .grid{display:flex;flex-wrap:wrap;gap:8px}
+        .lbl{width:160px;height:160px;border:1.5px solid #222;border-radius:6px;padding:8px;
+          display:flex;flex-direction:column;gap:2px;page-break-inside:avoid;background:#fff}
+        .lbl-cat{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+        .lbl-name{font-size:10px;font-weight:700;color:#111;line-height:1.2;flex:1;overflow:hidden;word-break:break-word}
+        .lbl-loc{font-size:8px;color:#555}
+        .lbl-id{font-size:9px;font-weight:800;color:#c4761a;font-family:monospace;letter-spacing:.5px}
+        .lbl-qr{width:56px;height:56px;margin-top:auto}
+        .lbl-brand{font-size:7px;color:#aaa}
+        @media print{.controls{display:none}.grid{gap:6px}.lbl{width:150px;height:150px}}
+      </style></head><body>
+      <div class="controls">
+        <strong>${org?.name||"Theatre4u"}</strong> — ${toPrint.length} label${toPrint.length!==1?"s":""}
+        <button onclick="window.print()" style="margin-left:16px;padding:5px 14px;background:#d4a843;border:none;border-radius:5px;font-weight:700;cursor:pointer">🖨 Print</button>
+        <button onclick="window.close()" style="margin-left:6px;padding:5px 14px;border:1px solid #ccc;border-radius:5px;cursor:pointer">Close</button>
+        <span style="margin-left:12px;color:#888;font-size:12px">Tip: In print dialog choose "Fit to page" or "No scaling" for best results</span>
+      </div>
+      <div class="grid">${labels}</div>
+      <script>setTimeout(function(){window.print()},600)<\/script>
+      </body></html>`);
+      w.document.close();
+    } finally { setPrinting(false); }
+  };
+
+  // ── ASSIGN TAB ───────────────────────────────────────────────────────────
+  const doAssign = async () => {
+    const code = assignCode.trim().toUpperCase();
+    const itemId = assignItem;
+    if(!code||!itemId){ setAssignMsg("⚠ Please enter a label code and select an item."); return; }
+    setAssignSaving(true);
+    setAssignMsg("");
+    try {
+      const {error} = await SB.from("items")
+        .update({display_id: code}).eq("id",itemId).eq("org_id",userId);
+      if(error) throw error;
+      await SB.from("label_pool")
+        .update({status:"claimed",org_id:userId,item_id:itemId,claimed_at:new Date().toISOString()})
+        .eq("code",code).eq("org_id",userId);
+      setMyItems(p=>p.map(i=>i.id===itemId?{...i,display_id:code}:i));
+      setAssignMsg("✅ Label "+code+" assigned!");
+      setAssignCode(""); setAssignItem("");
+    } catch(e) {
+      setAssignMsg("❌ "+e.message);
+    }
+    setAssignSaving(false);
+  };
+
+  // Unassign a label from an item
+  const doUnassign = async (item) => {
+    if(!confirm(`Remove label ${item.display_id} from "${item.name}"?`)) return;
+    await SB.from("items").update({display_id:null}).eq("id",item.id);
+    await SB.from("label_pool").update({status:"available",item_id:null,claimed_at:null}).eq("code",item.display_id).eq("org_id",userId);
+    setMyItems(p=>p.map(i=>i.id===item.id?{...i,display_id:null}:i));
+  };
+
+  // ── ORDER TAB ────────────────────────────────────────────────────────────
+  const pack = selPack != null ? LABEL_PACKS[selPack] : null;
+  const totalCents = pack ? pack.retail + (includeLogo ? LOGO_ADDON_CENTS : 0) : 0;
+
+  const submitOrder = async () => {
+    if(!pack){ setOrderMsg("⚠ Please select a label pack."); return; }
+    const addr = [orderAddrLine, orderCity, orderState, orderZip].filter(Boolean).join(", ");
+    if(!addr.trim()){ setOrderMsg("⚠ Please enter a shipping address."); return; }
+    setOrderSubmitting(true);
+    setOrderMsg("");
+    try {
+      await SB.from("label_orders").insert({
+        org_id:        userId,
+        org_name:      org?.name||"",
+        contact_email: org?.email||"",
+        contact_name:  orderName||"",
+        item_count:    pack.qty,
+        label_type:    pack.type,
+        include_logo:  includeLogo,
+        logo_url:      includeLogo ? (logoUrl||org?.logo_url||"") : null,
+        delivery_addr: JSON.stringify({
+          name:  orderName||org?.director_name||"",
+          street:orderAddrLine,
+          city:  orderCity,
+          state: orderState,
+          zip:   orderZip,
+        }),
+        notes:    orderNotes||"",
+        amount_cents: totalCents,
+        status:   "pending",
+      });
+      setOrders(p=>[{
+        item_count:pack.qty, label_type:pack.type, status:"pending",
+        created_at:new Date().toISOString(), amount_cents:totalCents, include_logo:includeLogo
+      },...p]);
+      setOrderDone(true);
+    } catch(e) {
+      setOrderMsg("❌ "+e.message);
+    }
+    setOrderSubmitting(false);
+  };
+
+  const card = {background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10};
+  const inputStyle = {
+    width:"100%",background:"var(--white)",border:"1.5px solid var(--border)",
+    borderRadius:7,padding:"8px 12px",fontSize:13,color:"var(--text)",outline:"none",fontFamily:"inherit"
+  };
+  const labelStyle = {
+    fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,
+    color:"var(--muted)",display:"block",marginBottom:5
+  };
+
   return (
-    <div style={{padding:"28px 32px 64px",maxWidth:640}}>
-      <h1 style={{fontFamily:"var(--serif)",fontSize:28,margin:"0 0 4px"}}>🏷 QR Labels</h1>
-      <p style={{fontSize:13,color:"var(--muted)",margin:"0 0 24px"}}>
-        Physical QR labels for your inventory — coming soon.
-      </p>
-      <div style={{background:"var(--parch)",border:"1px solid var(--border)",
-        borderRadius:12,padding:"32px 28px"}}>
-        <div style={{fontSize:48,marginBottom:16}}>🏷</div>
-        <div style={{fontFamily:"var(--serif)",fontSize:20,marginBottom:12}}>
-          Label ordering is coming soon
-        </div>
-        <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.7,marginBottom:12}}>
-          We're finalizing our label printing partnership so you can order pre-printed
-          QR labels for your inventory — costumes, props, set pieces, equipment, and
-          storage bins. Each label will have a unique code tied exclusively to your program.
+    <div style={{padding:"24px 28px 80px",maxWidth:900}}>
+      {/* Header */}
+      <div style={{marginBottom:18}}>
+        <h1 style={{fontFamily:"var(--serif)",fontSize:26,margin:"0 0 4px"}}>🏷 QR Label Manager</h1>
+        <p style={{fontSize:13,color:"var(--muted)",margin:0}}>
+          Print labels instantly from your browser · Assign pre-ordered labels to inventory items · Order durable physical labels by mail
         </p>
-        <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.7}}>
-          Once the program launches you'll be able to order directly from this page and
-          receive labels in the mail within a week. We'll notify you by email when ordering opens.
-        </p>
-        <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid var(--border)",
-          fontSize:12,color:"var(--faint)"}}>
-          Questions? Email{" "}
-          <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)"}}>
-            hello@theatre4u.org
-          </a>
+      </div>
+
+      {/* How it works — 3 steps */}
+      <div style={{...card,padding:"14px 18px",marginBottom:20,
+        background:"linear-gradient(135deg,rgba(212,168,67,.07),rgba(212,168,67,.02))"}}>
+        <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>How Theatre4u QR labels work</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}}>
+          {[
+            {n:"1",ico:"🖨",t:"Print now — free",
+              b:"Use the Print tab to instantly generate and print QR code labels for any items. Works from any home or school printer. Best for getting started quickly."},
+            {n:"2",ico:"📬",t:"Order durable labels",
+              b:"Order professional polyester or weatherproof vinyl labels printed by WePrintBarcodes and mailed to your school. Pre-coded — stick them on bins now, assign to items anytime."},
+            {n:"3",ico:"🔗",t:"Assign codes to items",
+              b:"Got physical labels? Use the Assign tab to link any label code to any inventory item — current or future. Scan the label with any phone camera to pull up the item instantly."},
+          ].map(s=>(
+            <div key={s.n} style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+              <div style={{background:"var(--gold)",color:"#1a0f00",borderRadius:"50%",width:22,height:22,
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,flexShrink:0}}>
+                {s.n}
+              </div>
+              <div>
+                <div style={{fontSize:12,fontWeight:700,marginBottom:2}}>{s.ico} {s.t}</div>
+                <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.6}}>{s.b}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
+
+      {/* Tab bar */}
+      <div style={{display:"flex",gap:3,marginBottom:22,borderBottom:"1px solid var(--border)",paddingBottom:10}}>
+        {[["print","🖨 Print Labels"],["assign","🔗 Assign a Label"],["order","📬 Order Physical Labels"]].map(([id,lbl])=>(
+          <button key={id} onClick={()=>setTab(id)}
+            style={{padding:"7px 16px",borderRadius:"8px 8px 0 0",border:"none",cursor:"pointer",fontSize:13,
+              fontWeight:tab===id?700:500,background:tab===id?"var(--gold)":"transparent",
+              color:tab===id?"#1a0f00":"var(--muted)",fontFamily:"inherit",transition:"all .15s"}}>
+            {lbl}{id==="order"&&orders.length>0?` (${orders.length})`:""}
+          </button>
+        ))}
+      </div>
+
+      {/* ══ PRINT TAB ══ */}
+      {tab==="print"&&(
+        <div>
+          <p style={{fontSize:13,color:"var(--muted)",marginBottom:16}}>
+            Select items and click Print — your browser generates QR code labels you can print on any printer.
+            Each label includes the item name, category, location, ID code, and scannable QR code.
+            Any phone camera (no app needed) scans the code and pulls up the item instantly.
+          </p>
+          <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search items, locations, codes…"
+              style={{flex:1,minWidth:200,...inputStyle,width:"auto"}}/>
+            <button onClick={selAll} style={{padding:"7px 13px",borderRadius:7,border:"1px solid var(--border)",
+              background:"transparent",color:"var(--muted)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+              Select All ({filtered.length})
+            </button>
+            <button onClick={clearSel} style={{padding:"7px 13px",borderRadius:7,border:"1px solid var(--border)",
+              background:"transparent",color:"var(--muted)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+              Clear
+            </button>
+            <button onClick={printSelected} disabled={selected.length===0||printing}
+              style={{padding:"8px 20px",borderRadius:8,border:"none",fontFamily:"inherit",fontSize:13,fontWeight:700,
+                cursor:selected.length&&!printing?"pointer":"not-allowed",
+                background:selected.length&&!printing?"var(--gold)":"var(--border)",
+                color:selected.length&&!printing?"#1a0f00":"var(--muted)"}}>
+              {printing?"Generating…":selected.length?`🖨 Print ${selected.length} Label${selected.length!==1?"s":""}":"Select items to print"}
+            </button>
+          </div>
+
+          {loadingItems?(
+            <div style={{textAlign:"center",padding:32,color:"var(--muted)"}}>Loading inventory…</div>
+          ):(
+            <div style={{...card,overflow:"hidden",marginBottom:10}}>
+              {filtered.length===0?(
+                <div style={{padding:32,textAlign:"center",color:"var(--muted)",fontSize:13}}>
+                  {myItems.length===0
+                    ?"Add items to your inventory first — then print labels here."
+                    :"No items match your search."}
+                </div>
+              ):(
+                filtered.map(item=>{
+                  const cat = CAT[item.category]||CAT.other;
+                  const isSel = selected.includes(item.id);
+                  return(
+                    <div key={item.id} onClick={()=>toggleSel(item.id)}
+                      style={{display:"flex",alignItems:"center",gap:12,padding:"9px 14px",
+                        borderBottom:"1px solid var(--border)",cursor:"pointer",
+                        background:isSel?"rgba(212,168,67,.07)":"transparent",transition:"background .1s"}}>
+                      <div style={{width:18,height:18,borderRadius:4,border:"1.5px solid",
+                        borderColor:isSel?"var(--gold)":"var(--border)",
+                        background:isSel?"var(--gold)":"transparent",flexShrink:0,
+                        display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        {isSel&&<span style={{color:"#1a0f00",fontSize:12,fontWeight:900}}>✓</span>}
+                      </div>
+                      <span style={{fontSize:16,flexShrink:0}}>{cat.icon}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                          {item.name}
+                        </div>
+                        <div style={{fontSize:11,color:"var(--muted)"}}>
+                          {cat.label}{item.location?" · "+item.location:""}
+                        </div>
+                      </div>
+                      {item.display_id&&(
+                        <span style={{fontSize:11,fontFamily:"monospace",fontWeight:700,
+                          color:"var(--amber)",background:"rgba(196,118,26,.1)",
+                          padding:"2px 7px",borderRadius:4,flexShrink:0}}>
+                          {item.display_id}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+          <div style={{fontSize:12,color:"var(--muted)"}}>
+            {selected.length} of {myItems.length} item{myItems.length!==1?"s":""} selected ·{" "}
+            Labels print at ~2" × 2" · 4 per row · PDF or print dialog from your browser
+          </div>
+        </div>
+      )}
+
+      {/* ══ ASSIGN TAB ══ */}
+      {tab==="assign"&&(
+        <div>
+          <p style={{fontSize:13,color:"var(--muted)",marginBottom:20}}>
+            Physical labels from your order each have a unique pre-printed code (like <strong style={{fontFamily:"monospace",color:"var(--amber)"}}>T4U-00142</strong>).
+            Enter the code and select the inventory item you want it to track.
+            You can also assign labels to items you haven't cataloged yet — add them later.
+          </p>
+
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:24}}>
+            {/* Link form */}
+            <div style={{...card,padding:"20px 22px"}}>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:14}}>🔗 Link a Label to an Item</div>
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                <div>
+                  <label style={labelStyle}>Label Code (from the sticker)</label>
+                  <input value={assignCode} onChange={e=>setAssignCode(e.target.value.toUpperCase())}
+                    placeholder="e.g. T4U-00142"
+                    style={{...inputStyle,fontFamily:"monospace",fontWeight:700,fontSize:15,
+                      color:"var(--amber)",letterSpacing:1}}/>
+                </div>
+                <div>
+                  <label style={labelStyle}>Inventory Item</label>
+                  <select value={assignItem} onChange={e=>setAssignItem(e.target.value)} style={inputStyle}>
+                    <option value="">— Choose an item —</option>
+                    {myItems.map(i=>(
+                      <option key={i.id} value={i.id}>
+                        {i.name}{i.location?" ("+i.location+")":""}{i.display_id?" ["+i.display_id+"]":""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button onClick={doAssign} disabled={assignSaving||!assignCode||!assignItem}
+                  style={{padding:"10px 20px",borderRadius:8,border:"none",fontFamily:"inherit",fontSize:13,
+                    fontWeight:700,cursor:assignCode&&assignItem&&!assignSaving?"pointer":"not-allowed",
+                    background:assignCode&&assignItem?"var(--gold)":"var(--border)",
+                    color:assignCode&&assignItem?"#1a0f00":"var(--muted)"}}>
+                  {assignSaving?"Saving…":"🔗 Assign Label"}
+                </button>
+                {assignMsg&&(
+                  <div style={{fontSize:13,padding:"8px 12px",borderRadius:7,
+                    background:assignMsg.startsWith("✅")?"rgba(76,175,80,.1)":"rgba(229,57,53,.08)",
+                    border:"1px solid",borderColor:assignMsg.startsWith("✅")?"rgba(76,175,80,.3)":"rgba(229,57,53,.2)",
+                    color:assignMsg.startsWith("✅")?"#4caf50":"#e53935"}}>
+                    {assignMsg}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Tips panel */}
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              <div style={{...card,padding:"14px 16px",background:"rgba(33,150,243,.04)",borderColor:"rgba(33,150,243,.2)"}}>
+                <div style={{fontWeight:700,fontSize:12,marginBottom:6}}>💡 How to find label codes</div>
+                <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.7}}>
+                  Your physical labels arrive with unique codes pre-printed (e.g. <code style={{fontFamily:"monospace",color:"var(--amber)"}}>T4U-00142</code>).
+                  Your code range is shown in your order history below — or check the email confirmation.
+                  You can assign any code from your range to any item at any time.
+                </div>
+              </div>
+              <div style={{...card,padding:"14px 16px",background:"rgba(76,175,80,.04)",borderColor:"rgba(76,175,80,.2)"}}>
+                <div style={{fontWeight:700,fontSize:12,marginBottom:6}}>📋 Assign labels in bulk</div>
+                <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.7}}>
+                  Strategy: stick a label on a bin or rack, then walk through your inventory room and assign each code to the item or container it's on.
+                  You don't need to catalog items first — assign the label, add item details later.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Items with assigned labels */}
+          {myItems.filter(i=>i.display_id).length>0&&(
+            <div>
+              <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>
+                Items with assigned labels ({myItems.filter(i=>i.display_id).length})
+              </div>
+              <div style={{...card,overflow:"hidden"}}>
+                {myItems.filter(i=>i.display_id).map(item=>{
+                  const cat = CAT[item.category]||CAT.other;
+                  return(
+                    <div key={item.id} style={{display:"flex",alignItems:"center",gap:10,
+                      padding:"9px 14px",borderBottom:"1px solid var(--border)"}}>
+                      <span style={{fontSize:15,flexShrink:0}}>{cat.icon}</span>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:13,fontWeight:600}}>{item.name}</div>
+                        {item.location&&<div style={{fontSize:11,color:"var(--muted)"}}>📍 {item.location}</div>}
+                      </div>
+                      <span style={{fontFamily:"monospace",fontSize:12,fontWeight:800,
+                        color:"var(--amber)",background:"rgba(196,118,26,.1)",
+                        padding:"3px 9px",borderRadius:5,flexShrink:0}}>
+                        {item.display_id}
+                      </span>
+                      <button onClick={()=>doUnassign(item)}
+                        style={{background:"none",border:"1px solid var(--border)",borderRadius:6,
+                          padding:"2px 8px",fontSize:11,color:"var(--muted)",cursor:"pointer",flexShrink:0}}>
+                        ✕ Unlink
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Code ranges from orders */}
+          {orders.filter(o=>o.code_start).length>0&&(
+            <div style={{marginTop:20}}>
+              <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>Your label code ranges</div>
+              <div style={{...card,overflow:"hidden"}}>
+                {orders.filter(o=>o.code_start).map((o,i)=>(
+                  <div key={i} style={{padding:"10px 14px",borderBottom:"1px solid var(--border)",
+                    display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:13,fontWeight:600}}>{o.item_count} {o.label_type} labels</div>
+                      <div style={{fontSize:12,fontFamily:"monospace",color:"var(--amber)",marginTop:2}}>
+                        {o.code_start} → {o.code_end}
+                      </div>
+                    </div>
+                    <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:6,textTransform:"capitalize",
+                      background:o.status==="shipped"||o.status==="delivered"?"rgba(76,175,80,.12)":"rgba(212,168,67,.1)",
+                      color:o.status==="shipped"||o.status==="delivered"?"#4caf50":"var(--gold)"}}>
+                      {o.status==="pending"?"⏳ Pending":o.status==="processing"?"🔄 Processing":
+                       o.status==="shipped"?"✈ Shipped":"✓ Delivered"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ══ ORDER TAB ══ */}
+      {tab==="order"&&(
+        <div>
+          {orderDone?(
+            <div style={{...card,padding:"32px 28px",textAlign:"center",maxWidth:520}}>
+              <div style={{fontSize:44,marginBottom:12}}>📬</div>
+              <div style={{fontFamily:"var(--serif)",fontSize:22,marginBottom:12}}>Order Submitted!</div>
+              <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.8,marginBottom:16}}>
+                We'll confirm your order by email at <strong>{org?.email}</strong> within 1 business day
+                and send an invoice before processing payment. Labels ship via WePrintBarcodes within 5–7 business days once confirmed.
+              </p>
+              <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.8,marginBottom:24}}>
+                When your labels arrive, use the <strong>Assign tab</strong> to link each label code to an inventory item.
+                Or stick them on bins and racks now — you can assign codes to items anytime later.
+              </p>
+              <button onClick={()=>{setOrderDone(false);setSelPack(null);}}
+                style={{padding:"9px 22px",borderRadius:8,border:"1px solid var(--border)",
+                  background:"transparent",color:"var(--text)",fontSize:13,fontWeight:600,
+                  cursor:"pointer",fontFamily:"inherit"}}>
+                Order More Labels
+              </button>
+            </div>
+          ):(
+            <div style={{display:"grid",gridTemplateColumns:"1fr 340px",gap:24,alignItems:"start"}}>
+
+              {/* Left: Pack selection + options */}
+              <div>
+                <div style={{fontWeight:700,fontSize:14,marginBottom:12}}>Choose a label pack</div>
+
+                {/* Standard packs */}
+                <div style={{fontWeight:600,fontSize:12,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>
+                  Standard Polyester — Indoor use, costume racks, prop bins
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
+                  {LABEL_PACKS.filter(p=>p.type==="standard").map((p,i)=>{
+                    const idx = LABEL_PACKS.indexOf(p);
+                    const isSel = selPack===idx;
+                    return(
+                      <div key={idx} onClick={()=>setSelPack(idx)}
+                        style={{...card,padding:"12px 14px",cursor:"pointer",
+                          borderColor:isSel?"var(--gold)":"var(--border)",
+                          background:isSel?"rgba(212,168,67,.08)":"var(--parch)"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
+                          <div style={{fontWeight:700,fontSize:14}}>{p.qty} labels</div>
+                          <div style={{fontWeight:800,fontSize:16,color:isSel?"var(--gold)":"var(--text)"}}>
+                            ${(p.retail/100).toFixed(0)}
+                          </div>
+                        </div>
+                        <div style={{fontSize:11,color:"var(--muted)"}}>
+                          ${(p.retail/p.qty/100).toFixed(2)}/label · shipping included
+                        </div>
+                        {isSel&&<div style={{fontSize:10,color:"var(--gold)",fontWeight:700,marginTop:4}}>✓ Selected</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Weatherproof packs */}
+                <div style={{fontWeight:600,fontSize:12,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>
+                  Weatherproof Vinyl — Scene shops, outdoor storage, heavy-use gear
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:20}}>
+                  {LABEL_PACKS.filter(p=>p.type==="weatherproof").map((p,i)=>{
+                    const idx = LABEL_PACKS.indexOf(p);
+                    const isSel = selPack===idx;
+                    return(
+                      <div key={idx} onClick={()=>setSelPack(idx)}
+                        style={{...card,padding:"12px 14px",cursor:"pointer",
+                          borderColor:isSel?"var(--gold)":"var(--border)",
+                          background:isSel?"rgba(212,168,67,.08)":"var(--parch)"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
+                          <div style={{fontWeight:700,fontSize:14}}>{p.qty} labels</div>
+                          <div style={{fontWeight:800,fontSize:16,color:isSel?"var(--gold)":"var(--text)"}}>
+                            ${(p.retail/100).toFixed(0)}
+                          </div>
+                        </div>
+                        <div style={{fontSize:11,color:"var(--muted)"}}>
+                          ${(p.retail/p.qty/100).toFixed(2)}/label · shipping included
+                        </div>
+                        {isSel&&<div style={{fontSize:10,color:"var(--gold)",fontWeight:700,marginTop:4}}>✓ Selected</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Logo add-on */}
+                <div style={{...card,padding:"14px 16px",marginBottom:20}}>
+                  <div onClick={()=>setIncludeLogo(!includeLogo)}
+                    style={{display:"flex",gap:12,alignItems:"flex-start",cursor:"pointer",marginBottom:includeLogo?12:0}}>
+                    <div style={{width:20,height:20,borderRadius:5,border:"1.5px solid",flexShrink:0,marginTop:1,
+                      borderColor:includeLogo?"var(--gold)":"var(--border)",
+                      background:includeLogo?"var(--gold)":"transparent",
+                      display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      {includeLogo&&<span style={{color:"#1a0f00",fontSize:12,fontWeight:900}}>✓</span>}
+                    </div>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:13}}>Add program logo (+${(LOGO_ADDON_CENTS/100).toFixed(0)})</div>
+                      <div style={{fontSize:12,color:"var(--muted)",marginTop:2,lineHeight:1.5}}>
+                        Include your school or program logo on every label. Provide a URL to your logo image below.
+                      </div>
+                    </div>
+                  </div>
+                  {includeLogo&&(
+                    <div>
+                      <label style={labelStyle}>Logo Image URL</label>
+                      <input value={logoUrl} onChange={e=>setLogoUrl(e.target.value)}
+                        placeholder="https://yourschool.edu/logo.png or Google Drive direct link"
+                        style={inputStyle}/>
+                      {org?.logo_url&&!logoUrl&&(
+                        <button onClick={()=>setLogoUrl(org.logo_url)}
+                          style={{marginTop:6,fontSize:11,color:"var(--gold)",background:"none",
+                            border:"none",cursor:"pointer",padding:0,fontFamily:"inherit"}}>
+                          Use logo from your profile ↗
+                        </button>
+                      )}
+                      {logoUrl&&<div style={{marginTop:8,fontSize:11,color:"var(--muted)"}}>
+                        Preview: <a href={logoUrl} target="_blank" rel="noreferrer" style={{color:"var(--gold)"}}>View image ↗</a>
+                      </div>}
+                    </div>
+                  )}
+                </div>
+
+                {/* Shipping info */}
+                <div style={{fontWeight:700,fontSize:14,marginBottom:12}}>Shipping address</div>
+                <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:20}}>
+                  <div>
+                    <label style={labelStyle}>Contact Name</label>
+                    <input value={orderName} onChange={e=>setOrderName(e.target.value)}
+                      placeholder="Your name" style={inputStyle}/>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Street Address *</label>
+                    <input value={orderAddrLine} onChange={e=>setOrderAddrLine(e.target.value)}
+                      placeholder="1234 School Blvd, Attn: Drama Dept" style={inputStyle}/>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:8}}>
+                    <div>
+                      <label style={labelStyle}>City *</label>
+                      <input value={orderCity} onChange={e=>setOrderCity(e.target.value)}
+                        placeholder="City" style={inputStyle}/>
+                    </div>
+                    <div>
+                      <label style={labelStyle}>State</label>
+                      <input value={orderState} onChange={e=>setOrderState(e.target.value)}
+                        placeholder="CA" style={inputStyle}/>
+                    </div>
+                    <div>
+                      <label style={labelStyle}>ZIP</label>
+                      <input value={orderZip} onChange={e=>setOrderZip(e.target.value)}
+                        placeholder="90000" style={inputStyle}/>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Order Notes (optional)</label>
+                    <input value={orderNotes} onChange={e=>setOrderNotes(e.target.value)}
+                      placeholder="Special instructions, preferred label size, etc."
+                      style={inputStyle}/>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: Order summary */}
+              <div style={{position:"sticky",top:20}}>
+                <div style={{...card,padding:"18px 20px"}}>
+                  <div style={{fontWeight:700,fontSize:15,marginBottom:14}}>Order Summary</div>
+
+                  {!pack?(
+                    <div style={{textAlign:"center",padding:"20px 0",color:"var(--muted)",fontSize:13}}>
+                      ← Select a label pack to continue
+                    </div>
+                  ):(
+                    <>
+                      <div style={{marginBottom:12}}>
+                        <div style={{fontWeight:700,fontSize:14}}>{pack.label}</div>
+                        <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>{pack.desc}</div>
+                      </div>
+                      <div style={{borderTop:"1px solid var(--border)",paddingTop:12,marginBottom:12}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:13}}>
+                          <span style={{color:"var(--muted)"}}>{pack.qty} labels</span>
+                          <span>${(pack.retail/100).toFixed(2)}</span>
+                        </div>
+                        {includeLogo&&(
+                          <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:13}}>
+                            <span style={{color:"var(--muted)"}}>Logo add-on</span>
+                            <span>+${(LOGO_ADDON_CENTS/100).toFixed(2)}</span>
+                          </div>
+                        )}
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:12}}>
+                          <span style={{color:"var(--muted)"}}>Shipping</span>
+                          <span style={{color:"var(--muted)"}}>Included</span>
+                        </div>
+                        <div style={{display:"flex",justifyContent:"space-between",
+                          borderTop:"1px solid var(--border)",paddingTop:10,fontSize:15,fontWeight:800}}>
+                          <span>Total</span>
+                          <span style={{color:"var(--gold)"}}>${(totalCents/100).toFixed(2)}</span>
+                        </div>
+                      </div>
+
+                      <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.6,marginBottom:14,
+                        padding:"8px 10px",background:"rgba(212,168,67,.05)",borderRadius:6,
+                        border:"1px solid rgba(212,168,67,.15)"}}>
+                        No payment now. We'll email you a confirmation and invoice within 1 business day.
+                        Labels are printed by WePrintBarcodes and shipped within 5–7 days of payment.
+                      </div>
+
+                      {orderMsg&&<div style={{fontSize:13,color:"#e53935",marginBottom:10,
+                        padding:"7px 10px",borderRadius:6,background:"rgba(229,57,53,.08)",
+                        border:"1px solid rgba(229,57,53,.2)"}}>{orderMsg}</div>}
+
+                      <button onClick={submitOrder}
+                        disabled={orderSubmitting||!pack||!orderAddrLine.trim()||!orderCity.trim()}
+                        style={{width:"100%",padding:"11px",borderRadius:8,border:"none",fontFamily:"inherit",
+                          fontSize:14,fontWeight:700,
+                          cursor:pack&&orderAddrLine&&orderCity&&!orderSubmitting?"pointer":"not-allowed",
+                          background:pack&&orderAddrLine&&orderCity?"var(--gold)":"var(--border)",
+                          color:pack&&orderAddrLine&&orderCity?"#1a0f00":"var(--muted)"}}>
+                        {orderSubmitting?"Submitting…":"📬 Submit Order Request"}
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* WePrintBarcodes note */}
+                <div style={{marginTop:12,fontSize:11,color:"var(--muted)",lineHeight:1.6,textAlign:"center"}}>
+                  Labels printed by{" "}
+                  <a href="https://www.weprintbarcodes.com" target="_blank" rel="noreferrer"
+                    style={{color:"var(--gold)"}}>WePrintBarcodes.com</a>
+                  {" "}· Polyester matte or weatherproof vinyl · Pre-coded unique QR stickers
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Previous orders */}
+          {orders.length>0&&!orderDone&&(
+            <div style={{marginTop:32}}>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:12}}>Your Label Orders</div>
+              <div style={{...card,overflow:"hidden",maxWidth:700}}>
+                {orders.map((o,i)=>(
+                  <div key={i} style={{padding:"12px 16px",borderBottom:"1px solid var(--border)",
+                    display:"flex",gap:12,alignItems:"flex-start",flexWrap:"wrap"}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:13,fontWeight:700}}>
+                        {o.item_count} {o.label_type} labels
+                        {o.include_logo&&<span style={{marginLeft:8,fontSize:11,color:"var(--gold)"}}>🖼 logo</span>}
+                      </div>
+                      {o.code_start&&(
+                        <div style={{fontSize:12,fontFamily:"monospace",color:"var(--amber)",marginTop:2}}>
+                          Codes: {o.code_start} → {o.code_end}
+                        </div>
+                      )}
+                      {o.tracking&&<div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>📦 {o.tracking}</div>}
+                    </div>
+                    {o.amount_cents>0&&(
+                      <div style={{fontWeight:700,fontSize:14,color:"var(--gold)",flexShrink:0}}>
+                        ${(o.amount_cents/100).toFixed(2)}
+                      </div>
+                    )}
+                    <span style={{fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:6,flexShrink:0,
+                      background:o.status==="delivered"?"rgba(76,175,80,.12)":
+                                 o.status==="shipped"?"rgba(66,165,245,.12)":
+                                 o.status==="processing"?"rgba(33,150,243,.12)":"rgba(212,168,67,.1)",
+                      color:o.status==="delivered"?"#4caf50":
+                            o.status==="shipped"?"#42a5f5":
+                            o.status==="processing"?"#2196f3":"var(--gold)"}}>
+                      {o.status==="pending"?"⏳ Pending":o.status==="processing"?"🔄 Processing":
+                       o.status==="shipped"?"✈ Shipped":"✓ Delivered"}
+                    </span>
+                    <span style={{fontSize:11,color:"var(--muted)",flexShrink:0}}>
+                      {new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
+
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ADMIN DAILY DIGEST — standalone component used as first tab in AdminHub
@@ -13613,7 +14349,7 @@ function LabelOrderPanel({ org, userId, items=[] }) {
           <div style={{fontWeight:700,fontSize:15,marginBottom:3}}>🏷 QR Label Printing</div>
           <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>
             Order professional QR label stickers for your inventory bins, racks, and props.
-            We design them, you order direct from Sticker Mule — shipped to your door.
+            We handle printing through WePrintBarcodes — durable QR label stickers shipped to your door.
           </div>
         </div>
         {step!=="intro"&&<button onClick={()=>{setStep("intro");setRequestDone(false);}} className="btn btn-o btn-sm">← Back</button>}
@@ -13642,8 +14378,8 @@ function LabelOrderPanel({ org, userId, items=[] }) {
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
             {[
               { icon:"🎨", title:"We design the labels", body:"Your item name, category icon, QR code, storage location, and Theatre4u branding on every label." },
-              { icon:"🏷", title:"You order from Sticker Mule", body:"We'll email you a print-ready file. Upload it to Sticker Mule, choose weatherproof vinyl, done." },
-              { icon:"📦", title:"Ships to your door", body:"Sticker Mule ships in 4–6 days. Weatherproof labels survive costume closets and scene shops." },
+              { icon:"🏷", title:"Printed by WePrintBarcodes", body:"We generate the label files and order through WePrintBarcodes on your behalf. No action needed from you." },
+              { icon:"📦", title:"Ships to your school", body:"WePrintBarcodes ships within 5–7 business days. Polyester and weatherproof vinyl options both survive costume closets and scene shops." },
             ].map(s=>(
               <div key={s.title} style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:8,padding:"12px 14px"}}>
                 <div style={{fontSize:22,marginBottom:6}}>{s.icon}</div>
@@ -13653,16 +14389,16 @@ function LabelOrderPanel({ org, userId, items=[] }) {
             ))}
           </div>
           <div style={{background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"10px 14px",fontSize:12,color:"var(--muted)",marginBottom:14,lineHeight:1.6}}>
-            <strong style={{color:"var(--text)"}}>Estimated cost at Sticker Mule:</strong>
-            {" "}~$19 for 50 labels · ~$36 for 100 labels · ~$65 for 200 labels.
-            Prices include free worldwide shipping. Weatherproof vinyl is ~30% more.
+            <strong style={{color:"var(--text)"}}>Theatre4u label pricing:</strong>
+            {" "}$12 for 25 standard · $18 for 25 weatherproof · see packs below.
+            Shipping included. Printed and shipped via WePrintBarcodes.
           </div>
           <div style={{display:"flex",gap:8,alignItems:"center"}}>
             <button className="btn btn-g" onClick={()=>setStep("select")}>
               Design My Labels →
             </button>
-            <a href="https://www.stickermule.com/custom-labels" target="_blank" rel="noreferrer"
-              style={{fontSize:12,color:"var(--gold)"}}>View Sticker Mule pricing ↗</a>
+            <a href="https://www.weprintbarcodes.com" target="_blank" rel="noreferrer"
+              style={{fontSize:12,color:"var(--gold)"}}>WePrintBarcodes.com ↗</a>
           </div>
         </div>
       )}
@@ -13727,7 +14463,7 @@ function LabelOrderPanel({ org, userId, items=[] }) {
             <button className="btn btn-g" disabled={count===0} onClick={()=>setStep("preview")}>
               Preview Labels ({count}) →
             </button>
-            {count>0&&<span style={{fontSize:12,color:"var(--muted)"}}>Est. ~${estTotal} at Sticker Mule</span>}
+            {count>0&&<span style={{fontSize:12,color:"var(--muted)"}}>Estimated total (shipping included)</span>}
           </div>
         </div>
       )}
@@ -13736,7 +14472,7 @@ function LabelOrderPanel({ org, userId, items=[] }) {
         <div>
           <div style={{fontSize:13,color:"var(--muted)",marginBottom:14,lineHeight:1.5}}>
             Preview of your {count} labels at {SIZES[labelSize]} size.
-            We'll send you a print-ready PDF to upload to Sticker Mule.
+            Your labels will be printed by WePrintBarcodes and mailed to you.
           </div>
           <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20,
             maxHeight:320,overflowY:"auto",padding:4}}>
@@ -13756,16 +14492,14 @@ function LabelOrderPanel({ org, userId, items=[] }) {
                 <strong style={{color:"var(--text)"}}>How this works:</strong>{" "}
                 Submit your request below. We'll generate a print-ready PDF file and email it to{" "}
                 <strong>{org?.email}</strong> within 1–2 business days.
-                Upload it to <a href="https://www.stickermule.com/custom-labels" target="_blank" rel="noreferrer"
-                  style={{color:"var(--gold)"}}>Sticker Mule</a>, choose vinyl labels, and order directly.
-                No Theatre4u transaction fee — you pay Sticker Mule directly.
+                Labels are printed by WePrintBarcodes and shipped to your address on file. Payment is processed by Theatre4u when we confirm your order.
               </div>
               <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
                 <button onClick={submitRequest} disabled={saving} className="btn btn-g">
                   {saving?"Submitting…":"📧 Send Me the Print File →"}
                 </button>
                 <button onClick={()=>setStep("select")} className="btn btn-o btn-sm">← Edit Selection</button>
-                <span style={{fontSize:11,color:"var(--faint)"}}>Free · No charge until you order from Sticker Mule</span>
+                <span style={{fontSize:11,color:"var(--faint)"}}>You'll receive an email confirmation before payment is processed</span>
               </div>
             </div>
           ):(
@@ -13775,18 +14509,13 @@ function LabelOrderPanel({ org, userId, items=[] }) {
               <div style={{lineHeight:1.6,color:"var(--muted)"}}>
                 We'll email a print-ready PDF to <strong>{org?.email}</strong> within 1–2 business days.
                 Then just upload it to{" "}
-                <a href="https://www.stickermule.com/custom-labels" target="_blank" rel="noreferrer"
-                  style={{color:"var(--gold)"}}>stickermule.com/custom-labels</a>{" "}
-                and order the size that matches your labels. Ships in 4–6 days.
+                WePrintBarcodes. Labels ship within 5–7 business days.
               </div>
               <div style={{marginTop:10,display:"flex",gap:8}}>
                 <button onClick={()=>{setStep("intro");setRequestDone(false);}} className="btn btn-o btn-sm">
                   Order More Labels
                 </button>
-                <a href="https://www.stickermule.com/custom-labels" target="_blank" rel="noreferrer"
-                  className="btn btn-g btn-sm" style={{textDecoration:"none"}}>
-                  Go to Sticker Mule ↗
-                </a>
+                
               </div>
             </div>
           )}
@@ -14332,17 +15061,18 @@ function AppRoot(){
       { id:"inventory",   label:"Inventory",   ico:Ic.box     },
       ...(!isCrew && org?.marketplace_enabled ? [{ id:"marketplace", label:"Backstage Exchange", ico:Ic.store   }] : []),
       ...(!isCrew && org?.community_enabled   ? [{ id:"community",   label:"Community",   ico:"🎪", community:true }] : []),
-      [{ id:"productions", label:"Productions", ico:"🎭"       }],
+      { id:"productions", label:"Productions", ico:"🎭"       },
       ...(!isMember? [{ id:"reports",     label:"Reports",     ico:Ic.chart   }] : []),
       ...(!isMember? [{ id:"funding",     label:"Funding Tracker", ico:"💰"  }] : []),
       // Prop 28 nav hidden — legacy data accessible via Funding Tracker migration banner
       { id:"profile",     label:"My Profile",  ico:"👤"       },
+      ...(!isMember ? [{ id:"labels",  label:"QR Labels",    ico:"🏷" }] : []),
       ...(!isMember ? [{ id:"points", label:"Stage Points", ico:"🪙" }] : []),
       ...(!isMember && plan === "district" ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
       ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
     ];
   })();
-  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Backstage Exchange", productions:"Productions", reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:"Stage Points", points:"Stage Points", community:"Community Board" };
+  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Backstage Exchange", productions:"Productions", reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:"Stage Points", points:"Stage Points", community:"Community Board", labels:"QR Labels" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicItemId) return <PublicItemPage itemId={publicItemId} />;
@@ -14558,6 +15288,7 @@ function AppRoot(){
               {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} userId={user?.id} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
                   {page==="district"    && plan==="district" && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool}/>}
                   {page==="community"   && <CommunityGate userId={user?.id} org={org} setOrg={setOrg} plan={plan}/>}
+                  {page==="labels"     && <LabelsPage org={org} userId={user?.id} items={items}/>}
                   {page==="points"     && (plan!=="free"||isAdmin) && <CreditsPage userId={user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
                   {page==="points"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>Stage Points is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true}/></div>}
 
