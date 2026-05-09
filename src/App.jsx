@@ -1627,8 +1627,8 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
                   </div>
                   <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
                     When Theatre4u launches fully you'll have the option to subscribe.
-                    {" "}<strong style={{color:"var(--text)"}}>Earn your first year free</strong>{" "}
-                    by adding 25+ items to your inventory and submitting at least one piece of feedback.
+                    {" "}<strong style={{color:"var(--text)"}}>Beta programs that add 25+ items and share feedback</strong>{" "}
+                    will receive a founding member discount — $9.99/month instead of $15 — locked in for life.
                   </div>
                   {/* Progress toward first-year discount */}
                   <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
@@ -10827,9 +10827,21 @@ function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
             Sign In
           </button>
           {onTakeTour && (
-            <button onClick={onTakeTour} style={{background:"transparent",border:"1px solid rgba(212,168,67,.5)",color:"rgba(212,168,67,.9)",padding:"14px 24px",borderRadius:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:15,fontWeight:600}}>
-              👁 Preview the Platform
-            </button>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center"}}>
+              <button onClick={()=>window.location.href=window.location.href.split("?")[0]+"?demo=1"}
+                style={{background:"linear-gradient(135deg,rgba(212,168,67,.25),rgba(212,168,67,.1))",
+                  border:"1px solid rgba(212,168,67,.6)",color:"rgba(212,168,67,.95)",
+                  padding:"12px 22px",borderRadius:10,cursor:"pointer",
+                  fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:700}}>
+                🎭 Try the Full Demo
+              </button>
+              <button onClick={onTakeTour}
+                style={{background:"transparent",border:"1px solid rgba(255,255,255,.2)",
+                  color:"rgba(255,255,255,.65)",padding:"12px 20px",borderRadius:10,cursor:"pointer",
+                  fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:500}}>
+                👁 Quick Preview
+              </button>
+            </div>
           )}
         </div>
         <div style={{marginTop:20,fontSize:12,color:"rgba(255,255,255,.4)"}}>
@@ -11006,9 +11018,9 @@ function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
 function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
   const[visible,setVisible]=useState(false);
   const[mode,setMode]=useState("login");
-  const[email,setEmail]=useState("");
+  const[email,setEmail]=useState(()=>{ try { return sessionStorage.getItem("t4u_prefill_email")||""; } catch{return "";} });
   const[pass,setPass]=useState("");
-  const[orgName,setOrgName]=useState("");
+  const[orgName,setOrgName]=useState(()=>{ try { return sessionStorage.getItem("t4u_prefill_org")||""; } catch{return "";} });
   const[err,setErr]=useState("");
   const[loading,setLoading]=useState(false);
   const[done,setDone]=useState(false);
@@ -11074,6 +11086,8 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             const { data: pfxData } = await SB.rpc("generate_label_prefix", { p_name: orgName });
             if (pfxData) await SB.from("orgs").update({ label_prefix: pfxData }).eq("id", data.user.id);
           } catch(e) { /* non-fatal */ }
+          // Clear any demo pre-fill data
+          try { sessionStorage.removeItem("t4u_prefill_org"); sessionStorage.removeItem("t4u_prefill_email"); } catch(e) {}
           setDone(true);
         }
       } else {
@@ -11179,9 +11193,10 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
               </div>
               <div style={{fontSize:12,color:"rgba(255,255,255,.65)",lineHeight:1.7}}>
                 All programs that sign up during Theatre4u's beta phase get full Pro access at no charge.
-                When Theatre4u fully launches, you'll have the option to subscribe and
-                {" "}<strong style={{color:"rgba(255,255,255,.85)"}}>save your first year free</strong>{" "}
-                if you've added 25+ items and shared feedback.
+                When Theatre4u launches, beta programs that have added 25+ items and shared feedback
+                will receive a{" "}
+                <strong style={{color:"rgba(255,255,255,.85)"}}>founding member rate of $9.99/month</strong>
+                {" "}— instead of the standard $15 — locked in for as long as you subscribe.
               </div>
             </div>
           </>)}
@@ -12635,16 +12650,17 @@ function createDemoStore() {
 
 // Demo wrapper — replaces SB globally when ?demo=1
 function DemoApp() {
-  const [started, setStarted] = useState(false);
-  const [store]  = useState(() => createDemoStore());
+  const [started,  setStarted]  = useState(false);
+  const [store]    = useState(() => createDemoStore());
+  const [showNudge,setShowNudge]= useState(false);
 
-  // Inject the demo store as the global SB before AppRoot mounts
   useEffect(() => {
     window.__demoStore = store;
-    // Monkey-patch the module-level SB reference
-    // Since SB is const at module scope, we use a flag that AppRoot checks
     window.__isDemo = true;
     setStarted(true);
+    // Show conversion nudge after 3 minutes of exploring
+    const t = setTimeout(() => setShowNudge(true), 3 * 60 * 1000);
+    return () => clearTimeout(t);
   }, [store]);
 
   if (!started) return null;
@@ -12664,20 +12680,69 @@ function DemoApp() {
             — Experience Theatre4u as a new user. Nothing is saved. Close the tab to reset.
           </span>
         </div>
-        <div style={{display:"flex",gap:8}}>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
           <a href="https://theatre4u.org" style={{padding:"5px 14px",borderRadius:6,
             fontSize:12,fontWeight:600,color:"rgba(255,255,255,.7)",
             border:"1px solid rgba(255,255,255,.2)",textDecoration:"none"}}>
             Exit Demo
           </a>
-          <a href="https://theatre4u.org?signup=1" style={{padding:"5px 14px",borderRadius:6,
-            fontSize:12,fontWeight:700,color:"#1a0f00",background:"#d4a843",
-            border:"none",textDecoration:"none",cursor:"pointer"}}>
-            Create Real Account →
-          </a>
+          <button onClick={()=>{
+            // Carry over org name if user typed one during the demo
+            const demoOrg = store.getStore().orgs?.[0];
+            const orgName = demoOrg?.name || "";
+            const email   = demoOrg?.email || "";
+            // Store for pre-filling the real signup form
+            try {
+              if(orgName) sessionStorage.setItem("t4u_prefill_org",   orgName);
+              if(email)   sessionStorage.setItem("t4u_prefill_email", email);
+            } catch(e) {}
+            window.location.href = "https://theatre4u.org?signup=1";
+          }} style={{padding:"6px 16px",borderRadius:6,fontSize:13,fontWeight:700,
+            color:"#1a0f00",background:"#d4a843",border:"none",cursor:"pointer",
+            fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+            ⭐ Create Real Account →
+          </button>
         </div>
       </div>
       <div style={{paddingTop:40}}>
+        {/* Timed conversion nudge — appears after 3 minutes */}
+        {showNudge&&(
+          <div style={{margin:"12px 16px 0",padding:"14px 18px",borderRadius:10,
+            background:"linear-gradient(135deg,rgba(76,175,80,.15),rgba(76,175,80,.08))",
+            border:"1px solid rgba(76,175,80,.35)",display:"flex",gap:12,
+            alignItems:"center",flexWrap:"wrap"}}>
+            <span style={{fontSize:22}}>🎭</span>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:14,color:"#4caf50",marginBottom:2}}>
+                Ready to save your work?
+              </div>
+              <div style={{fontSize:13,color:"rgba(255,255,255,.65)",lineHeight:1.5}}>
+                Everything you've done disappears when you close this tab.
+                Create a free account to keep it — it takes 30 seconds.
+              </div>
+            </div>
+            <div style={{display:"flex",gap:8,flexShrink:0}}>
+              <button onClick={()=>{
+                const demoOrg = store.getStore().orgs?.[0];
+                try {
+                  if(demoOrg?.name)  sessionStorage.setItem("t4u_prefill_org",   demoOrg.name);
+                  if(demoOrg?.email) sessionStorage.setItem("t4u_prefill_email", demoOrg.email);
+                } catch(e) {}
+                window.location.href = "https://theatre4u.org?signup=1";
+              }} style={{padding:"8px 18px",borderRadius:7,border:"none",fontFamily:"inherit",
+                fontSize:13,fontWeight:700,cursor:"pointer",
+                background:"#4caf50",color:"#fff"}}>
+                ⭐ Create Free Account
+              </button>
+              <button onClick={()=>setShowNudge(false)}
+                style={{background:"none",border:"1px solid rgba(255,255,255,.15)",
+                  borderRadius:7,padding:"8px 12px",color:"rgba(255,255,255,.5)",
+                  fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+                Maybe later
+              </button>
+            </div>
+          </div>
+        )}
         <ErrorBoundary><AppRoot demoStore={store}/></ErrorBoundary>
       </div>
     </div>
@@ -14631,9 +14696,9 @@ function AdminHub({ currentUser, org }) {
           {/* Beta incentive progress */}
           <div style={{marginBottom:24}}>
             <h3 style={{fontFamily:"var(--serif)",fontSize:16,marginBottom:10}}>
-              Beta Incentive Progress — First Year Free
+              Beta Incentive Progress — Founding Member Rate
               <span style={{fontSize:12,fontWeight:400,color:"var(--muted)",marginLeft:8}}>
-                25+ items + 1 feedback = first year free at launch
+                25+ items + 1 feedback = $9.99/mo founding rate (vs $15 standard)
               </span>
             </h3>
             <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
@@ -14972,8 +15037,8 @@ function AdminHub({ currentUser, org }) {
                               +"?subject=Theatre4u™ — Your Beta Access & Subscription Options"
                               +"&body=Hi "+( o.director_name||"there")+","
                               +"%0A%0AThank you for being part of the Theatre4u beta! You've had full Pro access at no charge while we've been building and improving the platform."
-                              +"%0A%0AWe'd love to have you continue as a subscriber. Pro is $15%2Fmonth or $150%2Fyear — and as a beta member, you've already experienced everything it includes."
-                              +"%0A%0AYou can subscribe here: https%3A%2F%2Ftheatre4u.org%2F%23checkout"
+                              +"%0A%0AAs a beta program that has been with us from the start, you qualify for our founding member rate: %249.99%2Fmonth (instead of the standard %2415) — locked in for as long as you subscribe."
+                              +"%0A%0ATo activate your founding member subscription: https%3A%2F%2Ftheatre4u.org"
                               +"%0A%0AIf you have any questions just reply to this email."
                               +"%0A%0ABob Zick%0AFounder, Theatre4u™%0Ahello%40theatre4u.org"}
                               style={{fontSize:12,color:"var(--gold)",fontWeight:700,
@@ -15277,11 +15342,86 @@ function AdminHub({ currentUser, org }) {
       {/* ── TOOLS ── */}
       {!loading&&tab==="tools"&&(
         <div>
-          <div style={{marginBottom:24}}>
+          <div style={{marginBottom:28}}>
             <h3 style={{fontFamily:"var(--serif)",fontSize:22,marginBottom:4}}>Quick Actions</h3>
             <p style={{fontSize:14,color:"var(--muted)"}}>
-              One-click actions for managing your programs. Everything here updates the database instantly.
+              One-click actions for managing your programs, plus previews of what new users see.
             </p>
+          </div>
+
+          {/* ── Preview what new users see ── */}
+          <div style={{background:"rgba(33,150,243,.05)",border:"1px solid rgba(33,150,243,.2)",
+            borderRadius:12,padding:20,marginBottom:20}}>
+            <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>
+              👁 Preview as a New User
+            </div>
+            <p style={{fontSize:13,color:"var(--muted)",marginBottom:14,lineHeight:1.6}}>
+              Since you're already signed in, you can't experience the signup and onboarding flow
+              normally. Use these links to preview exactly what a first-time visitor sees.
+            </p>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12}}>
+              {[
+                {ico:"🎭",title:"Full Interactive Demo",desc:"The real app with sample data. Shows signup → onboarding → full platform. Opens in a new tab.",
+                  url:"/?demo=1",btn:"Open Demo"},
+                {ico:"👁",title:"Quick Platform Preview",desc:"The lightweight read-only preview tour. Quick look at inventory and Exchange.",
+                  url:"/?preview=1",btn:"Open Preview"},
+                {ico:"🏠",title:"Landing Page",desc:"What visitors see before they sign up. Check hero copy, plans, features.",
+                  url:"/",btn:"View Landing"},
+                {ico:"📝",title:"Signup Form Copy",desc:"Open the demo and click 'Start Free Account' to see the signup form and beta messaging.",
+                  url:"/?demo=1",btn:"Open Demo → Sign Up"},
+              ].map(p=>(
+                <div key={p.title} style={{background:"var(--parch)",border:"1px solid var(--border)",
+                  borderRadius:10,padding:"14px 16px"}}>
+                  <div style={{fontSize:22,marginBottom:6}}>{p.ico}</div>
+                  <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>{p.title}</div>
+                  <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:12}}>{p.desc}</div>
+                  <a href={p.url} target="_blank" rel="noreferrer"
+                    style={{display:"inline-block",padding:"6px 14px",borderRadius:7,
+                      background:"rgba(33,150,243,.15)",color:"#42a5f5",
+                      border:"1px solid rgba(33,150,243,.3)",fontSize:12,fontWeight:700,
+                      textDecoration:"none"}}>
+                    {p.btn} ↗
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Current beta messaging reference ── */}
+          <div style={{background:"rgba(212,168,67,.05)",border:"1px solid rgba(212,168,67,.2)",
+            borderRadius:12,padding:20,marginBottom:20}}>
+            <div style={{fontWeight:700,fontSize:16,marginBottom:10}}>📋 Current Beta Messaging</div>
+            <p style={{fontSize:13,color:"var(--muted)",marginBottom:12,lineHeight:1.6}}>
+              This is what new users see when they sign up. Review and update here before pushing changes.
+            </p>
+            <div style={{background:"rgba(0,0,0,.15)",borderRadius:8,padding:"14px 16px",
+              border:"1px solid rgba(212,168,67,.15)"}}>
+              <div style={{fontSize:12,fontWeight:700,color:"var(--gold)",marginBottom:6}}>
+                ⭐ Free Pro Access During Beta — shown on signup form
+              </div>
+              <div style={{fontSize:13,color:"rgba(255,255,255,.75)",lineHeight:1.7}}>
+                "All programs that sign up during Theatre4u's beta phase get full Pro access at no charge.
+                When Theatre4u launches, beta programs that have added 25+ items and shared feedback
+                will receive a <strong>founding member rate of $9.99/month</strong> — instead of the standard $15 —
+                locked in for as long as you subscribe."
+              </div>
+            </div>
+            <div style={{background:"rgba(0,0,0,.15)",borderRadius:8,padding:"14px 16px",
+              border:"1px solid rgba(212,168,67,.15)",marginTop:10}}>
+              <div style={{fontSize:12,fontWeight:700,color:"var(--gold)",marginBottom:6}}>
+                ⭐ Dashboard banner — shown to all beta users
+              </div>
+              <div style={{fontSize:13,color:"rgba(255,255,255,.75)",lineHeight:1.7}}>
+                "Full Pro access — complimentary during Theatre4u beta.
+                Beta programs that add 25+ items and share feedback will receive a
+                <strong> founding member discount — $9.99/month instead of $15 — locked in for life.</strong>"
+              </div>
+            </div>
+            <div style={{marginTop:10,fontSize:11,color:"var(--muted)",lineHeight:1.5,
+              padding:"8px 12px",background:"rgba(0,0,0,.1)",borderRadius:6}}>
+              To change this messaging, update the copy in the Dashboard component (isTempPro banner)
+              and the AuthOverlay signup form (beta notice box). Ask to update these any time.
+            </div>
           </div>
 
           {/* Grant / Revoke Temp Pro */}
@@ -16010,24 +16150,23 @@ function AppRoot({ demoStore = null }){
     return()=>subscription.unsubscribe();
   },[]);
 
-  // ── On load: if ?signin=1 in URL, open sign-in modal immediately ─────────────
+  // ── On load: if ?signin=1 or ?signup=1 in URL, open auth modal immediately ──
   useEffect(()=>{
     try {
       const params = new URLSearchParams(window.location.search);
-      if(params.get("signin") === "1") {
-        // Remove the param from URL cleanly
+      const mode = params.get("signin")==="1" ? "login"
+                 : params.get("signup")==="1" ? "signup"
+                 : null;
+      if(mode) {
         const nextHash = params.get("next") || "";
         const cleanUrl = window.location.pathname + (nextHash ? nextHash : "");
         window.history.replaceState({}, "", cleanUrl);
-        // Store next hash if provided
         if(nextHash && nextHash.startsWith("#/item/")) {
           try { localStorage.setItem("t4u_post_auth_hash", nextHash); } catch(e) {}
         }
-        // Open sign-in — use the global auth trigger registered by the AuthForm component
-        // Delay to allow AuthForm to mount and register window.__t4u_show_auth
         setTimeout(()=>{
           if(typeof window.__t4u_show_auth === "function") {
-            window.__t4u_show_auth("login");
+            window.__t4u_show_auth(mode);
           }
         }, 400);
       }
@@ -16564,15 +16703,15 @@ function AppRoot({ demoStore = null }){
                   <button className="btn btn-o btn-sm btn-full" style={{color:"rgba(255,255,255,.85)",borderColor:"rgba(255,255,255,.28)",fontSize:13,padding:"8px 12px"}} onClick={()=>nav("settings")}>
                     <span style={{width:13,height:13,display:"flex"}}>{Ic.settings}</span>Settings
                   </button>
-                  {/* Subscribe button — shown for temp_pro users who haven't paid yet */}
-                  {org?.temp_pro && !org?.stripe_subscription_id && (
+                  {/* Subscribe button — shown for temp_pro users who haven't paid yet, not in demo */}
+                  {org?.temp_pro && !org?.stripe_subscription_id && !isAdmin && !isDemoMode() && (
                     <a href={stripeLink(STRIPE_LINKS.pro?.monthly, user?.id, user?.email)}
                       target="_blank" rel="noreferrer"
                       style={{display:"flex",alignItems:"center",justifyContent:"center",
                         gap:7,padding:"9px 12px",borderRadius:8,fontSize:13,fontWeight:700,
                         background:"linear-gradient(135deg,var(--gold),#a37f2c)",color:"#1a0f00",
                         textDecoration:"none",border:"none",cursor:"pointer",marginBottom:0}}>
-                      ⭐ Subscribe to Pro — $15/mo
+                      ⭐ Subscribe — $15/mo
                     </a>
                   )}
                   <button className="btn btn-sm btn-full" style={{background:"rgba(139,26,42,.22)",border:"1px solid rgba(139,26,42,.38)",color:"rgba(255,255,255,.85)",fontSize:13,padding:"8px 12px"}} onClick={signOut}>
