@@ -12788,6 +12788,92 @@ function DemoApp() {
 
   if (!started) return null;
 
+  // Don't render AppRoot until the user has clicked Enter Demo
+  // Once demoUser is set, AppRoot mounts fresh with that user as the initial state
+  if (!demoUser) return (
+    <>
+      <style>{CSS}</style>
+      {/* Demo ribbon shown even on entry screen */}
+      <div style={{position:"fixed",top:0,left:0,right:0,zIndex:99999,
+        background:"linear-gradient(135deg,#1a0d2e,#0d1225)",
+        borderBottom:"2px solid #d4a843",
+        padding:"7px 20px",display:"flex",alignItems:"center",
+        justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:16}}>🎭</span>
+          <span style={{fontWeight:800,color:"#d4a843",fontSize:14}}>Demo Mode</span>
+          <span style={{color:"rgba(255,255,255,.55)",fontSize:12}}>
+            — Nothing is saved. Close the tab to reset.
+          </span>
+        </div>
+        <a href="https://theatre4u.org"
+          style={{padding:"5px 14px",borderRadius:6,fontSize:12,fontWeight:600,
+            color:"rgba(255,255,255,.7)",border:"1px solid rgba(255,255,255,.2)",
+            textDecoration:"none"}}>
+          Exit Demo
+        </a>
+      </div>
+      {/* Entry screen */}
+      <div style={{minHeight:"100vh",background:"#0d0b11",display:"flex",flexDirection:"column",
+        alignItems:"center",justifyContent:"center",padding:"80px 20px 40px",textAlign:"center",
+        fontFamily:"'DM Sans',sans-serif",color:"#ede8df"}}>
+        <div style={{fontSize:56,marginBottom:16}}>🎭</div>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:32,color:"#d4a843",marginBottom:8}}>
+          Theatre4u™ Demo
+        </div>
+        <p style={{fontSize:16,color:"rgba(255,255,255,.55)",maxWidth:440,lineHeight:1.7,marginBottom:36}}>
+          Explore the full platform with sample data. Add items, browse the Backstage Exchange,
+          and see how Theatre4u works — no account needed.
+        </p>
+        <div style={{display:"flex",flexDirection:"column",gap:14,alignItems:"center",width:"100%",maxWidth:340}}>
+          <button
+            onClick={()=>enterDemo("Ocean View High School Drama")}
+            style={{width:"100%",padding:"16px 32px",borderRadius:10,border:"none",
+              background:"linear-gradient(135deg,#d4a843,#a37f2c)",color:"#1a0f00",
+              fontSize:17,fontWeight:800,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",
+              boxShadow:"0 4px 20px rgba(212,168,67,.3)"}}>
+            🎭 Enter Demo →
+          </button>
+          <div style={{fontSize:13,color:"rgba(255,255,255,.35)"}}>
+            — or personalize with your program name —
+          </div>
+          <div style={{display:"flex",gap:8,width:"100%"}}>
+            <input
+              id="demo-org-input"
+              placeholder="e.g. Lincoln High Drama"
+              style={{flex:1,padding:"11px 14px",borderRadius:8,
+                border:"1px solid rgba(255,255,255,.15)",
+                background:"rgba(255,255,255,.06)",color:"#fff",
+                fontSize:14,fontFamily:"'DM Sans',sans-serif",outline:"none"}}
+              onKeyDown={e=>{
+                if(e.key==="Enter"){
+                  const v=e.target.value.trim();
+                  enterDemo(v||"Ocean View High School Drama");
+                }
+              }}
+            />
+            <button
+              onClick={()=>{
+                const v=document.getElementById("demo-org-input")?.value?.trim();
+                enterDemo(v||"Ocean View High School Drama");
+              }}
+              style={{padding:"11px 18px",borderRadius:8,
+                border:"1px solid rgba(212,168,67,.4)",
+                background:"rgba(212,168,67,.12)",color:"#d4a843",
+                fontSize:14,fontWeight:700,cursor:"pointer",
+                fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"}}>
+              Go →
+            </button>
+          </div>
+          <a href="https://theatre4u.org?signup=1"
+            style={{fontSize:13,color:"rgba(255,255,255,.3)",textDecoration:"none",marginTop:4}}>
+            Ready to create a real account? →
+          </a>
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <div style={{position:"relative"}}>
       {/* Demo ribbon */}
@@ -16687,59 +16773,6 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
   );
 
   if(!user && previewMode) return <PreviewMode onSignUp={()=>{ setPreviewMode(false); window.__t4u_show_auth&&window.__t4u_show_auth("signup"); }}/>;
-
-  // Demo mode — show a simple entry screen instead of the full landing + auth flow
-  if(!user && isDemo && onEnterDemo) return (
-    <>
-      <style>{CSS}</style>
-      <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",flexDirection:"column",
-        alignItems:"center",justifyContent:"center",padding:"40px 20px",textAlign:"center"}}>
-        <div style={{fontSize:52,marginBottom:16}}>🎭</div>
-        <div style={{fontFamily:"'Playfair Display',serif",fontSize:32,color:"var(--gold)",marginBottom:8}}>
-          Theatre4u™ Demo
-        </div>
-        <p style={{fontSize:16,color:"rgba(255,255,255,.6)",maxWidth:440,lineHeight:1.7,marginBottom:32}}>
-          Explore the full platform with sample data. Add items, browse the Backstage Exchange,
-          try QR labels, and see how Theatre4u works — no account needed.
-        </p>
-        <div style={{display:"flex",flexDirection:"column",gap:12,alignItems:"center",width:"100%",maxWidth:320}}>
-          <button
-            onClick={()=>onEnterDemo("Ocean View High School Drama")}
-            style={{width:"100%",padding:"16px 32px",borderRadius:10,border:"none",
-              background:"linear-gradient(135deg,var(--gold),#a37f2c)",color:"#1a0f00",
-              fontSize:16,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
-            🎭 Enter Demo →
-          </button>
-          <div style={{fontSize:13,color:"rgba(255,255,255,.4)"}}>
-            Or enter your program name to personalize:
-          </div>
-          <div style={{display:"flex",gap:8,width:"100%"}}>
-            <input
-              placeholder="Your program name"
-              id="demo-org-input"
-              style={{flex:1,padding:"10px 14px",borderRadius:8,border:"1px solid rgba(255,255,255,.15)",
-                background:"rgba(255,255,255,.06)",color:"#fff",fontSize:14,fontFamily:"inherit",outline:"none"}}
-              onKeyDown={e=>e.key==="Enter"&&onEnterDemo(e.target.value||"Ocean View High School Drama")}
-            />
-            <button
-              onClick={()=>{
-                const v=document.getElementById("demo-org-input")?.value;
-                onEnterDemo(v||"Ocean View High School Drama");
-              }}
-              style={{padding:"10px 16px",borderRadius:8,border:"1px solid rgba(212,168,67,.4)",
-                background:"rgba(212,168,67,.1)",color:"var(--gold)",fontSize:14,fontWeight:700,
-                cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
-              Go →
-            </button>
-          </div>
-          <a href="https://theatre4u.org"
-            style={{fontSize:13,color:"rgba(255,255,255,.3)",textDecoration:"none",marginTop:8}}>
-            Exit Demo — Go to Theatre4u
-          </a>
-        </div>
-      </div>
-    </>
-  );
 
   if(!user) return(
     <>
