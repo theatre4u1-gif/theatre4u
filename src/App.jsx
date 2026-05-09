@@ -112,6 +112,64 @@ function errAlert(key) {
 
 const uid  = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 const fmt$ = n  => "$" + Number(n || 0).toFixed(2);
+
+// ── Social sharing ─────────────────────────────────────────────────────────
+// Uses Facebook's native share dialog — no API key, no approval, works for everyone.
+// The user shares to their own timeline, page, or any group they're in.
+function fbShare(url, quote="") {
+  const params = new URLSearchParams({ u: url, ...(quote ? { quote } : {}) });
+  window.open("https://www.facebook.com/sharer/sharer.php?" + params, "fb-share", "width=600,height=500,scrollbars=yes");
+}
+function itemShareUrl(item) {
+  return "https://theatre4u.org/#/item/" + (item.display_id || item.id);
+}
+function itemShareText(item, orgName) {
+  const cat = CAT_FALLBACK[item.category] || { icon:"🎭" };
+  const price = item.mkt==="For Loan" ? "Free loan"
+    : item.rent>0&&item.sale>0 ? "$"+item.rent+"/wk or $"+item.sale+" to buy"
+    : item.rent>0 ? "$"+item.rent+"/wk to rent"
+    : item.sale>0 ? "$"+item.sale+" to buy" : "";
+  return cat.icon+" "+item.name+(orgName?" — from "+orgName:"")+(price?" · "+price:"")+
+    "\n\nAvailable on the Backstage Exchange — free resource sharing for theatre programs everywhere."+
+    "\n\ntheatre4u.org #Theatre #TheatreEducation #BackstageExchange #TheatreTeacher";
+}
+function postShareText(post, orgName) {
+  const body = post.body ? "\n\n"+post.body.slice(0,200)+(post.body.length>200?"…":"") : "";
+  return "🎭 "+post.title+(orgName?" — "+orgName:"")+body+
+    "\n\nPosted on Theatre4u Community.\n\ntheatre4u.org #Theatre #TheatreEducation";
+}
+// Small reusable Facebook share button
+function FbShareBtn({ url, text, label="Share on Facebook", compact=false, style={} }) {
+  const [shared, setShared] = useState(false);
+  const handle = (e) => {
+    e.stopPropagation();
+    fbShare(url, text);
+    setShared(true);
+    setTimeout(() => setShared(false), 3000);
+  };
+  return (
+    <button onClick={handle} title="Share on Facebook"
+      style={{ display:"inline-flex", alignItems:"center", gap:5,
+        padding: compact ? "3px 9px" : "5px 12px",
+        borderRadius:6, border:"1px solid rgba(24,119,242,.35)",
+        background: shared ? "rgba(24,119,242,.2)" : "rgba(24,119,242,.08)",
+        color: shared ? "#fff" : "#4285f4",
+        fontSize:12, fontWeight:700, cursor:"pointer",
+        fontFamily:"inherit", flexShrink:0, transition:"all .15s", ...style }}>
+      {shared ? "✓ Shared!" : (<>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+        </svg>
+        {compact ? "Share" : label}
+      </>)}
+    </button>
+  );
+}
+// Fallback category map for use before CATS const is available
+const CAT_FALLBACK = {
+  costumes:"🥻",props:"🎭",sets:"🏗️",lighting:"💡",sound:"🔊",
+  scripts:"📜",makeup:"💄",furniture:"🪑",fabrics:"🧵",tools:"🔧",effects:"✨",other:"📦"
+};
 const itemNum = n  => n != null ? "#" + String(n).padStart(4, "0") : "";
 // Page background images — 5 confirmed-working Unsplash IDs only
 const usp=(id,w=900,h=500)=>`https://images.unsplash.com/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=82`;
@@ -2757,6 +2815,11 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
                         onClick={e=>{e.stopPropagation();setContactItem(item);}}>
                         💬 Message
                       </button>
+                      <FbShareBtn url={itemShareUrl(item)} text={itemShareText(item,item.org_name)} compact={true}/>
+                    </div>}
+                    {isOwn&&<div style={{display:"flex",gap:6,marginTop:8,justifyContent:"flex-end"}}>
+                      <FbShareBtn url={itemShareUrl(item)} text={itemShareText(item,org?.name)} compact={true}
+                        label="Share Your Listing"/>
                     </div>}
                   </div>
                 </div>
@@ -9295,6 +9358,12 @@ function CommunityPostCard({post, orgName, onEdit, onDelete, isOwn}) {
             {(post.tags||[]).slice(0,3).map(t=><span key={t} className="mt">#{t}</span>)}
             {post.ticket_url&&<a href={post.ticket_url} target="_blank" rel="noreferrer" className="btn btn-o btn-sm" style={{fontSize:11,padding:"3px 10px"}}>🎟️ Tickets</a>}
             {post.contact_email&&<a href={`mailto:${post.contact_email}`} className="btn btn-o btn-sm" style={{fontSize:11,padding:"3px 10px"}}>✉️ Contact</a>}
+            <FbShareBtn
+              url={"https://theatre4u.org/#/community"}
+              text={postShareText(post, orgName)}
+              compact={true}
+              style={{fontSize:11,padding:"3px 9px"}}
+            />
             {post.distance_miles != null && (
               <span style={{fontSize:11,fontWeight:700,padding:"1px 7px",background:"rgba(255,255,255,.06)",borderRadius:5,color:"var(--muted)"}}>
                 📍 {post.distance_miles < 1 ? "< 1" : Math.round(post.distance_miles)} mi
