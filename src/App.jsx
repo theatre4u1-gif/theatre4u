@@ -12641,123 +12641,160 @@ const DEMO_ITEMS = [
 
 // In-memory store for demo — mimics Supabase table structure
 function createDemoStore() {
-  let orgs  = [];      // starts empty — user "signs up" via the real form
-  let items = [];      // starts empty — user adds their own, or we seed after onboarding
+  // Generic in-memory store — works for ANY table name automatically
+  // Key: table name, Value: array of row objects
+  const tables = {
+    orgs:  [],
+    items: [],
+  };
   let seeded = false;
 
   const uid = () => "demo-" + Math.random().toString(36).slice(2,10);
 
-  // Intercept SB.from("table") calls
-  // Returns an object that mimics Supabase's chainable query builder
+  // Get or create a table
+  const tbl = (name) => {
+    if (!tables[name]) tables[name] = [];
+    return tables[name];
+  };
+
   const mockTable = (table) => {
     const chain = {
       _filters: [],
-      _data: null,
-      _single: false,
+      _data:    undefined,  // undefined = "not set", null = "explicitly null"
+      _single:  false,
+      _count:   false,
 
-      select: (cols) => chain,
-      order:  ()    => chain,
-      limit:  ()    => chain,
-      range:  ()    => chain,
-      neq:    ()    => chain,
-      gte:    ()    => chain,
-      lt:     ()    => chain,
-      ilike:  ()    => chain,
-      in:     (col, vals) => {
-        chain._filters.push(row => vals.includes(row[col]));
-        return chain;
-      },
+      select:   ()             => chain,
+      order:    ()             => chain,
+      limit:    ()             => chain,
+      range:    ()             => chain,
+      neq:      (col, val)     => { chain._filters.push(r => r[col] !== val); return chain; },
+      gte:      (col, val)     => { chain._filters.push(r => r[col] >= val);  return chain; },
+      lte:      (col, val)     => { chain._filters.push(r => r[col] <= val);  return chain; },
+      lt:       (col, val)     => { chain._filters.push(r => r[col] < val);   return chain; },
+      gt:       (col, val)     => { chain._filters.push(r => r[col] > val);   return chain; },
+      ilike:    (col, val)     => { chain._filters.push(r => String(r[col]||"").toLowerCase().includes(String(val||"").toLowerCase().replace(/%/g,""))); return chain; },
+      in:       (col, vals)    => { chain._filters.push(r => vals.includes(r[col])); return chain; },
+      contains: ()             => chain,
+      not:      ()             => chain,
+      or:       ()             => chain,
       eq: (col, val) => {
-        chain._filters.push(row => row[col] === val);
+        chain._filters.push(r => r[col] === val);
         return chain;
       },
       is: (col, val) => {
-        chain._filters.push(row => val === null ? row[col] == null : row[col] === val);
+        chain._filters.push(r => val === null ? (r[col] == null) : r[col] === val);
         return chain;
       },
       single: () => { chain._single = true; return chain; },
 
       insert: (data) => {
         const rows = Array.isArray(data) ? data : [data];
-        const inserted = rows.map(r => ({ ...r, id: r.id || uid(), created_at: new Date().toISOString() }));
-        if (table === "orgs")  orgs  = [...orgs,  ...inserted];
-        if (table === "items") items = [...items, ...inserted];
+        const inserted = rows.map(r => ({
+          ...r,
+          id:         r.id         || uid(),
+          created_at: r.created_at || new Date().toISOString(),
+          updated_at: r.updated_at || new Date().toISOString(),
+        }));
+        tbl(table).push(...inserted);
         chain._data = chain._single ? inserted[0] : inserted;
         return chain;
       },
 
-      upsert: (data) => {
+      upsert: (data, opts) => {
         const rows = Array.isArray(data) ? data : [data];
+        const conflictKey = opts?.onConflict || "id";
         rows.forEach(r => {
-          if (table === "orgs") {
-            const idx = orgs.findIndex(x => x.id === r.id);
-            if (idx >= 0) orgs[idx] = { ...orgs[idx], ...r };
-            else orgs.push({ ...r, created_at: new Date().toISOString() });
-          }
-          if (table === "items") {
-            const idx = items.findIndex(x => x.id === r.id);
-            if (idx >= 0) items[idx] = { ...items[idx], ...r };
-            else items.push({ ...r, id: r.id||uid(), created_at: new Date().toISOString() });
+          const store = tbl(table);
+          const idx = store.findIndex(x => x[conflictKey] === r[conflictKey]);
+          if (idx >= 0) {
+            store[idx] = { ...store[idx], ...r, updated_at: new Date().toISOString() };
+          } else {
+            store.push({ ...r, id: r.id||uid(), created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
           }
         });
-        const result = table === "orgs" ? orgs.find(x => x.id === rows[0]?.id) : rows[0];
-        chain._data = result;
+        const result = tbl(table).find(x => x[conflictKey] === rows[0]?.[conflictKey]);
+        chain._data = chain._single ? result : (result ? [result] : rows);
         return chain;
       },
 
       update: (data) => {
-        if (table === "orgs")  orgs  = orgs.map(r  => chain._filters.every(f=>f(r))  ? {...r,...data}  : r);
-        if (table === "items") items = items.map(r => chain._filters.every(f=>f(r)) ? {...r,...data} : r);
+        const store = tbl(table);
+        store.forEach((r, i) => {
+          if (chain._filters.every(f => f(r))) {
+            store[i] = { ...r, ...data, updated_at: new Date().toISOString() };
+          }
+        });
         chain._data = null;
         return chain;
       },
 
       delete: () => {
-        if (table === "items") items = items.filter(r => !chain._filters.every(f=>f(r)));
-        if (table === "orgs")  orgs  = orgs.filter(r  => !chain._filters.every(f=>f(r)));
+        tables[table] = tbl(table).filter(r => !chain._filters.every(f => f(r)));
+        chain._data = null;
         return chain;
       },
 
-       // Terminal — returns a thenable so await works correctly in demo mode
-       then: (resolve, reject) => {
-         try {
-           let data = null;
-           if (chain._data !== undefined && chain._data !== null) {
-             data = chain._data;
-           } else {
-             const st = table === "orgs" ? orgs : table === "items" ? items : [];
-             const filtered = st.filter(r => chain._filters.every(f=>f(r)));
-             data = chain._single ? (filtered[0] || null) : filtered;
-           }
-           resolve({ data, error: null, count: Array.isArray(data) ? data.length : (data?1:0) });
-         } catch(e) {
-           if(reject) reject(e); else resolve({ data: null, error: e });
-         }
-       },
+      // Thenable — makes await work on every query
+      then: (resolve, reject) => {
+        try {
+          let data;
+          if (chain._data !== undefined) {
+            data = chain._data;
+          } else {
+            const store = tbl(table);
+            const filtered = store.filter(r => chain._filters.every(f => f(r)));
+            data = chain._single ? (filtered[0] || null) : filtered;
+          }
+          const count = Array.isArray(data) ? data.length : (data ? 1 : 0);
+          resolve({ data, error: null, count });
+        } catch(e) {
+          if (reject) reject(e);
+          else resolve({ data: null, error: e });
+        }
+      },
     };
-    // Make it thenable — supports await SB.from("items").select("*").eq(...)
     chain[Symbol.toStringTag] = "DemoQuery";
     return chain;
   };
 
   return {
-    getStore: () => ({ orgs, items }),
+    getStore: () => tables,
     seedItems: () => {
-      if (!seeded) { items = [...DEMO_ITEMS]; seeded = true; }
+      if (!seeded) { tables.items = [...DEMO_ITEMS]; seeded = true; }
     },
     from: (table) => mockTable(table),
-    rpc:  ()      => Promise.resolve({ data: null, error: null }),
+    rpc:  (fn, args) => {
+      // Handle specific RPCs that need to return useful data
+      if (fn === "generate_label_prefix") {
+        const name = args?.p_name || "DEMO";
+        const prefix = name.replace(/[^A-Z]/gi, "").toUpperCase().slice(0,4) || "DEMO";
+        return Promise.resolve({ data: prefix, error: null });
+      }
+      if (fn === "award_milestone_points") return Promise.resolve({ data: null, error: null });
+      if (fn === "lookup_label")           return Promise.resolve({ data: null, error: null });
+      return Promise.resolve({ data: null, error: null });
+    },
     auth: {
-      getSession:      () => Promise.resolve({ data: { session: null } }),
-      onAuthStateChange: (cb) => { return { data: { subscription: { unsubscribe: ()=>{} } } }; },
-      signInWithPassword: () => Promise.resolve({ data: { user: null }, error: { message: "Demo mode — no real login" } }),
+      getSession:        () => Promise.resolve({ data: { session: null } }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: ()=>{} } } }),
+      signInWithPassword:() => Promise.resolve({ data: { user: null }, error: { message: "Demo mode" } }),
       signUp: (creds) => {
-        const demoUser = { id: "demo-user-id", email: creds.email, created_at: new Date().toISOString() };
-        return Promise.resolve({ data: { user: demoUser, session: { access_token: "demo-token", user: demoUser } }, error: null });
+        const u = { id:"demo-user-id", email:creds.email, created_at:new Date().toISOString() };
+        return Promise.resolve({ data: { user: u, session: { access_token:"demo-token", user:u } }, error: null });
       },
       signOut: () => { window.location.href = "https://theatre4u.org"; return Promise.resolve(); },
+      admin: { getUserById: () => Promise.resolve({ data: null }) },
     },
-    storage: { from: () => ({ upload: () => Promise.resolve({ data: null, error: null }), getPublicUrl: () => ({ data: { publicUrl: "" } }) }) },
+    storage: {
+      from: () => ({
+        upload:       () => Promise.resolve({ data: null, error: null }),
+        getPublicUrl: () => ({ data: { publicUrl: "" } }),
+        remove:       () => Promise.resolve({ data: null, error: null }),
+      })
+    },
+  };
+}
   };
 }
 
@@ -16894,7 +16931,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
 
               <div className="sb-foot">
                 <div style={{display:"flex",gap:5,flexDirection:"column"}}>
-                  {(plan==="pro"||plan==="district"||isAdmin)&&(
+                  {(plan==="pro"||plan==="district"||isAdmin)&&!isDemo&&(
                     <a href="/app.html" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
                       style={{color:"var(--gold)",borderColor:"rgba(212,168,67,.3)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                       📱 Mobile App
