@@ -12898,6 +12898,13 @@ function createDemoStore() {
       signOut: () => { window.location.href = "https://theatre4u.org"; return Promise.resolve(); },
       admin: { getUserById: () => Promise.resolve({ data: null }) },
     },
+    // Realtime — no-op in demo (no live updates needed)
+    channel: (name) => {
+      const noop = { on: ()=>noop, subscribe: ()=>noop, unsubscribe: ()=>{} };
+      return noop;
+    },
+    removeChannel: () => {},
+    removeAllChannels: () => {},
     storage: {
       from: () => ({
         upload:       () => Promise.resolve({ data: null, error: null }),
@@ -16953,7 +16960,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
       />
       <AuthOverlay onAuth={u=>{setUser(u);}} pendingInvite={pendingInvite} inviteInfo={inviteInfo}/>
       {user && <FeedbackWidget userId={user.id} orgName={org?.name||""} isLeadingPlayer={org?.is_leading_player||false}/>}
-      {user && <AIHelpBubble user={user} />}
+      {user && !isDemo && <AIHelpBubble user={user} />}
     </>
   );
 
@@ -17058,7 +17065,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
                       📱 Mobile App
                     </a>
                   )}
-                  {(plan==="pro"||plan==="district"||isAdmin)&&(
+                  {(plan==="pro"||plan==="district"||isAdmin)&&!isDemo&&(
                     <a href="/help.html" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
                       style={{color:"rgba(255,255,255,.6)",borderColor:"rgba(255,255,255,.12)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                       ❓ Help & Tutorials
@@ -17180,7 +17187,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
       {legalPage==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegalPage(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
       {legalPage==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegalPage(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
       {user && <FeedbackWidget userId={user.id} orgName={org?.name||""} isLeadingPlayer={org?.is_leading_player||false}/>}
-      {user && <AIHelpBubble user={user} />}
+      {user && !isDemo && <AIHelpBubble user={user} />}
       {/* ── Onboarding overlay ─ shown once to new users ── */}
       {user && onboardingStep !== null && onboardingStep < 4 && (
         (onboardingStep === 0 ||
