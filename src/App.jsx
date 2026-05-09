@@ -592,7 +592,33 @@ tr:hover td{background:rgba(243,230,204,.55)}
   .pricing-grid{grid-template-columns:1fr}
   .hero-title{font-size:26px}
   .sc-grid{grid-template-columns:1fr 1fr}
+  /* Mobile font boosters */
+  html,body,#root{font-size:16px}
+  .sb-sub{font-size:11px}
+  .sb-section{font-size:10px}
+  .chip,.mkt-badge,.fl{font-size:13px}
+  .inv-cat{font-size:12px}
+  .stat-lbl{font-size:12px}
+  th{font-size:12px;padding:9px 12px}
+  td{padding:9px 12px;font-size:14px}
 }
+
+/* ── Readability overrides — ensure nothing is unreadably small ──────────── */
+/* Minimum readable: labels/badges 12px, body 13px, headings 15px+ */
+.fl{font-size:12px}                           /* form labels */
+.sb-section{font-size:10px}                   /* sidebar section headers — stays small, all caps */
+.sb-badge{font-size:12px}                     /* sidebar count badges */
+.chip{font-size:12px}                         /* inventory chips */
+.mkt-badge{font-size:12px}                    /* market status badges */
+.inv-cat{font-size:12px}                      /* inventory category labels */
+.sc-cat{font-size:12px}                       /* shop category label */
+.stat-lbl{font-size:12px}                     /* stat card labels */
+.dt-sec h3{font-size:12px}                    /* detail section headers */
+.fbar label{font-size:11px}                   /* filter bar labels */
+.cat-cnt{font-size:12px}                      /* category count */
+/* Muted text contrast boost — minimum #8a7060 on light bg */
+.sb-sub{color:rgba(255,255,255,.65)}          /* sidebar subtitle */
+.faint{color:var(--muted)}                    /* faint → muted everywhere */
 
 /* ── FLOATING CTA ─────────────────────────────────────────────── */
 /* FAB removed — Upgrade button is now in sidebar */
@@ -13299,435 +13325,83 @@ function LabelsPage({ org, userId, items=[] }) {
 
       {/* ══ ORDER TAB ══ */}
       {tab==="order"&&(
-        <div>
-
-          {orderDone ? (
-            /* ── Success screen ── */
-            <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,
-              padding:"36px 32px",textAlign:"center",maxWidth:520}}>
-              <div style={{fontSize:48,marginBottom:14}}>📬</div>
-              <div style={{fontFamily:"var(--serif)",fontSize:22,marginBottom:12}}>Order Submitted!</div>
-              <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.8,marginBottom:8}}>
-                {"Confirmation will be sent to "}
-                <strong>{org?.email}</strong>
-                {" within 1 business day, along with an invoice before payment is processed."}
-              </p>
-              <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.8,marginBottom:24}}>
-                {"Labels for your existing items are pre-matched — just apply them when they arrive. " +
-                 "Blank labels for future items can be assigned in the Assign tab anytime."}
-              </p>
-              <button onClick={()=>{ setOrderDone(false); setExtraSticky(0); setExtraIronOn(0); }}
-                style={{padding:"9px 22px",borderRadius:8,border:"1px solid var(--border)",
-                  background:"transparent",color:"var(--text)",fontSize:13,
-                  fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
-                Place Another Order
-              </button>
+        <div style={{maxWidth:560}}>
+          <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,
+            padding:"40px 32px",textAlign:"center"}}>
+            <div style={{fontSize:52,marginBottom:16}}>🏷</div>
+            <div style={{fontFamily:"var(--serif)",fontSize:22,marginBottom:10,fontWeight:700}}>
+              Physical Label Ordering — Coming Soon
             </div>
+            <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.8,marginBottom:12,maxWidth:420,margin:"0 auto 12px"}}>
+              We are finalizing our label printing partnership. Soon you will be able to order
+              professional pre-coded QR label stickers — sticky vinyl for props and equipment,
+              iron-on for costumes — mailed directly to your school.
+            </p>
+            <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.8,marginBottom:24,maxWidth:420,margin:"0 auto 24px"}}>
+              In the meantime, use the <strong style={{color:"var(--text)"}}>Print Labels</strong> tab
+              to generate and print QR labels instantly from any printer.
+            </p>
+            <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+              <button onClick={()=>setTab("print")}
+                style={{padding:"11px 24px",borderRadius:8,border:"none",fontFamily:"inherit",
+                  fontSize:14,fontWeight:700,cursor:"pointer",
+                  background:"var(--gold)",color:"#1a0f00"}}>
+                🖨 Print Labels Now
+              </button>
+              <a href={"mailto:hello@theatre4u.org?subject=Label Ordering Interest"}
+                style={{padding:"11px 24px",borderRadius:8,border:"1px solid var(--border)",
+                  fontFamily:"inherit",fontSize:14,fontWeight:600,cursor:"pointer",
+                  background:"transparent",color:"var(--text)",textDecoration:"none",
+                  display:"inline-flex",alignItems:"center"}}>
+                ✉ Notify Me When Ready
+              </a>
+            </div>
+            <div style={{marginTop:24,paddingTop:20,borderTop:"1px solid var(--border)",
+              fontSize:13,color:"var(--muted)"}}>
+              Questions? Email{" "}
+              <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)",fontWeight:600}}>
+                hello@theatre4u.org
+              </a>
+            </div>
+          </div>
 
-          ) : (
-            <div>
-              <p style={{fontSize:13,color:"var(--muted)",marginBottom:22,lineHeight:1.7,maxWidth:680}}>
-                Order professional QR label stickers for your program.
-                Choose <strong>sticky vinyl</strong> for hard goods (equipment, props, storage bins)
-                or <strong>iron-on</strong> for soft goods (costumes, fabric items).
-                You can order labels for items already in your inventory <em>and</em> blank
-                pre-coded labels for items you'll add later — in any combination.
-              </p>
-
-              <div style={{display:"grid",gridTemplateColumns:"1fr 300px",gap:24,alignItems:"start"}}>
-
-                {/* ── LEFT COLUMN ── */}
-                <div>
-
-                  {/* SECTION A: Existing inventory items */}
-                  <div style={{marginBottom:28}}>
-                    <div style={{fontWeight:700,fontSize:15,marginBottom:2}}>
-                      {"A — Labels for existing inventory items"}
-                    </div>
-                    <div style={{fontSize:12,color:"var(--muted)",marginBottom:12,lineHeight:1.6}}>
-                      Tag each item with the label type you want. These labels will be
-                      pre-matched to the item — just apply when they arrive.
-                      Hit Auto-suggest to let Theatre4u make a first pass based on category.
-                    </div>
-
-                    <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
-                      {/* Legend */}
-                      {[
-                        {type:"sticky",  ico:"🏷",  label:"Sticky",   color:"#2196f3"},
-                        {type:"iron_on", ico:"♨️",  label:"Iron-on",  color:"#e91e63"},
-                        {type:"none",    ico:"—",   label:"Skip",     color:"var(--muted)"},
-                      ].map(o=>(
-                        <div key={o.type} style={{display:"flex",alignItems:"center",gap:5,fontSize:12}}>
-                          <div style={{width:20,height:20,borderRadius:4,border:"1.5px solid",
-                            borderColor:o.color,display:"flex",alignItems:"center",
-                            justifyContent:"center",fontSize:10,color:o.color}}>{o.ico}</div>
-                          <span style={{color:"var(--muted)"}}>{o.label}</span>
-                        </div>
-                      ))}
-                      <div style={{marginLeft:"auto",display:"flex",gap:6}}>
-                        <button onClick={()=>{
-                          const SOFT=["costumes","fabrics","makeup"];
-                          setMyItems(p=>p.map(i=>({...i,
-                            label_type:i.label_type||(SOFT.includes(i.category)?"iron_on":"sticky")
-                          })));
-                        }} style={{padding:"5px 10px",borderRadius:6,border:"1px solid var(--border)",
-                          background:"transparent",color:"var(--muted)",fontSize:11,
-                          cursor:"pointer",fontFamily:"inherit"}}>
-                          ✨ Auto-suggest
-                        </button>
-                        <button onClick={()=>setMyItems(p=>p.map(i=>({...i,label_type:null})))}
-                          style={{padding:"5px 10px",borderRadius:6,border:"1px solid var(--border)",
-                            background:"transparent",color:"var(--muted)",fontSize:11,
-                            cursor:"pointer",fontFamily:"inherit"}}>
-                          Clear
-                        </button>
+          {/* Show previous orders if any exist */}
+          {orders.length>0&&(
+            <div style={{marginTop:28}}>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:10}}>Your Label Orders</div>
+              <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
+                {orders.map((o,i)=>(
+                  <div key={i} style={{padding:"12px 16px",borderBottom:"1px solid var(--border)",
+                    display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:14,fontWeight:700}}>
+                        {o.item_count+" "+o.label_type+" labels"}
                       </div>
+                      {o.code_start&&<div style={{fontSize:12,fontFamily:"monospace",color:"var(--amber)",marginTop:2}}>
+                        {o.code_start+" → "+o.code_end}
+                      </div>}
+                      {o.tracking&&<div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>
+                        {"📦 Tracking: "+o.tracking}
+                      </div>}
                     </div>
-
-                    {/* Item list */}
-                    <div style={{border:"1px solid var(--border)",borderRadius:10,
-                      overflow:"hidden",maxHeight:360,overflowY:"auto"}}>
-                      {loadingItems
-                        ? <div style={{padding:24,textAlign:"center",color:"var(--muted)",fontSize:13}}>Loading items…</div>
-                        : myItems.map(item=>{
-                          const cat=CAT[item.category]||CAT.other;
-                          const lt=item.label_type;
-                          return(
-                            <div key={item.id} style={{display:"flex",alignItems:"center",gap:10,
-                              padding:"8px 12px",borderBottom:"1px solid var(--border)",
-                              background:lt==="sticky"?"rgba(33,150,243,.04)":
-                                         lt==="iron_on"?"rgba(233,30,99,.04)":
-                                         lt==="none"?"rgba(0,0,0,.03)":"transparent"}}>
-                              <span style={{fontSize:14,flexShrink:0}}>{cat.icon}</span>
-                              <div style={{flex:1,minWidth:0}}>
-                                <div style={{fontSize:13,fontWeight:600,overflow:"hidden",
-                                  textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</div>
-                                <div style={{fontSize:10,color:"var(--muted)"}}>
-                                  {item.display_id||""}
-                                  {item.location?" · "+item.location:""}
-                                  {item.label_code?" · "+item.label_code+" ✓":""}
-                                </div>
-                              </div>
-                              {/* Type toggle buttons */}
-                              <div style={{display:"flex",gap:3,flexShrink:0}}>
-                                {[
-                                  {type:"sticky",  ico:"🏷",  color:"#2196f3", title:"Sticky vinyl — bins, props, equipment"},
-                                  {type:"iron_on", ico:"♨️",  color:"#e91e63", title:"Iron-on — costumes, fabric, soft goods"},
-                                  {type:"none",    ico:"—",   color:"var(--muted)", title:"No label for this item"},
-                                ].map(o=>(
-                                  <button key={o.type} title={o.title}
-                                    onClick={()=>setMyItems(p=>p.map(i=>
-                                      i.id===item.id?{...i,label_type:lt===o.type?null:o.type}:i
-                                    ))}
-                                    style={{width:26,height:26,borderRadius:5,border:"1.5px solid",
-                                      cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",
-                                      justifyContent:"center",fontFamily:"inherit",transition:"all .12s",
-                                      borderColor:lt===o.type?o.color:"var(--border)",
-                                      background:lt===o.type
-                                        ?(o.type==="sticky"?"rgba(33,150,243,.15)"
-                                          :o.type==="iron_on"?"rgba(233,30,99,.15)"
-                                          :"rgba(0,0,0,.08)")
-                                        :"transparent",
-                                      color:lt===o.type?o.color:"var(--muted)"}}>
-                                    {o.ico}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })
-                      }
-                    </div>
+                    {o.amount_cents>0&&<div style={{fontWeight:700,fontSize:15,color:"var(--gold)"}}>
+                      {"$"+(o.amount_cents/100).toFixed(2)}
+                    </div>}
+                    <span style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:6,
+                      background:o.status==="delivered"?"rgba(76,175,80,.12)":
+                                 o.status==="shipped"?"rgba(66,165,245,.12)":
+                                 o.status==="processing"?"rgba(33,150,243,.12)":"rgba(212,168,67,.1)",
+                      color:o.status==="delivered"?"#4caf50":
+                            o.status==="shipped"?"#42a5f5":
+                            o.status==="processing"?"#2196f3":"var(--gold)"}}>
+                      {o.status==="pending"?"⏳ Pending":o.status==="processing"?"🔄 Processing":
+                       o.status==="shipped"?"✈ Shipped":"✓ Delivered"}
+                    </span>
+                    <span style={{fontSize:12,color:"var(--muted)"}}>
+                      {new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
+                    </span>
                   </div>
-
-                  {/* SECTION B: Future / blank labels */}
-                  <div style={{marginBottom:28}}>
-                    <div style={{fontWeight:700,fontSize:15,marginBottom:2}}>
-                      {"B — Blank labels for future items"}
-                    </div>
-                    <div style={{fontSize:12,color:"var(--muted)",marginBottom:14,lineHeight:1.6}}>
-                      Order pre-coded blank labels that aren't assigned to anything yet.
-                      Stick them on storage bins, racks, or new items as you acquire them.
-                      Assign each code to an item in the Assign tab whenever you're ready.
-                    </div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,maxWidth:400}}>
-                      {[
-                        {key:"extraSticky", val:extraSticky, set:setExtraSticky,
-                         ico:"🏷",label:"Extra sticky",color:"#2196f3",
-                         sub:"For bins, racks, new hard goods"},
-                        {key:"extraIronOn", val:extraIronOn, set:setExtraIronOn,
-                         ico:"♨️",label:"Extra iron-on",color:"#e91e63",
-                         sub:"For costumes you haven't cataloged yet"},
-                      ].map(({val,set,ico,label,color,sub})=>(
-                        <div key={label} style={{background:"var(--parch)",border:"1px solid var(--border)",
-                          borderRadius:9,padding:"12px 14px"}}>
-                          <div style={{fontSize:12,fontWeight:700,color,marginBottom:3}}>{ico} {label}</div>
-                          <div style={{fontSize:10,color:"var(--muted)",marginBottom:10,lineHeight:1.5}}>{sub}</div>
-                          <div style={{display:"flex",alignItems:"center",gap:0,
-                            border:"1px solid var(--border)",borderRadius:7,overflow:"hidden",width:"fit-content"}}>
-                            {[0,5,10,25,50].map(n=>(
-                              <button key={n} onClick={()=>set(n)}
-                                style={{padding:"6px 10px",border:"none",borderRight:"1px solid var(--border)",
-                                  cursor:"pointer",fontSize:12,fontWeight:val===n?700:400,
-                                  background:val===n?color:"transparent",
-                                  color:val===n?"#fff":"var(--muted)",fontFamily:"inherit",
-                                  transition:"all .12s"}}>
-                                {n===0?"None":n}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Shipping address */}
-                  {(()=>{
-                    const totalTagged = myItems.filter(i=>i.label_type==="sticky"||i.label_type==="iron_on").length;
-                    if(totalTagged===0&&extraSticky===0&&extraIronOn===0) return null;
-                    return(
-                      <div>
-                        <div style={{fontWeight:700,fontSize:15,marginBottom:12}}>
-                          {"C — Shipping address"}
-                        </div>
-                        <div style={{display:"flex",flexDirection:"column",gap:10,maxWidth:480}}>
-                          <div>
-                            <label style={{fontSize:11,fontWeight:700,textTransform:"uppercase",
-                              letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:4}}>Contact Name</label>
-                            <input value={orderName} onChange={e=>setOrderName(e.target.value)}
-                              placeholder="Your name"
-                              style={{width:"100%",background:"var(--white)",border:"1.5px solid var(--border)",
-                                borderRadius:7,padding:"8px 12px",fontSize:13,color:"var(--text)",
-                                outline:"none",fontFamily:"inherit"}}/>
-                          </div>
-                          <div>
-                            <label style={{fontSize:11,fontWeight:700,textTransform:"uppercase",
-                              letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:4}}>Street Address *</label>
-                            <input value={orderAddrLine} onChange={e=>setOrderAddrLine(e.target.value)}
-                              placeholder="1234 School Blvd, Attn: Drama Dept"
-                              style={{width:"100%",background:"var(--white)",border:"1.5px solid var(--border)",
-                                borderRadius:7,padding:"8px 12px",fontSize:13,color:"var(--text)",
-                                outline:"none",fontFamily:"inherit"}}/>
-                          </div>
-                          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:8}}>
-                            {[
-                              {label:"City *", val:orderCity,  set:setOrderCity,  ph:"City"},
-                              {label:"State",  val:orderState, set:setOrderState, ph:"CA"},
-                              {label:"ZIP",    val:orderZip,   set:setOrderZip,   ph:"90000"},
-                            ].map(({label,val,set,ph})=>(
-                              <div key={label}>
-                                <label style={{fontSize:11,fontWeight:700,textTransform:"uppercase",
-                                  letterSpacing:.8,color:"var(--muted)",display:"block",marginBottom:4}}>{label}</label>
-                                <input value={val} onChange={e=>set(e.target.value)} placeholder={ph}
-                                  style={{width:"100%",background:"var(--white)",border:"1.5px solid var(--border)",
-                                    borderRadius:7,padding:"8px 12px",fontSize:13,color:"var(--text)",
-                                    outline:"none",fontFamily:"inherit"}}/>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* ── RIGHT COLUMN: Sticky summary card ── */}
-                {(()=>{
-                  const stickyItems = myItems.filter(i=>i.label_type==="sticky");
-                  const ironItems   = myItems.filter(i=>i.label_type==="iron_on");
-                  const totalSticky = stickyItems.length + extraSticky;
-                  const totalIronOn = ironItems.length + extraIronOn;
-                  const totalLabels = totalSticky + totalIronOn;
-                  const STICKY_C = 40;  // cents per label
-                  const IRON_C   = 56;  // cents per label
-                  const SHIP_C   = 695; // flat shipping
-                  const subtotal = totalSticky*STICKY_C + totalIronOn*IRON_C;
-                  const grandTotal = subtotal + (totalLabels>0?SHIP_C:0);
-
-                  return(
-                    <div style={{position:"sticky",top:20}}>
-                      <div style={{background:"var(--parch)",border:"1px solid var(--border)",
-                        borderRadius:10,padding:"18px 20px",marginBottom:12}}>
-                        <div style={{fontWeight:700,fontSize:15,marginBottom:14}}>Order Summary</div>
-
-                        {totalLabels===0?(
-                          <div style={{fontSize:13,color:"var(--muted)",textAlign:"center",padding:"12px 0"}}>
-                            Tag items or add extras to build your order
-                          </div>
-                        ):(
-                          <>
-                            {totalSticky>0&&(
-                              <div style={{marginBottom:10}}>
-                                <div style={{display:"flex",justifyContent:"space-between",
-                                  fontSize:13,fontWeight:700,marginBottom:4}}>
-                                  <span>{"🏷 "+totalSticky+" sticky vinyl"}</span>
-                                  <span>{"$"+(totalSticky*STICKY_C/100).toFixed(2)}</span>
-                                </div>
-                                {stickyItems.length>0&&(
-                                  <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.5,
-                                    paddingLeft:8,borderLeft:"2px solid #2196f3"}}>
-                                    {stickyItems.length+" item"+(stickyItems.length!==1?"s":"")+": "}
-                                    {stickyItems.slice(0,3).map(i=>i.name).join(", ")}
-                                    {stickyItems.length>3?" +"+( stickyItems.length-3)+" more":""}
-                                  </div>
-                                )}
-                                {extraSticky>0&&(
-                                  <div style={{fontSize:11,color:"var(--muted)",paddingLeft:8,
-                                    borderLeft:"2px solid #2196f3",marginTop:3}}>
-                                    {extraSticky+" blank (future items)"}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            {totalIronOn>0&&(
-                              <div style={{marginBottom:10}}>
-                                <div style={{display:"flex",justifyContent:"space-between",
-                                  fontSize:13,fontWeight:700,marginBottom:4}}>
-                                  <span>{"♨️ "+totalIronOn+" iron-on"}</span>
-                                  <span>{"$"+(totalIronOn*IRON_C/100).toFixed(2)}</span>
-                                </div>
-                                {ironItems.length>0&&(
-                                  <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.5,
-                                    paddingLeft:8,borderLeft:"2px solid #e91e63"}}>
-                                    {ironItems.length+" item"+(ironItems.length!==1?"s":"")+": "}
-                                    {ironItems.slice(0,3).map(i=>i.name).join(", ")}
-                                    {ironItems.length>3?" +"+( ironItems.length-3)+" more":""}
-                                  </div>
-                                )}
-                                {extraIronOn>0&&(
-                                  <div style={{fontSize:11,color:"var(--muted)",paddingLeft:8,
-                                    borderLeft:"2px solid #e91e63",marginTop:3}}>
-                                    {extraIronOn+" blank (future items)"}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            <div style={{display:"flex",justifyContent:"space-between",
-                              fontSize:12,color:"var(--muted)",marginBottom:8}}>
-                              <span>Shipping (USPS)</span>
-                              <span>$6.95</span>
-                            </div>
-                            <div style={{display:"flex",justifyContent:"space-between",
-                              borderTop:"1px solid var(--border)",paddingTop:10,
-                              fontSize:16,fontWeight:800}}>
-                              <span>Total</span>
-                              <span style={{color:"var(--gold)"}}>{"$"+(grandTotal/100).toFixed(2)}</span>
-                            </div>
-                          </>
-                        )}
-
-                        <div style={{marginTop:12,fontSize:11,color:"var(--muted)",lineHeight:1.7,
-                          background:"rgba(212,168,67,.06)",borderRadius:6,padding:"9px 11px",
-                          border:"1px solid rgba(212,168,67,.15)"}}>
-                          {"No payment now. We confirm and send an invoice within 1 business day. " +
-                           "Labels for existing items arrive pre-matched. Blank labels arrive as " +
-                           "unassigned codes ready to apply and link."}
-                        </div>
-
-                        {orderMsg&&(
-                          <div style={{fontSize:12,color:"#e53935",marginTop:10,padding:"7px 10px",
-                            borderRadius:6,background:"rgba(229,57,53,.08)",
-                            border:"1px solid rgba(229,57,53,.2)"}}>{orderMsg}</div>
-                        )}
-
-                        <button disabled={orderSubmitting||totalLabels===0||!orderAddrLine.trim()||!orderCity.trim()}
-                          onClick={async()=>{
-                            if(!orderAddrLine.trim()||!orderCity.trim()){
-                              setOrderMsg("⚠ Please enter a shipping address."); return;
-                            }
-                            setOrderSubmitting(true); setOrderMsg("");
-                            try {
-                              const stickyItems2 = myItems.filter(i=>i.label_type==="sticky");
-                              const ironItems2   = myItems.filter(i=>i.label_type==="iron_on");
-                              const totalS = stickyItems2.length + extraSticky;
-                              const totalI = ironItems2.length + extraIronOn;
-                              const total  = totalS + totalI;
-                              const STICKY_C2=40; const IRON_C2=56; const SHIP_C2=695;
-                              const grandT = totalS*STICKY_C2 + totalI*IRON_C2 + (total>0?SHIP_C2:0);
-
-                              // Save label_type preferences to items table
-                              const tagged = myItems.filter(i=>i.label_type);
-                              await Promise.all(tagged.map(i=>
-                                SB.from("items").update({label_type:i.label_type}).eq("id",i.id)
-                              ));
-
-                              const ltype = totalS>0&&totalI>0?"mixed":totalI>0?"iron_on":"sticky";
-                              const notes =
-                                "Sticky: "+totalS+" ("+stickyItems2.length+" items + "+extraSticky+" blank). "+
-                                "Iron-on: "+totalI+" ("+ironItems2.length+" items + "+extraIronOn+" blank). "+
-                                "Item list: "+tagged.map(i=>i.name+"("+i.label_type+")").join(", ");
-
-                              const {data:ord,error:ordErr} = await SB.from("label_orders").insert({
-                                org_id:        userId,
-                                org_name:      org?.name||"",
-                                contact_email: org?.email||"",
-                                contact_name:  orderName,
-                                item_count:    total,
-                                label_type:    ltype,
-                                delivery_addr: JSON.stringify({
-                                  name:orderName, street:orderAddrLine,
-                                  city:orderCity, state:orderState, zip:orderZip
-                                }),
-                                notes,
-                                amount_cents:  grandT,
-                                status:        "pending",
-                              }).select().single();
-                              if(ordErr) throw ordErr;
-
-                              setOrders(p=>[ord,...p]);
-                              setOrderDone(true);
-                            } catch(e){ setOrderMsg("❌ "+e.message); }
-                            setOrderSubmitting(false);
-                          }}
-                          style={{width:"100%",padding:"11px",borderRadius:8,border:"none",
-                            fontFamily:"inherit",fontSize:14,fontWeight:700,marginTop:10,
-                            cursor:totalLabels>0&&orderAddrLine&&orderCity&&!orderSubmitting?"pointer":"not-allowed",
-                            background:totalLabels>0&&orderAddrLine&&orderCity?"var(--gold)":"var(--border)",
-                            color:totalLabels>0&&orderAddrLine&&orderCity?"#1a0f00":"var(--muted)"}}>
-                          {(()=>{
-                            const stickyItems3 = myItems.filter(i=>i.label_type==="sticky");
-                            const ironItems3   = myItems.filter(i=>i.label_type==="iron_on");
-                            const t = stickyItems3.length+ironItems3.length+extraSticky+extraIronOn;
-                            return orderSubmitting?"Submitting…":t===0?"Select items or add extras":"📬 Submit Order ("+t+" labels)";
-                          })()}
-                        </button>
-                      </div>
-
-                      {/* Previous orders */}
-                      {orders.length>0&&(
-                        <div>
-                          <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>Previous orders</div>
-                          {orders.map((o,i)=>(
-                            <div key={i} style={{background:"var(--parch)",border:"1px solid var(--border)",
-                              borderRadius:8,padding:"10px 12px",marginBottom:6,fontSize:12}}>
-                              <div style={{display:"flex",justifyContent:"space-between",
-                                alignItems:"center",marginBottom:4}}>
-                                <span style={{fontWeight:700}}>{o.item_count+" "+o.label_type+" labels"}</span>
-                                {o.amount_cents>0&&<span style={{color:"var(--gold)",fontWeight:700}}>
-                                  {"$"+(o.amount_cents/100).toFixed(2)}
-                                </span>}
-                              </div>
-                              {o.code_start&&<div style={{fontFamily:"monospace",color:"var(--amber)",fontSize:11}}>
-                                {o.code_start+" → "+o.code_end}
-                              </div>}
-                              <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
-                                <span style={{color:"var(--muted)"}}>
-                                  {new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
-                                </span>
-                                <span style={{fontWeight:700,
-                                  color:o.status==="delivered"?"#4caf50":o.status==="shipped"?"#42a5f5":
-                                        o.status==="processing"?"#2196f3":"var(--gold)"}}>
-                                  {o.status==="pending"?"⏳ Pending":o.status==="processing"?"🔄 Processing":
-                                   o.status==="shipped"?"✈ Shipped":"✓ Delivered"}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
+                ))}
               </div>
             </div>
           )}
@@ -14245,15 +13919,27 @@ function AdminHub({ currentUser, org }) {
         <p style={{fontSize:13,color:"var(--muted)",margin:0}}>Theatre4u™ platform administration — everything in one place.</p>
       </div>
 
-      <div style={{display:"flex",gap:5,marginBottom:24,flexWrap:"wrap",borderBottom:"1px solid var(--border)",paddingBottom:12}}>
-        {TABS.map(([id,lbl])=>(
-          <button key={id} onClick={()=>setTab(id)}
-            style={{padding:"7px 14px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:tab===id?700:500,
-              background:tab===id?"var(--gold)":"transparent",
-              color:tab===id?"#1a0f00":"var(--muted)",fontFamily:"inherit",transition:"all .15s"}}>
-            {lbl}{id==="feedback"&&newFeedback>0?` (${newFeedback})`:""}{id==="users"&&newLeads>0?` (${newLeads})`:""}{id==="labels"&&labelOrders.filter(o=>o.status==="pending").length>0?` (${labelOrders.filter(o=>o.status==="pending").length})`:""}
-          </button>
-        ))}
+      <div style={{display:"flex",gap:4,marginBottom:24,borderBottom:"1px solid var(--border)",
+        paddingBottom:0,overflowX:"auto",WebkitOverflowScrolling:"touch",
+        scrollbarWidth:"none",msOverflowStyle:"none"}}>
+        {TABS.map(([id,lbl])=>{
+          const badge = id==="feedback"&&newFeedback>0?newFeedback
+            : id==="users"&&newLeads>0?newLeads
+            : id==="labels"&&labelOrders.filter(o=>o.status==="pending").length>0?labelOrders.filter(o=>o.status==="pending").length
+            : 0;
+          return(
+            <button key={id} onClick={()=>setTab(id)}
+              style={{padding:"10px 16px",borderRadius:"8px 8px 0 0",border:"none",
+                cursor:"pointer",fontSize:14,fontWeight:tab===id?700:500,
+                whiteSpace:"nowrap",flexShrink:0,
+                background:tab===id?"var(--gold)":"transparent",
+                borderBottom:tab===id?"3px solid var(--gold)":"3px solid transparent",
+                color:tab===id?"#1a0f00":tab===id?"var(--text)":"var(--muted)",
+                fontFamily:"inherit",transition:"all .15s"}}>
+              {lbl}{badge>0?" ("+badge+")":""}
+            </button>
+          );
+        })}
       </div>
 
       {msg&&<div style={{background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.3)",borderRadius:8,padding:"8px 14px",marginBottom:16,fontSize:13,color:"#4caf50"}}>{msg}</div>}
@@ -14724,42 +14410,144 @@ function AdminHub({ currentUser, org }) {
       {/* ── TOOLS ── */}
       {!loading&&tab==="tools"&&(
         <div>
-          <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>Admin Tools & Quick Actions</h3>
-          <p style={{fontSize:13,color:"var(--muted)",marginBottom:20}}>Common tasks and reference SQL for managing the platform.</p>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
-            {[
-              { icon:"⭐", title:"Grant Beta Pro Access",
-                body:"Go to Users tab → find the program → set plan to 'pro' → toggle ⭐ LP to on.",
-                sql:null },
-              { icon:"✉️", title:"Email a Tester",
-                body:"Go to Users tab → click the ✉ Email link next to any program to open a pre-addressed email.",
-                sql:null },
-              { icon:"🔧", title:"Fix Email Typo in Lead",
-                body:"Run in Supabase SQL editor:",
-                sql:"UPDATE beta_leads SET email='correct@email.com'\nWHERE email='wrong@email.com';" },
-              { icon:"🔄", title:"Mark Lead as Converted",
-                body:"Run after a beta lead creates their Theatre4u account:",
-                sql:"UPDATE beta_leads SET converted=true\nWHERE email='their@email.com';" },
-              { icon:"💰", title:"Award Stage Points",
-                body:"Grant Stage Points to a tester for feedback or referral:",
-                sql:"INSERT INTO credit_ledger (org_id, amount, note)\nVALUES ('org-uuid-here', 150, 'Beta feedback reward');" },
-              { icon:"🏷", title:"Label Order Pricing Guide",
-                body:"Standard vinyl QR labels: ~$0.10–0.15/label. Weatherproof: ~$0.20–0.25/label. Minimum order: 30 labels. Shipping: USPS First Class ~$4–6.",
-                sql:null },
-              { icon:"📊", title:"Export All Orgs as CSV",
-                body:"Run in Supabase SQL, then download results:",
-                sql:"SELECT name,email,plan,is_leading_player,director_name,city,created_at\nFROM orgs ORDER BY created_at DESC;" },
-              { icon:"🗑", title:"Remove Test Accounts",
-                body:"Go to Users tab → find test orgs → use Supabase auth dashboard to delete the user.",
-                sql:null },
-            ].map(tool=>(
-              <div key={tool.title} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px"}}>
-                <div style={{fontSize:28,marginBottom:8}}>{tool.icon}</div>
-                <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>{tool.title}</div>
-                <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:tool.sql?8:0}}>{tool.body}</div>
-                {tool.sql&&<code style={{display:"block",background:"rgba(0,0,0,.2)",borderRadius:6,padding:"8px 10px",fontSize:11,fontFamily:"monospace",color:"var(--text)",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{tool.sql}</code>}
+          <div style={{marginBottom:24}}>
+            <h3 style={{fontFamily:"var(--serif)",fontSize:22,marginBottom:4}}>Quick Actions</h3>
+            <p style={{fontSize:14,color:"var(--muted)"}}>
+              One-click actions for managing your programs. Everything here updates the database instantly.
+            </p>
+          </div>
+
+          {/* Grant / Revoke Temp Pro */}
+          <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,
+            padding:20,marginBottom:16}}>
+            <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:14}}>
+              <span style={{fontSize:28,flexShrink:0}}>⭐</span>
+              <div>
+                <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>Grant or Remove Beta Pro Access</div>
+                <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>
+                  Use this to give any program full Pro access during the beta — or take it away.
+                  Go to the <strong style={{color:"var(--text)"}}>Users &amp; Leads</strong> tab,
+                  find the program you want to update, then click the <strong style={{color:"var(--gold)"}}>⭐ Pro</strong> button
+                  next to their name. It toggles on and off instantly.
+                </div>
               </div>
-            ))}
+            </div>
+            <button onClick={()=>setTab("users")} style={{padding:"10px 22px",borderRadius:8,
+              background:"var(--gold)",color:"#1a0f00",border:"none",
+              fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
+              Go to Users &amp; Leads →
+            </button>
+          </div>
+
+          {/* Email a program */}
+          <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,
+            padding:20,marginBottom:16}}>
+            <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:14}}>
+              <span style={{fontSize:28,flexShrink:0}}>✉️</span>
+              <div>
+                <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>Email a Program</div>
+                <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>
+                  Go to <strong style={{color:"var(--text)"}}>Users &amp; Leads</strong>, find the program,
+                  and click the <strong style={{color:"var(--gold)"}}>✉ Email</strong> link next to their name.
+                  It opens a pre-addressed email in your mail app so you can write to them directly.
+                </div>
+              </div>
+            </div>
+            <button onClick={()=>setTab("users")} style={{padding:"10px 22px",borderRadius:8,
+              background:"transparent",color:"var(--text)",border:"1px solid var(--border)",
+              fontWeight:600,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
+              Go to Users &amp; Leads →
+            </button>
+          </div>
+
+          {/* Award Stage Points */}
+          <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,
+            padding:20,marginBottom:16}}>
+            <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:4}}>
+              <span style={{fontSize:28,flexShrink:0}}>💰</span>
+              <div>
+                <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>Award Stage Points</div>
+                <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>
+                  Reward a program for giving great feedback or referring a new school.
+                  Go to the <strong style={{color:"var(--text)"}}>Feedback</strong> tab and use
+                  the <strong style={{color:"var(--gold)"}}>🎁 Award Points</strong> button on any feedback entry.
+                  The points appear in their account immediately.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Label order fulfillment */}
+          <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,
+            padding:20,marginBottom:16}}>
+            <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:14}}>
+              <span style={{fontSize:28,flexShrink:0}}>🏷</span>
+              <div>
+                <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>Process a Label Order</div>
+                <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>
+                  When a program requests labels, go to the
+                  <strong style={{color:"var(--text)"}}> Label Orders</strong> tab.
+                  Export the CSV for WePrintBarcodes, then enter the tracking number
+                  when the labels ship. The program sees their order status update automatically.
+                </div>
+              </div>
+            </div>
+            <button onClick={()=>setTab("labels")} style={{padding:"10px 22px",borderRadius:8,
+              background:"transparent",color:"var(--text)",border:"1px solid var(--border)",
+              fontWeight:600,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
+              Go to Label Orders →
+            </button>
+          </div>
+
+          {/* Check feedback */}
+          <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,
+            padding:20,marginBottom:16}}>
+            <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:14}}>
+              <span style={{fontSize:28,flexShrink:0}}>💬</span>
+              <div>
+                <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>Review User Feedback</div>
+                <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>
+                  See everything programs have submitted through the Leading Players feedback button.
+                  You can mark items as reviewed, resolved, or won't fix — and award points for great reports.
+                </div>
+              </div>
+            </div>
+            <button onClick={()=>setTab("feedback")} style={{padding:"10px 22px",borderRadius:8,
+              background:"transparent",color:"var(--text)",border:"1px solid var(--border)",
+              fontWeight:600,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
+              Go to Feedback →
+            </button>
+          </div>
+
+          {/* Label pricing reference */}
+          <div style={{background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.2)",
+            borderRadius:12,padding:20,marginBottom:16}}>
+            <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+              <span style={{fontSize:28,flexShrink:0}}>💵</span>
+              <div>
+                <div style={{fontWeight:700,fontSize:16,marginBottom:8,color:"var(--gold)"}}>
+                  Label Pricing Reference
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  {[
+                    ["Standard sticky vinyl",  "$0.40/label + $6.95 shipping"],
+                    ["Iron-on (costumes)",      "$0.56/label + $6.95 shipping"],
+                    ["Logo add-on",             "+$5.00 per order"],
+                    ["Minimum order",           "25 labels"],
+                  ].map(([label,val])=>(
+                    <div key={label} style={{background:"rgba(0,0,0,.15)",borderRadius:8,padding:"10px 14px"}}>
+                      <div style={{fontSize:12,color:"var(--muted)",marginBottom:3}}>{label}</div>
+                      <div style={{fontSize:15,fontWeight:700,color:"var(--text)"}}>{val}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{fontSize:12,color:"var(--muted)",marginTop:10,lineHeight:1.6}}>
+                  These are retail prices charged to programs. Our cost from WePrintBarcodes is approximately
+                  $0.12–0.15/label (standard) and $0.22–0.25/label (weatherproof).
+                  Confirm exact costs after each WePrintBarcodes call.
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
