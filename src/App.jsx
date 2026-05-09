@@ -12718,18 +12718,22 @@ function createDemoStore() {
         return chain;
       },
 
-      // Terminal — execute and return {data, error}
-      then: (resolve) => {
-        let data = null;
-        if (chain._data !== undefined && chain._data !== null) {
-          data = chain._data;
-        } else {
-          const store = table === "orgs" ? orgs : table === "items" ? items : [];
-          const filtered = store.filter(r => chain._filters.every(f=>f(r)));
-          data = chain._single ? (filtered[0] || null) : filtered;
-        }
-        resolve({ data, error: null, count: Array.isArray(data) ? data.length : (data?1:0) });
-      },
+       // Terminal — returns a thenable so await works correctly in demo mode
+       then: (resolve, reject) => {
+         try {
+           let data = null;
+           if (chain._data !== undefined && chain._data !== null) {
+             data = chain._data;
+           } else {
+             const st = table === "orgs" ? orgs : table === "items" ? items : [];
+             const filtered = st.filter(r => chain._filters.every(f=>f(r)));
+             data = chain._single ? (filtered[0] || null) : filtered;
+           }
+           resolve({ data, error: null, count: Array.isArray(data) ? data.length : (data?1:0) });
+         } catch(e) {
+           if(reject) reject(e); else resolve({ data: null, error: e });
+         }
+       },
     };
     // Make it thenable — supports await SB.from("items").select("*").eq(...)
     chain[Symbol.toStringTag] = "DemoQuery";
@@ -16331,11 +16335,12 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
 
   // ── Auth listener ────────────────────────────────────────────────────────
   useEffect(()=>{
+    // Demo mode: user is pre-set, skip all real auth checks
+    if(isDemo){ setAuthChk(true); return; }
+
     SB.auth.getSession().then(({data:{session}})=>{
       setUser(session?.user||null);
       setAuthChk(true);
-      // If no valid session but stale tokens exist, clear them
-      // This prevents the "signed out after inactivity" message on fresh visits
       if(!session){
         try{
           const keys=Object.keys(localStorage).filter(k=>k.startsWith("sb-"));
@@ -16350,8 +16355,6 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
         setItems([]); setOrg({name:"",type:"",email:"",phone:"",location:"",bio:""});
         setLoaded(false);
       } else if(u) {
-        // Ensure data reloads whenever a new session starts
-        // (covers: email confirmation redirect, returning user, invite accept)
         setLoaded(false);
       }
     });
