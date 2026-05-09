@@ -12795,8 +12795,6 @@ function createDemoStore() {
     },
   };
 }
-  };
-}
 
 // Demo wrapper — replaces SB globally when ?demo=1
 function DemoApp() {
