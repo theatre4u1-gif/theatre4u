@@ -2519,7 +2519,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
       <div style={{fontSize:44,marginBottom:14}}>🏪</div>
       <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:22,marginBottom:10}}>Backstage Exchange is a Pro Feature</h2>
       <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Share selected items with other programs — rent, sell, or loan. Upgrade to Pro to join Backstage Exchange.</p>
-      <UpgradePlans compact={true}/>
+      <UpgradePlans compact={true} userId={userId} userEmail={userEmail}/>
     </div>
   );
 
@@ -4151,7 +4151,7 @@ function ProductionReportTab({ org, allItems }) {
   );
 }
 
-function Reports({ items, plan="free", org=null }) {
+function Reports({ items, plan="free", org=null, userId=null, userEmail=null }) {
   const [tab,setTab] = useState("overview");
   const totalQty  = items.reduce((s,i)=>s+(i.qty||1),0);
   const catData   = CATS.map(cat=>{const ci=items.filter(i=>i.category===cat.id);return{...cat,count:ci.length,qty:ci.reduce((s,i)=>s+(i.qty||1),0),val:ci.reduce((s,i)=>s+((i.sale||0)*(i.qty||1)),0)}}).filter(c=>c.count>0);
@@ -4190,7 +4190,7 @@ function Reports({ items, plan="free", org=null }) {
       <div style={{fontSize:44,marginBottom:14}}>📊</div>
       <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>Reports require a Pro account</h2>
       <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Get detailed analytics, condition reports, location breakdowns, and CSV export. Upgrade to Pro to unlock Reports.</p>
-      <UpgradePlans compact={true}/>
+      <UpgradePlans compact={true} userId={userId} userEmail={userEmail}/>
     </div>
   );
 
@@ -14736,12 +14736,11 @@ function AdminHub({ currentUser, org }) {
             </div>
             <div style={{marginTop:14,fontSize:12,color:"var(--muted)",lineHeight:1.6,
               borderTop:"1px solid rgba(33,150,243,.15)",paddingTop:12}}>
-              <strong style={{color:"var(--text)"}}>One thing still needed:</strong> The Stripe checkout link
-              that programs click to subscribe needs to pass their <code style={{fontFamily:"monospace",
-              background:"rgba(0,0,0,.06)",padding:"1px 5px",borderRadius:3}}>org_id</code> as the
+              <strong style={{color:"#4caf50"}}>✅ Fully automated and live.</strong>
+              {" "}Every step above is wired and working. The org's ID is passed to Stripe as
               {" "}<code style={{fontFamily:"monospace",background:"rgba(0,0,0,.06)",padding:"1px 5px",borderRadius:3}}>client_reference_id</code>
-              {" "}in the Stripe session, so the webhook knows which org to upgrade.
-              This is a one-time code change in the checkout flow — ask to build this when ready to go live.
+              {" "}on every checkout, so the webhook always knows which account to upgrade.
+              Subscriptions, renewals, failures, and cancellations are all handled automatically.
             </div>
           </div>
         </div>
@@ -15745,7 +15744,34 @@ function AppRoot(){
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── After sign-in: redirect to item if user came from a QR scan ─────────────
+  // ── Detect post-Stripe-payment redirect and refresh org plan ────────────────
+  const [paymentSuccessMsg, setPaymentSuccessMsg] = useState("");
+  useEffect(()=>{
+    if(!user) return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const paymentSuccess = params.get("payment_success") || params.get("session_id");
+      if(paymentSuccess) {
+        // Clean the URL immediately
+        window.history.replaceState({}, "", window.location.pathname + window.location.hash);
+        // Refresh org data — try immediately then again after 3s for webhook processing
+        const refresh = async () => {
+          const { data: freshOrg } = await SB.from("orgs").select("*").eq("id", user.id).single();
+          if(freshOrg) {
+            setOrg(prev => ({ ...prev, ...freshOrg }));
+            const ep = freshOrg.stripe_subscription_id ? freshOrg.plan
+              : freshOrg.temp_pro ? "pro" : (freshOrg.plan || "free");
+            setPlanState(ep);
+          }
+        };
+        refresh();
+        setTimeout(refresh, 3000);
+        setPaymentSuccessMsg("🎉 Welcome to Pro! Your subscription is now active.");
+        setTimeout(() => setPaymentSuccessMsg(""), 8000);
+      }
+    } catch(e) {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
   useEffect(()=>{
     if(!user) return;
     try {
@@ -16247,6 +16273,17 @@ function AppRoot(){
                   <button className="btn btn-o btn-sm btn-full" style={{color:"rgba(255,255,255,.85)",borderColor:"rgba(255,255,255,.28)",fontSize:13,padding:"8px 12px"}} onClick={()=>nav("settings")}>
                     <span style={{width:13,height:13,display:"flex"}}>{Ic.settings}</span>Settings
                   </button>
+                  {/* Subscribe button — shown for temp_pro users who haven't paid yet */}
+                  {org?.temp_pro && !org?.stripe_subscription_id && (
+                    <a href={stripeLink(STRIPE_LINKS.pro?.monthly, user?.id, user?.email)}
+                      target="_blank" rel="noreferrer"
+                      style={{display:"flex",alignItems:"center",justifyContent:"center",
+                        gap:7,padding:"9px 12px",borderRadius:8,fontSize:13,fontWeight:700,
+                        background:"linear-gradient(135deg,var(--gold),#a37f2c)",color:"#1a0f00",
+                        textDecoration:"none",border:"none",cursor:"pointer",marginBottom:0}}>
+                      ⭐ Subscribe to Pro — $15/mo
+                    </a>
+                  )}
                   <button className="btn btn-sm btn-full" style={{background:"rgba(139,26,42,.22)",border:"1px solid rgba(139,26,42,.38)",color:"rgba(255,255,255,.85)",fontSize:13,padding:"8px 12px"}} onClick={signOut}>
                     Sign Out
                   </button>
@@ -16273,6 +16310,25 @@ function AppRoot(){
             </div>
           </div>
           <div className="scroll-area" onClick={()=>mob&&setMob(false)}>
+            {/* Post-payment success banner */}
+            {paymentSuccessMsg&&(
+              <div style={{background:"linear-gradient(135deg,rgba(76,175,80,.15),rgba(76,175,80,.08))",
+                border:"1px solid rgba(76,175,80,.35)",borderRadius:10,margin:"16px 24px 0",
+                padding:"12px 18px",display:"flex",gap:12,alignItems:"center"}}>
+                <span style={{fontSize:20}}>🎉</span>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:14,color:"#4caf50"}}>
+                    Subscription active!
+                  </div>
+                  <div style={{fontSize:13,color:"var(--muted)",marginTop:2}}>
+                    {paymentSuccessMsg.replace("🎉 ","")}
+                  </div>
+                </div>
+                <button onClick={()=>setPaymentSuccessMsg("")}
+                  style={{background:"none",border:"none",color:"var(--muted)",
+                    cursor:"pointer",fontSize:18,padding:"0 4px",lineHeight:1}}>✕</button>
+              </div>
+            )}
             {!loaded
               ? <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:18,color:"var(--faint)"}}>
                   <div style={{fontSize:52}}>🎭</div>
@@ -16302,7 +16358,7 @@ function AppRoot(){
                   )}
                   {page==="marketplace" && <MarketplaceGate items={items} org={org} setOrg={setOrg} plan={plan} userId={user?.id} activeSchool={activeSchool} allSchoolsMode={plan==="district"} onEdit={edit} onDelete={del}/>}
                   {page==="productions" && <Productions userId={user?.id} allItems={items} org={org} onNavigateTo={nav}/>}
-                  {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan} org={org}/>}
+                  {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan} org={org} userId={user?.id} userEmail={user?.email}/>}
                   {page==="funding"     && <FundingPage userId={user?.id} org={org} plan={plan}/>}
                   {page==="prop28"      && <Prop28Page  userId={user?.id} org={org} onNav={nav}/>}
                   {page==="profile"     && <OrgProfilePage userId={user?.id} org={org} setOrg={saveOrg} plan={plan} items={items}/>}
@@ -16311,7 +16367,7 @@ function AppRoot(){
                   {page==="community"   && <CommunityGate userId={user?.id} org={org} setOrg={setOrg} plan={plan}/>}
                   {page==="labels"     && <LabelsPage org={org} userId={user?.id} items={items} isAdmin={isAdmin}/>}
                   {page==="points"     && (plan!=="free"||isAdmin) && <CreditsPage userId={user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
-                  {page==="points"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>Stage Points is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true}/></div>}
+                  {page==="points"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>Stage Points is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true} userId={user?.id} userEmail={user?.email}/></div>}
 
 
                   {page==="admin"       && isAdmin && <AdminHub currentUser={user} org={org}/>}
