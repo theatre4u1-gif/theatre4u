@@ -420,7 +420,8 @@ body{font-family:'Raleway',sans-serif;-webkit-font-smoothing:antialiased}
 
 /* Inventory cards */
 .inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(266px,1fr));gap:16px}
-.inv-card{background:rgba(253,246,236,.93);border:1px solid var(--border);border-radius:var(--rm);overflow:hidden;cursor:pointer;transition:all .2s;box-shadow:var(--sh1);backdrop-filter:blur(4px)}
+.inv-card{background:rgba(253,246,236,.93);border:1px solid var(--border);border-radius:var(--rm);overflow:hidden;cursor:pointer;transition:all .2s;box-shadow:var(--sh1);backdrop-filter:blur(4px);position:relative}
+tr.select-row{cursor:pointer}tr.select-row:hover td{background:rgba(212,168,67,.04)}
 .inv-card:hover{box-shadow:var(--sh2);transform:translateY(-3px)}
 .inv-img{height:170px;overflow:hidden}
 .inv-img img{width:100%;height:100%;object-fit:cover;transition:transform .55s}
@@ -1930,6 +1931,53 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
   const[showF,setShowF]=useState(false);const[pg,setPg]=useState(1);
   const[modal,setModal]=useState(null);const[active,setActive]=useState(null);
   const[showImport,setShowImport]=useState(false);
+
+  // ── Bulk / mass edit state ───────────────────────────────────────────────
+  const[selectMode, setSelectMode] = useState(false);
+  const[selected,   setSelected]   = useState(new Set()); // Set of item ids
+  const[bulkSaving, setBulkSaving] = useState(false);
+  const[bulkMsg,    setBulkMsg]    = useState("");
+  const[bulkField,  setBulkField]  = useState(""); // which field to bulk-update
+  const[bulkValue,  setBulkValue]  = useState("");  // what value
+
+  const toggleSelect = (id) => setSelected(prev => {
+    const n = new Set(prev);
+    n.has(id) ? n.delete(id) : n.add(id);
+    return n;
+  });
+  const selectAll  = () => setSelected(new Set(filtered.map(i=>i.id)));
+  const clearSelect = () => { setSelected(new Set()); };
+
+  const applyBulkEdit = async () => {
+    if (!bulkField || !bulkValue || selected.size === 0) return;
+    setBulkSaving(true);
+    setBulkMsg("");
+    const ids = [...selected];
+    const colMap = {
+      category:   "category",
+      location:   "location",
+      condition:  "condition",
+      avail:      "avail",
+      mkt:        "mkt",
+    };
+    const col = colMap[bulkField];
+    if (!col) { setBulkSaving(false); return; }
+    const { error } = await SB.from("items")
+      .update({ [col]: bulkValue })
+      .in("id", ids)
+      .eq("org_id", userId);
+    if (error) {
+      setBulkMsg("❌ Update failed: " + error.message);
+    } else {
+      ids.forEach(id => onEdit({ ...items.find(i=>i.id===id), [col]: bulkValue }));
+      setBulkMsg("✅ Updated " + ids.length + " item" + (ids.length!==1?"s":""));
+      setSelected(new Set());
+      setBulkField("");
+      setBulkValue("");
+      setTimeout(()=>setBulkMsg(""), 3000);
+    }
+    setBulkSaving(false);
+  };
   const PP=20;
   const mktCls=m=>m==="For Rent"?"mb-rent":m==="For Sale"?"mb-sale":m==="Rent or Sale"?"mb-both":m==="For Loan"?"mb-loan":"mb-none";
   const filtered=useMemo(()=>{
@@ -2059,6 +2107,15 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
           <div className="srch">{Ic.search}<input value={search} onChange={e=>setSrch(e.target.value)} placeholder="Search items, tags, location…"/></div>
           <button className="ico-btn" style={showF?{borderColor:"var(--gold)",color:"var(--cog)"}:{}} onClick={()=>setShowF(!showF)}>{Ic.filter}</button>
           <div className="vtog"><button className={view==="grid"?"on":""} onClick={()=>setView("grid")}>Grid</button><button className={view==="table"?"on":""} onClick={()=>setView("table")}>Table</button><button className={view==="locations"?"on":""} onClick={()=>setView("locations")}>📦 Locations</button></div>
+          {canEdit&&<button
+            onClick={()=>{ setSelectMode(m=>!m); setSelected(new Set()); setBulkField(""); setBulkValue(""); setBulkMsg(""); }}
+            style={{padding:"6px 13px",borderRadius:7,border:"1.5px solid",fontSize:13,fontWeight:700,
+              cursor:"pointer",fontFamily:"inherit",transition:"all .15s",
+              borderColor: selectMode?"var(--gold)":"var(--border)",
+              background:  selectMode?"rgba(212,168,67,.12)":"transparent",
+              color:       selectMode?"var(--gold)":"var(--muted)"}}>
+            {selectMode ? ("✓ Selecting "+(selected.size>0?"("+selected.size+")":"")) : "☐ Select"}
+          </button>}
           <div style={{marginLeft:"auto",display:"flex",gap:7}}>
             <button className="btn btn-o" style={{fontSize:12,padding:"6px 12px"}} disabled={printingQR}
               onClick={printQRFiltered} title="Print QR labels for visible items">
@@ -2073,6 +2130,105 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
             }}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add Item</button>}
           </div>
         </div>
+
+        {/* ── Bulk Edit Action Bar — shown when Select Mode is active ── */}
+        {selectMode&&canEdit&&(
+          <div style={{background:"linear-gradient(135deg,rgba(212,168,67,.1),rgba(212,168,67,.04))",
+            border:"1px solid rgba(212,168,67,.35)",borderRadius:10,padding:"12px 16px",
+            marginBottom:14,display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+            {/* Selection controls */}
+            <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
+              <button onClick={selectAll}
+                style={{padding:"5px 11px",borderRadius:6,border:"1px solid var(--border)",
+                  background:"transparent",color:"var(--muted)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+                Select All ({filtered.length})
+              </button>
+              {selected.size>0&&<button onClick={clearSelect}
+                style={{padding:"5px 11px",borderRadius:6,border:"1px solid var(--border)",
+                  background:"transparent",color:"var(--muted)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+                Clear
+              </button>}
+              {selected.size>0&&<span style={{fontSize:13,fontWeight:700,color:"var(--gold)"}}>
+                {selected.size} selected
+              </span>}
+            </div>
+
+            {/* Field + value pickers — only show when items are selected */}
+            {selected.size>0&&(<>
+              <div style={{display:"flex",gap:6,alignItems:"center",flex:1,flexWrap:"wrap"}}>
+                <span style={{fontSize:12,fontWeight:700,color:"var(--muted)",whiteSpace:"nowrap"}}>
+                  Change:
+                </span>
+                <select value={bulkField} onChange={e=>{setBulkField(e.target.value);setBulkValue("");}}
+                  style={{padding:"6px 10px",borderRadius:7,border:"1px solid var(--border)",
+                    background:"var(--white)",color:"var(--text)",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                  <option value="">— pick a field —</option>
+                  <option value="category">Category</option>
+                  <option value="location">Location</option>
+                  <option value="condition">Condition</option>
+                  <option value="avail">Availability</option>
+                  <option value="mkt">Exchange Status</option>
+                </select>
+
+                {bulkField==="category"&&(
+                  <select value={bulkValue} onChange={e=>setBulkValue(e.target.value)}
+                    style={{padding:"6px 10px",borderRadius:7,border:"1px solid var(--border)",
+                      background:"var(--white)",color:"var(--text)",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                    <option value="">— pick category —</option>
+                    {CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+                  </select>
+                )}
+                {bulkField==="location"&&(
+                  <input value={bulkValue} onChange={e=>setBulkValue(e.target.value)}
+                    placeholder="e.g. Storage Bin 4A"
+                    style={{padding:"6px 10px",borderRadius:7,border:"1px solid var(--border)",
+                      background:"var(--white)",color:"var(--text)",fontSize:13,fontFamily:"inherit",
+                      outline:"none",minWidth:160}}/>
+                )}
+                {bulkField==="condition"&&(
+                  <select value={bulkValue} onChange={e=>setBulkValue(e.target.value)}
+                    style={{padding:"6px 10px",borderRadius:7,border:"1px solid var(--border)",
+                      background:"var(--white)",color:"var(--text)",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                    <option value="">— pick condition —</option>
+                    {CONDS.map(c=><option key={c}>{c}</option>)}
+                  </select>
+                )}
+                {bulkField==="avail"&&(
+                  <select value={bulkValue} onChange={e=>setBulkValue(e.target.value)}
+                    style={{padding:"6px 10px",borderRadius:7,border:"1px solid var(--border)",
+                      background:"var(--white)",color:"var(--text)",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                    <option value="">— pick availability —</option>
+                    {AVAIL.map(a=><option key={a}>{a}</option>)}
+                  </select>
+                )}
+                {bulkField==="mkt"&&(
+                  <select value={bulkValue} onChange={e=>setBulkValue(e.target.value)}
+                    style={{padding:"6px 10px",borderRadius:7,border:"1px solid var(--border)",
+                      background:"var(--white)",color:"var(--text)",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                    <option value="">— pick status —</option>
+                    {MKT.map(s=><option key={s}>{s}</option>)}
+                  </select>
+                )}
+
+                {bulkField&&bulkValue&&(
+                  <button onClick={applyBulkEdit} disabled={bulkSaving}
+                    style={{padding:"6px 16px",borderRadius:7,border:"none",fontFamily:"inherit",
+                      fontSize:13,fontWeight:700,cursor:bulkSaving?"not-allowed":"pointer",
+                      background:"var(--gold)",color:"#1a0f00"}}>
+                    {bulkSaving?"Saving…":"Apply to "+selected.size+" item"+(selected.size!==1?"s":"")}
+                  </button>
+                )}
+              </div>
+            </>)}
+
+            {bulkMsg&&<div style={{fontSize:13,fontWeight:700,
+              color:bulkMsg.startsWith("✅")?"#4caf50":"#e53935",
+              padding:"4px 10px",borderRadius:6,
+              background:bulkMsg.startsWith("✅")?"rgba(76,175,80,.1)":"rgba(229,57,53,.08)"}}>
+              {bulkMsg}
+            </div>}
+          </div>
+        )}
         {showF&&(
           <div className="fbar fin">
             <div><label>Category</label><select value={catF} onChange={e=>setCatF(e.target.value)}><option value="all">All</option>{CATS.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></div>
@@ -2089,7 +2245,10 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
               {paged.map(item=>{
                 const cat=CAT[item.category]||CAT.other;
                 return(
-                  <div key={item.id} className="inv-card" onClick={()=>openD(item)}>
+                  <div key={item.id} className="inv-card"
+                    onClick={()=>selectMode ? toggleSelect(item.id) : openD(item)}
+                    style={{position:"relative",...(selectMode?{cursor:"pointer",outline:selected.has(item.id)?"2px solid var(--gold)":"2px solid transparent",outlineOffset:2,background:selected.has(item.id)?"rgba(212,168,67,.06)":""}:{})}}>
+                    {selectMode&&<div style={{position:"absolute",top:10,left:10,zIndex:10,width:24,height:24,borderRadius:6,border:"2px solid",borderColor:selected.has(item.id)?"var(--gold)":"rgba(255,255,255,.6)",background:selected.has(item.id)?"var(--gold)":"rgba(0,0,0,.35)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:900,color:"#1a0f00"}}>{selected.has(item.id)?"✓":""}</div>}
                     <div className="inv-img">{item.img?<img src={item.img} alt={item.name} loading="lazy"/>:<CatCard catId={item.category} width="100%" height={220}><div style={{padding:"0 14px 12px",color:"#fff"}}></div></CatCard>}</div>
                     <div className="inv-body">
                       {schoolName&&<div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:1.5,color:"#42a5f5",marginBottom:4,display:"flex",alignItems:"center",gap:4}}><span>🏫</span>{schoolName}</div>}
@@ -2107,15 +2266,30 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
         {view==="table"&&(
           <div className="tw">
             <table>
-              <thead><tr><th style={{width:60}}>#</th><th></th><th>Item</th><th>Category</th><th>Cond.</th><th>Qty</th><th>Location</th><th>Avail.</th><th>Market</th><th></th></tr></thead>
+              <thead><tr>
+                {selectMode&&<th style={{width:36}}></th>}
+                <th style={{width:60}}>#</th><th></th><th>Item</th><th>Category</th><th>Cond.</th><th>Qty</th><th>Location</th><th>Avail.</th><th>Market</th><th></th>
+              </tr></thead>
               <tbody>
                 {paged.map(item=>{
                   const cat=CAT[item.category]||CAT.other;
+                  const isSel = selectMode && selected.has(item.id);
                   return(
-                    <tr key={item.id}>
+                    <tr key={item.id} style={isSel?{background:"rgba(212,168,67,.06)"}:{}}
+                      onClick={selectMode?()=>toggleSelect(item.id):undefined}
+                      className={selectMode?"select-row":""}>
+                      {selectMode&&<td style={{width:36,padding:"4px 8px",textAlign:"center"}}>
+                        <div style={{width:20,height:20,borderRadius:5,border:"1.5px solid",
+                          borderColor:isSel?"var(--gold)":"var(--border)",
+                          background:isSel?"var(--gold)":"transparent",
+                          display:"flex",alignItems:"center",justifyContent:"center",
+                          fontSize:12,fontWeight:900,color:"#1a0f00",margin:"0 auto"}}>
+                          {isSel?"✓":""}
+                        </div>
+                      </td>}
                       <td style={{padding:"4px 10px",fontFamily:"monospace",fontSize:12,fontWeight:800,color:"var(--amber)",whiteSpace:"nowrap"}}>{item.display_id||""}</td>
                       <td style={{width:40,padding:"4px 8px"}}>{item.img?<img src={item.img} alt="" style={{width:32,height:32,borderRadius:4,objectFit:"cover"}}/>:<CatThumb catId={item.category} size={32}/>}</td>
-                      <td style={{fontFamily:"'Lora',serif",fontWeight:600,fontSize:15,cursor:"pointer",color:"var(--ink)"}} onClick={()=>openD(item)}>{item.name}</td>
+                      <td style={{fontFamily:"'Lora',serif",fontWeight:600,fontSize:15,cursor:"pointer",color:"var(--ink)"}} onClick={selectMode?undefined:()=>openD(item)}>{item.name}</td>
                       <td style={{fontWeight:700,color:"var(--muted)"}}>{cat.icon} {cat.label}</td>
                       <td>{item.condition}</td><td style={{fontWeight:800}}>{item.qty}</td>
                       <td style={{color:"var(--muted)"}}>
@@ -2123,15 +2297,15 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
                         {item.location||"—"}
                       </td>
                       <td>{item.avail}</td>
-                      <td><span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span></td>
+                      <td><span className={"mkt-badge "+mktCls(item.mkt)}>{item.mkt}</span></td>
                       <td><div style={{display:"flex",gap:4}}>
-                        <button className="ico-btn" onClick={e=>{e.stopPropagation();openE(item)}}>{Ic.edit}</button>
-                        {canDelete&&<button className="ico-btn" style={{color:"var(--red)"}} onClick={e=>{e.stopPropagation();if(window.confirm("Delete?"))onDelete(item.id)}}>{Ic.trash}</button>}
+                        {!selectMode&&<button className="ico-btn" onClick={e=>{e.stopPropagation();openE(item)}}>{Ic.edit}</button>}
+                        {!selectMode&&canDelete&&<button className="ico-btn" style={{color:"var(--red)"}} onClick={e=>{e.stopPropagation();if(window.confirm("Delete?"))onDelete(item.id)}}>{Ic.trash}</button>}
                       </div></td>
                     </tr>
                   );
                 })}
-                {paged.length===0&&<tr><td colSpan={9} style={{textAlign:"center",color:"var(--faint)",padding:40,fontFamily:"'Lora',serif",fontStyle:"italic"}}>No items found</td></tr>}
+                {paged.length===0&&<tr><td colSpan={selectMode?10:9} style={{textAlign:"center",color:"var(--faint)",padding:40,fontFamily:"'Lora',serif",fontStyle:"italic"}}>No items found</td></tr>}
               </tbody>
             </table>
           </div>
@@ -12848,7 +13022,7 @@ const LABEL_PACKS = [
 ];
 const LOGO_ADDON_CENTS = 500; // $5 to include program logo on labels
 
-function LabelsPage({ org, userId, items=[] }) {
+function LabelsPage({ org, userId, items=[], isAdmin=false }) {
   const [tab, setTab]           = useState("print");
   const [myItems, setMyItems]   = useState([]);
   const [orders, setOrders]     = useState([]);
@@ -13099,7 +13273,7 @@ function LabelsPage({ org, userId, items=[] }) {
 
       {/* Tab bar */}
       <div style={{display:"flex",gap:3,marginBottom:22,borderBottom:"1px solid var(--border)",paddingBottom:10}}>
-        {[["print","🖨 Print Labels"],["assign","🔗 Assign a Label"],["order","📬 Order Physical Labels"]].map(([id,lbl])=>(
+        {[["print","🖨 Print Labels"],["assign","🔗 Assign a Label"],["order","📬 Order Physical Labels"]].filter(([id])=>id!=="order"||isAdmin).map(([id,lbl])=>(
           <button key={id} onClick={()=>setTab(id)}
             style={{padding:"7px 16px",borderRadius:"8px 8px 0 0",border:"none",cursor:"pointer",fontSize:13,
               fontWeight:tab===id?700:500,background:tab===id?"var(--gold)":"transparent",
@@ -13324,7 +13498,7 @@ function LabelsPage({ org, userId, items=[] }) {
       )}
 
       {/* ══ ORDER TAB ══ */}
-      {tab==="order"&&(
+      {tab==="order"&&!isAdmin&&(
         <div style={{maxWidth:560}}>
           <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,
             padding:"40px 32px",textAlign:"center"}}>
@@ -13405,6 +13579,33 @@ function LabelsPage({ org, userId, items=[] }) {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {tab==="order"&&isAdmin&&(
+        <div>
+          <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.3)",
+            borderRadius:10,padding:"10px 16px",marginBottom:20,display:"flex",
+            gap:10,alignItems:"center"}}>
+            <span style={{fontSize:16}}>🔧</span>
+            <span style={{fontSize:13,fontWeight:700,color:"var(--gold)"}}>Admin preview</span>
+            <span style={{fontSize:13,color:"var(--muted)"}}>
+              This order UI is visible only to you. Other programs see a Coming Soon page.
+            </span>
+          </div>
+          <p style={{fontSize:14,color:"var(--muted)",marginBottom:18,lineHeight:1.7}}>
+            Full order flow is accessible here for testing and development.
+            Tag each inventory item with a label type, add blank extras for future items,
+            then submit to generate an order in the database.
+          </p>
+          <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:20,marginBottom:16}}>
+            <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>Order flow is in development</div>
+            <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>
+              The complete order UI (item tagging, blank label extras, shipping address, cost summary)
+              will appear here once WePrintBarcodes pricing and CSV format are confirmed.
+              For now, use the Admin Hub Label Orders tab to manage orders manually.
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -13906,6 +14107,7 @@ function AdminHub({ currentUser, org }) {
     ["overview",  "🏠 Overview"],
     ["digest",    "📋 Daily Digest"],
     ["users",     "👥 Users & Leads"],
+    ["billing",   "💳 Billing & Access"],
     ["analytics", "📈 Analytics"],
     ["feedback",  "💬 Feedback"],
     ["labels",    "🏷 Label Orders"],
@@ -14168,6 +14370,209 @@ function AdminHub({ currentUser, org }) {
               </table>
             </div>
           }
+        </div>
+      )}
+
+      {/* ── BILLING & ACCESS ── */}
+      {!loading&&tab==="billing"&&(
+        <div>
+          <div style={{marginBottom:24}}>
+            <h3 style={{fontFamily:"var(--serif)",fontSize:22,marginBottom:4}}>Billing & Access Management</h3>
+            <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.6}}>
+              Control who has Pro access and how. Right now everyone is on
+              {" "}<strong style={{color:"var(--gold)"}}>Beta Temp Pro</strong> — free access you granted manually.
+              When beta ends, you'll end temp pro here, and programs will need to subscribe through Stripe to keep Pro features.
+            </p>
+          </div>
+
+          {/* Status summary */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:24}}>
+            {[
+              { n: orgs.filter(o=>o.temp_pro).length,                                    label:"Beta Temp Pro",   color:"var(--gold)",  icon:"⭐", desc:"Free beta access" },
+              { n: orgs.filter(o=>o.stripe_subscription_id).length,                      label:"Paying (Stripe)", color:"#4caf50",      icon:"💳", desc:"Active subscriptions" },
+              { n: orgs.filter(o=>o.plan==="district"&&!o.temp_pro).length,              label:"District",        color:"#2196f3",      icon:"🏛", desc:"Manually granted" },
+              { n: orgs.filter(o=>o.plan==="free"&&!o.temp_pro).length,                  label:"Free",            color:"var(--muted)", icon:"⚪", desc:"Limited access" },
+            ].map(k=>(
+              <div key={k.label} style={{background:"var(--parch)",border:"1px solid var(--border)",
+                borderRadius:10,padding:"14px 16px",textAlign:"center"}}>
+                <div style={{fontSize:24,marginBottom:4}}>{k.icon}</div>
+                <div style={{fontSize:28,fontWeight:800,color:k.color,lineHeight:1}}>{k.n}</div>
+                <div style={{fontSize:12,fontWeight:700,color:k.color,marginTop:3}}>{k.label}</div>
+                <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{k.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Bulk group actions */}
+          <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,padding:20,marginBottom:20}}>
+            <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>Group Actions</div>
+            <p style={{fontSize:13,color:"var(--muted)",marginBottom:16,lineHeight:1.6}}>
+              These buttons affect all programs in a group at once. Use with care — there's no undo.
+            </p>
+            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+              <button onClick={async()=>{
+                if(!confirm("Grant temp_pro to ALL free programs that don't have it? This gives them full Pro access.")) return;
+                const {error} = await SB.from("orgs")
+                  .update({temp_pro:true, temp_pro_granted_at:new Date().toISOString(), temp_pro_note:"Bulk granted via admin hub"})
+                  .eq("plan","free").is("temp_pro",false)
+                  .is("deleted_at",null);
+                if(!error){flash("✓ Temp Pro granted to all free accounts");setOrgs(p=>p.map(o=>o.plan==="free"&&!o.temp_pro?{...o,temp_pro:true}:o));}
+              }} style={{padding:"10px 18px",borderRadius:8,border:"none",fontFamily:"inherit",
+                fontSize:14,fontWeight:700,cursor:"pointer",
+                background:"rgba(212,168,67,.15)",color:"var(--gold)",border:"1px solid rgba(212,168,67,.3)"}}>
+                ⭐ Grant Temp Pro to all free accounts
+              </button>
+
+              <button onClick={async()=>{
+                if(!confirm("END BETA: Remove temp_pro from everyone? Programs will need to subscribe through Stripe to keep Pro features. This is a big step — only do this at Artstracker launch.")) return;
+                const {error} = await SB.from("orgs")
+                  .update({temp_pro:false, temp_pro_note:"Beta ended — subscription required"})
+                  .eq("temp_pro",true)
+                  .is("stripe_subscription_id",null);
+                if(!error){flash("✓ Beta ended — temp_pro removed from all non-paying accounts");
+                  setOrgs(p=>p.map(o=>o.temp_pro&&!o.stripe_subscription_id?{...o,temp_pro:false}:o));}
+              }} style={{padding:"10px 18px",borderRadius:8,fontFamily:"inherit",
+                fontSize:14,fontWeight:700,cursor:"pointer",
+                background:"rgba(229,57,53,.08)",color:"#e53935",border:"1px solid rgba(229,57,53,.25)"}}>
+                🔴 End Beta (remove temp pro from all non-paying)
+              </button>
+            </div>
+            <div style={{marginTop:12,fontSize:12,color:"var(--muted)",lineHeight:1.6,
+              padding:"10px 12px",background:"rgba(0,0,0,.06)",borderRadius:7}}>
+              <strong style={{color:"var(--text)"}}>Safe to use now:</strong> Grant Temp Pro.
+              {" "}<strong style={{color:"#e53935"}}>End Beta</strong> only at Artstracker launch —
+              it removes free access from everyone who hasn't paid. Paying subscribers (Stripe) are unaffected.
+            </div>
+          </div>
+
+          {/* Per-program access table */}
+          <div>
+            <div style={{fontWeight:700,fontSize:16,marginBottom:12}}>Program Access — Individual Controls</div>
+            <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                <thead><tr style={{background:"rgba(0,0,0,.08)"}}>
+                  {["Program","Director","Plan","Access","Stripe","Send Stripe Link"].map(h=>(
+                    <th key={h} style={{padding:"9px 12px",textAlign:"left",fontSize:11,fontWeight:700,
+                      textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)"}}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {orgs.map(o=>{
+                    const accessLabel = o.stripe_subscription_id ? "💳 Paying"
+                      : o.temp_pro ? "⭐ Beta Free"
+                      : o.plan==="district" ? "🏛 District"
+                      : "⚪ Free";
+                    const accessColor = o.stripe_subscription_id ? "#4caf50"
+                      : o.temp_pro ? "var(--gold)"
+                      : o.plan==="district" ? "#2196f3"
+                      : "var(--muted)";
+                    const stripeLink = "https://billing.stripe.com/p/login/aFa4gydAZ2X1cpZ6UHgA800";
+                    const checkoutLink = "https://theatre4u.org?checkout=pro";
+                    return(
+                      <tr key={o.id} style={{borderTop:"1px solid var(--border)"}}>
+                        <td style={{padding:"9px 12px",fontWeight:600,fontSize:13}}>{o.name}</td>
+                        <td style={{padding:"9px 12px",fontSize:12,color:"var(--muted)"}}>{o.director_name||"—"}</td>
+                        <td style={{padding:"9px 12px"}}>
+                          <select value={o.plan}
+                            onChange={async e=>{
+                              const np=e.target.value;
+                              const{error}=await SB.from("orgs").update({plan:np}).eq("id",o.id);
+                              if(!error){setOrgs(p=>p.map(x=>x.id===o.id?{...x,plan:np}:x));flash("✓ Plan updated");}
+                            }}
+                            style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,
+                              padding:"3px 7px",fontSize:12,color:"var(--text)",cursor:"pointer"}}>
+                            {["free","pro","district","district_m","district_l"].map(p=><option key={p} value={p}>{p}</option>)}
+                          </select>
+                        </td>
+                        <td style={{padding:"9px 12px"}}>
+                          <button onClick={async()=>{
+                            const next=!o.temp_pro;
+                            const{error}=await SB.from("orgs").update({
+                              temp_pro:next,
+                              temp_pro_granted_at:next?new Date().toISOString():null,
+                              temp_pro_note:next?"Granted via billing tab":"Removed via billing tab"
+                            }).eq("id",o.id);
+                            if(!error){setOrgs(p=>p.map(x=>x.id===o.id?{...x,temp_pro:next}:x));flash("✓ Access updated");}
+                          }} style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:6,
+                            border:"1.5px solid",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",
+                            borderColor:o.temp_pro?"var(--gold)":o.stripe_subscription_id?"#4caf50":"var(--border)",
+                            background:o.temp_pro?"rgba(212,168,67,.1)":o.stripe_subscription_id?"rgba(76,175,80,.1)":"transparent",
+                            color:accessColor}}>
+                            {accessLabel}
+                          </button>
+                        </td>
+                        <td style={{padding:"9px 12px",fontSize:11,color:"var(--muted)",fontFamily:"monospace"}}>
+                          {o.stripe_subscription_id
+                            ? <span style={{color:"#4caf50"}}>✓ Active</span>
+                            : o.stripe_customer_id
+                            ? <span style={{color:"var(--gold)"}}>Customer, no sub</span>
+                            : <span>None</span>}
+                        </td>
+                        <td style={{padding:"9px 12px"}}>
+                          {!o.stripe_subscription_id&&(
+                            <a href={"mailto:"+o.email
+                              +"?subject=Theatre4u™ — Your Beta Access & Subscription Options"
+                              +"&body=Hi "+( o.director_name||"there")+","
+                              +"%0A%0AThank you for being part of the Theatre4u beta! You've had full Pro access at no charge while we've been building and improving the platform."
+                              +"%0A%0AWe'd love to have you continue as a subscriber. Pro is $15%2Fmonth or $150%2Fyear — and as a beta member, you've already experienced everything it includes."
+                              +"%0A%0AYou can subscribe here: https%3A%2F%2Ftheatre4u.org%2F%23checkout"
+                              +"%0A%0AIf you have any questions just reply to this email."
+                              +"%0A%0ABob Zick%0AFounder, Theatre4u™%0Ahello%40theatre4u.org"}
+                              style={{fontSize:12,color:"var(--gold)",fontWeight:700,
+                                textDecoration:"none",whiteSpace:"nowrap"}}>
+                              ✉ Send invite
+                            </a>
+                          )}
+                          {o.stripe_subscription_id&&(
+                            <a href={stripeLink} target="_blank" rel="noreferrer"
+                              style={{fontSize:12,color:"#4caf50",fontWeight:700,textDecoration:"none"}}>
+                              Manage →
+                            </a>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* How automation works */}
+          <div style={{marginTop:24,background:"rgba(33,150,243,.05)",border:"1px solid rgba(33,150,243,.15)",
+            borderRadius:12,padding:20}}>
+            <div style={{fontWeight:700,fontSize:15,marginBottom:12}}>How billing automation works</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
+              {[
+                {n:"1",ico:"📝",t:"Program signs up",b:"They get temp_pro=true automatically. Full Pro features, no charge."},
+                {n:"2",ico:"✉️",t:"You send Stripe invite",b:"Click 'Send invite' above to email them a pre-written subscription link."},
+                {n:"3",ico:"💳",t:"They subscribe",b:"They pay $15/mo through Stripe checkout. Automatic from there."},
+                {n:"4",ico:"⚡",t:"Webhook fires",b:"Stripe tells Theatre4u instantly. plan='pro', stripe IDs stored. No action needed."},
+                {n:"5",ico:"🔁",t:"Auto-renewal",b:"Stripe handles monthly/annual renewal. If payment fails, plan downgrades automatically."},
+                {n:"6",ico:"❌",t:"They cancel",b:"Stripe webhook downgrades them to free at period end. Automatic."},
+              ].map(s=>(
+                <div key={s.n} style={{background:"rgba(255,255,255,.5)",borderRadius:8,padding:"12px 14px",
+                  display:"flex",gap:10,alignItems:"flex-start"}}>
+                  <div style={{background:"#2196f3",color:"#fff",borderRadius:"50%",width:22,height:22,
+                    minWidth:22,display:"flex",alignItems:"center",justifyContent:"center",
+                    fontSize:11,fontWeight:800}}>{s.n}</div>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:13,marginBottom:3}}>{s.ico} {s.t}</div>
+                    <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>{s.b}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{marginTop:14,fontSize:12,color:"var(--muted)",lineHeight:1.6,
+              borderTop:"1px solid rgba(33,150,243,.15)",paddingTop:12}}>
+              <strong style={{color:"var(--text)"}}>One thing still needed:</strong> The Stripe checkout link
+              that programs click to subscribe needs to pass their <code style={{fontFamily:"monospace",
+              background:"rgba(0,0,0,.06)",padding:"1px 5px",borderRadius:3}}>org_id</code> as the
+              {" "}<code style={{fontFamily:"monospace",background:"rgba(0,0,0,.06)",padding:"1px 5px",borderRadius:3}}>client_reference_id</code>
+              {" "}in the Stripe session, so the webhook knows which org to upgrade.
+              This is a one-time code change in the checkout flow — ask to build this when ready to go live.
+            </div>
+          </div>
         </div>
       )}
 
@@ -15728,7 +16133,7 @@ function AppRoot(){
               {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} userId={user?.id} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
                   {page==="district"    && plan==="district" && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool}/>}
                   {page==="community"   && <CommunityGate userId={user?.id} org={org} setOrg={setOrg} plan={plan}/>}
-                  {page==="labels"     && <LabelsPage org={org} userId={user?.id} items={items}/>}
+                  {page==="labels"     && <LabelsPage org={org} userId={user?.id} items={items} isAdmin={isAdmin}/>}
                   {page==="points"     && (plan!=="free"||isAdmin) && <CreditsPage userId={user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
                   {page==="points"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>Stage Points is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true}/></div>}
 
