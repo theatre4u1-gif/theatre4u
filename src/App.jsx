@@ -9857,7 +9857,7 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
             { icon: "🏪", title: "First Exchange Listing",earn: "+15 pts",    note: "List any item on the Exchange." },
             { icon: "📨", title: "First Exchange Request",earn: "+10 pts",    note: "Send your first request to another program." },
             { icon: "👥", title: "Invite a Team Member", earn: "+15 pts",     note: "Per member who signs in." },
-            { icon: "👋", title: "Refer a Program",     earn: "+50 pts",      note: "Per program that creates an account." },
+            { icon: "👋", title: "Refer a Program",     earn: "+50 pts",      note: "Per program that creates an account using your referral link." },
             { icon: "🤝", title: "Loan Completed",       earn: isAnnual ? "+15–75 pts ⭐" : "+10–50 pts",
               note: isAnnual ? "1.5× annual rate. Lighting/Sound = 75 pts." : "Varies by item category. Lighting/Sound = 50 pts." },
             { icon: "🔑", title: "Rental Completed",     earn: isAnnual ? "+$1 = 1.5 pts ⭐" : "+$1 = 1 pt",
@@ -9873,6 +9873,71 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
             </div>
           ))}
         </div>
+
+        {/* ── Referral Link ── */}
+        {org?.referral_code && (
+          <div className="card card-p" style={{ marginBottom: 22,
+            background: "linear-gradient(135deg,rgba(212,168,67,.06),rgba(212,168,67,.02))",
+            border: "1px solid rgba(212,168,67,.25)" }}>
+            <div style={{ display: "flex", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
+              <span style={{ fontSize: 32, flexShrink: 0 }}>👋</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>
+                  Your Referral Link — Earn 50 Points Per Program
+                </div>
+                <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, marginBottom: 14 }}>
+                  Share this link with other theatre directors. When they sign up and create an account,
+                  you automatically earn 50 Stage Points. No limit on referrals.
+                </div>
+                {/* Referral link box */}
+                {(()=>{
+                  const refUrl = "https://theatre4u.org?ref=" + org.referral_code;
+                  const [copied, setCopied] = useState(false);
+                  const copy = () => {
+                    navigator.clipboard.writeText(refUrl).then(()=>{
+                      setCopied(true); setTimeout(()=>setCopied(false), 2500);
+                    });
+                  };
+                  return (
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                      <div style={{ flex: 1, minWidth: 200, background: "var(--parch)",
+                        border: "1px solid var(--border)", borderRadius: 8,
+                        padding: "9px 14px", fontFamily: "monospace", fontSize: 13,
+                        color: "var(--gold)", letterSpacing: 0.3, wordBreak: "break-all" }}>
+                        {refUrl}
+                      </div>
+                      <button onClick={copy}
+                        style={{ padding: "9px 18px", borderRadius: 8, border: "none",
+                          background: copied ? "var(--green)" : "var(--gold)",
+                          color: "#1a0f00", fontWeight: 700, fontSize: 13,
+                          cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
+                          transition: "background .2s" }}>
+                        {copied ? "✓ Copied!" : "Copy Link"}
+                      </button>
+                      <button onClick={()=>fbShare(refUrl,
+                        "🎭 I use Theatre4u to manage my theatre program's inventory and share resources with other programs through the Backstage Exchange. It's free right now — check it out!\n\ntheatre4u.org #Theatre #TheatreEducation")}
+                        style={{ padding: "9px 14px", borderRadius: 8,
+                          border: "1px solid rgba(24,119,242,.35)",
+                          background: "rgba(24,119,242,.08)", color: "#4285f4",
+                          fontSize: 13, fontWeight: 700, cursor: "pointer",
+                          fontFamily: "inherit", flexShrink: 0,
+                          display: "flex", alignItems: "center", gap: 6 }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                        </svg>
+                        Share
+                      </button>
+                    </div>
+                  );
+                })()}
+                <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
+                  Your referral code: <strong style={{ color: "var(--gold)", fontFamily: "monospace", letterSpacing: 1 }}>{org.referral_code}</strong>
+                  {" · "}Points appear in your ledger within seconds of the new program signing up.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Redeem Free Month ── */}
         {plan !== "free" && (
@@ -11170,6 +11235,19 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             temp_pro_granted_at: new Date().toISOString(),
             temp_pro_note: "Beta signup — auto-granted",
           },{onConflict:"id",ignoreDuplicates:false});
+          // Look up referrer by ref code and link them
+          const refCode = getRefCode();
+          if (refCode) {
+            const { data: referrer } = await SB.from("orgs")
+              .select("id").eq("referral_code", refCode).single();
+            if (referrer?.id && referrer.id !== data.user.id) {
+              await SB.from("orgs").update({ referred_by_org: referrer.id })
+                .eq("id", data.user.id);
+              // Award 50 Stage Points to referrer immediately
+              await SB.rpc("award_referral_points", { p_new_org_id: data.user.id });
+              try { sessionStorage.removeItem("t4u_ref"); } catch(e) {}
+            }
+          }
           // Auto-generate label prefix
           try {
             const { data: pfxData } = await SB.rpc("generate_label_prefix", { p_name: orgName });
@@ -12664,7 +12742,13 @@ function createDemoStore() {
       _single:  false,
       _count:   false,
 
-      select:   ()             => chain,
+      select:   (cols) => {
+        // If selecting with a nested join like "*, orgs(name,...)", enrich items with org data
+        if (cols && typeof cols === "string" && cols.includes("orgs(") && table === "items") {
+          chain._enrichWithOrg = true;
+        }
+        return chain;
+      },
       order:    ()             => chain,
       limit:    ()             => chain,
       range:    ()             => chain,
@@ -12745,14 +12829,27 @@ function createDemoStore() {
         try {
           let data;
           if (chain._data !== undefined) {
-            // insert/upsert set _data — but if .single() was chained after,
-            // we need to unwrap the array to a single row
             data = chain._data;
             if (chain._single && Array.isArray(data)) data = data[0] || null;
           } else {
             const store = tbl(table);
             const filtered = store.filter(r => chain._filters.every(f => f(r)));
             data = chain._single ? (filtered[0] || null) : filtered;
+          }
+          // Enrich items with org data when a nested join was requested
+          if (chain._enrichWithOrg && Array.isArray(data)) {
+            const orgStore = tbl("orgs");
+            data = data.map(item => {
+              const org = orgStore.find(o => o.id === item.org_id) || {};
+              return { ...item, orgs: {
+                name: org.name || "Demo Theatre Program",
+                location: org.location || "Demo City, CA",
+                state: org.state || "CA",
+                zipcode: org.zipcode || "92648",
+                lat: null, lng: null,
+                marketplace_enabled: true,
+              }};
+            });
           }
           const count = Array.isArray(data) ? data.length : (data ? 1 : 0);
           resolve({ data, error: null, count });
@@ -12779,8 +12876,15 @@ function createDemoStore() {
         const prefix = name.replace(/[^A-Z]/gi, "").toUpperCase().slice(0,4) || "DEMO";
         return Promise.resolve({ data: prefix, error: null });
       }
-      if (fn === "award_milestone_points") return Promise.resolve({ data: null, error: null });
-      if (fn === "lookup_label")           return Promise.resolve({ data: null, error: null });
+      // Credits spending always succeeds in demo
+      if (fn === "spend_credits") return Promise.resolve({ data: { success: true }, error: null });
+      // Points awarding, referrals, etc. — all succeed silently
+      if (fn === "award_milestone_points")  return Promise.resolve({ data: null, error: null });
+      if (fn === "award_referral_points")   return Promise.resolve({ data: null, error: null });
+      if (fn === "get_my_credit_balance")   return Promise.resolve({ data: 150, error: null });
+      if (fn === "points_eligible_in_days") return Promise.resolve({ data: 0,   error: null });
+      if (fn === "lookup_label")            return Promise.resolve({ data: null, error: null });
+      if (fn === "is_org_member")           return Promise.resolve({ data: false, error: null });
       return Promise.resolve({ data: null, error: null });
     },
     auth: {
@@ -16275,6 +16379,16 @@ function getSessionId() {
   if (!sid) { sid = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem("t4u_sid", sid); }
   return sid;
 }
+// Capture referral code from ?ref= param and persist it for signup
+;(()=>{
+  try {
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (ref) sessionStorage.setItem("t4u_ref", ref.toUpperCase().trim());
+  } catch(e) {}
+})();
+function getRefCode() {
+  try { return sessionStorage.getItem("t4u_ref") || null; } catch(e) { return null; }
+}
 function trackVisit(page, extra = {}) {
   try {
     const params = new URLSearchParams(window.location.search);
@@ -16287,6 +16401,7 @@ function trackVisit(page, extra = {}) {
         utm_source:   params.get("utm_source"),
         utm_medium:   params.get("utm_medium"),
         utm_campaign: params.get("utm_campaign"),
+        ref_code:     getRefCode(),
         ...extra
       })
     }).catch(() => {});
