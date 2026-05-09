@@ -12697,7 +12697,8 @@ function createDemoStore() {
           updated_at: r.updated_at || new Date().toISOString(),
         }));
         tbl(table).push(...inserted);
-        chain._data = chain._single ? inserted[0] : inserted;
+        // Always store the array — then() will unwrap to single if .single() was chained
+        chain._data = inserted;
         return chain;
       },
 
@@ -12714,18 +12715,22 @@ function createDemoStore() {
           }
         });
         const result = tbl(table).find(x => x[conflictKey] === rows[0]?.[conflictKey]);
-        chain._data = chain._single ? result : (result ? [result] : rows);
+        // Store as array so then() can unwrap for .single()
+        chain._data = result ? [result] : [];
         return chain;
       },
 
       update: (data) => {
         const store = tbl(table);
+        const updated = [];
         store.forEach((r, i) => {
           if (chain._filters.every(f => f(r))) {
             store[i] = { ...r, ...data, updated_at: new Date().toISOString() };
+            updated.push(store[i]);
           }
         });
-        chain._data = null;
+        // Store updated rows so chained .select().single() returns the row
+        chain._data = updated;
         return chain;
       },
 
@@ -12740,7 +12745,10 @@ function createDemoStore() {
         try {
           let data;
           if (chain._data !== undefined) {
+            // insert/upsert set _data — but if .single() was chained after,
+            // we need to unwrap the array to a single row
             data = chain._data;
+            if (chain._single && Array.isArray(data)) data = data[0] || null;
           } else {
             const store = tbl(table);
             const filtered = store.filter(r => chain._filters.every(f => f(r)));
