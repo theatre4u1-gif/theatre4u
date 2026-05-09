@@ -37,10 +37,21 @@ function getBrowserLocation() {
   });
 }
 
-const SB = createClient(
+const _SB_REAL = createClient(
   "https://ldmmphwivnnboyhlxipl.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA"
 );
+
+// SB_ACTIVE is the mutable backend — swapped to demoStore in demo mode.
+// All 274 SB.xxx() calls throughout the app use this transparently.
+let SB_ACTIVE = _SB_REAL;
+const SB = new Proxy({}, {
+  get(_, prop) {
+    const target = SB_ACTIVE;
+    const val = target[prop];
+    return typeof val === "function" ? val.bind(target) : val;
+  }
+});
 
 // Edge function caller helper
 const callEdgeFn = async (name, body, token) => {
@@ -1947,6 +1958,53 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
   const[bulkMsg,    setBulkMsg]    = useState("");
   const[bulkField,  setBulkField]  = useState(""); // which field to bulk-update
   const[bulkValue,  setBulkValue]  = useState("");  // what value
+  const[autoCatRunning, setAutoCatRunning] = useState(false);
+  const[autoCatMsg,     setAutoCatMsg]     = useState("");
+
+  // Auto-categorize selected items using Claude AI
+  const autoCategorizeSel = async () => {
+    if (selected.size === 0) return;
+    setAutoCatRunning(true);
+    setAutoCatMsg("Analyzing items…");
+    const ids = [...selected];
+    const toProcess = items.filter(i => ids.includes(i.id));
+    let updated = 0, failed = 0;
+
+    for (const item of toProcess) {
+      try {
+        const prompt = "You are categorizing theatre inventory items. "
+          + "Given the item name and notes, return ONLY the single best category ID from this list: "
+          + "costumes, props, sets, lighting, sound, scripts, makeup, furniture, fabrics, tools, effects, other. "
+          + "Return only the category ID, nothing else. "
+          + "Item name: " + item.name + ". "
+          + (item.notes ? "Notes: " + item.notes + "." : "");
+
+        const res = await fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/ai-help", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: prompt, context: "categorize" }),
+        });
+        const json = await res.json();
+        const raw  = (json.reply || json.response || json.content || "").trim().toLowerCase();
+        const VALID = ["costumes","props","sets","lighting","sound","scripts","makeup","furniture","fabrics","tools","effects","other"];
+        const cat   = VALID.find(c => raw.includes(c));
+        if (cat && cat !== item.category) {
+          const { error } = await SB.from("items").update({ category: cat }).eq("id", item.id);
+          if (!error) { onEdit({ ...item, category: cat }); updated++; }
+          else failed++;
+        } else {
+          updated++; // already correct or no change needed
+        }
+        setAutoCatMsg("Analyzing… " + (updated + failed) + "/" + toProcess.length);
+      } catch(e) { failed++; }
+    }
+
+    setAutoCatMsg("✅ Done — " + updated + " item" + (updated!==1?"s":"") + " categorized"
+      + (failed > 0 ? ", " + failed + " failed" : ""));
+    setAutoCatRunning(false);
+    setSelected(new Set());
+    setTimeout(() => setAutoCatMsg(""), 4000);
+  };
 
   const toggleSelect = (id) => setSelected(prev => {
     const n = new Set(prev);
@@ -2160,6 +2218,20 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
                 {selected.size} selected
               </span>}
             </div>
+
+            {/* Auto-categorize — shown when items are selected */}
+            {selected.size>0&&(
+              <button onClick={autoCategorizeSel} disabled={autoCatRunning}
+                title="Use AI to suggest the best category for each selected item based on its name and description"
+                style={{padding:"5px 13px",borderRadius:6,border:"1px solid rgba(212,168,67,.4)",
+                  background:"rgba(212,168,67,.1)",color:"var(--gold)",fontSize:12,fontWeight:700,
+                  cursor:autoCatRunning?"not-allowed":"pointer",fontFamily:"inherit",
+                  display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
+                {autoCatRunning ? "✨ Analyzing…" : "✨ Auto-categorize"}
+              </button>
+            )}
+            {autoCatMsg&&<span style={{fontSize:12,fontWeight:700,
+              color:autoCatMsg.startsWith("✅")?"#4caf50":"var(--gold)"}}>{autoCatMsg}</span>}
 
             {/* Field + value pickers — only show when items are selected */}
             {selected.size>0&&(<>
@@ -12411,8 +12483,215 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// Wrap App with ErrorBoundary for export
-const AppWithBoundary = ()=><ErrorBoundary><AppRoot/></ErrorBoundary>;
+// ══════════════════════════════════════════════════════════════════════════════
+// DEMO MODE — Full app running with in-memory store, no real Supabase writes
+// Access via theatre4u.org?demo=1
+// Shows the real signup → onboarding → full app experience
+// ══════════════════════════════════════════════════════════════════════════════
+
+const DEMO_ORG = {
+  id: "demo-org-id",
+  name: "", // filled in during signup demo
+  email: "",
+  type: "", phone: "", location: "", bio: "",
+  plan: "pro", temp_pro: true,
+  director_name: "", director_title: "Theatre Director",
+  label_prefix: "DEMO",
+  is_leading_player: false,
+  beta_acknowledged: false,
+  profile_public: false,
+  onboarding_step: 0,
+  created_at: new Date().toISOString(),
+};
+
+const DEMO_ITEMS = [
+  { id:"di1", name:"Victorian Ball Gown — Blue", category:"costumes", condition:"Good", size:"M", qty:1, location:"Costume Closet A", notes:"Used in A Christmas Carol 2024", mkt:"For Rent", avail:"In Stock", sale:0, rent:25, tags:["period","formal"], img:null, display_id:"DEMO-0001", org_id:"demo-org-id", added:new Date().toISOString() },
+  { id:"di2", name:"Pirate Hat Collection (6pc)", category:"costumes", condition:"Fair", size:"One Size", qty:6, location:"Costume Closet B", notes:"Assorted styles", mkt:"Not Listed", avail:"In Stock", sale:0, rent:0, tags:["adventure"], img:null, display_id:"DEMO-0002", org_id:"demo-org-id", added:new Date().toISOString() },
+  { id:"di3", name:"Wireless Handheld Mic — Shure SM58", category:"sound", condition:"Excellent", size:"N/A", qty:4, location:"Sound Booth", notes:"4 channels, includes cases", mkt:"For Rent", avail:"In Stock", sale:0, rent:15, tags:["audio"], img:null, display_id:"DEMO-0003", org_id:"demo-org-id", added:new Date().toISOString() },
+  { id:"di4", name:"LED Par Can RGBW", category:"lighting", condition:"New", size:"N/A", qty:12, location:"Lighting Storage", notes:"DMX controllable", mkt:"Rent or Sale", avail:"In Stock", sale:85, rent:10, tags:["dmx","led"], img:null, display_id:"DEMO-0004", org_id:"demo-org-id", added:new Date().toISOString() },
+  { id:"di5", name:"Fog Machine 1000W", category:"effects", condition:"Good", size:"N/A", qty:2, location:"Effects Cage", notes:"Includes remote", mkt:"For Rent", avail:"In Stock", sale:0, rent:20, tags:["atmosphere"], img:null, display_id:"DEMO-0005", org_id:"demo-org-id", added:new Date().toISOString() },
+  { id:"di6", name:"Forest Backdrop 8x12ft", category:"sets", condition:"Good", size:"N/A", qty:2, location:"Scene Shop", notes:"Painted muslin on frame", mkt:"For Rent", avail:"In Stock", sale:0, rent:40, tags:["outdoor"], img:null, display_id:"DEMO-0006", org_id:"demo-org-id", added:new Date().toISOString() },
+  { id:"di7", name:"Foam Rubber Swords (8pc)", category:"props", condition:"Fair", size:"N/A", qty:8, location:"Props Table", notes:"Safe for stage combat", mkt:"For Sale", avail:"In Stock", sale:12, rent:0, tags:["combat"], img:null, display_id:"DEMO-0007", org_id:"demo-org-id", added:new Date().toISOString() },
+  { id:"di8", name:"Ben Nye Master Makeup Kit", category:"makeup", condition:"Good", size:"N/A", qty:3, location:"Dressing Room 1", notes:"Full spectrum palette", mkt:"Not Listed", avail:"In Stock", sale:0, rent:0, tags:["professional"], img:null, display_id:"DEMO-0008", org_id:"demo-org-id", added:new Date().toISOString() },
+];
+
+// In-memory store for demo — mimics Supabase table structure
+function createDemoStore() {
+  let orgs  = [];      // starts empty — user "signs up" via the real form
+  let items = [];      // starts empty — user adds their own, or we seed after onboarding
+  let seeded = false;
+
+  const uid = () => "demo-" + Math.random().toString(36).slice(2,10);
+
+  // Intercept SB.from("table") calls
+  // Returns an object that mimics Supabase's chainable query builder
+  const mockTable = (table) => {
+    const chain = {
+      _filters: [],
+      _data: null,
+      _single: false,
+
+      select: (cols) => chain,
+      order:  ()    => chain,
+      limit:  ()    => chain,
+      range:  ()    => chain,
+      neq:    ()    => chain,
+      gte:    ()    => chain,
+      lt:     ()    => chain,
+      ilike:  ()    => chain,
+      in:     (col, vals) => {
+        chain._filters.push(row => vals.includes(row[col]));
+        return chain;
+      },
+      eq: (col, val) => {
+        chain._filters.push(row => row[col] === val);
+        return chain;
+      },
+      is: (col, val) => {
+        chain._filters.push(row => val === null ? row[col] == null : row[col] === val);
+        return chain;
+      },
+      single: () => { chain._single = true; return chain; },
+
+      insert: (data) => {
+        const rows = Array.isArray(data) ? data : [data];
+        const inserted = rows.map(r => ({ ...r, id: r.id || uid(), created_at: new Date().toISOString() }));
+        if (table === "orgs")  orgs  = [...orgs,  ...inserted];
+        if (table === "items") items = [...items, ...inserted];
+        chain._data = chain._single ? inserted[0] : inserted;
+        return chain;
+      },
+
+      upsert: (data) => {
+        const rows = Array.isArray(data) ? data : [data];
+        rows.forEach(r => {
+          if (table === "orgs") {
+            const idx = orgs.findIndex(x => x.id === r.id);
+            if (idx >= 0) orgs[idx] = { ...orgs[idx], ...r };
+            else orgs.push({ ...r, created_at: new Date().toISOString() });
+          }
+          if (table === "items") {
+            const idx = items.findIndex(x => x.id === r.id);
+            if (idx >= 0) items[idx] = { ...items[idx], ...r };
+            else items.push({ ...r, id: r.id||uid(), created_at: new Date().toISOString() });
+          }
+        });
+        const result = table === "orgs" ? orgs.find(x => x.id === rows[0]?.id) : rows[0];
+        chain._data = result;
+        return chain;
+      },
+
+      update: (data) => {
+        if (table === "orgs")  orgs  = orgs.map(r  => chain._filters.every(f=>f(r))  ? {...r,...data}  : r);
+        if (table === "items") items = items.map(r => chain._filters.every(f=>f(r)) ? {...r,...data} : r);
+        chain._data = null;
+        return chain;
+      },
+
+      delete: () => {
+        if (table === "items") items = items.filter(r => !chain._filters.every(f=>f(r)));
+        if (table === "orgs")  orgs  = orgs.filter(r  => !chain._filters.every(f=>f(r)));
+        return chain;
+      },
+
+      // Terminal — execute and return {data, error}
+      then: (resolve) => {
+        let data = null;
+        if (chain._data !== undefined && chain._data !== null) {
+          data = chain._data;
+        } else {
+          const store = table === "orgs" ? orgs : table === "items" ? items : [];
+          const filtered = store.filter(r => chain._filters.every(f=>f(r)));
+          data = chain._single ? (filtered[0] || null) : filtered;
+        }
+        resolve({ data, error: null, count: Array.isArray(data) ? data.length : (data?1:0) });
+      },
+    };
+    // Make it thenable — supports await SB.from("items").select("*").eq(...)
+    chain[Symbol.toStringTag] = "DemoQuery";
+    return chain;
+  };
+
+  return {
+    getStore: () => ({ orgs, items }),
+    seedItems: () => {
+      if (!seeded) { items = [...DEMO_ITEMS]; seeded = true; }
+    },
+    from: (table) => mockTable(table),
+    rpc:  ()      => Promise.resolve({ data: null, error: null }),
+    auth: {
+      getSession:      () => Promise.resolve({ data: { session: null } }),
+      onAuthStateChange: (cb) => { return { data: { subscription: { unsubscribe: ()=>{} } } }; },
+      signInWithPassword: () => Promise.resolve({ data: { user: null }, error: { message: "Demo mode — no real login" } }),
+      signUp: (creds) => {
+        const demoUser = { id: "demo-user-id", email: creds.email, created_at: new Date().toISOString() };
+        return Promise.resolve({ data: { user: demoUser, session: { access_token: "demo-token", user: demoUser } }, error: null });
+      },
+      signOut: () => { window.location.href = "https://theatre4u.org"; return Promise.resolve(); },
+    },
+    storage: { from: () => ({ upload: () => Promise.resolve({ data: null, error: null }), getPublicUrl: () => ({ data: { publicUrl: "" } }) }) },
+  };
+}
+
+// Demo wrapper — replaces SB globally when ?demo=1
+function DemoApp() {
+  const [started, setStarted] = useState(false);
+  const [store]  = useState(() => createDemoStore());
+
+  // Inject the demo store as the global SB before AppRoot mounts
+  useEffect(() => {
+    window.__demoStore = store;
+    // Monkey-patch the module-level SB reference
+    // Since SB is const at module scope, we use a flag that AppRoot checks
+    window.__isDemo = true;
+    setStarted(true);
+  }, [store]);
+
+  if (!started) return null;
+
+  return (
+    <div style={{position:"relative"}}>
+      {/* Demo ribbon */}
+      <div style={{position:"fixed",top:0,left:0,right:0,zIndex:99999,
+        background:"linear-gradient(135deg,#1a0d2e,#0d1225)",
+        borderBottom:"2px solid var(--gold, #d4a843)",
+        padding:"7px 20px",display:"flex",alignItems:"center",
+        justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:16}}>🎭</span>
+          <span style={{fontWeight:800,color:"#d4a843",fontSize:14}}>Demo Mode</span>
+          <span style={{color:"rgba(255,255,255,.55)",fontSize:12}}>
+            — Experience Theatre4u as a new user. Nothing is saved. Close the tab to reset.
+          </span>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <a href="https://theatre4u.org" style={{padding:"5px 14px",borderRadius:6,
+            fontSize:12,fontWeight:600,color:"rgba(255,255,255,.7)",
+            border:"1px solid rgba(255,255,255,.2)",textDecoration:"none"}}>
+            Exit Demo
+          </a>
+          <a href="https://theatre4u.org?signup=1" style={{padding:"5px 14px",borderRadius:6,
+            fontSize:12,fontWeight:700,color:"#1a0f00",background:"#d4a843",
+            border:"none",textDecoration:"none",cursor:"pointer"}}>
+            Create Real Account →
+          </a>
+        </div>
+      </div>
+      <div style={{paddingTop:40}}>
+        <ErrorBoundary><AppRoot demoStore={store}/></ErrorBoundary>
+      </div>
+    </div>
+  );
+}
+
+const isDemoMode = () => {
+  try { return new URLSearchParams(window.location.search).get("demo") === "1"; } catch { return false; }
+};
+
+const AppWithBoundary = () => isDemoMode()
+  ? <DemoApp/>
+  : <ErrorBoundary><AppRoot/></ErrorBoundary>;
+
 export default AppWithBoundary;
 
 
@@ -15618,7 +15897,10 @@ function trackVisit(page, extra = {}) {
   } catch(e) {}
 }
 
-function AppRoot(){
+function AppRoot({ demoStore = null }){
+  const isDemo = !!demoStore;
+  // Swap the backend in demo mode — affects all SB.from() calls app-wide
+  if (demoStore && SB_ACTIVE !== demoStore) SB_ACTIVE = demoStore;
   const [user,setUser]     = useState(null);
   // ── Hash routing — handles #/item/:id for public QR scans ─────────────────
   // ── Hash routing: #/item/:id and #/location/:id (storage location QR codes) ──
