@@ -11120,6 +11120,26 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
     if(!pass){setErr("Please enter a password.");return;}
     if(mode==="signup"&&pass.length<6){setErr("Password must be at least 6 characters.");return;}
     setLoading(true);
+
+      // ── Demo mode fast-path ───────────────────────────────────────────────
+      if(isDemoMode()){
+        const demoUser = { id:"demo-user-id", email, created_at:new Date().toISOString() };
+        if(mode==="signup"){
+          if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
+          await SB.from("orgs").upsert({
+            id:demoUser.id, name:orgName, email,
+            type:"", phone:"", location:"", bio:"",
+            temp_pro:true, onboarding_step:0,
+            plan:"pro", created_at:new Date().toISOString(),
+          },{onConflict:"id",ignoreDuplicates:false});
+          if(window.__demoStore) window.__demoStore.seedItems();
+        }
+        onAuth(demoUser);
+        close();
+        return;
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
     try{
       if(mode==="signup"){
         if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
@@ -11336,6 +11356,26 @@ function AuthScreen({onAuth}){
     if(!pass){setErr("Please enter a password.");return;}
     if(mode==="signup"&&pass.length<6){setErr("Password must be at least 6 characters.");return;}
     setLoading(true);
+
+      // ── Demo mode fast-path ───────────────────────────────────────────────
+      if(isDemoMode()){
+        const demoUser = { id:"demo-user-id", email, created_at:new Date().toISOString() };
+        if(mode==="signup"){
+          if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
+          await SB.from("orgs").upsert({
+            id:demoUser.id, name:orgName, email,
+            type:"", phone:"", location:"", bio:"",
+            temp_pro:true, onboarding_step:0,
+            plan:"pro", created_at:new Date().toISOString(),
+          },{onConflict:"id",ignoreDuplicates:false});
+          if(window.__demoStore) window.__demoStore.seedItems();
+        }
+        onAuth(demoUser);
+        close();
+        return;
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
     try{
       if(mode==="signup"){
         if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
@@ -12722,12 +12762,26 @@ function DemoApp() {
   const [started,  setStarted]  = useState(false);
   const [store]    = useState(() => createDemoStore());
   const [showNudge,setShowNudge]= useState(false);
+  const [demoUser, setDemoUser] = useState(null); // set when user clicks "Enter Demo"
+
+  const enterDemo = async (orgName="Demo Theatre Program") => {
+    // Create the demo org in the in-memory store
+    const user = { id:"demo-user-id", email:"demo@theatre4u.org", created_at:new Date().toISOString() };
+    await store.from("orgs").upsert({
+      id: user.id, name: orgName, email: user.email,
+      type:"School", phone:"", location:"", bio:"",
+      temp_pro:true, onboarding_step:0,
+      plan:"pro", created_at:new Date().toISOString(),
+      label_prefix:"DEMO",
+    },{onConflict:"id",ignoreDuplicates:false});
+    store.seedItems();
+    setDemoUser(user);
+  };
 
   useEffect(() => {
     window.__demoStore = store;
     window.__isDemo = true;
     setStarted(true);
-    // Show conversion nudge after 3 minutes of exploring
     const t = setTimeout(() => setShowNudge(true), 3 * 60 * 1000);
     return () => clearTimeout(t);
   }, [store]);
@@ -12812,7 +12866,7 @@ function DemoApp() {
             </div>
           </div>
         )}
-        <ErrorBoundary><AppRoot demoStore={store}/></ErrorBoundary>
+        <ErrorBoundary><AppRoot demoStore={store} demoUser={demoUser} onEnterDemo={enterDemo}/></ErrorBoundary>
       </div>
     </div>
   );
@@ -16106,12 +16160,11 @@ function trackVisit(page, extra = {}) {
   } catch(e) {}
 }
 
-function AppRoot({ demoStore = null }){
+function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
   const isDemo = !!demoStore;
-  // Swap the backend in demo mode — affects all SB.from() calls app-wide
   if (demoStore && SB_ACTIVE !== demoStore) SB_ACTIVE = demoStore;
-  const [user,setUser]     = useState(null);
-  // ── Hash routing — handles #/item/:id for public QR scans ─────────────────
+  // In demo mode, use the pre-built demo user if provided
+  const [user,setUser] = useState(demoUser);
   // ── Hash routing: #/item/:id and #/location/:id (storage location QR codes) ──
   const _parseHash = (h) => ({
     itemId:     (h.match(/^#\/item\/(.+)$/)     || [])[1] || null,
@@ -16634,6 +16687,59 @@ function AppRoot({ demoStore = null }){
   );
 
   if(!user && previewMode) return <PreviewMode onSignUp={()=>{ setPreviewMode(false); window.__t4u_show_auth&&window.__t4u_show_auth("signup"); }}/>;
+
+  // Demo mode — show a simple entry screen instead of the full landing + auth flow
+  if(!user && isDemo && onEnterDemo) return (
+    <>
+      <style>{CSS}</style>
+      <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",flexDirection:"column",
+        alignItems:"center",justifyContent:"center",padding:"40px 20px",textAlign:"center"}}>
+        <div style={{fontSize:52,marginBottom:16}}>🎭</div>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:32,color:"var(--gold)",marginBottom:8}}>
+          Theatre4u™ Demo
+        </div>
+        <p style={{fontSize:16,color:"rgba(255,255,255,.6)",maxWidth:440,lineHeight:1.7,marginBottom:32}}>
+          Explore the full platform with sample data. Add items, browse the Backstage Exchange,
+          try QR labels, and see how Theatre4u works — no account needed.
+        </p>
+        <div style={{display:"flex",flexDirection:"column",gap:12,alignItems:"center",width:"100%",maxWidth:320}}>
+          <button
+            onClick={()=>onEnterDemo("Ocean View High School Drama")}
+            style={{width:"100%",padding:"16px 32px",borderRadius:10,border:"none",
+              background:"linear-gradient(135deg,var(--gold),#a37f2c)",color:"#1a0f00",
+              fontSize:16,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
+            🎭 Enter Demo →
+          </button>
+          <div style={{fontSize:13,color:"rgba(255,255,255,.4)"}}>
+            Or enter your program name to personalize:
+          </div>
+          <div style={{display:"flex",gap:8,width:"100%"}}>
+            <input
+              placeholder="Your program name"
+              id="demo-org-input"
+              style={{flex:1,padding:"10px 14px",borderRadius:8,border:"1px solid rgba(255,255,255,.15)",
+                background:"rgba(255,255,255,.06)",color:"#fff",fontSize:14,fontFamily:"inherit",outline:"none"}}
+              onKeyDown={e=>e.key==="Enter"&&onEnterDemo(e.target.value||"Ocean View High School Drama")}
+            />
+            <button
+              onClick={()=>{
+                const v=document.getElementById("demo-org-input")?.value;
+                onEnterDemo(v||"Ocean View High School Drama");
+              }}
+              style={{padding:"10px 16px",borderRadius:8,border:"1px solid rgba(212,168,67,.4)",
+                background:"rgba(212,168,67,.1)",color:"var(--gold)",fontSize:14,fontWeight:700,
+                cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+              Go →
+            </button>
+          </div>
+          <a href="https://theatre4u.org"
+            style={{fontSize:13,color:"rgba(255,255,255,.3)",textDecoration:"none",marginTop:8}}>
+            Exit Demo — Go to Theatre4u
+          </a>
+        </div>
+      </div>
+    </>
+  );
 
   if(!user) return(
     <>
