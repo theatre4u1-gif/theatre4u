@@ -1864,7 +1864,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
           {CATS.map(cat=>{
             const count=items.filter(it=>it.category===cat.id).length;
             return(
-              <div key={cat.id} className="cat-tile" onClick={()=>goInventory&&goInventory()}>
+              <div key={cat.id} className="cat-tile" onClick={()=>goInventory&&goInventory(cat.id)}>
                 <CatCard catId={cat.id} label={cat.label} icon={cat.icon} width="100%" height={160}>
                   <div className="cat-info"><span className="cat-emo">{cat.icon}</span><span className="cat-name">{cat.label}</span>{count>0&&<div className="cat-cnt">{count} item{count!==1?"s":""}</div>}</div>
                 </CatCard>
@@ -1902,7 +1902,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
   );
 }
 
-function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null}){
+function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null}){
     const[upgradeReason,setUpgradeReason]=useState(null);
   // Role-based permissions
   const canEdit   = memberRole !== "house";
@@ -1924,6 +1924,14 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
       if (onDeepLinkConsumed) onDeepLinkConsumed();
     })();
   }, [deepLinkLocationId]);
+
+  // Consume category deep link from dashboard Browse by Category
+  useEffect(()=>{
+    if (!deepLinkCategory) return;
+    setCatF(deepLinkCategory);
+    setView("grid");
+    if (onDeepLinkCategoryConsumed) onDeepLinkCategoryConsumed();
+  }, [deepLinkCategory]);
 
   const[search,setSrch]=useState("");const[catF,setCatF]=useState("all");
   const[condF,setCondF]=useState("all");const[availF,setAvailF]=useState("all");
@@ -15621,6 +15629,7 @@ function AppRoot(){
   });
   const [publicItemId,     setPublicItemId]     = useState(() => _parseHash(window.location.hash).itemId);
   const [deepLinkLocation, setDeepLinkLocation] = useState(() => _parseHash(window.location.hash).locationId);
+  const [deepLinkCategory, setDeepLinkCategory] = useState(null);
   const [publicOrgSlug,    setPublicOrgSlug]    = useState(() => _parseHash(window.location.hash).orgSlug);
   useEffect(()=>{
     const onHash = () => {
@@ -16342,8 +16351,8 @@ function AppRoot(){
                       setPendingReqCount(count||0);
                     }}/>}
                   {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
-                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} pointBalance={creditBalance} goInventory={()=>nav("inventory")} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
-                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)}/>}
+                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} pointBalance={creditBalance} goInventory={(cat)=>{ if(cat) setDeepLinkCategory(cat); nav("inventory"); }} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
+                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} deepLinkCategory={deepLinkCategory} onDeepLinkCategoryConsumed={()=>setDeepLinkCategory(null)}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
                       ? <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading {activeSchool.name}…</div>
