@@ -13951,6 +13951,176 @@ function AdminDailyDigest() {
 // ADMIN HUB — Single consolidated admin page
 // Tabs: Overview · Daily Digest · Users · Analytics · Feedback · Labels · Tools
 // ══════════════════════════════════════════════════════════════════════════════
+function AdminPaymentsTab() {
+  const [payments, setPayments] = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [year,     setYear]     = useState(new Date().getFullYear());
+  const [view,     setView]     = useState("all"); // all | succeeded | failed | refunded
+
+  useEffect(()=>{
+    (async()=>{
+      setLoading(true);
+      const { data } = await SB.from("stripe_payments")
+        .select("*")
+        .gte("stripe_created_at", year+"-01-01")
+        .lt("stripe_created_at", (year+1)+"-01-01")
+        .order("stripe_created_at",{ascending:false})
+        .limit(500);
+      setPayments(data||[]);
+      setLoading(false);
+    })();
+  },[year]);
+
+  const years = [new Date().getFullYear(), new Date().getFullYear()-1, new Date().getFullYear()-2];
+  const fmt$  = (cents) => cents ? "$"+(cents/100).toFixed(2) : "—";
+  const fmtDt = (dt) => dt ? new Date(dt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "—";
+
+  const filtered = view==="all" ? payments
+    : payments.filter(p => view==="refunded" ? p.refunded : p.status===view);
+
+  const totalRevenue  = payments.filter(p=>p.status==="succeeded"&&!p.refunded).reduce((s,p)=>s+(p.amount_cents||0),0);
+  const totalRefunded = payments.filter(p=>p.refunded).reduce((s,p)=>s+(p.refund_amount_cents||0),0);
+  const totalFailed   = payments.filter(p=>p.status==="failed").length;
+
+  const card = {background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px"};
+
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:12}}>
+        <div>
+          <h3 style={{fontFamily:"var(--serif)",fontSize:22,marginBottom:4}}>Payment History</h3>
+          <p style={{fontSize:13,color:"var(--muted)"}}>
+            Every Stripe payment, subscription, and refund — recorded automatically.
+          </p>
+        </div>
+        {/* Year selector for archiving */}
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <span style={{fontSize:12,color:"var(--muted)",fontWeight:700}}>Year:</span>
+          {years.map(y=>(
+            <button key={y} onClick={()=>setYear(y)}
+              style={{padding:"5px 12px",borderRadius:6,border:"1px solid",fontFamily:"inherit",
+                fontSize:13,fontWeight:700,cursor:"pointer",
+                borderColor:year===y?"var(--gold)":"var(--border)",
+                background:year===y?"rgba(212,168,67,.12)":"transparent",
+                color:year===y?"var(--gold)":"var(--muted)"}}>
+              {y}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Summary tiles */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:20}}>
+        {[
+          {ico:"💰",label:"Revenue "+year, val:fmt$(totalRevenue), color:"#4caf50"},
+          {ico:"↩️",label:"Refunded",      val:fmt$(totalRefunded),color:"#e53935"},
+          {ico:"❌",label:"Failed",        val:totalFailed+" payments",color:"var(--muted)"},
+          {ico:"📋",label:"Total events",  val:payments.length+" logged",color:"var(--gold)"},
+        ].map(k=>(
+          <div key={k.label} style={{...card,textAlign:"center"}}>
+            <div style={{fontSize:22,marginBottom:4}}>{k.ico}</div>
+            <div style={{fontSize:20,fontWeight:800,color:k.color,lineHeight:1}}>{k.val}</div>
+            <div style={{fontSize:11,color:"var(--muted)",marginTop:3,textTransform:"uppercase",letterSpacing:.5}}>{k.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter tabs */}
+      <div style={{display:"flex",gap:4,marginBottom:14,borderBottom:"1px solid var(--border)",paddingBottom:0}}>
+        {[["all","All"],["succeeded","Succeeded"],["failed","Failed"],["refunded","Refunded"]].map(([v,l])=>(
+          <button key={v} onClick={()=>setView(v)}
+            style={{padding:"8px 14px",borderRadius:"7px 7px 0 0",border:"none",cursor:"pointer",
+              fontSize:13,fontWeight:view===v?700:500,fontFamily:"inherit",
+              background:view===v?"var(--gold)":"transparent",
+              color:view===v?"#1a0f00":"var(--muted)",
+              borderBottom:view===v?"3px solid var(--gold)":"3px solid transparent"}}>
+            {l}
+            {v==="failed"&&totalFailed>0&&<span style={{marginLeft:5,background:"#e53935",color:"#fff",
+              borderRadius:8,padding:"1px 6px",fontSize:10,fontWeight:800}}>{totalFailed}</span>}
+          </button>
+        ))}
+      </div>
+
+      {loading&&<div style={{textAlign:"center",padding:40,color:"var(--muted)"}}>Loading payments…</div>}
+
+      {!loading&&filtered.length===0&&(
+        <div style={{...card,textAlign:"center",padding:40,color:"var(--muted)"}}>
+          {payments.length===0
+            ? "No payments recorded for "+year+". Stripe events are captured automatically going forward."
+            : "No "+view+" payments in "+year+"."}
+        </div>
+      )}
+
+      {!loading&&filtered.length>0&&(
+        <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+            <thead><tr style={{background:"rgba(0,0,0,.08)"}}>
+              {["Date","Program / Customer","Description","Amount","Status","Linked Org"].map(h=>(
+                <th key={h} style={{padding:"9px 12px",textAlign:"left",fontSize:11,fontWeight:700,
+                  textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)"}}>{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {filtered.map(p=>(
+                <tr key={p.id} style={{borderTop:"1px solid var(--border)",
+                  background:p.refunded?"rgba(229,57,53,.03)":p.status==="failed"?"rgba(229,57,53,.04)":""}}>
+                  <td style={{padding:"9px 12px",fontSize:12,color:"var(--muted)",whiteSpace:"nowrap"}}>
+                    {fmtDt(p.stripe_created_at)}
+                  </td>
+                  <td style={{padding:"9px 12px"}}>
+                    <div style={{fontWeight:600,fontSize:13}}>{p.org_name||p.customer_name||"—"}</div>
+                    {p.customer_email&&<div style={{fontSize:11,color:"var(--muted)"}}>{p.customer_email}</div>}
+                  </td>
+                  <td style={{padding:"9px 12px",fontSize:12,color:"var(--muted)",maxWidth:220}}>
+                    {p.description||p.stripe_event_type}
+                    {p.plan&&<span style={{marginLeft:6,fontWeight:700,color:"var(--gold)",fontSize:11}}>
+                      {p.plan} {p.plan_interval}
+                    </span>}
+                  </td>
+                  <td style={{padding:"9px 12px",fontWeight:700,whiteSpace:"nowrap",
+                    color:p.refunded?"#e53935":p.status==="failed"?"var(--muted)":"var(--text)"}}>
+                    {fmt$(p.amount_cents)}
+                    {p.refunded&&p.refund_amount_cents&&<div style={{fontSize:10,color:"#e53935"}}>
+                      {"-"+fmt$(p.refund_amount_cents)+" refunded"}
+                    </div>}
+                  </td>
+                  <td style={{padding:"9px 12px"}}>
+                    <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:5,
+                      background:p.refunded?"rgba(229,57,53,.12)":
+                                 p.status==="succeeded"?"rgba(76,175,80,.12)":"rgba(229,57,53,.1)",
+                      color:p.refunded?"#e53935":p.status==="succeeded"?"#4caf50":"#e53935"}}>
+                      {p.refunded?"Refunded":p.status==="succeeded"?"✓ Paid":p.status==="failed"?"✗ Failed":p.status}
+                    </span>
+                  </td>
+                  <td style={{padding:"9px 12px",fontSize:12}}>
+                    {p.org_id
+                      ? <span style={{color:"#4caf50",fontWeight:600}}>✓ Matched</span>
+                      : <span style={{color:"var(--muted)"}}>
+                          Unmatched
+                          <div style={{fontSize:10,color:"#e53935"}}>org_id needed at checkout</div>
+                        </span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Archive note */}
+      <div style={{marginTop:20,fontSize:12,color:"var(--muted)",lineHeight:1.7,
+        background:"rgba(0,0,0,.04)",borderRadius:8,padding:"12px 14px"}}>
+        <strong style={{color:"var(--text)"}}>Data retention:</strong> Payment records are kept permanently and never deleted,
+        even if a program cancels or deletes their account. Use the year buttons above to browse historical years.
+        The "Linked Org" column shows whether we could match the payment to a Theatre4u account —
+        payments marked "Unmatched" were received but couldn't be connected to an org because
+        {" "}<code style={{background:"rgba(0,0,0,.08)",padding:"1px 4px",borderRadius:3,fontSize:11}}>client_reference_id</code>
+        {" "}was not set in the Stripe checkout session.
+      </div>
+    </div>
+  );
+}
+
 function AdminHub({ currentUser, org }) {
   const [tab, setTab]             = useState("overview");
   const [orgs, setOrgs]           = useState([]);
@@ -14108,6 +14278,7 @@ function AdminHub({ currentUser, org }) {
     ["digest",    "📋 Daily Digest"],
     ["users",     "👥 Users & Leads"],
     ["billing",   "💳 Billing & Access"],
+    ["payments",  "💰 Payments"],
     ["analytics", "📈 Analytics"],
     ["feedback",  "💬 Feedback"],
     ["labels",    "🏷 Label Orders"],
@@ -14574,6 +14745,11 @@ function AdminHub({ currentUser, org }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── PAYMENTS ── */}
+      {tab==="payments"&&(
+        <AdminPaymentsTab/>
       )}
 
       {/* ── ANALYTICS ── */}
