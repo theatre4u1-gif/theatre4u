@@ -1,393 +1,279 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-<meta name="theme-color" content="#0d0b11"/>
-<title>Join a Theatre4u™ Team</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Theatre4u™ — Free Beta Access for Theatre Programs</title>
+<meta name="description" content="Theatre4u gives your program a searchable, photo-tagged inventory with QR labels. Share gear through the Backstage Exchange. Free during beta for K–12, community theatre, and college programs.">
+<meta property="og:title" content="Do you know where your fog machine is right now?">
+<meta property="og:description" content="Theatre4u™ gives your program a searchable inventory, QR labels, and a marketplace to share gear with nearby programs. Free beta access — no credit card.">
+<meta property="og:image" content="https://theatre4u.org/og-image.png">
+<meta property="og:url" content="https://theatre4u.org/join.html">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap">
 <style>
-:root{--bg:#0d0b11;--bg2:#15121b;--bg3:#1d1925;--bd:#282333;--t1:#ede8df;--t2:#9b93a8;--t3:#685f76;--gold:#d4a843;--goldd:#a37f2c;--red:#c2185b;--grn:#4caf50;--r:12px}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{min-height:100vh;background:var(--bg);color:var(--t1);font-family:'DM Sans',sans-serif;font-size:14px}
-.wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
-.card{background:var(--bg2);border:1px solid var(--bd);border-radius:20px;padding:36px 32px;width:100%;max-width:440px;box-shadow:0 8px 48px rgba(0,0,0,.4)}
-.logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
-.logo-mark{width:42px;height:42px;background:linear-gradient(135deg,var(--gold),var(--goldd));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
-.logo-text{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--gold)}
-h1{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;margin-bottom:6px}
-.subtitle{color:var(--t2);font-size:14px;margin-bottom:28px;line-height:1.5}
-.org-banner{background:linear-gradient(135deg,rgba(212,168,67,.15),rgba(212,168,67,.05));border:1px solid rgba(212,168,67,.3);border-radius:10px;padding:14px 16px;margin-bottom:24px}
-.org-name{font-weight:700;font-size:16px;color:var(--gold)}
-.org-sub{font-size:12px;color:var(--t2);margin-top:3px}
-.role-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid var(--bd);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;margin-top:8px}
-.field{margin-bottom:16px}
-label{display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t2);margin-bottom:5px}
-input{width:100%;background:#110f18;border:1px solid var(--bd);border-radius:8px;padding:10px 12px;color:var(--t1);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border .2s}
-input:focus{border-color:var(--gold)}
-input::placeholder{color:var(--t3)}
-.btn{width:100%;padding:12px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:all .2s;margin-top:4px}
-.btn-gold{background:linear-gradient(135deg,var(--gold),var(--goldd));color:#1a1200}
-.btn-gold:hover{filter:brightness(1.1);transform:translateY(-1px)}
-.btn-gold:disabled{opacity:.4;cursor:not-allowed;transform:none}
-.err{background:rgba(194,24,91,.12);border:1px solid rgba(194,24,91,.3);border-radius:8px;padding:10px 14px;color:#f48fb1;font-size:13px;margin-bottom:16px}
-.ok{background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.3);border-radius:8px;padding:10px 14px;color:#81c784;font-size:13px;margin-bottom:16px}
-.divider{display:flex;align-items:center;gap:10px;margin:20px 0}
-.divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--bd)}
-.divider span{color:var(--t3);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px}
-.code-input{text-align:center;font-size:22px;font-weight:900;letter-spacing:6px;text-transform:uppercase;font-family:'DM Sans',sans-serif}
-.step{display:none}
-.step.active{display:block}
-.back{background:none;border:none;color:var(--t3);cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;margin-bottom:20px;padding:0;display:flex;align-items:center;gap:4px}
-.back:hover{color:var(--t1)}
-.success-ico{font-size:56px;text-align:center;margin-bottom:16px}
-.success-title{font-family:'Playfair Display',serif;font-size:24px;text-align:center;margin-bottom:8px}
-.success-sub{color:var(--t2);text-align:center;font-size:14px;line-height:1.6;margin-bottom:24px}
-.footer{margin-top:20px;text-align:center;font-size:12px;color:var(--t3)}
-.footer a{color:var(--gold);text-decoration:none}
-.pts-banner{background:linear-gradient(135deg,rgba(212,168,67,.12),rgba(212,168,67,.05));border:1px solid rgba(212,168,67,.28);border-radius:12px;padding:14px 16px;margin:20px 0 0;display:flex;gap:12px;align-items:flex-start}
-.pts-ico{font-size:28px;flex-shrink:0;margin-top:2px}
-.pts-title{font-weight:700;font-size:14px;color:var(--gold);margin-bottom:4px}
-.pts-body{font-size:12px;color:var(--t2);line-height:1.6}
-.pts-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
-.pts-chip{background:rgba(255,255,255,.05);border:1px solid rgba(212,168,67,.2);border-radius:7px;padding:6px 10px;font-size:11px;color:var(--t2);line-height:1.4}
-.pts-chip strong{display:block;color:var(--gold);font-size:12px;margin-bottom:1px}
-</style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--gold:#d4a843;--dark:#0d0b11;--dark2:#15121b;--dark3:#1d1925;--bd:#282333;--t1:#ede8df;--t2:#9b93a8;--t3:#685f76;--grn:#4caf50;--red:#c2185b;--blu:#42a5f5}
+html{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--t1);font-size:16px;line-height:1.6}
+body{min-height:100vh}
+a{color:var(--gold);text-decoration:none}
 
-    <!-- Meta Pixel Code -->
-    <script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js'); fbq('init', '1486269912908144'); fbq('track', 'PageView');<\/script>
-    <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1486269912908144&ev=PageView&noscript=1"/></noscript>
-    <!-- End Meta Pixel Code -->
+/* Nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;background:rgba(13,11,17,.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.06)}
+.logo{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--gold);display:flex;align-items:center;gap:8px}
+.nav-cta{background:var(--gold);color:#1a0f00;padding:8px 18px;border-radius:7px;font-weight:600;font-size:13px;text-decoration:none;white-space:nowrap}
+
+/* Hero */
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:100px 24px 60px;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(212,168,67,.08) 0%,transparent 70%)}
+.hero-inner{max-width:680px;width:100%;text-align:center}
+.badge{display:inline-block;background:rgba(212,168,67,.12);border:1px solid rgba(212,168,67,.25);color:var(--gold);padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.5px;margin-bottom:24px;text-transform:uppercase}
+h1{font-family:'Playfair Display',serif;font-size:clamp(32px,6vw,52px);font-weight:900;line-height:1.15;margin-bottom:20px;color:var(--t1)}
+h1 em{color:var(--gold);font-style:normal}
+.sub{font-size:clamp(15px,2.5vw,18px);color:var(--t2);max-width:520px;margin:0 auto 36px;line-height:1.7}
+
+/* Sign-up card */
+.signup-card{background:var(--dark2);border:1px solid var(--bd);border-radius:16px;padding:28px;max-width:420px;margin:0 auto 48px}
+.signup-card h2{font-family:'Playfair Display',serif;font-size:18px;margin-bottom:6px}
+.signup-card p{font-size:13px;color:var(--t2);margin-bottom:18px}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.field label{font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:1px}
+.field input{background:rgba(255,255,255,.05);border:1px solid var(--bd);border-radius:8px;padding:11px 14px;color:var(--t1);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border .2s}
+.field input:focus{border-color:var(--gold)}
+.field input::placeholder{color:var(--t3)}
+.cta-btn{width:100%;padding:15px;background:linear-gradient(135deg,var(--gold),#a37f2c);color:#1a0f00;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:4px;transition:filter .2s,transform .2s}
+.cta-btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.small-print{font-size:11px;color:var(--t3);margin-top:10px;text-align:center}
+.err{background:rgba(194,24,91,.12);border:1px solid rgba(194,24,91,.3);color:#e06090;padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:10px;display:none}
+.success{background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.3);color:#66bb6a;padding:16px;border-radius:10px;font-size:14px;text-align:center;display:none;line-height:1.6}
+
+/* Social proof */
+.proof{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:48px}
+.proof-chip{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:5px 14px;font-size:12px;color:var(--t2)}
+
+/* Features */
+.features{max-width:880px;margin:0 auto;padding:0 24px 80px}
+.features h2{font-family:'Playfair Display',serif;font-size:28px;text-align:center;margin-bottom:10px}
+.features .lead{text-align:center;color:var(--t2);margin-bottom:40px;font-size:15px}
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+.feat{background:var(--dark2);border:1px solid var(--bd);border-radius:12px;padding:22px}
+.feat-icon{font-size:26px;margin-bottom:12px}
+.feat h3{font-size:15px;font-weight:600;margin-bottom:6px}
+.feat p{font-size:13px;color:var(--t2);line-height:1.6}
+
+/* Quote */
+.quote-section{background:var(--dark2);border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);padding:60px 24px;text-align:center;margin-bottom:0}
+.quote{font-family:'Playfair Display',serif;font-size:clamp(18px,3vw,24px);color:var(--t1);max-width:680px;margin:0 auto 16px;line-height:1.5}
+.quote-attr{font-size:13px;color:var(--t2)}
+
+/* Bottom CTA */
+.bottom-cta{text-align:center;padding:60px 24px 80px;max-width:520px;margin:0 auto}
+.bottom-cta h2{font-family:'Playfair Display',serif;font-size:28px;margin-bottom:12px}
+.bottom-cta p{color:var(--t2);margin-bottom:28px;font-size:15px}
+.bottom-btn{display:inline-block;background:linear-gradient(135deg,var(--gold),#a37f2c);color:#1a0f00;padding:16px 36px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;text-decoration:none;transition:filter .2s,transform .2s}
+.bottom-btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+
+footer{text-align:center;padding:24px;font-size:12px;color:var(--t3);border-top:1px solid var(--bd)}
+
+@media(max-width:600px){
+  .signup-card{border-radius:12px;padding:20px}
+}
+</style>
 </head>
 <body>
-<div class="wrap">
-  <div class="card">
-    <div class="logo">
-      <div class="logo-mark">🎭</div>
-      <div class="logo-text">Theatre4u™</div>
-    </div>
 
-    <!-- Step 1: Entry — auto-detected from URL params -->
-    <div class="step active" id="step-entry">
-      <h1>Join a Team</h1>
-      <p class="subtitle">You've been invited to join a theatre program's backstage team on Theatre4u.</p>
-      <div id="entry-content">
-        <!-- Populated by JS based on URL params -->
-        <div style="color:var(--t3);font-size:13px">Loading invite details…</div>
+<nav>
+  <div class="logo">🎭 Theatre4u™</div>
+  <a class="nav-cta" href="https://theatre4u.org?signup=1">Join Free →</a>
+</nav>
+
+<section class="hero">
+  <div class="hero-inner">
+    <div class="badge">🎭 Free Beta Access — No Credit Card Required</div>
+    <h1>Do you know where your<br><em>fog machine</em> is right now?</h1>
+    <p class="sub">Theatre4u™ gives your program a searchable, photo-tagged inventory with QR labels on every item. Find anything from your phone. Share gear with nearby programs.</p>
+
+    <div class="signup-card">
+      <h2>Join the Beta — It's Free</h2>
+      <p>K–12 schools, community theatres, and college programs. Full Pro access during beta.</p>
+      <div class="err" id="err"></div>
+      <div class="success" id="success">
+        🎭 You're in! Check your email for your welcome message.<br><br>
+        <a href="https://theatre4u.org" style="color:var(--gold);font-weight:600;">Open Theatre4u →</a>
       </div>
-      <div class="pts-banner">
-        <div class="pts-ico">🪙</div>
-        <div>
-          <div class="pts-title">Earn Stage Points Together</div>
-          <div class="pts-body">Theatre4u's Stage Points reward your program for sharing resources with other theatre programs. Every loan, rental, and milestone earns points — both programs earn when a loan completes.</div>
-          <div class="pts-grid">
-            <div class="pts-chip"><strong>🤝 Loan Items</strong>+10–50 pts per loan<br>(both programs earn)</div>
-            <div class="pts-chip"><strong>🔑 Complete Rentals</strong>+$1 = 1 pt earned<br>by the lending program</div>
-            <div class="pts-chip"><strong>📦 Build Inventory</strong>+25 pts at 10 items<br>+50 pts at 25 w/ photos</div>
-            <div class="pts-chip"><strong>🎟️ Redeem Points</strong>1,500 pts = free Pro month<br>or 50% off Exchange deals</div>
-          </div>
+      <div id="form">
+        <div class="field">
+          <label>Program Name</label>
+          <input type="text" id="orgName" placeholder="Lincoln High School Drama" autocomplete="organization">
         </div>
+        <div class="field">
+          <label>Email Address</label>
+          <input type="email" id="email" placeholder="director@school.edu" autocomplete="email">
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="pass" placeholder="At least 6 characters" autocomplete="new-password">
+        </div>
+        <button class="cta-btn" onclick="handleSignup()">Start Free Beta Access →</button>
+        <p class="small-print">Free during beta · Founding member rate when we launch · No contracts</p>
       </div>
     </div>
 
-    <!-- Step 2: Create account or sign in -->
-    <div class="step" id="step-auth">
-      <button class="back" onclick="goBack()">← Back</button>
-      <div id="org-banner-auth"></div>
-      <h1 id="auth-heading">Create Your Account</h1>
-      <p class="subtitle" id="auth-sub">Enter your details to join the team.</p>
-      <div id="auth-msg"></div>
-      <div class="field">
-        <label>Email</label>
-        <input id="auth-email" type="email" placeholder="you@school.edu" autocapitalize="none"/>
-      </div>
-      <div class="field">
-        <label>Password</label>
-        <input id="auth-pass" type="password" placeholder="Create a password (min 6 chars)"/>
-      </div>
-      <div class="field" id="name-field">
-        <label>Your Name</label>
-        <input id="auth-name" type="text" placeholder="First Last"/>
-      </div>
-      <button class="btn btn-gold" id="auth-btn" onclick="submitAuth()">Join Team →</button>
-      <div class="divider"><span>or</span></div>
-      <p style="text-align:center;color:var(--t2);font-size:13px">
-        Already have an account? 
-        <a href="#" onclick="toggleAuthMode()" style="color:var(--gold)" id="toggle-link">Sign in instead</a>
-      </p>
-    </div>
-
-    <!-- Step 3: Success -->
-    <div class="step" id="step-success">
-      <div class="success-ico">🎭</div>
-      <div class="success-title" id="success-title">You're on the team!</div>
-      <div class="success-sub" id="success-sub">Welcome to the team. You now have access to the inventory.</div>
-      <div style="background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.25);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--t2);text-align:left;line-height:1.6">
-        🪙 <strong style="color:var(--gold)">Your program earns Stage Points</strong> when items are loaned or rented through Backstage Exchange. Ask your director about listing items — the more your program shares, the more points you earn toward free months and Exchange discounts.
-      </div>
-      <button class="btn btn-gold" onclick="window.location.href='https://theatre4u.org'">
-        Open Theatre4u →
-      </button>
+    <div class="proof">
+      <div class="proof-chip">12+ programs onboarded</div>
+      <div class="proof-chip">500+ items cataloged</div>
+      <div class="proof-chip">Built by a theatre director</div>
+      <div class="proof-chip">Prop 28 tracking included</div>
     </div>
   </div>
+</section>
 
-  <div class="footer">
-    <a href="https://theatre4u.org">theatre4u.org</a> · 
-    <a href="https://theatre4u.org/help">Help</a>
+<section class="features">
+  <h2>Everything your program needs</h2>
+  <p class="lead">Built by Robert Zick — arts educator and theatre artist with over 30 years of experience — after too many years managing theatre programs on spreadsheets.</p>
+  <div class="feat-grid">
+    <div class="feat">
+      <div class="feat-icon">📦</div>
+      <h3>Inventory Management</h3>
+      <p>Catalog every costume, prop, light, and piece of gear with photos, tags, locations, and production history.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">🔍</div>
+      <h3>QR Code Labels</h3>
+      <p>Every item gets a printable QR label. Scan from any phone to instantly pull up details, location, and checkout status.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">🎭</div>
+      <h3>Backstage Exchange</h3>
+      <p>Loan, rent, or sell items to nearby programs. Find what you need without renting from a commercial vendor.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">📊</div>
+      <h3>Funding Tracker</h3>
+      <p>Track Prop 28 funding, expenditures, and inventory value. Generate reports for district administrators.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">🪙</div>
+      <h3>Stage Points</h3>
+      <p>Earn points for sharing your inventory. Redeem them for Exchange discounts or a free month of Pro.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">📱</div>
+      <h3>Mobile App</h3>
+      <p>Install on iPhone or Android. Scan QR labels, add items with your camera, manage inventory on the go.</p>
+    </div>
   </div>
+</section>
+
+<section class="quote-section">
+  <p class="quote">"After nearly 20 years in arts education — and 30 years in professional theatre — I built the tool I always wished existed."</p>
+  <p class="quote-attr">— Robert Zick, Founder · Arts Educator & Theatre Artist, 30+ Years</p>
+</section>
+
+<div class="bottom-cta">
+  <h2>Ready to know what you own?</h2>
+  <p>Free full access during beta. Founding member rate when we launch — locked in for life.</p>
+  <a class="bottom-btn" href="https://theatre4u.org?signup=1">Join Free →</a>
 </div>
 
-<script type="module">
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+<footer>
+  <p>Theatre4u™ · <a href="https://theatre4u.org">theatre4u.org</a> · <a href="https://theatre4u.org/#privacy">Privacy</a> · <a href="https://theatre4u.org/#terms">Terms</a></p>
+  <p style="margin-top:6px">A product of <a href="https://artstracker.org">Artstracker LLC</a></p>
+</footer>
 
-const SB = createClient(
-  "https://ldmmphwivnnboyhlxipl.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA"
-);
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const { createClient } = supabase;
+const SB = createClient('https://ldmmphwivnnboyhlxipl.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk2NjAyMTcsImV4cCI6MjA1NTIzNjIxN30.t3UMpGSMoBpMPHZqbXTy_EHGSbGVdkRhxpz4b62KvNk');
 
-const ROLE_LABELS = {
-  stage_manager: "📋 Stage Manager",
-  crew: "🔧 Crew",
-  house: "🎟 House",
-  director: "🎬 Director",
-};
+// Capture ref code and UTM from URL
+const params = new URLSearchParams(location.search);
+const refCode = params.get('ref') || sessionStorage.getItem('t4u_ref') || null;
+if(refCode) sessionStorage.setItem('t4u_ref', refCode.toUpperCase());
 
-let currentInvite = null;
-let authMode = "signup"; // or "login"
+// Track this visit
+fetch('https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/track-visit', {
+  method:'POST', headers:{'Content-Type':'application/json'},
+  body: JSON.stringify({
+    page:'join-landing',
+    session_id: sessionStorage.getItem('t4u_sid') || (()=>{ const s=Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('t4u_sid',s); return s; })(),
+    referrer: document.referrer || null,
+    utm_source: params.get('utm_source'),
+    utm_medium: params.get('utm_medium'),
+    utm_campaign: params.get('utm_campaign'),
+    ref_code: refCode,
+  })
+}).catch(()=>{});
 
-// ── Parse URL params ──────────────────────────────────────────────────────────
-const params = new URLSearchParams(window.location.search);
-const token  = params.get("token");
-const code   = params.get("code");
+async function handleSignup() {
+  const orgName = document.getElementById('orgName').value.trim();
+  const email   = document.getElementById('email').value.trim();
+  const pass    = document.getElementById('pass').value;
+  const err     = document.getElementById('err');
+  const success = document.getElementById('success');
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-async function init() {
-  if (token) {
-    await loadTokenInvite(token);
-  } else if (code) {
-    await loadCodeInvite(code);
-  } else {
-    showManualCodeEntry();
-  }
-}
+  err.style.display = 'none';
+  if(!orgName){ showErr('Please enter your program name.'); return; }
+  if(!email || !email.includes('@')){ showErr('Please enter a valid email address.'); return; }
+  if(!pass || pass.length < 6){ showErr('Password must be at least 6 characters.'); return; }
 
-async function loadTokenInvite(tok) {
-  const { data, error } = await SB.from("org_invites")
-    .select("*, orgs(name)")
-    .eq("token", tok)
-    .is("accepted_at", null)
-    .single();
+  document.querySelector('.cta-btn').textContent = 'Creating your account…';
+  document.querySelector('.cta-btn').disabled = true;
 
-  if (error || !data) {
-    showError("This invite link is invalid or has already been used.");
-    return;
-  }
-  if (new Date(data.expires_at) < new Date()) {
-    showError("This invite link has expired. Ask your director to send a new one.");
-    return;
-  }
-
-  currentInvite = data;
-  const orgName = data.orgs?.name || "a theatre program";
-
-  document.getElementById("entry-content").innerHTML = `
-    <div class="org-banner">
-      <div class="org-name">🎭 ${orgName}</div>
-      <div class="org-sub">You've been invited to join their backstage team</div>
-      <div class="role-badge">${ROLE_LABELS[data.role] || data.role}</div>
-    </div>
-    <p style="color:var(--t2);font-size:13px;margin-bottom:20px;line-height:1.6">
-      Create a free Theatre4u account to accept this invitation and start managing inventory.
-    </p>
-    <button class="btn btn-gold" onclick="goToAuth('${orgName}', '${data.email || ''}', '${data.role}')">
-      Accept Invitation →
-    </button>
-  `;
-}
-
-async function loadCodeInvite(joinCode) {
-  const { data, error } = await SB.from("org_invites")
-    .select("*, orgs(name)")
-    .eq("join_code", joinCode)
-    .eq("invite_type", "code")
-    .is("accepted_at", null)
-    .single();
-
-  if (error || !data) {
-    showManualCodeEntry("Invalid or expired join code. Try entering it again:");
-    return;
-  }
-  if (new Date(data.expires_at) < new Date()) {
-    showManualCodeEntry("This code has expired. Ask your director for a new one.");
-    return;
-  }
-
-  currentInvite = data;
-  const orgName = data.orgs?.name || "a theatre program";
-
-  document.getElementById("entry-content").innerHTML = `
-    <div class="org-banner">
-      <div class="org-name">🎭 ${orgName}</div>
-      <div class="org-sub">Join their backstage team as Crew</div>
-      <div class="role-badge">${ROLE_LABELS[data.role] || data.role}</div>
-    </div>
-    <p style="color:var(--t2);font-size:13px;margin-bottom:20px;line-height:1.6">
-      Create a free Theatre4u account to join the team and start managing inventory together.
-    </p>
-    <button class="btn btn-gold" onclick="goToAuth('${orgName}', '', '${data.role}')">
-      Join as Crew →
-    </button>
-  `;
-}
-
-function showManualCodeEntry(msg = "") {
-  document.getElementById("entry-content").innerHTML = `
-    ${msg ? `<div class="err">${msg}</div>` : ""}
-    <p class="subtitle" style="margin-bottom:16px">Enter the join code your director gave you:</p>
-    <div class="field">
-      <label>Join Code</label>
-      <input id="manual-code" class="code-input" placeholder="ABC-123" maxlength="7"
-        oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')"
-        onkeydown="if(event.key==='Enter')submitCode()"/>
-    </div>
-    <button class="btn btn-gold" onclick="submitCode()">Look Up Code →</button>
-  `;
-}
-
-async function submitCode() {
-  const raw = document.getElementById("manual-code")?.value?.trim().toUpperCase();
-  if (!raw) return;
-  // Format: ensure ABC-123 format
-  const code = raw.length === 7 ? raw : raw.slice(0,3) + "-" + raw.slice(3);
-  await loadCodeInvite(code);
-}
-
-function goToAuth(orgName, prefillEmail, role) {
-  // Set up org banner in auth step
-  document.getElementById("org-banner-auth").innerHTML = `
-    <div class="org-banner" style="margin-bottom:20px">
-      <div class="org-name">🎭 ${orgName}</div>
-      <div class="role-badge">${ROLE_LABELS[role] || role}</div>
-    </div>
-  `;
-  if (prefillEmail) {
-    document.getElementById("auth-email").value = prefillEmail;
-  }
-  showStep("step-auth");
-}
-
-async function submitAuth() {
-  const email    = document.getElementById("auth-email").value.trim();
-  const password = document.getElementById("auth-pass").value;
-  const name     = document.getElementById("auth-name")?.value?.trim();
-  const btn      = document.getElementById("auth-btn");
-  const msgEl    = document.getElementById("auth-msg");
-
-  msgEl.innerHTML = "";
-  if (!email || !password) { showAuthMsg("Please fill in all fields.", "err"); return; }
-  if (authMode === "signup" && password.length < 6) {
-    showAuthMsg("Password must be at least 6 characters.", "err"); return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = authMode === "signup" ? "Creating account…" : "Signing in…";
-
-  let userId;
-  if (authMode === "signup") {
-    const { data, error } = await SB.auth.signUp({
-      email, password,
-      options: { data: { full_name: name, org_name: name ? name + "'s Account" : email.split("@")[0] } }
-    });
-    if (error) { showAuthMsg(error.message, "err"); btn.disabled = false; btn.textContent = "Join Team →"; return; }
-    userId = data.user?.id;
-  } else {
-    const { data, error } = await SB.auth.signInWithPassword({ email, password });
-    if (error) { showAuthMsg(error.message, "err"); btn.disabled = false; btn.textContent = "Sign In →"; return; }
-    userId = data.user?.id;
-  }
-
-  if (!userId || !currentInvite) {
-    showAuthMsg("Something went wrong. Please try again.", "err");
-    btn.disabled = false; return;
-  }
-
-  // Add member to org
-  const { error: memberErr } = await SB.from("org_members").insert({
-    org_id:     currentInvite.org_id,
-    user_id:    userId,
-    email:      email,
-    role:       currentInvite.role,
-    invited_by: currentInvite.invited_by,
+  const { data, error } = await SB.auth.signUp({
+    email, password: pass,
+    options: { data: { org_name: orgName }, emailRedirectTo: 'https://theatre4u.org' }
   });
 
-  if (memberErr && !memberErr.message.includes("unique")) {
-    // If it's a unique conflict they're already a member — that's fine
-    showAuthMsg("Could not join team: " + memberErr.message, "err");
-    btn.disabled = false; return;
+  if(error){ showErr(error.message); return; }
+
+  // Create org
+  await SB.from('orgs').upsert({
+    id: data.user.id, name: orgName, email,
+    type:'', phone:'', location:'', bio:'',
+    temp_pro: true, temp_pro_granted_at: new Date().toISOString(),
+    temp_pro_note: 'Beta signup via join.html landing page',
+  },{onConflict:'id',ignoreDuplicates:false}).catch(()=>{});
+
+  // Handle referral
+  const ref = sessionStorage.getItem('t4u_ref');
+  if(ref) {
+    const { data: referrer } = await SB.from('orgs').select('id').eq('referral_code', ref).single().catch(()=>({data:null}));
+    if(referrer?.id && referrer.id !== data.user.id) {
+      await SB.from('orgs').update({ referred_by_org: referrer.id }).eq('id', data.user.id).catch(()=>{});
+      await SB.rpc('award_referral_points', { p_new_org_id: data.user.id }).catch(()=>{});
+      sessionStorage.removeItem('t4u_ref');
+    }
   }
 
-  // Mark invite as accepted (for email invites; code invites stay reusable)
-  if (currentInvite.invite_type === "email") {
-    await SB.from("org_invites").update({
-      accepted_at: new Date().toISOString(),
-      accepted_by: userId,
-    }).eq("id", currentInvite.id);
-  }
+  // Log signup event
+  await SB.from('signup_events').insert({
+    org_id: data.user.id,
+    utm_source: params.get('utm_source') || (document.referrer.includes('facebook') ? 'facebook' : null),
+    utm_medium: params.get('utm_medium'),
+    utm_campaign: params.get('utm_campaign'),
+    referrer: document.referrer || null,
+    ref_code: ref || null,
+  }).catch(()=>{});
 
-  // Show success
-  const orgName = currentInvite.orgs?.name || "the team";
-  const roleLabel = ROLE_LABELS[currentInvite.role] || currentInvite.role;
-  document.getElementById("success-title").textContent = "You're on the team!";
-  document.getElementById("success-sub").innerHTML =
-    `Welcome to <strong>${orgName}</strong>. You've joined as <strong>${roleLabel}</strong>.<br><br>
-     Open Theatre4u to start managing inventory with your team.`;
-  showStep("step-success");
+  sessionStorage.removeItem('t4u_prefill_org');
+  sessionStorage.removeItem('t4u_prefill_email');
+
+  document.getElementById('form').style.display = 'none';
+  success.style.display = 'block';
 }
 
-function toggleAuthMode() {
-  authMode = authMode === "signup" ? "login" : "signup";
-  document.getElementById("auth-heading").textContent = authMode === "signup" ? "Create Your Account" : "Sign In";
-  document.getElementById("auth-sub").textContent = authMode === "signup" ?
-    "Enter your details to join the team." : "Sign in to your existing Theatre4u account.";
-  document.getElementById("auth-btn").textContent = authMode === "signup" ? "Join Team →" : "Sign In →";
-  document.getElementById("toggle-link").textContent = authMode === "signup" ? "Sign in instead" : "Create an account";
-  document.getElementById("name-field").style.display = authMode === "signup" ? "" : "none";
-  document.getElementById("auth-msg").innerHTML = "";
+function showErr(msg) {
+  const err = document.getElementById('err');
+  err.textContent = msg;
+  err.style.display = 'block';
+  document.querySelector('.cta-btn').textContent = 'Start Free Beta Access →';
+  document.querySelector('.cta-btn').disabled = false;
 }
 
-function showAuthMsg(msg, type) {
-  document.getElementById("auth-msg").innerHTML = `<div class="${type}">${msg}</div>`;
-}
-
-function showError(msg) {
-  document.getElementById("entry-content").innerHTML = `
-    <div class="err">${msg}</div>
-    <p style="color:var(--t2);font-size:13px;margin-top:12px">
-      Contact your director for a new invite, or 
-      <a href="https://theatre4u.org" style="color:var(--gold)">return to Theatre4u</a>.
-    </p>
-  `;
-}
-
-function showStep(id) {
-  document.querySelectorAll(".step").forEach(s => s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-}
-
-function goBack() {
-  showStep("step-entry");
-}
-
-// Expose to onclick handlers
-window.submitCode = submitCode;
-window.submitAuth = submitAuth;
-window.toggleAuthMode = toggleAuthMode;
-window.goToAuth = goToAuth;
-window.goBack = goBack;
-
-// Init
-init();
+// Allow Enter key in password field
+document.getElementById('pass').addEventListener('keydown', e => { if(e.key==='Enter') handleSignup(); });
 </script>
 </body>
 </html>
