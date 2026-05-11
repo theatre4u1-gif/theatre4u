@@ -1161,10 +1161,16 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=t
           </div>
         </div>
       </div>
-      <div style={{display:"flex",gap:8,marginTop:16}}>
+      <div style={{display:"flex",gap:8,marginTop:16,flexWrap:"wrap"}}>
         {canEdit&&onEdit&&<button className="btn btn-p btn-sm" onClick={onEdit}><span style={{width:14,height:14,display:"flex"}}>{Ic.edit}</span>Edit</button>}
         {canDelete&&onDelete&&<button className="btn btn-d btn-sm" onClick={()=>{if(window.confirm("Delete this item?"))onDelete(item.id)}}><span style={{width:14,height:14,display:"flex"}}>{Ic.trash}</span>Delete</button>}
         {userId && <button className="btn btn-o btn-sm" onClick={()=>setShowAddToProd(true)}>🎭 Add to Production</button>}
+        {item.mkt!=="Not Listed"&&<FbShareBtn
+          url={itemShareUrl(item)}
+          text={itemShareText(item, schoolName)}
+          compact={true}
+          label="Share on Facebook"
+        />}
       </div>
       {showAddToProd && userId && (
         <AddToProductionPicker item={item} userId={userId} onClose={()=>setShowAddToProd(false)}/>
@@ -14872,31 +14878,35 @@ function AdminHub({ currentUser, org }) {
           .select("*").order("created_at", { ascending: false }).limit(50);
         setLeads(data || []);
       }
-      if (tab === "analytics") {
-        const { data: pv } = await SB.from("page_views")
-          .select("page,session_id,created_at,utm_source,utm_campaign")
-          .order("created_at", { ascending: false }).limit(2000);
-        if (pv) {
-          const byPage = {};
-          const bySess = {};
-          const byDay  = {};
-          pv.forEach(v => {
-            byPage[v.page] = (byPage[v.page]||0) + 1;
-            bySess[v.session_id] = true;
-            const day = (v.created_at||"").slice(0,10);
-            if (day) byDay[day] = (byDay[day]||0) + 1;
-          });
-          const dayEntries = Object.entries(byDay)
-            .sort(([a],[b]) => a > b ? 1 : -1).slice(-14);
-          const maxDay = Math.max(1, ...dayEntries.map(([,v])=>v));
-          setAnalytics({
-            views: pv.length,
-            sessions: Object.keys(bySess).length,
-            byPage: Object.entries(byPage).sort(([,a],[,b])=>b-a),
-            byDay: dayEntries,
-            maxDay,
-          });
-        }
+       if (tab === "analytics") {
+         const { data: pv } = await SB.from("page_views")
+           .select("page,session_id,created_at,utm_source,utm_campaign,referrer,ref_code")
+           .order("created_at", { ascending: false }).limit(5000);
+         if (pv) {
+           const byPage={}, bySess={}, byDay={}, bySrc={};
+           pv.forEach(v => {
+             byPage[v.page] = (byPage[v.page]||0) + 1;
+             bySess[v.session_id] = true;
+             const day = (v.created_at||"").slice(0,10);
+             if (day) byDay[day] = (byDay[day]||0) + 1;
+             const src = v.utm_source||(v.referrer?.includes("facebook")?"facebook":v.referrer?.includes("google")?"google":v.referrer?.includes("instagram")?"instagram":"direct");
+             bySrc[src] = (bySrc[src]||0) + 1;
+           });
+           // Always include today so it shows on the chart even with 0 visits
+           const today = new Date().toISOString().slice(0,10);
+           if (!byDay[today]) byDay[today] = 0;
+           const dayEntries = Object.entries(byDay)
+             .sort(([a],[b]) => a > b ? 1 : -1).slice(-14);
+           const maxDay = Math.max(1, ...dayEntries.map(([,v])=>v));
+           setAnalytics({
+             views: pv.length,
+             sessions: Object.keys(bySess).length,
+             byPage: Object.entries(byPage).sort(([,a],[,b])=>b-a),
+             byDay: dayEntries,
+             maxDay,
+             bySrc: Object.entries(bySrc).sort(([,a],[,b])=>b-a),
+           });
+         }
       }
       if (tab === "labels") {
         const { data } = await SB.from("label_orders")
@@ -15617,11 +15627,21 @@ function AdminHub({ currentUser, org }) {
             </div>
           </div>
 
-          {/* UTM tip */}
-          <div style={{background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"12px 16px",fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
-            <strong style={{color:"var(--text)"}}>💡 Track your Facebook ad:</strong> Change your ad destination to{" "}
-            <code style={{background:"var(--parch)",padding:"1px 5px",borderRadius:4,fontSize:11}}>theatre4u.org/join.html?utm_source=facebook&utm_medium=paid&utm_campaign=beta-spring26</code>
-            {" "}and traffic will appear as "facebook" in sources above.
+          {/* Facebook ad tracking tip */}
+          <div style={{background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"14px 16px",fontSize:13,lineHeight:1.7}}>
+            <div style={{fontWeight:700,color:"var(--text)",marginBottom:6}}>📘 How to track your Facebook ad visits</div>
+            <p style={{color:"var(--muted)",margin:"0 0 10px"}}>
+              Right now your Facebook ad links to <strong style={{color:"var(--text)"}}>theatre4u.org</strong> — so when someone clicks it,
+              the analytics can't tell if they came from your ad or just typed the address.
+              To fix this, change your ad's destination link to:
+            </p>
+            <code style={{display:"block",background:"var(--parch)",border:"1px solid var(--border)",padding:"8px 12px",borderRadius:6,fontSize:12,wordBreak:"break-all",color:"var(--gold)"}}>
+              theatre4u.org/join.html?utm_source=facebook&utm_medium=paid&utm_campaign=beta-spring26
+            </code>
+            <p style={{color:"var(--muted)",margin:"10px 0 0",fontSize:12}}>
+              After that, every click from your ad will show up as "facebook" in the Traffic Sources above — so you can see exactly how many visitors and signups your ad is generating.
+              Change it in Meta Ads Manager → your ad → Edit → Destination URL.
+            </p>
           </div>
         </div>
       )}
