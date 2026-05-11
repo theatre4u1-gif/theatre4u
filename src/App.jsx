@@ -11746,6 +11746,193 @@ function PublicOrgPage({ slug }) {
   );
 }
 
+// ── UnassignedLabelAssigner ───────────────────────────────────────────────────
+// Shown when someone scans a blank label. Lets the owner assign it to an item
+// or add a new item, all from the scan page.
+function UnassignedLabelAssigner({ labelCode, onDone }) {
+  const [session,    setSession]    = useState(null);
+  const [items,      setItems]      = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [search,     setSearch]     = useState("");
+  const [saving,     setSaving]     = useState(false);
+  const [err,        setErr]        = useState("");
+  const [mode,       setMode]       = useState("pick"); // "pick" | "new"
+  const [newName,    setNewName]    = useState("");
+  const [newCat,     setNewCat]     = useState("costumes");
+  const [newLoc,     setNewLoc]     = useState("");
+
+  useEffect(()=>{
+    (async()=>{
+      const { data:{ session:s } } = await SB.auth.getSession();
+      setSession(s);
+      if(s){
+        // Load items that don't already have a label
+        const {data} = await SB.from("items")
+          .select("id,name,category,location,display_id")
+          .eq("org_id", s.user.id)
+          .order("name");
+        setItems(data||[]);
+      }
+      setLoading(false);
+    })();
+  },[]);
+
+  const assign = async(itemId) => {
+    setSaving(true); setErr("");
+    const {error} = await SB.from("label_pool")
+      .update({ item_id: itemId, status:"claimed", claimed_at: new Date().toISOString() })
+      .eq("code", labelCode);
+    if(error){ setErr("Could not assign label. Try again."); setSaving(false); return; }
+    // Also write the label code back to the item
+    await SB.from("items").update({ item_number: labelCode }).eq("id", itemId);
+    onDone();
+  };
+
+  const createAndAssign = async() => {
+    if(!newName.trim()){ setErr("Please enter an item name."); return; }
+    setSaving(true); setErr("");
+    const newItem = {
+      id: crypto.randomUUID(),
+      org_id: session.user.id,
+      name: newName.trim(),
+      category: newCat,
+      location: newLoc.trim(),
+      condition:"Good", qty:1, avail:"In Stock", mkt:"Not Listed",
+      added: new Date().toISOString(),
+    };
+    const {error} = await SB.from("items").insert(newItem);
+    if(error){ setErr("Could not create item. Try again."); setSaving(false); return; }
+    await assign(newItem.id);
+  };
+
+  if(loading) return <div style={{color:"rgba(255,255,255,.4)",fontSize:13}}>Checking account…</div>;
+
+  // Not logged in
+  if(!session) return (
+    <div>
+      <div style={{color:"rgba(255,255,255,.5)",fontSize:13,marginBottom:16}}>
+        Sign in to assign this label to one of your inventory items.
+      </div>
+      <a href={`https://theatre4u.org?signin=1&next=${encodeURIComponent("#/item/"+labelCode)}`}
+        style={{display:"inline-block",padding:"11px 28px",
+          background:"linear-gradient(135deg,#c4922a,#8b6914)",
+          borderRadius:8,color:"#1a0f00",fontWeight:700,
+          textDecoration:"none",fontSize:14}}>
+        Sign In to Assign →
+      </a>
+    </div>
+  );
+
+  const filtered = items.filter(i =>
+    !search || i.name.toLowerCase().includes(search.toLowerCase()) ||
+    (i.location||"").toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div style={{textAlign:"left",maxWidth:400,margin:"0 auto"}}>
+      {err && <div style={{background:"rgba(194,24,91,.15)",border:"1px solid rgba(194,24,91,.3)",
+        borderRadius:8,padding:"10px 14px",color:"#e06090",fontSize:13,marginBottom:12}}>{err}</div>}
+
+      {/* Mode toggle */}
+      <div style={{display:"flex",gap:8,marginBottom:16}}>
+        <button onClick={()=>setMode("pick")}
+          style={{flex:1,padding:"9px",borderRadius:8,fontFamily:"inherit",fontSize:13,
+            fontWeight:600,cursor:"pointer",border:"1px solid rgba(255,255,255,.15)",
+            background:mode==="pick"?"var(--gold)":"rgba(255,255,255,.06)",
+            color:mode==="pick"?"#1a0f00":"rgba(255,255,255,.7)"}}>
+          📦 Assign to Existing Item
+        </button>
+        <button onClick={()=>setMode("new")}
+          style={{flex:1,padding:"9px",borderRadius:8,fontFamily:"inherit",fontSize:13,
+            fontWeight:600,cursor:"pointer",border:"1px solid rgba(255,255,255,.15)",
+            background:mode==="new"?"var(--gold)":"rgba(255,255,255,.06)",
+            color:mode==="new"?"#1a0f00":"rgba(255,255,255,.7)"}}>
+          ✨ Add New Item
+        </button>
+      </div>
+
+      {/* Pick existing item */}
+      {mode==="pick" && (<>
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="Search your items…"
+          style={{width:"100%",padding:"9px 12px",borderRadius:8,border:"1px solid rgba(255,255,255,.15)",
+            background:"rgba(255,255,255,.06)",color:"#fff",fontSize:14,
+            fontFamily:"inherit",outline:"none",marginBottom:10}}/>
+        {filtered.length===0
+          ? <div style={{color:"rgba(255,255,255,.4)",fontSize:13,textAlign:"center",padding:20}}>
+              No items found. Try a different search or add a new item.
+            </div>
+          : <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:280,overflowY:"auto"}}>
+              {filtered.map(i=>(
+                <button key={i.id} onClick={()=>assign(i.id)} disabled={saving}
+                  style={{textAlign:"left",padding:"10px 14px",borderRadius:8,
+                    border:"1px solid rgba(255,255,255,.12)",
+                    background:"rgba(255,255,255,.05)",cursor:"pointer",
+                    fontFamily:"inherit",color:"#fff",width:"100%",
+                    opacity:saving?.5:1}}>
+                  <div style={{fontWeight:600,fontSize:13}}>{i.name}</div>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginTop:2}}>
+                    {i.category}{i.location?" · "+i.location:""}
+                    {i.display_id?" · "+i.display_id:""}
+                  </div>
+                </button>
+              ))}
+            </div>
+        }
+      </>)}
+
+      {/* Add new item */}
+      {mode==="new" && (
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,.5)",marginBottom:4,
+              textTransform:"uppercase",letterSpacing:1}}>Item Name *</div>
+            <input value={newName} onChange={e=>setNewName(e.target.value)}
+              placeholder="e.g. Victorian Ball Gown"
+              style={{width:"100%",padding:"9px 12px",borderRadius:8,
+                border:"1px solid rgba(255,255,255,.15)",
+                background:"rgba(255,255,255,.06)",color:"#fff",
+                fontSize:14,fontFamily:"inherit",outline:"none"}}/>
+          </div>
+          <div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,.5)",marginBottom:4,
+              textTransform:"uppercase",letterSpacing:1}}>Category</div>
+            <select value={newCat} onChange={e=>setNewCat(e.target.value)}
+              style={{width:"100%",padding:"9px 12px",borderRadius:8,
+                border:"1px solid rgba(255,255,255,.15)",
+                background:"#1a1520",color:"#fff",fontSize:14,fontFamily:"inherit"}}>
+              {Object.entries(CAT_MAP).map(([id,c])=>(
+                <option key={id} value={id}>{c.icon} {c.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,.5)",marginBottom:4,
+              textTransform:"uppercase",letterSpacing:1}}>Location</div>
+            <input value={newLoc} onChange={e=>setNewLoc(e.target.value)}
+              placeholder="e.g. Storage Bin 3A"
+              style={{width:"100%",padding:"9px 12px",borderRadius:8,
+                border:"1px solid rgba(255,255,255,.15)",
+                background:"rgba(255,255,255,.06)",color:"#fff",
+                fontSize:14,fontFamily:"inherit",outline:"none"}}/>
+          </div>
+          <button onClick={createAndAssign} disabled={saving||!newName.trim()}
+            style={{padding:"12px",borderRadius:8,border:"none",
+              background:"linear-gradient(135deg,#c4922a,#8b6914)",
+              color:"#1a0f00",fontWeight:700,fontSize:14,cursor:"pointer",
+              fontFamily:"inherit",opacity:saving||!newName.trim()?.6:1}}>
+            {saving?"Saving…":"✨ Create Item & Assign Label"}
+          </button>
+          <div style={{fontSize:12,color:"rgba(255,255,255,.35)",textAlign:"center"}}>
+            You can add more details (photos, condition, notes) after assignment in Theatre4u.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 function PublicItemPage({ itemId }) {
   const [item,    setItem]    = useState(null);
   const [org,     setOrg]     = useState(null);
@@ -11754,6 +11941,10 @@ function PublicItemPage({ itemId }) {
   const [lb,      setLb]      = useState(null);
   const [access,  setAccess]  = useState("full"); // "full" | "loan" | "guest" | "contact"
   const [contact, setContact] = useState(null);
+
+  const [poolLabel,   setPoolLabel]   = useState(null); // {code, org_name, status}
+  const [assigning,   setAssigning]   = useState(false);
+  const [assignDone,  setAssignDone]  = useState(false);
 
   useEffect(()=>{
     (async()=>{
@@ -11768,6 +11959,18 @@ function PublicItemPage({ itemId }) {
           { headers }
         );
         const json = await res.json();
+
+        // ── Unassigned pool label ─────────────────────────────────────────
+        if (json.pool_code && !json.item) {
+          setPoolLabel({
+            code:     json.label_code || cleanId,
+            org_name: json.org_name   || null,
+            org_id:   json.org_id     || null,
+            status:   json.status     || "assigned",
+          });
+          return;
+        }
+
         if (!res.ok || !json.item) {
           setLegacy(!!json.legacy);
           setErr("Item not found.");
@@ -11839,6 +12042,51 @@ function PublicItemPage({ itemId }) {
             <div style={{textAlign:"center",padding:60,color:"rgba(255,255,255,.4)"}}>
               <div style={{fontSize:42,marginBottom:12}}>🎭</div>
               <div>Loading item…</div>
+            </div>
+          )}
+
+          {/* ── Unassigned pool label ──────────────────────────────────────── */}
+          {poolLabel && !assignDone && (
+            <div style={{textAlign:"center",padding:"40px 16px"}}>
+              <div style={{fontSize:48,marginBottom:12}}>🏷️</div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,
+                color:"var(--gold)",marginBottom:8}}>
+                Unassigned Label
+              </div>
+              <div style={{fontFamily:"monospace",fontSize:14,color:"rgba(255,255,255,.5)",
+                marginBottom:16,background:"rgba(255,255,255,.05)",display:"inline-block",
+                padding:"4px 12px",borderRadius:6,letterSpacing:1}}>
+                {poolLabel.code}
+              </div>
+              <div style={{color:"rgba(255,255,255,.6)",fontSize:14,lineHeight:1.7,
+                maxWidth:360,margin:"0 auto 28px"}}>
+                This label hasn't been assigned to an item yet.
+                {poolLabel.org_name && <><br/><strong style={{color:"rgba(255,255,255,.8)"}}>
+                  {poolLabel.org_name}</strong> — scan this label from your Theatre4u
+                  inventory to assign it to an item.</>}
+              </div>
+
+              {/* Two paths: logged-in owner can assign now, others prompted to sign in */}
+              <UnassignedLabelAssigner
+                labelCode={poolLabel.code}
+                onDone={()=>setAssignDone(true)}
+              />
+            </div>
+          )}
+
+          {poolLabel && assignDone && (
+            <div style={{textAlign:"center",padding:"40px 16px"}}>
+              <div style={{fontSize:48,marginBottom:12}}>✅</div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,
+                color:"var(--gold)",marginBottom:12}}>Label Assigned!</div>
+              <div style={{color:"rgba(255,255,255,.6)",fontSize:14,marginBottom:24}}>
+                Next time someone scans this label, they'll see the item details.
+              </div>
+              <a href="https://theatre4u.org" style={{display:"inline-block",
+                padding:"10px 24px",background:"linear-gradient(135deg,#c4922a,#8b6914)",
+                borderRadius:8,color:"#1a0f00",fontWeight:700,textDecoration:"none",fontSize:14}}>
+                Back to Theatre4u →
+              </a>
             </div>
           )}
 
