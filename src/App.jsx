@@ -15473,44 +15473,155 @@ function AdminHub({ currentUser, org }) {
       {/* ── ANALYTICS ── */}
       {!loading&&tab==="analytics"&&(
         <div>
-          <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:4}}>Platform Analytics</h3>
-          <p style={{fontSize:13,color:"var(--muted)",marginBottom:20}}>Page view data from the track-visit edge function. All time.</p>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:24}}>
-            <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:20,textAlign:"center"}}>
-              <div style={{fontSize:40,fontWeight:800,color:"var(--gold)"}}>{analytics.views}</div>
-              <div style={{fontSize:12,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1}}>Total Page Views</div>
+          {/* Header + controls */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10,marginBottom:20}}>
+            <div>
+              <h3 style={{fontFamily:"var(--serif)",fontSize:18,marginBottom:2}}>Platform Analytics</h3>
+              <p style={{fontSize:13,color:"var(--muted)"}}>Live page view data. Last updated: {new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}</p>
             </div>
-            <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:20,textAlign:"center"}}>
-              <div style={{fontSize:40,fontWeight:800,color:"var(--gold)"}}>{analytics.sessions}</div>
-              <div style={{fontSize:12,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1}}>Unique Sessions</div>
+            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+              {/* Time window selector */}
+              <div style={{display:"flex",border:"1px solid var(--border)",borderRadius:7,overflow:"hidden"}}>
+                {[["7d","7 Days"],["14d","14 Days"],["30d","30 Days"],["all","All Time"]].map(([id,lbl])=>(
+                  <button key={id}
+                    onClick={async()=>{
+                      const days = id==="all"?3650:parseInt(id);
+                      const since = new Date(Date.now()-days*24*60*60*1000).toISOString();
+                      const {data:pv} = await SB.from("page_views")
+                        .select("page,session_id,created_at,utm_source,utm_campaign,referrer,ref_code")
+                        .gte("created_at", id==="all"?"2020-01-01":since)
+                        .order("created_at",{ascending:false}).limit(5000);
+                      if(pv){
+                        const byPage={},bySess={},byDay={},bySrc={};
+                        pv.forEach(v=>{
+                          byPage[v.page]=(byPage[v.page]||0)+1;
+                          bySess[v.session_id]=true;
+                          const day=(v.created_at||"").slice(0,10);
+                          if(day)byDay[day]=(byDay[day]||0)+1;
+                          const src=v.utm_source||(v.referrer?.includes("facebook")?"facebook":v.referrer?.includes("google")?"google":v.referrer?.includes("instagram")?"instagram":"direct");
+                          bySrc[src]=(bySrc[src]||0)+1;
+                        });
+                        const windowDays = id==="all"?90:days;
+                        const dayEntries=Object.entries(byDay).sort(([a],[b])=>a>b?1:-1).slice(-windowDays);
+                        const maxDay=Math.max(1,...dayEntries.map(([,v])=>v));
+                        setAnalytics({views:pv.length,sessions:Object.keys(bySess).length,byPage:Object.entries(byPage).sort(([,a],[,b])=>b-a),byDay:dayEntries,maxDay,bySrc:Object.entries(bySrc).sort(([,a],[,b])=>b-a)});
+                      }
+                    }}
+                    style={{background:analytics._win===id?"var(--gold)":"transparent",color:analytics._win===id?"#1a0f00":"var(--muted)",border:"none",padding:"5px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+              <button onClick={async()=>{
+                const since=new Date(Date.now()-14*24*60*60*1000).toISOString();
+                const {data:pv}=await SB.from("page_views").select("page,session_id,created_at,utm_source,utm_campaign,referrer,ref_code").gte("created_at",since).order("created_at",{ascending:false}).limit(5000);
+                if(pv){
+                  const byPage={},bySess={},byDay={},bySrc={};
+                  pv.forEach(v=>{
+                    byPage[v.page]=(byPage[v.page]||0)+1;
+                    bySess[v.session_id]=true;
+                    const day=(v.created_at||"").slice(0,10);
+                    if(day)byDay[day]=(byDay[day]||0)+1;
+                    const src=v.utm_source||(v.referrer?.includes("facebook")?"facebook":v.referrer?.includes("google")?"google":v.referrer?.includes("instagram")?"instagram":"direct");
+                    bySrc[src]=(bySrc[src]||0)+1;
+                  });
+                  const dayEntries=Object.entries(byDay).sort(([a],[b])=>a>b?1:-1).slice(-14);
+                  const maxDay=Math.max(1,...dayEntries.map(([,v])=>v));
+                  setAnalytics({views:pv.length,sessions:Object.keys(bySess).length,byPage:Object.entries(byPage).sort(([,a],[,b])=>b-a),byDay:dayEntries,maxDay,bySrc:Object.entries(bySrc).sort(([,a],[,b])=>b-a)});
+                }
+              }} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:7,padding:"5px 14px",fontSize:12,fontWeight:600,color:"var(--text)",cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:5}}>
+                🔄 Refresh
+              </button>
             </div>
           </div>
-          <h4 style={{fontSize:13,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Views by Page</h4>
-          <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:24}}>
-            {analytics.byPage.map(([page,count])=>(
-              <div key={page} style={{display:"flex",alignItems:"center",gap:10}}>
-                <div style={{fontSize:13,width:100,color:"var(--text)",textTransform:"capitalize",flexShrink:0}}>{page}</div>
-                <div style={{flex:1,height:20,background:"var(--border)",borderRadius:4,overflow:"hidden"}}>
-                  <div style={{width:(count/Math.max(...analytics.byPage.map(([,v])=>v))*100)+"%",height:"100%",background:"var(--gold)",borderRadius:4,transition:"width .4s"}}/>
+
+          {/* KPI tiles */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:12,marginBottom:24}}>
+            {[
+              {label:"Page Views",    val:analytics.views,    icon:"👁"},
+              {label:"Unique Sessions",val:analytics.sessions, icon:"🧍"},
+              {label:"Top Source",    val:(analytics.bySrc||[])[0]?.[0]||"—", icon:"📡"},
+              {label:"From Facebook", val:(analytics.bySrc||[]).find(([s])=>s==="facebook")?.[1]||0, icon:"📘"},
+            ].map(k=>(
+              <div key={k.label} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px",textAlign:"center"}}>
+                <div style={{fontSize:22,marginBottom:4}}>{k.icon}</div>
+                <div style={{fontSize:26,fontWeight:800,color:"var(--gold)",fontFamily:"var(--serif)",lineHeight:1}}>{k.val}</div>
+                <div style={{fontSize:11,color:"var(--muted)",marginTop:4,textTransform:"uppercase",letterSpacing:.8}}>{k.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Daily chart — readable */}
+          <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,padding:"16px 16px 8px",marginBottom:20}}>
+            <div style={{fontSize:13,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,marginBottom:14}}>
+              Daily Page Views
+            </div>
+            {analytics.byDay.length===0
+              ?<div style={{textAlign:"center",color:"var(--muted)",padding:32,fontSize:13}}>No data yet</div>
+              :<div style={{overflowX:"auto"}}>
+                <div style={{display:"flex",gap:6,alignItems:"flex-end",minWidth:Math.max(400,analytics.byDay.length*44)+"px",height:160,padding:"0 4px 0"}}>
+                  {analytics.byDay.map(([day,count])=>{
+                    const barH = Math.max(6,(count/analytics.maxDay*120));
+                    const mo = new Date(day+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"});
+                    return(
+                      <div key={day} style={{flex:1,minWidth:36,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"var(--gold)"}}>{count}</div>
+                        <div style={{width:"100%",maxWidth:44,background:"var(--gold)",borderRadius:"4px 4px 0 0",height:barH+"px",transition:"height .3s",opacity:.85}}/>
+                        <div style={{fontSize:10,color:"var(--muted)",textAlign:"center",lineHeight:1.2,whiteSpace:"nowrap"}}>{mo}</div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div style={{fontSize:13,fontWeight:700,color:"var(--gold)",width:40,textAlign:"right"}}>{count}</div>
               </div>
-            ))}
+            }
           </div>
-          <h4 style={{fontSize:13,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Daily Views (Last 14 days)</h4>
-          <div style={{display:"flex",gap:4,alignItems:"flex-end",height:120,padding:"0 4px",background:"var(--parch)",borderRadius:10,border:"1px solid var(--border)"}}>
-            {analytics.byDay.map(([day,count])=>(
-              <div key={day} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4,paddingBottom:8}}>
-                <div style={{fontSize:9,color:"var(--muted)",fontWeight:700}}>{count}</div>
-                <div style={{width:"100%",background:"var(--gold)",borderRadius:"3px 3px 0 0",height:Math.max(4,(count/analytics.maxDay*80))+"px",transition:"height .4s"}}/>
-                <div style={{fontSize:8,color:"var(--faint)",transform:"rotate(-45deg)",whiteSpace:"nowrap"}}>{day.slice(5)}</div>
+
+          {/* Traffic sources */}
+          {(analytics.bySrc||[]).length>0&&(
+            <div style={{marginBottom:20}}>
+              <div style={{fontSize:13,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Traffic Sources</div>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {(analytics.bySrc||[]).map(([src,count])=>{
+                  const total=analytics.views||1;
+                  const pct=Math.round(count/total*100);
+                  const srcIcon=src==="facebook"?"📘":src==="google"?"🔍":src==="instagram"?"📷":src==="direct"?"🔗":"🌐";
+                  return(
+                    <div key={src} style={{display:"flex",alignItems:"center",gap:10}}>
+                      <div style={{fontSize:14,width:20,textAlign:"center"}}>{srcIcon}</div>
+                      <div style={{fontSize:13,color:"var(--text)",width:100,textTransform:"capitalize",flexShrink:0}}>{src}</div>
+                      <div style={{flex:1,height:18,background:"var(--border)",borderRadius:4,overflow:"hidden"}}>
+                        <div style={{width:pct+"%",height:"100%",background:"var(--gold)",borderRadius:4,opacity:.8,transition:"width .4s"}}/>
+                      </div>
+                      <div style={{fontSize:13,fontWeight:700,color:"var(--gold)",width:50,textAlign:"right"}}>{count}</div>
+                      <div style={{fontSize:11,color:"var(--muted)",width:36,textAlign:"right"}}>{pct}%</div>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-            {analytics.byDay.length===0&&<div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",color:"var(--muted)",fontSize:13}}>No daily data yet</div>}
+            </div>
+          )}
+
+          {/* Views by page */}
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:13,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>Views by Page</div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {analytics.byPage.map(([page,count])=>(
+                <div key={page} style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{fontSize:13,color:"var(--text)",width:140,textTransform:"capitalize",flexShrink:0}}>{page}</div>
+                  <div style={{flex:1,height:18,background:"var(--border)",borderRadius:4,overflow:"hidden"}}>
+                    <div style={{width:(count/Math.max(...analytics.byPage.map(([,v])=>v))*100)+"%",height:"100%",background:"var(--gold)",borderRadius:4,opacity:.7,transition:"width .4s"}}/>
+                  </div>
+                  <div style={{fontSize:13,fontWeight:700,color:"var(--gold)",width:40,textAlign:"right"}}>{count}</div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div style={{marginTop:16,background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"12px 16px",fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
-            <strong style={{color:"var(--text)"}}>💡 To track traffic sources:</strong> Add UTM parameters to your links.
-            Example: <code style={{background:"var(--parch)",padding:"1px 5px",borderRadius:4}}>theatre4u.org/beta.html?utm_source=reddit&utm_campaign=beta_launch</code>
+
+          {/* UTM tip */}
+          <div style={{background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"12px 16px",fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
+            <strong style={{color:"var(--text)"}}>💡 Track your Facebook ad:</strong> Change your ad destination to{" "}
+            <code style={{background:"var(--parch)",padding:"1px 5px",borderRadius:4,fontSize:11}}>theatre4u.org/join.html?utm_source=facebook&utm_medium=paid&utm_campaign=beta-spring26</code>
+            {" "}and traffic will appear as "facebook" in sources above.
           </div>
         </div>
       )}
