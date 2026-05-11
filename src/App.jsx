@@ -14049,7 +14049,7 @@ function LabelsPage({ org, userId, items=[], isAdmin=false }) {
       setMyItems((data||[]).map(i => ({ ...i, label_code: labelMap[i.id] || null })));
 
       const {data:ords} = await SB.from("label_orders")
-        .select("id,item_count,label_type,status,created_at,tracking,code_start,code_end,amount_cents,include_logo")
+        .select("id,item_count,assigned_count,blank_count,costume_count,equipment_count,label_type,status,created_at,tracking,code_start,code_end,amount_cents,include_logo,vendor,vendor_order_ref,notes,reorder_of")
         .eq("org_id",userId).order("created_at",{ascending:false});
       setOrders(ords||[]);
       setLoadingItems(false);
@@ -14516,37 +14516,93 @@ function LabelsPage({ org, userId, items=[], isAdmin=false }) {
           {orders.length>0&&(
             <div style={{marginTop:28}}>
               <div style={{fontWeight:700,fontSize:14,marginBottom:10}}>Your Label Orders</div>
-              <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
                 {orders.map((o,i)=>(
-                  <div key={i} style={{padding:"12px 16px",borderBottom:"1px solid var(--border)",
-                    display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:14,fontWeight:700}}>
-                        {o.item_count+" "+o.label_type+" labels"}
+                  <div key={i} style={{background:"var(--parch)",border:"1px solid var(--border)",
+                    borderRadius:10,padding:"14px 16px"}}>
+                    {/* Header row */}
+                    <div style={{display:"flex",gap:10,alignItems:"flex-start",
+                      flexWrap:"wrap",marginBottom:8}}>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:14,fontWeight:700}}>
+                          {o.item_count} labels
+                          {o.assigned_count>0&&o.blank_count>0
+                            ? ` (${o.assigned_count} assigned + ${o.blank_count} blank)`
+                            : o.assigned_count>0 ? ` (${o.assigned_count} assigned)`
+                            : o.blank_count>0    ? ` (${o.blank_count} blank)` : ""}
+                        </div>
+                        <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>
+                          {new Date(o.created_at).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}
+                          {o.vendor&&" · "+o.vendor}
+                        </div>
                       </div>
-                      {o.code_start&&<div style={{fontSize:12,fontFamily:"monospace",color:"var(--amber)",marginTop:2}}>
-                        {o.code_start+" → "+o.code_end}
-                      </div>}
-                      {o.tracking&&<div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>
-                        {"📦 Tracking: "+o.tracking}
-                      </div>}
+                      <span style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:6,
+                        background:o.status==="delivered"?"rgba(76,175,80,.12)":
+                                   o.status==="shipped"?"rgba(66,165,245,.12)":
+                                   o.status==="processing"?"rgba(33,150,243,.12)":"rgba(212,168,67,.1)",
+                        color:o.status==="delivered"?"#4caf50":
+                              o.status==="shipped"?"#42a5f5":
+                              o.status==="processing"?"#2196f3":"var(--gold)"}}>
+                        {o.status==="pending"?"⏳ Pending":o.status==="processing"?"🔄 Processing":
+                         o.status==="shipped"?"✈️ Shipped":"✅ Delivered"}
+                      </span>
                     </div>
-                    {o.amount_cents>0&&<div style={{fontWeight:700,fontSize:15,color:"var(--gold)"}}>
-                      {"$"+(o.amount_cents/100).toFixed(2)}
-                    </div>}
-                    <span style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:6,
-                      background:o.status==="delivered"?"rgba(76,175,80,.12)":
-                                 o.status==="shipped"?"rgba(66,165,245,.12)":
-                                 o.status==="processing"?"rgba(33,150,243,.12)":"rgba(212,168,67,.1)",
-                      color:o.status==="delivered"?"#4caf50":
-                            o.status==="shipped"?"#42a5f5":
-                            o.status==="processing"?"#2196f3":"var(--gold)"}}>
-                      {o.status==="pending"?"⏳ Pending":o.status==="processing"?"🔄 Processing":
-                       o.status==="shipped"?"✈ Shipped":"✓ Delivered"}
-                    </span>
-                    <span style={{fontSize:12,color:"var(--muted)"}}>
-                      {new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
-                    </span>
+
+                    {/* Detail rows */}
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",
+                      gap:6,fontSize:12,color:"var(--muted)",marginBottom:o.tracking||o.vendor_order_ref?8:0}}>
+                      {o.code_start&&(
+                        <div>
+                          <span style={{fontFamily:"monospace",color:"var(--amber)"}}>
+                            {o.code_start}
+                          </span>
+                          {o.code_end&&o.code_end!==o.code_start&&(
+                            <span style={{fontFamily:"monospace",color:"var(--amber)"}}>
+                              {" → "+o.code_end}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {o.costume_count>0&&(
+                        <div>👗 {o.costume_count} iron-on (costumes)</div>
+                      )}
+                      {o.equipment_count>0&&(
+                        <div>🏷️ {o.equipment_count} polypropylene (equipment)</div>
+                      )}
+                    </div>
+
+                    {(o.tracking||o.vendor_order_ref)&&(
+                      <div style={{fontSize:12,color:"var(--muted)",marginBottom:8}}>
+                        {o.vendor_order_ref&&<div>📋 Order ref: <strong style={{color:"var(--text)"}}>{o.vendor_order_ref}</strong></div>}
+                        {o.tracking&&<div>📦 Tracking: <strong style={{color:"var(--text)"}}>{o.tracking}</strong></div>}
+                      </div>
+                    )}
+
+                    {/* Reorder button */}
+                    <button
+                      onClick={async()=>{
+                        const sum = await SB.rpc("get_label_order_summary",{p_org_id:userId});
+                        const s = sum?.data;
+                        if(!s)return;
+                        const msg = [
+                          `Based on your current inventory:`,
+                          `• ${s.unlabeled_items} items need labels`,
+                          `• ${s.pool_blank} blank labels still available`,
+                          `• Next blank codes start at: ${org?.label_prefix||"?"}-${String(s.next_blank_start).padStart(4,"0")}`,
+                          ``,
+                          `To request a new order, email hello@theatre4u.org with:`,
+                          `  - How many assigned labels (for specific items)`,
+                          `  - How many blank labels you want`,
+                          `  - Shipping address`,
+                        ].join("\n");
+                        alert(msg);
+                      }}
+                      style={{fontSize:12,fontWeight:600,padding:"5px 12px",borderRadius:6,
+                        border:"1px solid var(--border)",background:"var(--parch)",
+                        color:"var(--muted)",cursor:"pointer",fontFamily:"inherit",
+                        marginTop:4}}>
+                      🔄 Reorder / Request New Labels
+                    </button>
                   </div>
                 ))}
               </div>
