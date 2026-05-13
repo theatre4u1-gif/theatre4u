@@ -1769,9 +1769,6 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
       <img src={usp(BG.dashboard,1400,900)} alt="" className="page-bg-img"/>
       <div className="page-layer">
 
-        {/* Join code entry — always visible so users can join a team any time */}
-        <JoinCodePrompt/>
-
         {/* Temp Pro beta notice */}
         {isTempPro&&(()=>{
           const itemCount = items.length;
@@ -15773,9 +15770,9 @@ function AdminHub({ currentUser, org }) {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      if (tab === "programs") {
+      if (tab === "overview" || tab === "programs" || tab === "users" || tab === "billing") {
         const { data } = await SB.from("orgs")
-          .select("id,name,email,plan,temp_pro,director_name,label_prefix,created_at,last_seen,stripe_subscription_id,account_status,city,location,referral_code")
+          .select("id,name,email,plan,temp_pro,is_leading_player,director_name,label_prefix,created_at,last_seen,stripe_subscription_id,account_status,city,location,referral_code")
           .is("deleted_at", null)
           .order("created_at", { ascending: false }).limit(200);
         setOrgs(data || []);
@@ -15784,6 +15781,11 @@ function AdminHub({ currentUser, org }) {
         const { data } = await SB.from("beta_feedback")
           .select("*").order("created_at", { ascending: false }).limit(50);
         setFeedback(data || []);
+      }
+      if (tab === "overview") {
+        // Quick page views count for the overview stat card
+        const { count } = await SB.from("page_views").select("*", { count: "exact", head: true });
+        setAnalytics(prev => ({ ...prev, views: count || 0 }));
       }
       if (tab === "overview" || tab === "users") {
         const { data } = await SB.from("beta_leads")
@@ -15968,12 +15970,14 @@ function AdminHub({ currentUser, org }) {
         <div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:24}}>
             {[
-              { n:totalOrgs,                                      label:"Total Programs",   color:"var(--gold)", icon:"🎭" },
-              { n:paidOrgs,                                       label:"Paid Plans",       color:"#4caf50",     icon:"💳" },
-              { n:orgs.filter(o=>o.temp_pro).length,              label:"Temp Pro (Beta)",  color:"#9c27b0",     icon:"⭐" },
-              { n:newLeads,                                       label:"New Beta Leads",   color:"#2196f3",     icon:"📥" },
-              { n:newFeedback,                                     label:"New Feedback",     color:"#ff9800",     icon:"💬" },
-              { n:analytics.views,                                label:"Page Views",       color:"var(--muted)",icon:"👁" },
+              { n:totalOrgs,                                       label:"Total Programs",  color:"var(--gold)", icon:"🎭" },
+              { n:paidOrgs,                                        label:"Paid Plans",      color:"#4caf50",     icon:"💳" },
+              { n:orgs.filter(o=>o.temp_pro).length,               label:"Beta Pro",        color:"#9c27b0",     icon:"⭐" },
+              { n:orgs.reduce((s,o)=>s+(o._items||0),0)||"—",      label:"Total Items",     color:"var(--gold)", icon:"📦" },
+              { n:newLeads,                                        label:"New Leads",       color:"#2196f3",     icon:"📥" },
+              { n:newFeedback,                                     label:"New Feedback",    color:"#ff9800",     icon:"💬" },
+              { n:orgs.filter(o=>o.last_seen && new Date(o.last_seen) > new Date(Date.now()-7*24*60*60*1000)).length, label:"Active 7d", color:"#4caf50", icon:"🟢" },
+              { n:analytics.views||0,                              label:"Page Views",      color:"var(--muted)",icon:"👁" },
             ].map(k=>(
               <div key={k.label} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px"}}>
                 <div style={{fontSize:22,marginBottom:4}}>{k.icon}</div>
