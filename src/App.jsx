@@ -10368,7 +10368,7 @@ function TeamSettings({ userId, orgName, plan }) {
     flash("✓ Role updated");
   };
 
-  const joinUrl = joinCode ? `theatre4u.org/join.html?code=${joinCode}` : null;
+  const joinUrl = joinCode ? `theatre4u.org/invite.html?code=${joinCode}` : null;
 
   return (
     <div className="card card-p" style={{ marginBottom: 20 }}>
@@ -10443,7 +10443,7 @@ function TeamSettings({ userId, orgName, plan }) {
                 </div>
               </div>
               <button onClick={() => {
-                const url = `https://theatre4u.org/join.html?token=${inv.token}`;
+                const url = `https://theatre4u.org/invite.html?token=${inv.token}`;
                 if (navigator.clipboard?.writeText) {
                   navigator.clipboard.writeText(url)
                     .then(() => flash("✓ Invite link copied!"))
@@ -10505,13 +10505,13 @@ function TeamSettings({ userId, orgName, plan }) {
               <div style={{ flex: 1, minWidth: 160 }}>
                 <div style={{ fontSize: 11, color: "var(--faint)", marginBottom: 4 }}>Or share this link</div>
                 <div style={{ fontSize: 12, color: "var(--muted)", wordBreak: "break-all" }}>
-                  theatre4u.org/join.html?code={joinCode}
+                  theatre4u.org/invite.html?code={joinCode}
                 </div>
               </div>
               <button className="btn bs bsm" onClick={() => {
-                navigator.clipboard?.writeText(`https://theatre4u.org/join.html?code=${joinCode}`)
+                navigator.clipboard?.writeText(`https://theatre4u.org/invite.html?code=${joinCode}`)
                   .then(() => flash("✓ Link copied to clipboard!"))
-                  .catch(() => flash("✓ Link: https://theatre4u.org/join.html?code=" + joinCode));
+                  .catch(() => flash("✓ Link: https://theatre4u.org/invite.html?code=" + joinCode));
                 flash("✓ Link copied!");
               }}>Copy Link</button>
             </div>
