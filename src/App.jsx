@@ -15762,6 +15762,7 @@ function AdminHub({ currentUser, org }) {
   const [analytics, setAnalytics] = useState({ views:0, sessions:0, byPage:[], byDay:[] });
   const [labelOrders, setLabelOrders] = useState([]);
   const [digest, setDigest]       = useState(null);
+  const [adminItemCount, setAdminItemCount] = useState(null); // real total from DB
   const [query, setQuery]         = useState("");
   const [loading, setLoading]     = useState(false);
   const [msg, setMsg]             = useState("");
@@ -15786,6 +15787,9 @@ function AdminHub({ currentUser, org }) {
         // Quick page views count for the overview stat card
         const { count } = await SB.from("page_views").select("*", { count: "exact", head: true });
         setAnalytics(prev => ({ ...prev, views: count || 0 }));
+        // Real item count — don't rely on joined data
+        const { count: ic } = await SB.from("items").select("*", { count: "exact", head: true });
+        setAdminItemCount(ic || 0);
       }
       if (tab === "overview" || tab === "users") {
         const { data } = await SB.from("beta_leads")
@@ -15970,14 +15974,13 @@ function AdminHub({ currentUser, org }) {
         <div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:24}}>
             {[
-              { n:totalOrgs,                                       label:"Total Programs",  color:"var(--gold)", icon:"🎭" },
-              { n:paidOrgs,                                        label:"Paid Plans",      color:"#4caf50",     icon:"💳" },
-              { n:orgs.filter(o=>o.temp_pro).length,               label:"Beta Pro",        color:"#9c27b0",     icon:"⭐" },
-              { n:orgs.reduce((s,o)=>s+(o._items||0),0)||"—",      label:"Total Items",     color:"var(--gold)", icon:"📦" },
-              { n:newLeads,                                        label:"New Leads",       color:"#2196f3",     icon:"📥" },
-              { n:newFeedback,                                     label:"New Feedback",    color:"#ff9800",     icon:"💬" },
-              { n:orgs.filter(o=>o.last_seen && new Date(o.last_seen) > new Date(Date.now()-7*24*60*60*1000)).length, label:"Active 7d", color:"#4caf50", icon:"🟢" },
-              { n:analytics.views||0,                              label:"Page Views",      color:"var(--muted)",icon:"👁" },
+              { n:totalOrgs,                                          label:"Total Programs", color:"var(--gold)", icon:"🎭" },
+              { n:paidOrgs,                                           label:"Paid Plans",     color:"#4caf50",     icon:"💳" },
+              { n:orgs.filter(o=>o.temp_pro).length,                  label:"Beta Pro",       color:"#9c27b0",     icon:"⭐" },
+              { n:adminItemCount!==null?adminItemCount:"…",           label:"Total Items",    color:"var(--gold)", icon:"📦" },
+              { n:newLeads,                                           label:"New Leads",      color:"#2196f3",     icon:"📥" },
+              { n:newFeedback,                                        label:"New Feedback",   color:"#ff9800",     icon:"💬" },
+              { n:analytics.views||0,                                 label:"Page Views",     color:"var(--muted)",icon:"👁" },
             ].map(k=>(
               <div key={k.label} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px"}}>
                 <div style={{fontSize:22,marginBottom:4}}>{k.icon}</div>
