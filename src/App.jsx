@@ -15772,11 +15772,17 @@ function AdminHub({ currentUser, org }) {
     (async () => {
       setLoading(true);
       if (tab === "overview" || tab === "programs" || tab === "users" || tab === "billing") {
-        const { data } = await SB.from("orgs")
-          .select("id,name,email,plan,temp_pro,is_leading_player,director_name,label_prefix,created_at,last_seen,stripe_subscription_id,account_status,city,location,referral_code")
-          .is("deleted_at", null)
-          .order("created_at", { ascending: false }).limit(200);
-        setOrgs(data || []);
+        // Use RPC to get item counts per org in one query
+        const { data: orgData } = await SB.rpc("get_admin_org_overview");
+        if (orgData) setOrgs(orgData);
+        else {
+          // Fallback to basic query if RPC not available
+          const { data } = await SB.from("orgs")
+            .select("id,name,email,plan,temp_pro,is_leading_player,director_name,label_prefix,created_at,last_seen,stripe_subscription_id,account_status,city,location,referral_code")
+            .is("deleted_at", null)
+            .order("created_at", { ascending: false }).limit(200);
+          setOrgs(data || []);
+        }
       }
       if (tab === "overview" || tab === "feedback") {
         const { data } = await SB.from("beta_feedback")
@@ -15977,7 +15983,7 @@ function AdminHub({ currentUser, org }) {
               { n:totalOrgs,                                          label:"Total Programs", color:"var(--gold)", icon:"🎭" },
               { n:paidOrgs,                                           label:"Paid Plans",     color:"#4caf50",     icon:"💳" },
               { n:orgs.filter(o=>o.temp_pro).length,                  label:"Beta Pro",       color:"#9c27b0",     icon:"⭐" },
-              { n:adminItemCount!==null?adminItemCount:"…",           label:"Total Items",    color:"var(--gold)", icon:"📦" },
+              { n:adminItemCount!==null?adminItemCount:orgs.reduce((s,o)=>s+(Number(o.item_count)||0),0)||"…", label:"Total Items", color:"var(--gold)", icon:"📦" },
               { n:newLeads,                                           label:"New Leads",      color:"#2196f3",     icon:"📥" },
               { n:newFeedback,                                        label:"New Feedback",   color:"#ff9800",     icon:"💬" },
               { n:analytics.views||0,                                 label:"Page Views",     color:"var(--muted)",icon:"👁" },
@@ -15993,42 +15999,54 @@ function AdminHub({ currentUser, org }) {
           {/* Beta incentive progress */}
           <div style={{marginBottom:24}}>
             <h3 style={{fontFamily:"var(--serif)",fontSize:16,marginBottom:10}}>
-              Beta Incentive Progress — Founding Member Rate
-              <span style={{fontSize:12,fontWeight:400,color:"var(--muted)",marginLeft:8}}>
-                25+ items + 1 feedback = $9.99/mo founding rate (vs $15 standard)
-              </span>
+              All Programs — Inventory Overview
             </h3>
             <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
                 <thead><tr style={{background:"rgba(0,0,0,.1)"}}>
-                  {["Program","Items","Feedback","Status"].map(h=>(
+                  {["Program","Plan","Items","Team","Joined","Status"].map(h=>(
                     <th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)"}}>{h}</th>
                   ))}
                 </tr></thead>
                 <tbody>
-                  {orgs.filter(o=>o.temp_pro).map(o=>{
-                    // We don't have per-org item counts here — show what we can
-                    // Full counts available via check_beta_incentive_eligibility() RPC
+                  {orgs.map((o,idx)=>{
+                    const items = Number(o.item_count)||0;
+                    const team  = Number(o.team_count)||0;
+                    const planColor = o.plan==="district"?"#42a5f5":o.plan==="pro"?"var(--gold)":"var(--muted)";
+                    const statusBadge = o.stripe_subscription_id
+                      ? {label:"💳 Paying",bg:"rgba(76,175,80,.12)",color:"#4caf50"}
+                      : o.temp_pro
+                      ? {label:"⭐ Beta Pro",bg:"rgba(212,168,67,.1)",color:"var(--gold)"}
+                      : {label:"Free",bg:"rgba(150,150,150,.1)",color:"var(--muted)"};
                     return(
-                      <tr key={o.id} style={{borderTop:"1px solid var(--border)"}}>
-                        <td style={{padding:"8px 12px",fontWeight:600}}>{o.name}</td>
-                        <td style={{padding:"8px 12px",color:"var(--muted)"}}>—</td>
-                        <td style={{padding:"8px 12px",color:"var(--muted)"}}>—</td>
+                      <tr key={o.id} style={{borderTop:"1px solid var(--border)",background:idx%2===0?"transparent":"rgba(0,0,0,.02)"}}>
+                        <td style={{padding:"8px 12px",fontWeight:600,maxWidth:200}}>
+                          <div style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{o.name}</div>
+                          <div style={{fontSize:11,color:"var(--muted)",fontWeight:400}}>{o.label_prefix||"—"}</div>
+                        </td>
+                        <td style={{padding:"8px 12px"}}>
+                          <span style={{fontSize:11,fontWeight:700,color:planColor,textTransform:"uppercase"}}>{o.plan}</span>
+                        </td>
+                        <td style={{padding:"8px 12px"}}>
+                          <span style={{fontWeight:700,color:items>0?"var(--text)":"var(--muted)",fontSize:items>0?15:13}}>
+                            {items>0?items:"—"}
+                          </span>
+                        </td>
+                        <td style={{padding:"8px 12px",color:team>0?"var(--text)":"var(--muted)"}}>{team>0?team:"—"}</td>
+                        <td style={{padding:"8px 12px",color:"var(--muted)",fontSize:12}}>
+                          {new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"2-digit"})}
+                        </td>
                         <td style={{padding:"8px 12px"}}>
                           <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:6,
-                            background:"rgba(212,168,67,.1)",color:"var(--gold)"}}>⭐ Temp Pro</span>
+                            background:statusBadge.bg,color:statusBadge.color}}>
+                            {statusBadge.label}
+                          </span>
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
-              <div style={{padding:"10px 14px",borderTop:"1px solid var(--border)",fontSize:12,color:"var(--muted)",display:"flex",gap:12,alignItems:"center"}}>
-                <span>Run in Supabase SQL for full counts:</span>
-                <code style={{background:"rgba(0,0,0,.2)",padding:"2px 8px",borderRadius:4,fontSize:11}}>
-                  SELECT * FROM check_beta_incentive_eligibility();
-                </code>
-              </div>
             </div>
           </div>
 
