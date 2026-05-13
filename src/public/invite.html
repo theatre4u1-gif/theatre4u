@@ -309,33 +309,50 @@ async function handleSignin() {
 
 // ── Init: load invite info ──────────────────────────────────────────────────
 async function init() {
-  // If already signed in, try to accept invite immediately
   const { data: { session } } = await SB.auth.getSession();
 
   if (token) {
-    // Look up invite by token
-    const { data } = await SB.rpc('get_invite_by_token', { p_token: token }).catch(() => ({ data: null }));
-    if (!data || !data.length) {
-      // Could be expired — but still let them try signing up
-      // (The RPC will catch the error gracefully)
-    } else {
-      inviteData = data[0];
+    // Look up directly from org_invites — the get_invite_by_token RPC only covers district invites
+    const { data, error } = await SB.from('org_invites')
+      .select('id, role, email, token, expires_at, accepted_at, orgs(name)')
+      .eq('token', token)
+      .maybeSingle();
+
+    if (error || !data) {
+      show('invite-error');
+      document.getElementById('invite-error-msg').textContent =
+        'This invite link was not found. It may have expired or already been used. Ask your director to send a new invite.';
+      return;
     }
+
+    if (data.accepted_at) {
+      show('invite-error');
+      document.getElementById('invite-error-msg').textContent =
+        'This invite link has already been used. If you need access, ask your director to send a new invite.';
+      return;
+    }
+
+    inviteData = {
+      role:     data.role,
+      org_name: data.orgs?.name,
+      email:    data.email,
+    };
+
   } else if (joinCode) {
-    // Look up join code invite
     const { data } = await SB.from('org_invites')
-      .select('role, org_id, orgs(name)')
-      .filter('join_code', 'ilike', joinCode.trim())
-      .limit(1);
-    if (data?.length) {
+      .select('role, org_id, email, orgs(name)')
+      .ilike('join_code', joinCode.trim())
+      .maybeSingle();
+
+    if (data) {
       inviteData = {
-        role:     data[0].role,
-        org_name: data[0].orgs?.name,
-        org_id:   data[0].org_id,
+        role:     data.role,
+        org_name: data.orgs?.name,
+        org_id:   data.org_id,
+        email:    data.email,
       };
     }
   } else {
-    // No token or code — show error
     show('invite-error');
     document.getElementById('invite-error-msg').textContent =
       'No invite token or join code found in this link. Ask your director to share the invite again.';
@@ -346,14 +363,13 @@ async function init() {
   if (inviteData) {
     document.getElementById('org-name').textContent = inviteData.org_name || 'Your Theatre Program';
     document.getElementById('role-label').textContent = ROLE_LABELS[inviteData.role] || inviteData.role || 'Team Member';
-    // Pre-fill email if invite has one
     if (inviteData.email) {
       document.getElementById('su-email').value = inviteData.email;
       document.getElementById('si-email').value = inviteData.email;
     }
   }
 
-  // If already signed in, just accept and show success
+  // If already signed in, accept immediately and show success
   if (session) {
     const { data: invResult, error: invErr } = await acceptInvite();
     if (!invErr && invResult?.success) {
