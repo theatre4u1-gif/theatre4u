@@ -1646,6 +1646,101 @@ function CommunitySpotlight({onViewAll}){
   );
 }
 
+// ── JoinCodePrompt ─────────────────────────────────────────────────────────
+function JoinCodePrompt({ onJoined }) {
+  const [code,      setCode]      = useState("");
+  const [saving,    setSaving]    = useState(false);
+  const [err,       setErr]       = useState("");
+  const [done,      setDone]      = useState(false);
+  const [orgName,   setOrgName]   = useState("");
+  const [dismissed, setDismissed] = useState(
+    ()=>{ try { return localStorage.getItem("t4u_code_prompt_dismissed")==="1"; } catch{return false;} }
+  );
+
+  // Don't show if already dismissed and no pending code
+  const pendingCode = typeof window !== "undefined"
+    ? localStorage.getItem("t4u_pending_join_code") : null;
+  if (dismissed && !pendingCode) return null;
+
+  const submit = async () => {
+    const trimmed = code.trim().toUpperCase();
+    if (!trimmed) { setErr("Please enter a join code."); return; }
+    setSaving(true); setErr("");
+    const { data, error } = await SB.rpc("accept_team_invite_by_code", { p_code: trimmed });
+    setSaving(false);
+    if (error || data?.error) {
+      setErr(data?.error || "Something went wrong. Please check the code and try again.");
+      return;
+    }
+    setOrgName(data.org_name || "the program");
+    setDone(true);
+    if (onJoined) setTimeout(()=>{ window.location.reload(); }, 1800);
+  };
+
+  const dismiss = () => {
+    try { localStorage.setItem("t4u_code_prompt_dismissed","1"); } catch(e) {}
+    setDismissed(true);
+  };
+
+  // Auto-fill if there's a pending code from URL
+  useEffect(()=>{
+    if (pendingCode && !code) {
+      setCode(pendingCode);
+      localStorage.removeItem("t4u_pending_join_code");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+
+  if (done) return (
+    <div style={{background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.3)",
+      borderRadius:10,padding:"14px 18px",display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+      <span style={{fontSize:20}}>✅</span>
+      <span style={{fontSize:14,color:"#81c784",fontWeight:600}}>
+        You've joined {orgName}'s team! Reloading…
+      </span>
+    </div>
+  );
+
+  return (
+    <div style={{background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.2)",
+      borderRadius:10,padding:"14px 18px",marginBottom:16,position:"relative"}}>
+      <button onClick={dismiss}
+        style={{position:"absolute",top:10,right:10,background:"none",border:"none",
+          color:"var(--muted)",fontSize:16,cursor:"pointer",lineHeight:1,padding:"2px 6px"}}>
+        ×
+      </button>
+      <div style={{fontWeight:700,fontSize:14,marginBottom:2}}>
+        👋 Have a join code from your director?
+      </div>
+      <div style={{fontSize:13,color:"var(--muted)",marginBottom:10,lineHeight:1.5,paddingRight:24}}>
+        Enter the code they shared to join their program's backstage team.
+      </div>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-start"}}>
+        <input
+          value={code}
+          onChange={e=>{ setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g,"")); setErr(""); }}
+          onKeyDown={e=>e.key==="Enter"&&submit()}
+          placeholder="e.g. Y8H-YMH"
+          maxLength={10}
+          style={{padding:"9px 14px",borderRadius:8,
+            border:`1px solid ${err?"rgba(194,24,91,.5)":"rgba(255,255,255,.15)"}`,
+            background:"rgba(255,255,255,.06)",color:"#fff",fontSize:16,
+            fontFamily:"monospace",letterSpacing:2,width:150,outline:"none",
+            textTransform:"uppercase"}}
+        />
+        <button onClick={submit} disabled={saving||!code.trim()}
+          style={{padding:"9px 20px",borderRadius:8,border:"none",
+            background:"linear-gradient(135deg,var(--gold),#a37f2c)",
+            color:"#1a0f00",fontWeight:700,fontSize:14,cursor:"pointer",
+            fontFamily:"inherit",opacity:saving||!code.trim()?.6:1}}>
+          {saving ? "Joining…" : "Join Team →"}
+        </button>
+      </div>
+      {err&&<div style={{fontSize:12,color:"#e06090",marginTop:6}}>{err}</div>}
+    </div>
+  );
+}
+
 function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketplace,goCommunity,goProfile,goPoints}){
   const totalQty=items.reduce((s,i)=>s+(i.qty||1),0);
   const listed=items.filter(i=>i.mkt!=="Not Listed").length;
@@ -1673,6 +1768,9 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
     <div style={{position:"relative",padding:"32px 36px 56px"}}>
       <img src={usp(BG.dashboard,1400,900)} alt="" className="page-bg-img"/>
       <div className="page-layer">
+
+        {/* Join code entry — always visible so users can join a team any time */}
+        <JoinCodePrompt/>
 
         {/* Temp Pro beta notice */}
         {isTempPro&&(()=>{
@@ -11261,6 +11359,14 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
           } catch(e) { /* non-fatal */ }
           // Clear any demo pre-fill data
           try { sessionStorage.removeItem("t4u_prefill_org"); sessionStorage.removeItem("t4u_prefill_email"); } catch(e) {}
+          // Process any pending join code (user arrived via ?code=XYZ before signing up)
+          const pendingCode = localStorage.getItem("t4u_pending_join_code");
+          if (pendingCode) {
+            localStorage.removeItem("t4u_pending_join_code");
+            try {
+              await SB.rpc("accept_team_invite_by_code", { p_code: pendingCode });
+            } catch(e) { /* non-fatal */ }
+          }
           setDone(true);
         }
       } else {
@@ -16913,10 +17019,15 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
   // Supabase's email confirmation redirect (which strips query params)
   const [pendingInvite,setPendingInvite] = useState(() => {
     const p = new URLSearchParams(window.location.search);
-    const fromUrl = p.get("invite") || p.get("token"); // team invites use 'token'
+    const fromUrl = p.get("invite") || p.get("token");
+    // Also capture join codes from URL e.g. ?code=Y8H-YMH
+    const codeFromUrl = p.get("code");
+    if (codeFromUrl && !codeFromUrl.includes("-0") && codeFromUrl.length < 12) {
+      // Looks like a join code (not a label code like OVHS-0001)
+      localStorage.setItem("t4u_pending_join_code", codeFromUrl.toUpperCase().trim());
+    }
     if (fromUrl) {
       localStorage.setItem("t4u_pending_invite", fromUrl);
-      // Also detect if it's a team token vs district token
       const itype = p.get("token") ? "team" : "district";
       localStorage.setItem("t4u_pending_invite_type", itype);
       return fromUrl;
@@ -17289,6 +17400,28 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
           : result?.role === "crew" ? "Crew" : "House";
         alert(`✓ Welcome to ${orgName}'s Backstage Team! You've joined as ${roleLabel}. The page will reload to show your team inventory.`);
         window.location.reload();
+        return;
+      }
+
+      // ── JOIN CODE (persisted from URL or signup) ──────────────────────
+      const pendingCode = localStorage.getItem("t4u_pending_join_code");
+      if (pendingCode) {
+        localStorage.removeItem("t4u_pending_join_code");
+        clearInvite();
+        const { data: codeResult, error: codeErr } = await SB.rpc("accept_team_invite_by_code", {
+          p_code: pendingCode,
+        });
+        if (!codeErr && codeResult?.success) {
+          const orgName   = codeResult.org_name || "the program";
+          const roleLabel = codeResult.role === "stage_manager" ? "Stage Manager"
+            : codeResult.role === "crew" ? "Crew"
+            : codeResult.role === "co_director" ? "Co-Director" : "House";
+          alert(`✓ Welcome to ${orgName}'s Backstage Team! You've joined as ${roleLabel}. The page will reload.`);
+          window.location.reload();
+        } else if (codeResult?.error?.includes("Already a member")) {
+          // Silent — they're already in, just reload
+          window.location.reload();
+        }
         return;
       }
 
