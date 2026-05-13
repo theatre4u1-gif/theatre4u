@@ -11323,6 +11323,17 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
           throw error;
         }
         if(data.user){
+          // Team members arrive via invite.html — they join an existing org, no new org needed
+          const isTeamMember = data.user.user_metadata?.is_team_member === true;
+          if (isTeamMember) {
+            const pendingCode = localStorage.getItem("t4u_pending_join_code");
+            if (pendingCode) {
+              localStorage.removeItem("t4u_pending_join_code");
+              await SB.rpc("accept_team_invite_by_code", { p_code: pendingCode }).catch(()=>{});
+            }
+            setDone(true);
+            return;
+          }
           // Track signup conversion with UTM attribution
           const _sid = window.__t4u_sid || sessionStorage.getItem("t4u_sid") || null;
           const _utm = window.__t4u_utm || JSON.parse(sessionStorage.getItem("t4u_utm")||"{}");
@@ -15256,6 +15267,496 @@ function AdminPaymentsTab() {
   );
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// ADMIN PROGRAMS — GOD MODE
+// Full oversight of every program: view inventory, edit items, manage team,
+// transfer ownership, update org profile. All actions act as service role.
+// ══════════════════════════════════════════════════════════════════════════════
+function AdminProgramsTab({ orgs, currentUser, flash }) {
+  const [selected,    setSelected]    = useState(null); // org object
+  const [view,        setView]        = useState("overview"); // overview|inventory|team|settings
+  const [items,       setItems]       = useState([]);
+  const [team,        setTeam]        = useState([]);
+  const [invites,     setInvites]     = useState([]);
+  const [loadingOrg,  setLoadingOrg]  = useState(false);
+  const [search,      setSearch]      = useState("");
+  const [editItem,    setEditItem]     = useState(null);
+  const [editOrg,     setEditOrg]     = useState(null);
+  const [saving,      setSaving]      = useState(false);
+  const [msg,         setMsg]         = useState("");
+  const showMsg = m => { setMsg(m); setTimeout(()=>setMsg(""),3000); };
+
+  const filtered = orgs.filter(o =>
+    !search || o.name?.toLowerCase().includes(search.toLowerCase()) ||
+    o.email?.toLowerCase().includes(search.toLowerCase()) ||
+    o.director_name?.toLowerCase().includes(search.toLowerCase()) ||
+    o.label_prefix?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const selectOrg = async (org) => {
+    setSelected(org);
+    setView("overview");
+    setEditOrg({...org});
+    setLoadingOrg(true);
+    const [{ data: its }, { data: mems }, { data: invs }] = await Promise.all([
+      SB.from("items").select("id,name,category,display_id,location,condition,qty,avail,mkt,img").eq("org_id", org.id).order("display_id"),
+      SB.from("org_members").select("user_id,email,role,joined_at").eq("org_id", org.id),
+      SB.from("org_invites").select("id,email,role,join_code,token,expires_at,accepted_at,is_permanent").eq("org_id", org.id).order("created_at",{ascending:false}),
+    ]);
+    setItems(its||[]);
+    setTeam(mems||[]);
+    setInvites(invs||[]);
+    setLoadingOrg(false);
+  };
+
+  const saveOrgProfile = async () => {
+    if (!editOrg) return;
+    setSaving(true);
+    const { error } = await SB.from("orgs").update({
+      name: editOrg.name, director_name: editOrg.director_name,
+      email: editOrg.email, plan: editOrg.plan,
+      temp_pro: editOrg.temp_pro, label_prefix: editOrg.label_prefix,
+      city: editOrg.city, location: editOrg.location,
+      account_status: editOrg.account_status,
+    }).eq("id", editOrg.id);
+    setSaving(false);
+    if (error) { showMsg("❌ Save failed: "+error.message); return; }
+    setSelected({...selected,...editOrg});
+    showMsg("✅ Profile saved");
+  };
+
+  const saveItem = async () => {
+    if (!editItem) return;
+    setSaving(true);
+    const { id, org_id, added, ...payload } = editItem;
+    const { error } = await SB.from("items").update(payload).eq("id", editItem.id);
+    setSaving(false);
+    if (error) { showMsg("❌ "+error.message); return; }
+    setItems(p => p.map(i => i.id===editItem.id ? editItem : i));
+    setEditItem(null);
+    showMsg("✅ Item saved");
+  };
+
+  const deleteItem = async (itemId) => {
+    if (!confirm("Delete this item from "+selected?.name+"?")) return;
+    const { error } = await SB.from("items").delete().eq("id", itemId);
+    if (error) { showMsg("❌ "+error.message); return; }
+    setItems(p => p.filter(i => i.id !== itemId));
+    showMsg("✅ Item deleted");
+  };
+
+  const removeMember = async (userId, memberEmail) => {
+    if (!confirm(`Remove ${memberEmail} from ${selected?.name}?`)) return;
+    const { error } = await SB.from("org_members").delete()
+      .eq("org_id", selected.id).eq("user_id", userId);
+    if (error) { showMsg("❌ "+error.message); return; }
+    setTeam(p => p.filter(m => m.user_id !== userId));
+    showMsg("✅ Member removed");
+  };
+
+  const addMember = async (email, role) => {
+    if (!email.trim()) return;
+    setSaving(true);
+    // Look up user by email
+    const { data: userOrg } = await SB.from("orgs").select("id").eq("email", email.trim()).single();
+    if (!userOrg) { showMsg("❌ No Theatre4u account found for "+email); setSaving(false); return; }
+    const { error } = await SB.from("org_members").upsert({
+      org_id: selected.id, user_id: userOrg.id, email: email.trim(),
+      role, invited_by: selected.id, joined_at: new Date().toISOString()
+    },{onConflict:"org_id,user_id"});
+    setSaving(false);
+    if (error) { showMsg("❌ "+error.message); return; }
+    setTeam(p => [...p.filter(m=>m.user_id!==userOrg.id), {user_id:userOrg.id,email:email.trim(),role,joined_at:new Date().toISOString()}]);
+    showMsg("✅ "+email+" added as "+role);
+  };
+
+  const transferOwnership = async (newEmail) => {
+    if (!newEmail.trim()) return;
+    if (!confirm(`Transfer ownership of "${selected?.name}" to ${newEmail}?\n\nThis will:\n• Change the org's primary email to the new director\n• Keep all inventory and team members\n• The previous director loses owner access`)) return;
+    setSaving(true);
+    // Find the new owner's auth user
+    const { data: newOwnerOrg } = await SB.from("orgs").select("id,name").eq("email", newEmail.trim()).single();
+    if (!newOwnerOrg) { showMsg("❌ No account found for "+newEmail+". They need to sign up first."); setSaving(false); return; }
+    // Update the org's email to the new director
+    const { error } = await SB.from("orgs").update({
+      email: newEmail.trim(),
+      director_name: editOrg?.director_name || "",
+    }).eq("id", selected.id);
+    setSaving(false);
+    if (error) { showMsg("❌ "+error.message); return; }
+    showMsg("✅ Ownership transfer initiated. Note: full transfer may require manual DB steps for auth.users.");
+  };
+
+  const planColor = p => p==="district"?"#42a5f5":p==="pro"?"var(--gold)":p==="free"?"var(--muted)":"var(--muted)";
+  const catIcon = c => ({costumes:"👗",props:"🎭",sets:"🏗️",lighting:"💡",sound:"🔊",scripts:"📜",makeup:"💄",furniture:"🪑",fabrics:"🧵",tools:"🔧",effects:"✨"}[c]||"📦");
+
+  return (
+    <div style={{display:"flex",gap:16,height:"calc(100vh - 200px)",minHeight:500}}>
+
+      {/* ── Left panel: program list ─────────────────────────────────────── */}
+      <div style={{width:260,flexShrink:0,display:"flex",flexDirection:"column",gap:8}}>
+        <div style={{fontWeight:800,fontSize:15,marginBottom:4}}>
+          🎭 All Programs <span style={{fontWeight:400,fontSize:12,color:"var(--muted)"}}>({orgs.length})</span>
+        </div>
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="Search programs…"
+          style={{padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",
+            background:"var(--parch)",color:"var(--text)",fontSize:13,
+            fontFamily:"inherit",outline:"none",width:"100%"}}/>
+        <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:4}}>
+          {filtered.map(o => (
+            <button key={o.id} onClick={()=>selectOrg(o)}
+              style={{textAlign:"left",padding:"10px 12px",borderRadius:8,
+                border:`1px solid ${selected?.id===o.id?"var(--gold)":"var(--border)"}`,
+                background:selected?.id===o.id?"rgba(212,168,67,.1)":"var(--parch)",
+                cursor:"pointer",fontFamily:"inherit",width:"100%",transition:"all .15s"}}>
+              <div style={{fontWeight:600,fontSize:13,color:"var(--text)",
+                whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                {o.name||o.email}
+              </div>
+              <div style={{display:"flex",gap:6,alignItems:"center",marginTop:3}}>
+                <span style={{fontSize:10,fontWeight:700,color:planColor(o.plan),
+                  background:planColor(o.plan)+"22",padding:"1px 6px",borderRadius:4}}>
+                  {o.plan?.toUpperCase()}
+                </span>
+                {o.temp_pro&&<span style={{fontSize:10,color:"var(--muted)"}}>beta</span>}
+                <span style={{fontSize:10,color:"var(--muted)",marginLeft:"auto"}}>
+                  {o.label_prefix||"—"}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Right panel: program detail ──────────────────────────────────── */}
+      <div style={{flex:1,overflowY:"auto",minWidth:0}}>
+        {!selected&&(
+          <div style={{textAlign:"center",padding:"60px 20px",color:"var(--muted)"}}>
+            <div style={{fontSize:40,marginBottom:12}}>🎭</div>
+            <div style={{fontSize:15,fontWeight:600,marginBottom:6}}>Select a program</div>
+            <div style={{fontSize:13}}>Click any program on the left to view and manage it.</div>
+          </div>
+        )}
+
+        {selected&&loadingOrg&&(
+          <div style={{textAlign:"center",padding:40,color:"var(--muted)"}}>Loading {selected.name}…</div>
+        )}
+
+        {selected&&!loadingOrg&&(<>
+          {msg&&<div style={{background:"rgba(76,175,80,.12)",border:"1px solid rgba(76,175,80,.3)",
+            borderRadius:8,padding:"10px 14px",fontSize:13,marginBottom:12,color:"#81c784"}}>{msg}</div>}
+
+          {/* Program header */}
+          <div style={{display:"flex",alignItems:"flex-start",gap:12,marginBottom:16,flexWrap:"wrap"}}>
+            <div style={{flex:1}}>
+              <div style={{fontFamily:"var(--serif)",fontSize:20,fontWeight:700}}>{selected.name}</div>
+              <div style={{fontSize:13,color:"var(--muted)"}}>{selected.email}
+                {selected.director_name&&" · "+selected.director_name}
+                {" · "}
+                <span style={{color:planColor(selected.plan),fontWeight:600}}>
+                  {selected.plan?.toUpperCase()}{selected.temp_pro?" (beta pro)":""}
+                </span>
+              </div>
+              <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>
+                {items.length} items · {team.length} team members · {selected.label_prefix||"no prefix"}
+                {" · Joined "}{new Date(selected.created_at).toLocaleDateString("en-US",{month:"short",year:"numeric"})}
+              </div>
+            </div>
+          </div>
+
+          {/* Sub-navigation */}
+          <div style={{display:"flex",gap:4,marginBottom:16,borderBottom:"1px solid var(--border)",paddingBottom:12}}>
+            {[["overview","📊 Overview"],["inventory","📦 Inventory ("+items.length+")"],
+              ["team","👥 Team ("+team.length+")"],["settings","⚙️ Settings"]].map(([v,l])=>(
+              <button key={v} onClick={()=>setView(v)}
+                style={{padding:"6px 14px",borderRadius:8,border:"none",
+                  background:view===v?"var(--gold)":"var(--parch)",
+                  color:view===v?"#1a0f00":"var(--muted)",
+                  fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                {l}
+              </button>
+            ))}
+          </div>
+
+          {/* ── OVERVIEW ── */}
+          {view==="overview"&&(
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10}}>
+              {[
+                {icon:"📦",val:items.length,lbl:"Items"},
+                {icon:"🏷️",val:items.filter(i=>i.display_id).length,lbl:"Labeled"},
+                {icon:"🎭",val:items.filter(i=>i.mkt!=="Not Listed").length,lbl:"On Exchange"},
+                {icon:"👥",val:team.length,lbl:"Team Members"},
+                {icon:"✉️",val:invites.filter(i=>!i.accepted_at).length,lbl:"Pending Invites"},
+                {icon:"📅",val:new Date(selected.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"}),lbl:"Joined"},
+              ].map(k=>(
+                <div key={k.lbl} style={{background:"var(--parch)",border:"1px solid var(--border)",
+                  borderRadius:10,padding:"14px",textAlign:"center"}}>
+                  <div style={{fontSize:24,marginBottom:4}}>{k.icon}</div>
+                  <div style={{fontSize:22,fontWeight:800,color:"var(--gold)",
+                    fontFamily:"var(--serif)",lineHeight:1}}>{k.val}</div>
+                  <div style={{fontSize:11,color:"var(--muted)",marginTop:4,
+                    textTransform:"uppercase",letterSpacing:.8}}>{k.lbl}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── INVENTORY ── */}
+          {view==="inventory"&&(
+            <div>
+              {editItem&&(
+                <div style={{background:"var(--parch)",border:"1px solid var(--gold)",
+                  borderRadius:10,padding:16,marginBottom:16}}>
+                  <div style={{fontWeight:700,fontSize:14,marginBottom:12,color:"var(--gold)"}}>
+                    ✏️ Editing: {editItem.name}
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                    {[["name","Item Name"],["location","Location"],["condition","Condition"],
+                      ["avail","Availability"],["qty","Quantity"]].map(([k,lbl])=>(
+                      <div key={k}>
+                        <div style={{fontSize:11,color:"var(--muted)",marginBottom:3,
+                          textTransform:"uppercase",letterSpacing:1}}>{lbl}</div>
+                        <input value={editItem[k]||""} onChange={e=>setEditItem(p=>({...p,[k]:e.target.value}))}
+                          style={{width:"100%",padding:"7px 10px",borderRadius:7,
+                            border:"1px solid var(--border)",background:"var(--ink)",
+                            color:"var(--text)",fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{display:"flex",gap:8,marginTop:12}}>
+                    <button onClick={saveItem} disabled={saving}
+                      style={{padding:"7px 18px",borderRadius:7,border:"none",
+                        background:"var(--gold)",color:"#1a0f00",fontWeight:700,
+                        fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                      {saving?"Saving…":"Save Item"}
+                    </button>
+                    <button onClick={()=>setEditItem(null)}
+                      style={{padding:"7px 14px",borderRadius:7,
+                        border:"1px solid var(--border)",background:"transparent",
+                        color:"var(--muted)",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {items.length===0&&(
+                  <div style={{textAlign:"center",padding:32,color:"var(--muted)",fontSize:13}}>
+                    No items cataloged yet.
+                  </div>
+                )}
+                {items.map(item=>(
+                  <div key={item.id} style={{display:"flex",alignItems:"center",gap:10,
+                    padding:"9px 12px",background:"var(--parch)",borderRadius:8,
+                    border:"1px solid var(--border)"}}>
+                    <span style={{fontSize:18,width:24,textAlign:"center"}}>{catIcon(item.category)}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:13,fontWeight:600,whiteSpace:"nowrap",
+                        overflow:"hidden",textOverflow:"ellipsis"}}>{item.name}</div>
+                      <div style={{fontSize:11,color:"var(--muted)"}}>
+                        {item.display_id||"unlabeled"} · {item.location||"no location"} · {item.condition}
+                      </div>
+                    </div>
+                    <span style={{fontSize:11,color:"var(--muted)",flexShrink:0}}>×{item.qty||1}</span>
+                    <button onClick={()=>setEditItem({...item})}
+                      style={{padding:"4px 10px",borderRadius:6,border:"1px solid var(--border)",
+                        background:"transparent",color:"var(--muted)",fontSize:12,
+                        cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+                      Edit
+                    </button>
+                    <button onClick={()=>deleteItem(item.id)}
+                      style={{padding:"4px 8px",borderRadius:6,border:"1px solid rgba(194,24,91,.3)",
+                        background:"transparent",color:"var(--red)",fontSize:12,
+                        cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── TEAM ── */}
+          {view==="team"&&(<>
+            <div style={{fontWeight:700,fontSize:14,marginBottom:10}}>Current Team Members</div>
+            {team.length===0&&<div style={{color:"var(--muted)",fontSize:13,marginBottom:16}}>No team members yet.</div>}
+            <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:20}}>
+              {team.map(m=>(
+                <div key={m.user_id} style={{display:"flex",alignItems:"center",gap:10,
+                  padding:"9px 12px",background:"var(--parch)",borderRadius:8,
+                  border:"1px solid var(--border)"}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,fontWeight:600}}>{m.email}</div>
+                    <div style={{fontSize:11,color:"var(--muted)"}}>
+                      {m.role?.replace("_"," ")} · joined {new Date(m.joined_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
+                    </div>
+                  </div>
+                  <button onClick={()=>removeMember(m.user_id,m.email)}
+                    style={{padding:"4px 10px",borderRadius:6,border:"1px solid rgba(194,24,91,.3)",
+                      background:"transparent",color:"var(--red)",fontSize:12,
+                      cursor:"pointer",fontFamily:"inherit"}}>
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Add member */}
+            <div style={{fontWeight:700,fontSize:14,marginBottom:8}}>Add Team Member</div>
+            <AddMemberForm onAdd={addMember} saving={saving}/>
+
+            {/* Pending invites */}
+            {invites.length>0&&(<>
+              <div style={{fontWeight:700,fontSize:14,margin:"16px 0 8px"}}>Pending Invites</div>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {invites.map(inv=>(
+                  <div key={inv.id} style={{padding:"9px 12px",background:"var(--parch)",
+                    borderRadius:8,border:"1px solid var(--border)",fontSize:13}}>
+                    <span style={{fontWeight:600}}>{inv.email||"Join code"}</span>
+                    <span style={{color:"var(--muted)",marginLeft:8}}>{inv.role?.replace("_"," ")}</span>
+                    {inv.join_code&&<span style={{fontFamily:"monospace",color:"var(--gold)",
+                      marginLeft:8,fontSize:12}}>code: {inv.join_code}</span>}
+                    {inv.accepted_at&&<span style={{color:"var(--grn)",marginLeft:8,fontSize:11}}>✓ accepted</span>}
+                    {!inv.accepted_at&&<span style={{color:"var(--muted)",marginLeft:8,fontSize:11}}>
+                      expires {new Date(inv.expires_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}
+                    </span>}
+                  </div>
+                ))}
+              </div>
+            </>)}
+          </>)}
+
+          {/* ── SETTINGS ── */}
+          {view==="settings"&&editOrg&&(
+            <div>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:12}}>Program Profile</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+                {[
+                  ["name","Program Name"],["director_name","Director Name"],
+                  ["email","Primary Email"],["label_prefix","Label Prefix"],
+                  ["city","City"],["location","Location/State"],
+                ].map(([k,lbl])=>(
+                  <div key={k}>
+                    <div style={{fontSize:11,color:"var(--muted)",marginBottom:3,
+                      textTransform:"uppercase",letterSpacing:1}}>{lbl}</div>
+                    <input value={editOrg[k]||""} onChange={e=>setEditOrg(p=>({...p,[k]:e.target.value}))}
+                      style={{width:"100%",padding:"8px 12px",borderRadius:8,
+                        border:"1px solid var(--border)",background:"var(--ink)",
+                        color:"var(--text)",fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+                  </div>
+                ))}
+              </div>
+
+              {/* Plan and access */}
+              <div style={{fontWeight:700,fontSize:14,marginBottom:8}}>Plan & Access</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+                <div>
+                  <div style={{fontSize:11,color:"var(--muted)",marginBottom:3,textTransform:"uppercase",letterSpacing:1}}>Plan</div>
+                  <select value={editOrg.plan||"free"} onChange={e=>setEditOrg(p=>({...p,plan:e.target.value}))}
+                    style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",
+                      background:"var(--ink)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
+                    <option value="free">Free</option>
+                    <option value="pro">Pro</option>
+                    <option value="district">District</option>
+                  </select>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:"var(--muted)",marginBottom:3,textTransform:"uppercase",letterSpacing:1}}>Beta Pro Access</div>
+                  <select value={editOrg.temp_pro?"yes":"no"} onChange={e=>setEditOrg(p=>({...p,temp_pro:e.target.value==="yes"}))}
+                    style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",
+                      background:"var(--ink)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
+                    <option value="yes">Yes — Full beta access</option>
+                    <option value="no">No — Plan only</option>
+                  </select>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:"var(--muted)",marginBottom:3,textTransform:"uppercase",letterSpacing:1}}>Account Status</div>
+                  <select value={editOrg.account_status||"active"} onChange={e=>setEditOrg(p=>({...p,account_status:e.target.value}))}
+                    style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",
+                      background:"var(--ink)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
+                    <option value="active">Active</option>
+                    <option value="suspended">Suspended</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </div>
+              </div>
+
+              <button onClick={saveOrgProfile} disabled={saving}
+                style={{padding:"10px 24px",borderRadius:8,border:"none",
+                  background:"var(--gold)",color:"#1a0f00",fontWeight:700,
+                  fontSize:14,cursor:"pointer",fontFamily:"inherit",marginBottom:24}}>
+                {saving?"Saving…":"💾 Save Changes"}
+              </button>
+
+              {/* Transfer ownership */}
+              <div style={{background:"rgba(194,24,91,.06)",border:"1px solid rgba(194,24,91,.2)",
+                borderRadius:10,padding:16}}>
+                <div style={{fontWeight:700,fontSize:14,color:"var(--red)",marginBottom:6}}>
+                  🔄 Transfer Ownership
+                </div>
+                <div style={{fontSize:13,color:"var(--muted)",marginBottom:10,lineHeight:1.6}}>
+                  Move this program to a different director. The new director must already have a Theatre4u account.
+                  All inventory, team members, and history will stay with the program.
+                </div>
+                <TransferOwnershipForm orgName={selected.name} onTransfer={transferOwnership} saving={saving}/>
+              </div>
+            </div>
+          )}
+        </>)}
+      </div>
+    </div>
+  );
+}
+
+function AddMemberForm({ onAdd, saving }) {
+  const [email, setEmail] = useState("");
+  const [role,  setRole]  = useState("crew");
+  return (
+    <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
+      <input value={email} onChange={e=>setEmail(e.target.value)}
+        placeholder="their@email.com"
+        style={{flex:1,minWidth:180,padding:"8px 12px",borderRadius:8,
+          border:"1px solid var(--border)",background:"var(--ink)",
+          color:"var(--text)",fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+      <select value={role} onChange={e=>setRole(e.target.value)}
+        style={{padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",
+          background:"var(--ink)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
+        <option value="co_director">Co-Director</option>
+        <option value="stage_manager">Stage Manager</option>
+        <option value="crew">Crew</option>
+        <option value="house">House</option>
+      </select>
+      <button onClick={()=>{if(email.trim())onAdd(email.trim(),role);setEmail("");}} disabled={saving||!email.trim()}
+        style={{padding:"8px 16px",borderRadius:8,border:"none",background:"var(--gold)",
+          color:"#1a0f00",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",
+          opacity:saving||!email.trim()?.6:1}}>
+        Add
+      </button>
+    </div>
+  );
+}
+
+function TransferOwnershipForm({ orgName, onTransfer, saving }) {
+  const [email, setEmail] = useState("");
+  return (
+    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+      <input value={email} onChange={e=>setEmail(e.target.value)}
+        placeholder="newdirector@school.edu"
+        style={{flex:1,minWidth:200,padding:"8px 12px",borderRadius:8,
+          border:"1px solid rgba(194,24,91,.3)",background:"var(--ink)",
+          color:"var(--text)",fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+      <button onClick={()=>{if(email.trim())onTransfer(email.trim());setEmail("");}} disabled={saving||!email.trim()}
+        style={{padding:"8px 16px",borderRadius:8,border:"none",
+          background:"rgba(194,24,91,.8)",color:"#fff",fontWeight:700,
+          fontSize:13,cursor:"pointer",fontFamily:"inherit",
+          opacity:saving||!email.trim()?.6:1}}>
+        Transfer
+      </button>
+    </div>
+  );
+}
+
 function AdminHub({ currentUser, org }) {
   const [tab, setTab]             = useState("overview");
   const [orgs, setOrgs]           = useState([]);
@@ -15272,10 +15773,11 @@ function AdminHub({ currentUser, org }) {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      if (tab === "overview" || tab === "users") {
+      if (tab === "programs") {
         const { data } = await SB.from("orgs")
-          .select("id,name,email,plan,is_leading_player,director_name,director_title,city,location,label_prefix,temp_pro,created_at")
-          .order("created_at", { ascending: false }).limit(100);
+          .select("id,name,email,plan,temp_pro,director_name,label_prefix,created_at,last_seen,stripe_subscription_id,account_status,city,location,referral_code")
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false }).limit(200);
         setOrgs(data || []);
       }
       if (tab === "overview" || tab === "feedback") {
@@ -15421,6 +15923,7 @@ function AdminHub({ currentUser, org }) {
     ["analytics", "📈 Analytics"],
     ["feedback",  "💬 Feedback"],
     ["labels",    "🏷 Label Orders"],
+    ["programs",  "🎭 Programs"],
     ["tools",     "🔧 Tools"],
   ];
 
@@ -16245,6 +16748,11 @@ function AdminHub({ currentUser, org }) {
           )}
           <PoolHealthWidget/>
         </div>
+      )}
+
+      {/* ── PROGRAMS (GOD MODE) ── */}
+      {!loading&&tab==="programs"&&(
+        <AdminProgramsTab orgs={orgs} currentUser={currentUser} flash={flash}/>
       )}
 
       {/* ── TOOLS ── */}
