@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>You've Been Invited — Theatre4u™</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--gold:#d4a843;--dark:#0d0b11;--dark2:#15121b;--bd:#282333;--t1:#ede8df;--t2:#9b93a8;--t3:#685f76;--red:#c2185b;--grn:#4caf50}
+html,body{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--t1);min-height:100vh;font-size:16px;line-height:1.6}
+
+nav{padding:16px 24px;display:flex;align-items:center;justify-content:space-between;background:var(--dark2);border-bottom:1px solid var(--bd)}
+.logo{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--gold);display:flex;align-items:center;gap:8px;text-decoration:none}
+
+.page{min-height:calc(100vh - 57px);display:flex;align-items:center;justify-content:center;padding:40px 20px;
+  background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(212,168,67,.06) 0%,transparent 70%)}
+
+.card{background:var(--dark2);border:1px solid var(--bd);border-radius:16px;width:100%;max-width:420px;padding:32px;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+
+.invite-badge{display:flex;align-items:center;gap:10;margin-bottom:24px;padding:14px 16px;
+  background:rgba(212,168,67,.08);border:1px solid rgba(212,168,67,.2);border-radius:10px}
+.invite-badge .icon{font-size:28px;flex-shrink:0}
+.invite-badge h2{font-family:'Playfair Display',serif;font-size:16px;margin-bottom:2px}
+.invite-badge p{font-size:13px;color:var(--t2)}
+
+.role-pill{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700;
+  background:rgba(212,168,67,.15);color:var(--gold);border:1px solid rgba(212,168,67,.3);margin-top:4px}
+
+.section-title{font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
+
+.tabs{display:flex;border:1px solid var(--bd);border-radius:8px;overflow:hidden;margin-bottom:24px}
+.tab{flex:1;padding:9px;text-align:center;font-size:14px;font-weight:600;cursor:pointer;border:none;
+  font-family:'DM Sans',sans-serif;transition:all .15s;background:transparent;color:var(--t2)}
+.tab.active{background:var(--gold);color:#1a0f00}
+.tab:not(.active):hover{background:rgba(255,255,255,.05);color:var(--t1)}
+
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:700;color:var(--t2);
+  text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.field input{width:100%;padding:11px 14px;background:rgba(255,255,255,.05);
+  border:1px solid var(--bd);border-radius:8px;color:var(--t1);font-size:14px;
+  font-family:'DM Sans',sans-serif;outline:none;transition:border .2s}
+.field input:focus{border-color:var(--gold)}
+.field input::placeholder{color:var(--t3)}
+
+.btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--gold),#a37f2c);
+  color:#1a0f00;border:none;border-radius:10px;font-size:15px;font-weight:700;
+  cursor:pointer;font-family:'DM Sans',sans-serif;transition:filter .2s,transform .2s;margin-top:4px}
+.btn:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+.err{background:rgba(194,24,91,.12);border:1px solid rgba(194,24,91,.3);
+  border-radius:8px;padding:10px 14px;color:#e06090;font-size:13px;margin-bottom:12px}
+
+.success{text-align:center;padding:8px 0}
+.success .big-icon{font-size:56px;margin-bottom:16px}
+.success h2{font-family:'Playfair Display',serif;font-size:24px;color:var(--gold);margin-bottom:8px}
+.success p{color:var(--t2);font-size:14px;line-height:1.7;margin-bottom:24px}
+.success a{display:inline-block;padding:12px 28px;background:linear-gradient(135deg,var(--gold),#a37f2c);
+  color:#1a0f00;border-radius:10px;font-weight:700;text-decoration:none;font-size:15px}
+
+.divider{display:flex;align-items:center;gap:10;margin:16px 0;color:var(--t3);font-size:12px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--bd)}
+
+.note{font-size:12px;color:var(--t3);text-align:center;margin-top:14px;line-height:1.6}
+
+footer{text-align:center;padding:24px;font-size:12px;color:var(--t3);border-top:1px solid var(--bd)}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="https://theatre4u.org">🎭 Theatre4u™</a>
+</nav>
+
+<div class="page">
+  <div class="card">
+
+    <!-- Loading state -->
+    <div id="loading" style="text-align:center;padding:32px 0">
+      <div style="font-size:32px;margin-bottom:12px">🎭</div>
+      <div style="color:var(--t2);font-size:14px">Loading your invitation…</div>
+    </div>
+
+    <!-- Invite info + sign in/up form -->
+    <div id="main" style="display:none">
+      <div class="invite-badge">
+        <div class="icon">🎭</div>
+        <div>
+          <h2 id="org-name">Your Theatre Program</h2>
+          <p>has invited you to join their backstage team</p>
+          <span class="role-pill" id="role-label">Crew Member</span>
+        </div>
+      </div>
+
+      <div class="section-title">Create your account or sign in</div>
+
+      <div class="tabs">
+        <button class="tab active" id="tab-signup" onclick="switchTab('signup')">New to Theatre4u</button>
+        <button class="tab" id="tab-signin" onclick="switchTab('signin')">Already have account</button>
+      </div>
+
+      <div id="err-box" class="err" style="display:none"></div>
+
+      <!-- Sign UP form -->
+      <div id="form-signup">
+        <div class="field">
+          <label>Your Name</label>
+          <input type="text" id="su-name" placeholder="First Last" autocomplete="name">
+        </div>
+        <div class="field">
+          <label>Email Address</label>
+          <input type="email" id="su-email" placeholder="you@school.edu" autocomplete="email">
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="su-pass" placeholder="At least 6 characters" autocomplete="new-password">
+        </div>
+        <button class="btn" id="su-btn" onclick="handleSignup()">Join the Team →</button>
+        <p class="note">No program setup needed — you'll see the full inventory when you log in.</p>
+      </div>
+
+      <!-- Sign IN form -->
+      <div id="form-signin" style="display:none">
+        <div class="field">
+          <label>Email Address</label>
+          <input type="email" id="si-email" placeholder="you@school.edu" autocomplete="email">
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="si-pass" placeholder="Your password" autocomplete="current-password">
+        </div>
+        <button class="btn" id="si-btn" onclick="handleSignin()">Sign In & Join →</button>
+      </div>
+    </div>
+
+    <!-- Success state -->
+    <div id="success" style="display:none">
+      <div class="success">
+        <div class="big-icon">🎉</div>
+        <h2>You're in!</h2>
+        <p id="success-msg">You've joined the team. Open Theatre4u to see the full inventory and get started.</p>
+        <a href="https://theatre4u.org">Open Theatre4u →</a>
+      </div>
+    </div>
+
+    <!-- Error / expired state -->
+    <div id="invite-error" style="display:none;text-align:center;padding:16px 0">
+      <div style="font-size:48px;margin-bottom:16px">🔗</div>
+      <h2 style="font-family:'Playfair Display',serif;font-size:22px;color:var(--gold);margin-bottom:8px">Invite Not Found</h2>
+      <p style="color:var(--t2);font-size:14px;line-height:1.7;margin-bottom:24px" id="invite-error-msg">
+        This invite link may have expired or already been used.<br>Ask your director to send a new invite.
+      </p>
+      <a href="https://theatre4u.org" style="color:var(--gold);font-size:14px">Go to Theatre4u →</a>
+    </div>
+
+  </div>
+</div>
+
+<footer>Theatre4u™ · <a href="https://theatre4u.org" style="color:var(--t3)">theatre4u.org</a> · A product of <a href="https://artstracker.org" style="color:var(--t3)">Artstracker LLC</a></footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const { createClient } = supabase;
+const SUPABASE_URL  = 'https://ldmmphwivnnboyhlxipl.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA';
+const SB = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const params   = new URLSearchParams(location.search);
+const token    = params.get('token') || '';
+const joinCode = params.get('code')  || '';
+
+let inviteData = null; // will be populated from DB
+
+const ROLE_LABELS = {
+  co_director:   'Co-Director',
+  stage_manager: 'Stage Manager',
+  crew:          'Crew',
+  house:         'House',
+};
+
+function show(id) {
+  ['loading','main','success','invite-error'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? '' : 'none';
+  });
+}
+
+function showErr(msg) {
+  const el = document.getElementById('err-box');
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+
+function setLoading(btnId, loading, label) {
+  const btn = document.getElementById(btnId);
+  btn.disabled = loading;
+  btn.textContent = loading ? 'Please wait…' : label;
+}
+
+function switchTab(tab) {
+  document.getElementById('form-signup').style.display = tab === 'signup' ? '' : 'none';
+  document.getElementById('form-signin').style.display = tab === 'signin' ? '' : 'none';
+  document.getElementById('tab-signup').className = 'tab' + (tab === 'signup' ? ' active' : '');
+  document.getElementById('tab-signin').className = 'tab' + (tab === 'signin' ? ' active' : '');
+  showErr('');
+}
+
+async function acceptInvite() {
+  if (token) {
+    // Email invite token
+    const { data, error } = await SB.rpc('accept_team_invite', { p_token: token });
+    return { data, error };
+  } else if (joinCode) {
+    // Join code
+    const { data, error } = await SB.rpc('accept_team_invite_by_code', { p_code: joinCode });
+    return { data, error };
+  }
+  return { data: null, error: { message: 'No invite token or code found.' } };
+}
+
+function showSuccess(orgName, role) {
+  const roleLabel = ROLE_LABELS[role] || role || 'Team Member';
+  document.getElementById('success-msg').innerHTML =
+    `You've joined <strong>${orgName}</strong> as <strong>${roleLabel}</strong>.<br>Open Theatre4u to see the full inventory.`;
+  show('success');
+}
+
+async function handleSignup() {
+  showErr('');
+  const name  = document.getElementById('su-name').value.trim();
+  const email = document.getElementById('su-email').value.trim();
+  const pass  = document.getElementById('su-pass').value;
+  if (!name)  { showErr('Please enter your name.'); return; }
+  if (!email) { showErr('Please enter your email address.'); return; }
+  if (!pass || pass.length < 6) { showErr('Password must be at least 6 characters.'); return; }
+
+  setLoading('su-btn', true, 'Join the Team →');
+
+  // 1. Create account — no org_name in metadata since they're joining an existing program
+  const { data: authData, error: authErr } = await SB.auth.signUp({
+    email, password: pass,
+    options: {
+      data: { full_name: name, invite_token: token || joinCode, is_team_member: true },
+      emailRedirectTo: 'https://theatre4u.org/invite.html?token=' + encodeURIComponent(token) + '&code=' + encodeURIComponent(joinCode),
+    }
+  });
+
+  if (authErr) {
+    setLoading('su-btn', false, 'Join the Team →');
+    if (authErr.message?.toLowerCase().includes('already registered')) {
+      showErr('This email already has an account. Use the "Already have account" tab to sign in.');
+      switchTab('signin');
+      document.getElementById('si-email').value = email;
+    } else {
+      showErr(authErr.message || 'Could not create account. Please try again.');
+    }
+    return;
+  }
+
+  // 2. Accept the invite immediately (user is authenticated)
+  const { data: invResult, error: invErr } = await acceptInvite();
+  setLoading('su-btn', false, 'Join the Team →');
+
+  if (invErr || invResult?.error) {
+    // Account created but invite failed — they can still use the dashboard to enter a code
+    showSuccess(inviteData?.org_name || 'the program', inviteData?.role);
+    return;
+  }
+
+  showSuccess(invResult?.org_name || inviteData?.org_name || 'the program', invResult?.role || inviteData?.role);
+}
+
+async function handleSignin() {
+  showErr('');
+  const email = document.getElementById('si-email').value.trim();
+  const pass  = document.getElementById('si-pass').value;
+  if (!email) { showErr('Please enter your email address.'); return; }
+  if (!pass)  { showErr('Please enter your password.'); return; }
+
+  setLoading('si-btn', true, 'Sign In & Join →');
+
+  const { data: authData, error: authErr } = await SB.auth.signInWithPassword({ email, password: pass });
+  if (authErr) {
+    setLoading('si-btn', false, 'Sign In & Join →');
+    showErr('Incorrect email or password. Please try again.');
+    return;
+  }
+
+  // Accept the invite now that they're signed in
+  const { data: invResult, error: invErr } = await acceptInvite();
+  setLoading('si-btn', false, 'Sign In & Join →');
+
+  if (invErr || invResult?.error) {
+    const msg = invResult?.error || '';
+    if (msg.includes('Already a member')) {
+      showSuccess(inviteData?.org_name || 'the program', inviteData?.role);
+    } else {
+      showErr(msg || 'Could not join the team. Please contact hello@theatre4u.org.');
+    }
+    return;
+  }
+
+  showSuccess(invResult?.org_name || inviteData?.org_name || 'the program', invResult?.role || inviteData?.role);
+}
+
+// ── Init: load invite info ──────────────────────────────────────────────────
+async function init() {
+  // If already signed in, try to accept invite immediately
+  const { data: { session } } = await SB.auth.getSession();
+
+  if (token) {
+    // Look up invite by token
+    const { data } = await SB.rpc('get_invite_by_token', { p_token: token }).catch(() => ({ data: null }));
+    if (!data || !data.length) {
+      // Could be expired — but still let them try signing up
+      // (The RPC will catch the error gracefully)
+    } else {
+      inviteData = data[0];
+    }
+  } else if (joinCode) {
+    // Look up join code invite
+    const { data } = await SB.from('org_invites')
+      .select('role, org_id, orgs(name)')
+      .filter('join_code', 'ilike', joinCode.trim())
+      .limit(1);
+    if (data?.length) {
+      inviteData = {
+        role:     data[0].role,
+        org_name: data[0].orgs?.name,
+        org_id:   data[0].org_id,
+      };
+    }
+  } else {
+    // No token or code — show error
+    show('invite-error');
+    document.getElementById('invite-error-msg').textContent =
+      'No invite token or join code found in this link. Ask your director to share the invite again.';
+    return;
+  }
+
+  // Populate invite badge
+  if (inviteData) {
+    document.getElementById('org-name').textContent = inviteData.org_name || 'Your Theatre Program';
+    document.getElementById('role-label').textContent = ROLE_LABELS[inviteData.role] || inviteData.role || 'Team Member';
+    // Pre-fill email if invite has one
+    if (inviteData.email) {
+      document.getElementById('su-email').value = inviteData.email;
+      document.getElementById('si-email').value = inviteData.email;
+    }
+  }
+
+  // If already signed in, just accept and show success
+  if (session) {
+    const { data: invResult, error: invErr } = await acceptInvite();
+    if (!invErr && invResult?.success) {
+      showSuccess(invResult.org_name || inviteData?.org_name || 'the program', invResult.role || inviteData?.role);
+      return;
+    } else if (invResult?.error?.includes('Already a member')) {
+      showSuccess(inviteData?.org_name || 'the program', inviteData?.role);
+      return;
+    }
+  }
+
+  show('main');
+}
+
+init();
+</script>
+</body>
+</html>
