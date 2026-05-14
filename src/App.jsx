@@ -10280,6 +10280,8 @@ function TeamSettings({ userId, orgName, plan }) {
       org_id: userId,
       role: "crew",
       invite_type: "code",
+      is_permanent: true,
+      expires_at: new Date(Date.now() + 365*24*60*60*1000).toISOString(), // 1 year
     });
     if (error) { flash("❌ Could not generate join code. Try again."); return; }
     // Re-fetch the newly created code invite (RLS: org_id = auth.uid())
