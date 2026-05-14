@@ -16255,7 +16255,7 @@ function AdminHub({ currentUser, org }) {
                   .eq("plan","free").is("temp_pro",false)
                   .is("deleted_at",null);
                 if(!error){flash("✓ Temp Pro granted to all free accounts");setOrgs(p=>p.map(o=>o.plan==="free"&&!o.temp_pro?{...o,temp_pro:true}:o));}
-              }} style={{padding:"10px 18px",borderRadius:8,border:"none",fontFamily:"inherit",
+              }} style={{padding:"10px 18px",borderRadius:8,fontFamily:"inherit",
                 fontSize:14,fontWeight:700,cursor:"pointer",
                 background:"rgba(212,168,67,.15)",color:"var(--gold)",border:"1px solid rgba(212,168,67,.3)"}}>
                 ⭐ Grant Temp Pro to all free accounts
