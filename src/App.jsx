@@ -15317,6 +15317,11 @@ function AdminProgramsTab({ orgs, currentUser, flash }) {
       temp_pro: editOrg.temp_pro, label_prefix: editOrg.label_prefix,
       city: editOrg.city, location: editOrg.location,
       account_status: editOrg.account_status,
+      founding_member: editOrg.founding_member,
+      beta_end_date: editOrg.beta_end_date,
+      founding_rate_plan: editOrg.founding_rate_plan,
+      founding_rate_accepted_at: editOrg.founding_rate_accepted_at,
+      beta_notes: editOrg.beta_notes,
     }).eq("id", editOrg.id);
     setSaving(false);
     if (error) { showMsg("❌ Save failed: "+error.message); return; }
@@ -15688,7 +15693,47 @@ function AdminProgramsTab({ orgs, currentUser, flash }) {
                 {saving?"Saving…":"💾 Save Changes"}
               </button>
 
-              {/* Transfer ownership */}
+              {/* Founding Member Status */}
+              <div style={{fontWeight:700,fontSize:14,marginBottom:8,marginTop:8}}>Founding Member & Beta</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+                <div>
+                  <div style={{fontSize:11,color:"var(--muted)",marginBottom:3,textTransform:"uppercase",letterSpacing:1}}>Founding Member</div>
+                  <select value={editOrg.founding_member?"yes":"no"} onChange={e=>setEditOrg(p=>({...p,founding_member:e.target.value==="yes"}))}
+                    style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",background:"var(--ink)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
+                    <option value="no">No — standard beta access</option>
+                    <option value="yes">Yes — 25+ items + feedback ✅</option>
+                  </select>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:"var(--muted)",marginBottom:3,textTransform:"uppercase",letterSpacing:1}}>Beta End Date</div>
+                  <input type="date" value={editOrg.beta_end_date||"2026-09-01"} onChange={e=>setEditOrg(p=>({...p,beta_end_date:e.target.value}))}
+                    style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",background:"var(--ink)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}/>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:"var(--muted)",marginBottom:3,textTransform:"uppercase",letterSpacing:1}}>Founding Rate Offered</div>
+                  <select value={editOrg.founding_rate_plan||""} onChange={e=>setEditOrg(p=>({...p,founding_rate_plan:e.target.value}))}
+                    style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",background:"var(--ink)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
+                    <option value="">Not yet offered</option>
+                    <option value="pro">Pro — $9.99/mo founding rate</option>
+                    <option value="district_s">District S — $29/mo founding rate</option>
+                    <option value="district_m">District M — $49/mo founding rate</option>
+                  </select>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:"var(--muted)",marginBottom:3,textTransform:"uppercase",letterSpacing:1}}>Founding Rate Accepted</div>
+                  <select value={editOrg.founding_rate_accepted_at?"yes":"no"} onChange={e=>setEditOrg(p=>({...p,founding_rate_accepted_at:e.target.value==="yes"?new Date().toISOString():null}))}
+                    style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",background:"var(--ink)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
+                    <option value="no">Not yet accepted</option>
+                    <option value="yes">✅ Accepted</option>
+                  </select>
+                </div>
+                <div style={{gridColumn:"1/-1"}}>
+                  <div style={{fontSize:11,color:"var(--muted)",marginBottom:3,textTransform:"uppercase",letterSpacing:1}}>Admin Notes</div>
+                  <textarea value={editOrg.beta_notes||""} onChange={e=>setEditOrg(p=>({...p,beta_notes:e.target.value}))}
+                    placeholder="Internal notes on this account's beta status, special arrangements, etc."
+                    style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",background:"var(--ink)",color:"var(--text)",fontSize:13,fontFamily:"inherit",resize:"vertical",minHeight:60}}/>
+                </div>
+              </div>
               <div style={{background:"rgba(194,24,91,.06)",border:"1px solid rgba(194,24,91,.2)",
                 borderRadius:10,padding:16}}>
                 <div style={{fontWeight:700,fontSize:14,color:"var(--red)",marginBottom:6}}>
@@ -15984,7 +16029,8 @@ function AdminHub({ currentUser, org }) {
             {[
               { n:totalOrgs,                                          label:"Total Programs", color:"var(--gold)", icon:"🎭" },
               { n:paidOrgs,                                           label:"Paid Plans",     color:"#4caf50",     icon:"💳" },
-              { n:orgs.filter(o=>o.temp_pro).length,                  label:"Beta Pro",       color:"#9c27b0",     icon:"⭐" },
+              { n:orgs.filter(o=>o.founding_member).length,               label:"Founding Members", color:"var(--gold)", icon:"⭐" },
+              { n:orgs.filter(o=>o.temp_pro&&!o.founding_member).length,  label:"Beta Only",        color:"#ce93d8",     icon:"🎭" },
               { n:adminItemCount!==null?adminItemCount:orgs.reduce((s,o)=>s+(Number(o.item_count)||0),0)||"…", label:"Total Items", color:"var(--gold)", icon:"📦" },
               { n:newLeads,                                           label:"New Leads",      color:"#2196f3",     icon:"📥" },
               { n:newFeedback,                                        label:"New Feedback",   color:"#ff9800",     icon:"💬" },
@@ -16017,8 +16063,10 @@ function AdminHub({ currentUser, org }) {
                     const planColor = o.plan==="district"?"#42a5f5":o.plan==="pro"?"var(--gold)":"var(--muted)";
                     const statusBadge = o.stripe_subscription_id
                       ? {label:"💳 Paying",bg:"rgba(76,175,80,.12)",color:"#4caf50"}
+                      : o.founding_member
+                      ? {label:"⭐ Founding",bg:"rgba(212,168,67,.15)",color:"var(--gold)"}
                       : o.temp_pro
-                      ? {label:"⭐ Beta Pro",bg:"rgba(212,168,67,.1)",color:"var(--gold)"}
+                      ? {label:"🎭 Beta Pro",bg:"rgba(156,39,176,.1)",color:"#ce93d8"}
                       : {label:"Free",bg:"rgba(150,150,150,.1)",color:"var(--muted)"};
                     return(
                       <tr key={o.id} style={{borderTop:"1px solid var(--border)",background:idx%2===0?"transparent":"rgba(0,0,0,.02)"}}>
