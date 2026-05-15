@@ -1072,21 +1072,26 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=t
   const mktCls=item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="Rent or Sale"?"mb-both":item.mkt==="For Loan"?"mb-loan":"mb-none";
 
   useEffect(()=>{
-    QR.toDataURL("https://theatre4u.org/#/item/"+item.id, 200).then(url=>{if(url)setQr(url);});
+    QR.toDataURL("https://theatre4u.org/#/item/"+(item.display_id||item.id), 200).then(url=>{if(url)setQr(url);});
   },[item.id, item.name]);
 
   const printQR=async()=>{
-    const qrSrc=await QR.toDataURL("https://theatre4u.org/#/item/"+item.id,200);
+    // QR encodes the display_id if available — it's human-readable, unique per org,
+    // and the public-item edge function resolves it correctly.
+    // Fall back to item.id for items that predate the display_id system.
+    const qrIdentifier = item.display_id || item.id;
+    const qrUrl = "https://theatre4u.org/#/item/" + qrIdentifier;
+    const qrSrc=await QR.toDataURL(qrUrl,200);
     if(!qrSrc)return;
     const w=window.open("","_blank","width=420,height=520");if(!w)return;
     const loc=item.location?"Location: "+item.location:"";
-    const itemUrl="theatre4u.org/#/item/"+item.id;
+    const itemUrl="theatre4u.org/#/item/"+qrIdentifier;
     const numStr = item.display_id || (item.item_number != null ? itemNum(item.item_number) : "");
     w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}.num{font-size:22px;font-weight:900;font-family:monospace;color:#c4761a;margin:2px 0 6px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2>${numStr?`<div class="num">${numStr}</div>`:""}<p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qrSrc}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${itemUrl}</p><p style="font-size:11px;color:#bbb">Theatre4u™ · theatre4u.org</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
     w.document.close();
   };
 
-  const dlQR=async()=>{const u=await QR.toDataURL("https://theatre4u.org/#/item/"+item.id,300);if(!u)return;const a=document.createElement("a");a.href=u;a.download="T4U-"+item.id+".png";a.click();};
+  const dlQR=async()=>{const qId=item.display_id||item.id;const u=await QR.toDataURL("https://theatre4u.org/#/item/"+qId,300);if(!u)return;const a=document.createElement("a");a.href=u;a.download="T4U-"+(item.display_id||item.id)+".png";a.click();};
 
   return(
     <>
@@ -12218,6 +12223,14 @@ function PublicItemPage({ itemId }) {
                 {org.name} · Theatre4u™
               </div>
             )}
+            {/* Open in App — deep links to the item in the main app */}
+            <a href={"https://theatre4u.org/#/item/"+(item.display_id||itemId)}
+              style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+                marginTop:16,background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.25)",
+                color:"var(--gold)",padding:"10px 16px",borderRadius:8,
+                textDecoration:"none",fontSize:13,fontWeight:600}}>
+              🎭 Open in Theatre4u →
+            </a>
           </>)}
 
           {/* ── LOAN ACCESS (another Theatre4u program borrowing this item) ─── */}
@@ -17165,7 +17178,7 @@ function LabelOrderPanel({ org, userId, items=[] }) {
 
   const LabelPreview = ({item}) => {
     const cat = CAT[item.category]||CAT.other;
-    const url = `https://theatre4u.org/#/item/${item.id}`;
+    const url = `https://theatre4u.org/#/item/${item.display_id||item.id}`;
     const [qrSrc, setQrSrc] = useState(null);
     useEffect(()=>{
       QR.toDataURL(url,80).then(setQrSrc).catch(()=>{});
