@@ -241,14 +241,19 @@ async function handleSignup() {
   setLoading('su-btn', true, 'Join the Team →');
 
   // Create auth account flagged as team member — no org_name so no org is created
+  const inviteReturn = token
+    ? `https://theatre4u.org/invite.html?token=${encodeURIComponent(token)}`
+    : `https://theatre4u.org/invite.html?code=${encodeURIComponent(joinCode)}`;
+
   const { data: authData, error: authErr } = await SB.auth.signUp({
     email, password: pass,
     options: {
       data: {
         full_name: name,
-        is_team_member: true,   // suppresses org creation in App.jsx
+        is_team_member: true,
         invite_token: token || joinCode,
       },
+      emailRedirectTo: inviteReturn,
     }
   });
 
@@ -264,7 +269,35 @@ async function handleSignup() {
     return;
   }
 
-  // Accept the invite to link them to the program
+  // Sign in immediately after signup to get an active session
+  // (Supabase may not auto-confirm — we sign in to ensure the session is live)
+  let activeSession = authData?.session;
+  if (!activeSession) {
+    const { data: signInData, error: signInErr } = await SB.auth.signInWithPassword({ email, password: pass });
+    if (!signInErr && signInData?.session) {
+      activeSession = signInData.session;
+    }
+  }
+
+  if (!activeSession) {
+    // Email confirmation required — store token and show helpful message
+    const storeKey = token ? 'pending_invite_token' : 'pending_invite_code';
+    localStorage.setItem(storeKey, token || joinCode);
+    setLoading('su-btn', false, 'Join the Team →');
+    document.getElementById('main').innerHTML = `
+      <div style="text-align:center;padding:16px 0">
+        <div style="font-size:48px;margin-bottom:16px">📧</div>
+        <h2 style="font-family:Georgia,serif;font-size:22px;color:var(--gold);margin-bottom:8px">Check your email</h2>
+        <p style="color:var(--t2);font-size:14px;line-height:1.7;margin-bottom:16px">
+          We sent a confirmation link to <strong style="color:var(--t1)">${email}</strong>.<br>
+          Click it to activate your account and you'll be connected to ${inviteData?.org_name || 'the program'} automatically.
+        </p>
+        <a href="https://theatre4u.org" style="color:var(--gold);font-size:14px">Go to Theatre4u →</a>
+      </div>`;
+    return;
+  }
+
+  // Accept the invite now that we have an active session
   const { data: invResult, error: invErr } = await acceptInvite();
   setLoading('su-btn', false, 'Join the Team →');
 
