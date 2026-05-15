@@ -11185,6 +11185,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
   const[done,setDone]=useState(false);
   const[legal,setLegal]=useState(null);
   const[showPass,setShowPass]=useState(false);
+  const[ageConfirmed,setAgeConfirmed]=useState(false);
 
   useEffect(()=>{
     window.__t4u_show_auth=(m)=>{setMode(m||"login");setErr("");setVisible(true);};
@@ -11209,6 +11210,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
     if(!email.trim()){setErr("Please enter your email address.");return;}
     if(!pass){setErr("Please enter a password.");return;}
     if(mode==="signup"&&pass.length<6){setErr("Password must be at least 6 characters.");return;}
+    if(mode==="signup"&&!ageConfirmed){setErr("Please confirm you are 13 years of age or older.");return;}
     setLoading(true);
 
       // ── Demo mode fast-path ───────────────────────────────────────────────
@@ -11434,6 +11436,16 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
           </div>
         </div>
         {err&&<div style={{marginTop:12,padding:"9px 12px",background:err.includes("sent")?"rgba(76,175,80,.1)":"rgba(194,24,91,.1)",border:`1px solid ${err.includes("sent")?"rgba(76,175,80,.3)":"rgba(194,24,91,.25)"}`,borderRadius:7,fontSize:13,color:err.includes("sent")?"#4caf50":"#e57373"}}>{err}</div>}
+        {mode==="signup"&&(
+          <label style={{display:"flex",alignItems:"flex-start",gap:8,marginTop:14,cursor:"pointer"}}>
+            <input type="checkbox" checked={ageConfirmed} onChange={e=>setAgeConfirmed(e.target.checked)}
+              style={{marginTop:2,accentColor:"#d4a843",flexShrink:0,width:15,height:15}}/>
+            <span style={{fontSize:12,color:"rgba(255,255,255,.55)",lineHeight:1.5}}>
+              I confirm I am <strong style={{color:"rgba(255,255,255,.75)"}}>13 years of age or older</strong>.
+              If you are under 13, please have a parent or guardian create this account on your behalf.
+            </span>
+          </label>
+        )}
         {mode==="signup"&&<p style={{fontSize:11,color:"rgba(255,255,255,.4)",textAlign:"center",marginTop:16,lineHeight:1.6}}>
           By creating an account you agree to our{" "}
           <span style={{color:"var(--gold)",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setLegal("terms")}>Terms of Service</span>
