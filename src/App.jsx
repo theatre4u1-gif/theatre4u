@@ -4929,20 +4929,6 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
 
   useEffect(() => { if (plan === "district") load(); }, [load, plan]);
 
-  const [assignMode,   setAssignMode]   = useState("invite"); // "invite" | "existing"
-  const [allOrgs,      setAllOrgs]      = useState([]);
-  const [assignOrgId,  setAssignOrgId]  = useState("");
-  const [assigning,    setAssigning]    = useState(false);
-
-  // Load all unassigned orgs for direct assignment
-  const loadAllOrgs = async () => {
-    const { data } = await SB.from("orgs")
-      .select("id,name,email,plan,district_id")
-      .is("district_id", null)
-      .order("name");
-    setAllOrgs(data || []);
-  };
-
   const sendInvite = async () => {
     if (!invEmail.trim()) return;
     setSending(true); setMsg("");
@@ -4972,24 +4958,6 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
     } finally {
       setSending(false);
     }
-  };
-
-  const assignExisting = async () => {
-    if (!assignOrgId || !district?.id) return;
-    setAssigning(true);
-    const { error } = await SB.from("orgs").update({
-      district_id: district.id,
-      role: "school_admin",
-    }).eq("id", assignOrgId);
-    if (!error) {
-      setMsg("✓ School added to district");
-      setAssignOrgId(""); setShowInvite(false);
-      load();
-    } else {
-      setMsg("Error: " + error.message);
-    }
-    setAssigning(false);
-    setTimeout(() => setMsg(""), 4000);
   };
 
   const revokeInvite = async (id) => {
@@ -5207,76 +5175,30 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
               <button className="btn btn-o btn-sm" onClick={() => setShowInvite(false)}>✕</button>
             </div>
 
-            {/* Mode tabs */}
-            <div style={{ display: "flex", gap: 0, borderBottom: "1px solid var(--border)", margin: "12px -18px 0", padding: "0 18px" }}>
-              {[["invite","📨 Send Invite Email"],["existing","🔗 Add Existing Account"]].map(([m, l]) => (
-                <button key={m}
-                  onClick={() => { setAssignMode(m); if(m==="existing") loadAllOrgs(); }}
-                  style={{ padding: "8px 14px", fontFamily: "inherit", fontSize: 13, fontWeight: 700,
-                    cursor: "pointer", background: "none", border: "none",
-                    borderBottom: assignMode === m ? "2px solid var(--gold)" : "2px solid transparent",
-                    color: assignMode === m ? "var(--ink)" : "var(--muted)", marginBottom: -1 }}>
-                  {l}
-                </button>
-              ))}
-            </div>
-
             <div style={{ marginTop: 16 }}>
-              {assignMode === "invite" ? (<>
-                <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 12, lineHeight: 1.6 }}>
-                  Send an invite link by email. They can accept by signing into their existing Theatre4u™ account
-                  or by creating a new one. You have <strong>{slotsTotal - slotsUsed}</strong> slot{slotsTotal - slotsUsed !== 1 ? "s" : ""} remaining.
-                </p>
-                <div className="fg" style={{ marginBottom: 12 }}>
-                  <label className="fl">School Admin Email *</label>
-                  <input className="fi" type="email" value={invEmail} onChange={e => setInvEmail(e.target.value)}
-                    placeholder="principal@school.edu" autoFocus
-                    onKeyDown={e => e.key === "Enter" && sendInvite()} />
-                </div>
-                <div className="fg" style={{ marginBottom: 16 }}>
-                  <label className="fl">School Name (optional)</label>
-                  <input className="fi" value={invSchool} onChange={e => setInvSchool(e.target.value)}
-                    placeholder="e.g. Ocean View High School" />
-                </div>
-                {msg && <div style={{ color: msg.startsWith("✓") ? "var(--green)" : "var(--red)",
-                  marginBottom: 12, fontSize: 13, fontWeight: 600 }}>{msg}</div>}
-                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                  <button className="btn btn-o" onClick={() => setShowInvite(false)}>Cancel</button>
-                  <button className="btn btn-g" onClick={sendInvite} disabled={!invEmail.trim() || sending}>
-                    {sending ? "Sending…" : "Send Invite →"}
-                  </button>
-                </div>
-              </>) : (<>
-                <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 12, lineHeight: 1.6 }}>
-                  Add a school that already has a Theatre4u account. Their inventory moves with them immediately —
-                  no email needed.
-                </p>
-                <div className="fg" style={{ marginBottom: 16 }}>
-                  <label className="fl">Select School Account</label>
-                  <select className="fs" value={assignOrgId} onChange={e => setAssignOrgId(e.target.value)}>
-                    <option value="">— Choose an account —</option>
-                    {allOrgs.map(o => (
-                      <option key={o.id} value={o.id}>
-                        {o.name || "Unnamed"} — {o.email} ({o.plan})
-                      </option>
-                    ))}
-                  </select>
-                  {allOrgs.length === 0 && (
-                    <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
-                      No unassigned accounts found.
-                    </div>
-                  )}
-                </div>
-                {msg && <div style={{ color: msg.startsWith("✓") ? "var(--green)" : "var(--red)",
-                  marginBottom: 12, fontSize: 13, fontWeight: 600 }}>{msg}</div>}
-                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                  <button className="btn btn-o" onClick={() => setShowInvite(false)}>Cancel</button>
-                  <button className="btn btn-g" onClick={assignExisting}
-                    disabled={assigning || !assignOrgId} style={{ opacity: !assignOrgId ? .5 : 1 }}>
-                    {assigning ? "Adding…" : "Add to District →"}
-                  </button>
-                </div>
-              </>)}
+              <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 12, lineHeight: 1.6 }}>
+                Send an invite link by email. The school director can accept by signing into their existing Theatre4u™ account
+                or by creating a new one. You have <strong>{slotsTotal - slotsUsed}</strong> slot{slotsTotal - slotsUsed !== 1 ? "s" : ""} remaining.
+              </p>
+              <div className="fg" style={{ marginBottom: 12 }}>
+                <label className="fl">School Director Email *</label>
+                <input className="fi" type="email" value={invEmail} onChange={e => setInvEmail(e.target.value)}
+                  placeholder="director@school.edu" autoFocus
+                  onKeyDown={e => e.key === "Enter" && sendInvite()} />
+              </div>
+              <div className="fg" style={{ marginBottom: 16 }}>
+                <label className="fl">School Name (optional)</label>
+                <input className="fi" value={invSchool} onChange={e => setInvSchool(e.target.value)}
+                  placeholder="e.g. Coppell Middle School West" />
+              </div>
+              {msg && <div style={{ color: msg.startsWith("✓") ? "var(--green)" : "var(--red)",
+                marginBottom: 12, fontSize: 13, fontWeight: 600 }}>{msg}</div>}
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button className="btn btn-o" onClick={() => setShowInvite(false)}>Cancel</button>
+                <button className="btn btn-g" onClick={sendInvite} disabled={!invEmail.trim() || sending}>
+                  {sending ? "Sending…" : "Send Invite →"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
