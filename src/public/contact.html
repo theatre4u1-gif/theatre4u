@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Contact Us · Theatre4u™</title>
+<meta name="description" content="Get in touch with Theatre4u. Questions about inventory management, QR labels, Backstage Exchange, district plans, or anything else — we're here to help."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#fdf8f1;--bg2:#f5ede0;--ink:#1a1008;--gold:#c4922a;--gold2:#e8b84b;
+  --green:#2d6e3a;--blue:#1a4fa0;--red:#8c1a2a;
+  --border:#e8dcc8;--muted:#5a4a38;--faint:#b8a890;--cream:#fffcf7;
+  --card:#ffffff;--shadow:0 2px 16px rgba(60,30,0,.08);--r:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:16px;line-height:1.7}
+a{color:var(--gold);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* Nav */
+.topnav{background:var(--ink);padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-mark{width:34px;height:34px;background:linear-gradient(135deg,var(--gold2),var(--gold));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.logo-text{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--gold2)}
+.logo-sub{font-size:11px;color:rgba(255,255,255,.45);margin-left:4px;font-weight:500}
+.topnav-links{display:flex;gap:4px;align-items:center}
+.topnav-links a{color:rgba(255,255,255,.7);font-size:13px;font-weight:600;padding:6px 12px;border-radius:6px;transition:all .15s;text-decoration:none}
+.topnav-links a:hover{background:rgba(255,255,255,.1);color:#fff}
+.topnav-links .cta{background:var(--gold);color:var(--ink)!important;font-weight:700}
+.topnav-links .cta:hover{background:var(--gold2)}
+
+/* Hero */
+.hero{background:linear-gradient(135deg,var(--ink) 0%,#2a1a08 100%);padding:56px 32px 48px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:"🎭";position:absolute;font-size:280px;opacity:.04;top:-30px;left:50%;transform:translateX(-50%);pointer-events:none}
+.hero-eyebrow{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--gold2);margin-bottom:10px}
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:44px;font-weight:700;color:#fff;margin-bottom:10px;line-height:1.1}
+.hero h1 span{color:var(--gold2)}
+.hero p{font-size:16px;color:rgba(255,255,255,.6);max-width:500px;margin:0 auto}
+
+/* Layout */
+.page{max-width:960px;margin:0 auto;padding:48px 24px 80px;display:grid;grid-template-columns:1fr 340px;gap:40px;align-items:start}
+@media(max-width:720px){.page{grid-template-columns:1fr;padding:32px 16px 60px}}
+
+/* Form card */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:32px;box-shadow:var(--shadow)}
+.card h2{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;margin-bottom:6px}
+.card .sub{font-size:14px;color:var(--muted);margin-bottom:24px}
+
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:16px}
+.fg label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
+.fg input,.fg select,.fg textarea{
+  background:var(--bg);border:1.5px solid var(--border);border-radius:8px;
+  padding:10px 14px;font-size:15px;font-family:'DM Sans',sans-serif;
+  color:var(--ink);outline:none;transition:border .2s;width:100%
+}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--gold)}
+.fg textarea{resize:vertical;min-height:140px;line-height:1.6}
+.fg select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a4a38' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:500px){.fg2{grid-template-columns:1fr}}
+
+.btn{width:100%;padding:13px 24px;background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--ink);border:none;border-radius:8px;font-size:15px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .2s;margin-top:4px}
+.btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* Success / error states */
+.success-box{display:none;background:#f0faf2;border:1.5px solid #a8d8b4;border-radius:10px;padding:24px;text-align:center}
+.success-box .si{font-size:40px;margin-bottom:10px}
+.success-box h3{font-family:'Cormorant Garamond',serif;font-size:22px;margin-bottom:6px;color:var(--green)}
+.success-box p{font-size:14px;color:var(--muted);line-height:1.6}
+.error-bar{display:none;background:#fdf0f0;border:1.5px solid #e8b4b4;border-radius:8px;padding:12px 16px;font-size:14px;color:var(--red);margin-bottom:16px;line-height:1.5}
+
+/* Sidebar */
+.sidebar{display:flex;flex-direction:column;gap:20px}
+.info-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:24px;box-shadow:var(--shadow)}
+.info-card h3{font-family:'Cormorant Garamond',serif;font-size:20px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.info-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.info-row:last-child{margin-bottom:0}
+.info-icon{width:36px;height:36px;background:linear-gradient(135deg,rgba(232,184,75,.15),rgba(196,146,42,.1));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.info-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--faint);margin-bottom:2px}
+.info-val{font-size:14px;color:var(--ink);font-weight:500}
+.info-val a{color:var(--gold)}
+
+.faq-item{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.faq-item:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+.faq-q{font-size:13.5px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.faq-a{font-size:13px;color:var(--muted);line-height:1.6}
+
+/* Footer */
+footer{background:var(--ink);padding:28px 32px;text-align:center}
+footer p{font-size:13px;color:rgba(255,255,255,.4)}
+footer a{color:rgba(255,255,255,.5)}
+footer a:hover{color:var(--gold2)}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="/" class="logo">
+    <div class="logo-mark">🎭</div>
+    <div>
+      <span class="logo-text">Theatre4u™</span>
+      <span class="logo-sub">by Artstracker</span>
+    </div>
+  </a>
+  <div class="topnav-links">
+    <a href="/help.html">Help</a>
+    <a href="/" class="cta">Get Started Free →</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-eyebrow">We're here to help</div>
+  <h1>Get in <span>Touch</span></h1>
+  <p>Questions, ideas, or just getting started — send us a message and we'll get back to you personally.</p>
+</div>
+
+<div class="page">
+
+  <!-- Contact Form -->
+  <div>
+    <div class="card" id="form-card">
+      <h2>Send us a message</h2>
+      <p class="sub">We typically respond within one business day.</p>
+
+      <div class="error-bar" id="error-bar"></div>
+
+      <div class="fg2">
+        <div class="fg">
+          <label>Your Name *</label>
+          <input type="text" id="f-name" placeholder="Jane Smith" autocomplete="name"/>
+        </div>
+        <div class="fg">
+          <label>Email Address *</label>
+          <input type="email" id="f-email" placeholder="you@school.edu" autocomplete="email"/>
+        </div>
+      </div>
+
+      <div class="fg2">
+        <div class="fg">
+          <label>School / Organization</label>
+          <input type="text" id="f-org" placeholder="Lincoln High School Theatre"/>
+        </div>
+        <div class="fg">
+          <label>Topic</label>
+          <select id="f-subject">
+            <option value="general">General Question</option>
+            <option value="support">Technical Support</option>
+            <option value="billing">Billing</option>
+            <option value="district">District Inquiry</option>
+            <option value="partnership">Partnership</option>
+            <option value="demo">Request a Demo</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="fg">
+        <label>Message *</label>
+        <textarea id="f-message" placeholder="Tell us what's on your mind..."></textarea>
+      </div>
+
+      <button class="btn" id="submit-btn" onclick="submitForm()">Send Message →</button>
+    </div>
+
+    <!-- Success state -->
+    <div class="success-box" id="success-box">
+      <div class="si">✅</div>
+      <h3>Message sent!</h3>
+      <p>Thank you for reaching out. We'll reply to <strong id="reply-email"></strong> within one business day.<br><br>In the meantime, check out our <a href="/help.html">Help Center</a> — you might find a quick answer there.</p>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+
+    <div class="info-card">
+      <h3>Contact Info</h3>
+      <div class="info-row">
+        <div class="info-icon">✉️</div>
+        <div>
+          <div class="info-label">Email</div>
+          <div class="info-val"><a href="mailto:hello@theatre4u.org">hello@theatre4u.org</a></div>
+        </div>
+      </div>
+      <div class="info-row">
+        <div class="info-icon">🎭</div>
+        <div>
+          <div class="info-label">Platform</div>
+          <div class="info-val"><a href="https://theatre4u.org">theatre4u.org</a></div>
+        </div>
+      </div>
+      <div class="info-row">
+        <div class="info-icon">📍</div>
+        <div>
+          <div class="info-label">Based in</div>
+          <div class="info-val">Garden Grove, California</div>
+        </div>
+      </div>
+      <div class="info-row">
+        <div class="info-icon">⏱️</div>
+        <div>
+          <div class="info-label">Response Time</div>
+          <div class="info-val">Within one business day</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3>Quick Answers</h3>
+      <div class="faq-item">
+        <div class="faq-q">Is there a free plan?</div>
+        <div class="faq-a">Yes — Theatre4u has a free tier with core inventory features. Pro is $15/month with full access to the Backstage Exchange and all advanced features.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Can I try it before signing up?</div>
+        <div class="faq-a">Absolutely. Click "Try the Full Demo" on the home page for an interactive walkthrough with sample data — no account needed.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Do you offer district plans?</div>
+        <div class="faq-a">Yes — District plans cover multiple schools under one subscription starting at $49/month. Select "District Inquiry" above and tell us about your district.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Who owns my data?</div>
+        <div class="faq-a">You do. Your inventory is yours completely — export it anytime as a CSV. We never sell or share your data.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <p>
+    Theatre4u™ · Artstracker LLC · Garden Grove, California ·
+    <a href="mailto:hello@theatre4u.org">hello@theatre4u.org</a> ·
+    <a href="/help.html">Help Center</a> ·
+    <a href="/?page=terms">Terms</a> ·
+    <a href="/?page=privacy">Privacy</a>
+  </p>
+</footer>
+
+<script>
+const SUPABASE_URL = "https://ldmmphwivnnboyhlxipl.supabase.co";
+const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA";
+
+async function submitForm() {
+  const btn = document.getElementById("submit-btn");
+  const errBar = document.getElementById("error-bar");
+  const name = document.getElementById("f-name").value.trim();
+  const email = document.getElementById("f-email").value.trim();
+  const org = document.getElementById("f-org").value.trim();
+  const subject = document.getElementById("f-subject").value;
+  const message = document.getElementById("f-message").value.trim();
+
+  // Clear error
+  errBar.style.display = "none";
+  errBar.textContent = "";
+
+  // Validate
+  if (!name) { showErr("Please enter your name."); return; }
+  if (!email || !email.includes("@")) { showErr("Please enter a valid email address."); return; }
+  if (!message) { showErr("Please enter a message."); return; }
+
+  btn.disabled = true;
+  btn.textContent = "Sending...";
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/contact-form`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": ANON_KEY,
+      },
+      body: JSON.stringify({ name, email, org, subject, message }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      showErr(data.error || "Something went wrong. Please email us directly at hello@theatre4u.org");
+      btn.disabled = false;
+      btn.textContent = "Send Message →";
+      return;
+    }
+
+    // Success
+    document.getElementById("form-card").style.display = "none";
+    const successBox = document.getElementById("success-box");
+    document.getElementById("reply-email").textContent = email;
+    successBox.style.display = "block";
+    successBox.scrollIntoView({ behavior: "smooth", block: "center" });
+
+  } catch (e) {
+    showErr("Could not send message. Please email us directly at hello@theatre4u.org");
+    btn.disabled = false;
+    btn.textContent = "Send Message →";
+  }
+}
+
+function showErr(msg) {
+  const errBar = document.getElementById("error-bar");
+  errBar.textContent = msg;
+  errBar.style.display = "block";
+  errBar.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+// Allow Enter key to submit (but not in textarea)
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && e.target.tagName !== "TEXTAREA" && e.target.tagName !== "SELECT") {
+    e.preventDefault();
+    submitForm();
+  }
+});
+</script>
+
+</body>
+</html>
