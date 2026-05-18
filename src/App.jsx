@@ -11170,6 +11170,7 @@ function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
       </div>
       <div style={{display:"flex",gap:18,fontSize:12,color:"rgba(255,255,255,.35)"}}>
         <a href="/help.html" target="_blank" style={{color:"rgba(255,255,255,.35)",textDecoration:"none"}} onMouseEnter={e=>e.target.style.color="var(--gold)"} onMouseLeave={e=>e.target.style.color="rgba(255,255,255,.35)"}>Help Center</a>
+        <a href="/contact.html" target="_blank" style={{color:"rgba(255,255,255,.35)",textDecoration:"none"}} onMouseEnter={e=>e.target.style.color="var(--gold)"} onMouseLeave={e=>e.target.style.color="rgba(255,255,255,.35)"}>Contact</a>
         <span style={{cursor:"pointer"}} onClick={onSignIn}>Sign In</span>
         <span style={{cursor:"pointer"}} onClick={onSignUp}>Sign Up</span>
         <span>hello@theatre4u.org</span>
