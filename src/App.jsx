@@ -37,6 +37,18 @@ function getBrowserLocation() {
   });
 }
 
+// ── Domain Detection ──────────────────────────────────────────────────────────
+// Detects which site the user came from so we can show the right branding.
+// localhost is treated as Theatre4u so local development works unchanged.
+const HOSTNAME       = typeof window !== "undefined" ? window.location.hostname : "";
+const IS_THEATRE4U   = HOSTNAME.includes("theatre4u.org") || HOSTNAME === "localhost";
+const IS_ARTSTRACKER = HOSTNAME.includes("artstracker.org");
+const APP_NAME       = IS_THEATRE4U ? "Theatre4u\u2122" : "ArtsTracker";
+const APP_SUBTITLE   = IS_THEATRE4U ? "Inventory \u00B7 Exchange" : "Theatre \u00B7 Music \u00B7 Dance \u00B7 Art \u00B7 Boosters";
+const APP_EMAIL      = IS_THEATRE4U ? "hello@theatre4u.org" : "hello@artstracker.org";
+const APP_URL        = IS_THEATRE4U ? "https://theatre4u.org" : "https://artstracker.org";
+// ── End Domain Detection ──────────────────────────────────────────────────────
+
 const _SB_REAL = createClient(
   "https://ldmmphwivnnboyhlxipl.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA"
@@ -18085,8 +18097,8 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
                 <div style={{display:"flex",alignItems:"center",gap:12}}>
                   <LogoMarkDark size={44}/>
                   <div>
-                    <div className="sb-name">Theatre4u™</div>
-                    <div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"rgba(212,168,67,.5)",marginTop:2,fontFamily:"'Raleway',sans-serif",fontWeight:700}}>Inventory · Exchange</div>
+                    <div className="sb-name">{APP_NAME}</div>
+                    <div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"rgba(212,168,67,.5)",marginTop:2,fontFamily:"'Raleway',sans-serif",fontWeight:700}}>{APP_SUBTITLE}</div>
                   </div>
                 </div>
                 <div style={{marginTop:8,display:"flex",alignItems:"center",gap:6}}>
