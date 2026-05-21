@@ -4799,7 +4799,7 @@ function InvoiceRequestForm({ orgName, userEmail }) {
   );
 }
 
-function UpgradePlans({ compact = false, userId = null, userEmail = null }) {
+function UpgradePlans({ compact = false, userId = null, userEmail = null, plan = "free" }) {
   const [billing, setBilling] = useState("monthly");
   return (
     <div>
@@ -4844,6 +4844,8 @@ function UpgradePlans({ compact = false, userId = null, userEmail = null }) {
               </ul>
               {isCurrentPlan
                 ? <button className="btn btn-full" style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",color:"rgba(240,230,211,.6)",cursor:"default",fontWeight:600,fontSize:13}} disabled>✓ Current Plan</button>
+                : isFree
+                ? null
                 : p.id==="enterprise"
                   ? <a href="mailto:hello@theatre4u.org?subject=Enterprise District Inquiry" className="btn btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",background:"linear-gradient(135deg,#1565c0,#0d47a1)",border:"1px solid rgba(66,133,244,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>Contact Us →</a>
                   : billing === "invoice"
@@ -10741,7 +10743,7 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
         <div className="card card-p" style={{marginBottom:20}}>
           <div className="sh"><h2>Plans</h2><p>Choose the right plan for your program.</p></div>
           {/* Billing toggle */}
-          <UpgradePlans userId={userId} userEmail={userEmail}/>
+          <UpgradePlans userId={userId} userEmail={userEmail} plan={plan}/>
           {/* Manage / Cancel billing — only shown to paid non-admin users */}
           {plan !== "free" && !isAdminEmail(userEmail) && (
             <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid var(--bd)"}}>
