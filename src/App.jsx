@@ -4689,7 +4689,7 @@ const UPGRADE_PLANS = [
     feats:["Up to 25 items","QR code generation","Photo uploads","Basic CSV export"] },
   { id:"pro",      name:"Pro",      monthlyPrice:"$15", annualPrice:"$12.50",  annualTotal:"$150/yr", per:"/month", annualNote:"save $30", desc:"For active programs & companies.", hot:true,
     feats:["Unlimited inventory","Full Backstage Exchange access","Photo storage 5GB","Analytics dashboard","Email support"] },
-  { id:"district", name:"District (up to 6 schools)", monthlyPrice:"$49", annualPrice:"$42",  annualTotal:"$500/yr", per:"/month", annualNote:"save $88", desc:"Multiple schools, one platform.",  hot:false,
+  { id:"district", name:"District S", monthlyPrice:"$49", annualPrice:"$42",  annualTotal:"$500/yr", per:"/month", annualNote:"save $88", desc:"Up to 6 schools, one platform.",  hot:false,
     feats:["Multiple organizations","District dashboard","Bulk import","Dedicated support","Everything in Pro"] },
   { id:"district_m", name:"District M", monthlyPrice:"$99", annualPrice:"$83",  annualTotal:"$999/yr",   per:"/month", annualNote:"save $189", desc:"Up to 15 schools — 54% savings.", hot:false,
     feats:["Everything in District S","Up to 15 school sites","District dashboard","Priority support","Dedicated onboarding"] },
@@ -4822,6 +4822,7 @@ function UpgradePlans({ compact = false, userId = null, userEmail = null }) {
           const note    = billing==="annual" ? p.annualNote  : null;
           const link    = stripeLink(STRIPE_LINKS[p.id]?.[billing], userId, userEmail);
           const isFree  = p.id==="free";
+          const isCurrentPlan = p.id === (plan || "free");
           return (
             <div key={p.id} style={{border:"1.5px solid "+(p.hot?"var(--gold)":"rgba(212,168,67,.2)"),borderRadius:10,padding:16,background:p.hot?"#241808":"#1e1208",position:"relative",display:"flex",flexDirection:"column",color:"#f0e6d3"}}>
               {p.hot && <div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",background:"var(--gold)",color:"#1a0f00",fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",padding:"2px 10px",borderRadius:9,whiteSpace:"nowrap"}}>Most Popular</div>}
@@ -4841,8 +4842,8 @@ function UpgradePlans({ compact = false, userId = null, userEmail = null }) {
                   </li>
                 ))}
               </ul>
-              {isFree
-                ? <button className="btn btn-full" style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",color:"rgba(240,230,211,.6)",cursor:"default",fontWeight:600,fontSize:13}} disabled>✓ Current Free Plan</button>
+              {isCurrentPlan
+                ? <button className="btn btn-full" style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",color:"rgba(240,230,211,.6)",cursor:"default",fontWeight:600,fontSize:13}} disabled>✓ Current Plan</button>
                 : p.id==="enterprise"
                   ? <a href="mailto:hello@theatre4u.org?subject=Enterprise District Inquiry" className="btn btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",background:"linear-gradient(135deg,#1565c0,#0d47a1)",border:"1px solid rgba(66,133,244,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>Contact Us →</a>
                   : billing === "invoice"
