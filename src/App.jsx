@@ -4833,10 +4833,10 @@ function UpgradePlans({ compact = false, userId = null, userEmail = null, plan =
               </div>
               {billing==="annual" && !isFree && p.annualTotal && <div style={{fontSize:11,color:"rgba(240,230,211,.45)",marginBottom:2}}>billed {p.annualTotal}</div>}
               {note && <div style={{fontSize:11,color:"var(--grn,#4caf50)",fontWeight:600,marginBottom:6}}>{note}</div>}
-              <div style={{fontSize:12,color:"rgba(240,230,211,.65)",marginBottom:10}}>{p.desc}</div>
+              <div style={{fontSize:13,color:"rgba(240,230,211,.9)",marginBottom:10}}>{p.desc}</div>
               <ul style={{listStyle:"none",padding:0,margin:"0 0 14px",flex:1}}>
                 {p.feats.map(f=>(
-                  <li key={f} style={{display:"flex",alignItems:"flex-start",gap:6,fontSize:12,color:"rgba(240,230,211,.75)",marginBottom:4}}>
+                  <li key={f} style={{display:"flex",alignItems:"flex-start",gap:6,fontSize:12,color:"rgba(240,230,211,.9)",marginBottom:4}}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2.5" style={{flexShrink:0,marginTop:1}}><polyline points="20 6 9 17 4 12"/></svg>
                     {f}
                   </li>
