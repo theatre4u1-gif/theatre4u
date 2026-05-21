@@ -4843,7 +4843,7 @@ function UpgradePlans({ compact = false, userId = null, userEmail = null, plan =
                 ))}
               </ul>
               {isCurrentPlan
-                ? <button className="btn btn-full" style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",color:"rgba(240,230,211,.6)",cursor:"default",fontWeight:600,fontSize:13}} disabled>✓ Current Plan</button>
+                ? <button className="btn btn-full" style={{background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.5)",color:"var(--gold)",cursor:"default",fontWeight:700,fontSize:13}} disabled>✓ Current Plan</button>
                 : isFree
                 ? null
                 : p.id==="enterprise"
