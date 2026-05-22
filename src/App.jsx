@@ -10970,7 +10970,7 @@ function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
   ];
 
   const steps=[
-    {n:"1",title:"Create your free account",desc:"Sign up in 60 seconds. No credit card needed. Your first 50 items are always free."},
+    {n:"1",title:"Create your free account",desc:"Sign up in 60 seconds. No credit card needed. Catalog up to 25 items free, forever."},
     {n:"2",title:"Build your inventory",desc:"Take photos on your phone or upload from your computer. Add name, category, condition, and location. Print QR labels for bins and racks."},
     {n:"3",title:"Track your productions",desc:"Create a show folder and pull items straight from your inventory. See what's assigned, what's checked out, and what you still need."},
     {n:"4",title:"Optionally join Backstage Exchange",desc:"When you're ready, opt in to Backstage Exchange. Post selected items for rent, loan, or sale. Browse what other programs near you have available."},
