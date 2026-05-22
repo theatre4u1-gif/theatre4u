@@ -885,7 +885,7 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical
     if(!userId)return;
     SB.from("funding_sources").select("id,name,source_type").eq("org_id",userId).eq("is_active",true).order("name")
       .then(({data})=>{ if(data) setFundSources(data); });
-    SB.from("storage_locations").select("id,name,code").eq("org_id",userId).order("name")
+    SB.from("storage_locations").select("id,name,code,location_type,map_pins,rack_rows,rack_cols,rack_row_style,rack_col_style").eq("org_id",userId).order("name")
       .then(({data})=>{ if(data) setStorLocs(data); });
   },[userId]);
 
@@ -943,15 +943,68 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
           <select className="fs" style={{flex:1}} value={f.location_id||""} onChange={e=>{
             upd("location_id",e.target.value||null);
+            upd("rack_slot",null);
+            upd("pin_id",null);
             const loc=storLocs.find(l=>l.id===e.target.value);
             if(loc)upd("location",loc.name);
           }}>
             <option value="">— None —</option>
-            {storLocs.map(l=><option key={l.id} value={l.id}>{l.name}{l.code?" ("+l.code+")":""}</option>)}
+            {storLocs.map(l=>{
+              const icon=l.location_type==="room"?"🗺️":l.location_type==="rack"?"🏗️":"📦";
+              return <option key={l.id} value={l.id}>{icon} {l.name}{l.code?" ("+l.code+")":""}</option>;
+            })}
           </select>
           <button type="button" className="btn btn-o btn-sm" style={{whiteSpace:"nowrap",flexShrink:0}}
             onClick={()=>{setQloc(v=>!v);setQfund(false);}}>+ New</button>
         </div>
+
+        {/* ── Pin sub-picker for room maps ── */}
+        {(()=>{
+          const selLoc = storLocs.find(l=>l.id===f.location_id);
+          if(!selLoc||selLoc.location_type!=="room") return null;
+          const pins = selLoc.map_pins||[];
+          if(pins.length===0) return <div style={{fontSize:11,color:"var(--muted)",marginTop:6,fontStyle:"italic"}}>No pins on this room map yet — add pins in Inventory → Locations tab.</div>;
+          return (
+            <div style={{marginTop:8}}>
+              <label className="fl" style={{fontSize:10}}>Pin / spot in this room <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:10}}>(optional)</span></label>
+              <select className="fs" value={f.pin_id||""} onChange={e=>upd("pin_id",e.target.value||null)}>
+                <option value="">— No specific pin —</option>
+                {pins.map((pin,i)=>(
+                  <option key={pin.id} value={pin.id}>📍 {i+1}. {pin.name}{pin.notes?" — "+pin.notes:""}</option>
+                ))}
+              </select>
+            </div>
+          );
+        })()}
+
+        {/* ── Slot sub-picker for storage racks ── */}
+        {(()=>{
+          const selLoc = storLocs.find(l=>l.id===f.location_id);
+          if(!selLoc||selLoc.location_type!=="rack") return null;
+          const rows = selLoc.rack_rows||3;
+          const cols = selLoc.rack_cols||4;
+          const rowLabels = (ROW_LABELS[selLoc.rack_row_style]||ROW_LABELS.alpha);
+          const colLabels = (COL_LABELS[selLoc.rack_col_style]||COL_LABELS.num);
+          const slots = [];
+          for(let i=0;i<rows;i++){
+            for(let j=0;j<cols;j++){
+              const key=`${rowLabels[i]||String(i+1)}-${j+1}`;
+              const colLabel=colLabels[j]||"";
+              slots.push({key, label:colLabel?`Row ${rowLabels[i]||i+1}, Slot ${colLabel}`:`Row ${rowLabels[i]||i+1}, Position ${j+1}`});
+            }
+          }
+          return (
+            <div style={{marginTop:8}}>
+              <label className="fl" style={{fontSize:10}}>Rack slot <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:10}}>(optional)</span></label>
+              <select className="fs" value={f.rack_slot||""} onChange={e=>upd("rack_slot",e.target.value||null)}>
+                <option value="">— No specific slot —</option>
+                {slots.map(s=>(
+                  <option key={s.key} value={s.key}>🏗️ {s.label} ({s.key})</option>
+                ))}
+              </select>
+            </div>
+          );
+        })()}
         {qloc&&(
           <div style={{marginTop:8,padding:"12px 14px",background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.25)",borderRadius:8}}>
             <div style={{fontWeight:700,fontSize:12,color:"var(--gold)",marginBottom:8}}>New Storage Location</div>
@@ -17749,6 +17802,8 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
     if(!row.purchase_vendor|| row.purchase_vendor==="") row.purchase_vendor  = null;
     if(!row.funding_source_id||row.funding_source_id==="") row.funding_source_id = null;
     if(!row.location_id    || row.location_id==="")     row.location_id      = null;
+    if(!row.pin_id         || row.pin_id==="")           row.pin_id           = null;
+    if(!row.rack_slot      || row.rack_slot==="")        row.rack_slot        = null;
     const{data,error}=await SB.from("items").insert(row).select().single();
     if(error){ alert("Could not save item: "+error.message); console.error(error); return; }
     if(data){
@@ -17782,6 +17837,8 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
     if(!payload.purchase_vendor  ||payload.purchase_vendor==="")  payload.purchase_vendor  = null;
     if(!payload.funding_source_id||payload.funding_source_id==="")payload.funding_source_id= null;
     if(!payload.location_id      ||payload.location_id==="")      payload.location_id      = null;
+    if(!payload.pin_id           ||payload.pin_id===""           )payload.pin_id           = null;
+    if(!payload.rack_slot        ||payload.rack_slot===""        )payload.rack_slot         = null;
     const{data,error}=await SB.from("items").update(payload).eq("id",item.id).select().single();
     if(error){ alert("Could not update item: "+error.message); console.error(error); return; }
     if(data){
