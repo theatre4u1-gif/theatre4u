@@ -3,6 +3,11 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getVertical } from "./lib/verticals.js";
 
+// ── Storage map constants (used by ItemForm and RoomMap/StorageRack) ──────────
+const PIN_COLORS = ["#D4A843","#5299E0","#52C784","#D85A30","#9B6EBF","#1D9E75","#E24B4A","#BA7517","#2B5BA8","#C2185B"];
+const ROW_LABELS = { alpha:["A","B","C","D","E","F","G","H"], num:["1","2","3","4","5","6","7","8"], shelf:["Shelf 1","Shelf 2","Shelf 3","Shelf 4","Shelf 5","Shelf 6","Shelf 7","Shelf 8"], custom:["Top","Upper","Middle","Lower","Bottom"] };
+const COL_LABELS = { num:["1","2","3","4","5","6"], alpha:["A","B","C","D","E","F"], none:["","","","","",""] };
+
 // ── Supabase ──────────────────────────────────────────────────────────────────
 
 // ── Geocoding (OpenStreetMap Nominatim — free, no key needed) ─────────────────
@@ -885,7 +890,7 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical
     if(!userId)return;
     SB.from("funding_sources").select("id,name,source_type").eq("org_id",userId).eq("is_active",true).order("name")
       .then(({data})=>{ if(data) setFundSources(data); });
-    SB.from("storage_locations").select("id,name,code").eq("org_id",userId).order("name")
+    SB.from("storage_locations").select("id,name,code,location_type,map_pins,rack_rows,rack_cols,rack_row_style,rack_col_style").eq("org_id",userId).order("name")
       .then(({data})=>{ if(data) setStorLocs(data); });
   },[userId]);
 
@@ -943,15 +948,68 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
           <select className="fs" style={{flex:1}} value={f.location_id||""} onChange={e=>{
             upd("location_id",e.target.value||null);
+            upd("rack_slot",null);
+            upd("pin_id",null);
             const loc=storLocs.find(l=>l.id===e.target.value);
             if(loc)upd("location",loc.name);
           }}>
             <option value="">— None —</option>
-            {storLocs.map(l=><option key={l.id} value={l.id}>{l.name}{l.code?" ("+l.code+")":""}</option>)}
+            {storLocs.map(l=>{
+              const icon=l.location_type==="room"?"🗺️":l.location_type==="rack"?"🏗️":"📦";
+              return <option key={l.id} value={l.id}>{icon} {l.name}{l.code?" ("+l.code+")":""}</option>;
+            })}
           </select>
           <button type="button" className="btn btn-o btn-sm" style={{whiteSpace:"nowrap",flexShrink:0}}
             onClick={()=>{setQloc(v=>!v);setQfund(false);}}>+ New</button>
         </div>
+
+        {/* ── Pin sub-picker for room maps ── */}
+        {(()=>{
+          const selLoc = storLocs.find(l=>l.id===f.location_id);
+          if(!selLoc||selLoc.location_type!=="room") return null;
+          const pins = selLoc.map_pins||[];
+          if(pins.length===0) return <div style={{fontSize:11,color:"var(--muted)",marginTop:6,fontStyle:"italic"}}>No pins on this room map yet — add pins in Inventory → Locations tab.</div>;
+          return (
+            <div style={{marginTop:8}}>
+              <label className="fl" style={{fontSize:10}}>Pin / spot in this room <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:10}}>(optional)</span></label>
+              <select className="fs" value={f.pin_id||""} onChange={e=>upd("pin_id",e.target.value||null)}>
+                <option value="">— No specific pin —</option>
+                {pins.map((pin,i)=>(
+                  <option key={pin.id} value={pin.id}>📍 {i+1}. {pin.name}{pin.notes?" — "+pin.notes:""}</option>
+                ))}
+              </select>
+            </div>
+          );
+        })()}
+
+        {/* ── Slot sub-picker for storage racks ── */}
+        {(()=>{
+          const selLoc = storLocs.find(l=>l.id===f.location_id);
+          if(!selLoc||selLoc.location_type!=="rack") return null;
+          const rows = selLoc.rack_rows||3;
+          const cols = selLoc.rack_cols||4;
+          const rowLabels = (ROW_LABELS[selLoc.rack_row_style]||ROW_LABELS.alpha);
+          const colLabels = (COL_LABELS[selLoc.rack_col_style]||COL_LABELS.num);
+          const slots = [];
+          for(let i=0;i<rows;i++){
+            for(let j=0;j<cols;j++){
+              const key=`${rowLabels[i]||String(i+1)}-${j+1}`;
+              const colLabel=colLabels[j]||"";
+              slots.push({key, label:colLabel?`Row ${rowLabels[i]||i+1}, Slot ${colLabel}`:`Row ${rowLabels[i]||i+1}, Position ${j+1}`});
+            }
+          }
+          return (
+            <div style={{marginTop:8}}>
+              <label className="fl" style={{fontSize:10}}>Rack slot <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:10}}>(optional)</span></label>
+              <select className="fs" value={f.rack_slot||""} onChange={e=>upd("rack_slot",e.target.value||null)}>
+                <option value="">— No specific slot —</option>
+                {slots.map(s=>(
+                  <option key={s.key} value={s.key}>🏗️ {s.label} ({s.key})</option>
+                ))}
+              </select>
+            </div>
+          );
+        })()}
         {qloc&&(
           <div style={{marginTop:8,padding:"12px 14px",background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.25)",borderRadius:8}}>
             <div style={{fontWeight:700,fontSize:12,color:"var(--gold)",marginBottom:8}}>New Storage Location</div>
@@ -17749,6 +17807,8 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
     if(!row.purchase_vendor|| row.purchase_vendor==="") row.purchase_vendor  = null;
     if(!row.funding_source_id||row.funding_source_id==="") row.funding_source_id = null;
     if(!row.location_id    || row.location_id==="")     row.location_id      = null;
+    if(!row.pin_id         || row.pin_id==="")           row.pin_id           = null;
+    if(!row.rack_slot      || row.rack_slot==="")        row.rack_slot        = null;
     const{data,error}=await SB.from("items").insert(row).select().single();
     if(error){ alert("Could not save item: "+error.message); console.error(error); return; }
     if(data){
@@ -17782,6 +17842,8 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
     if(!payload.purchase_vendor  ||payload.purchase_vendor==="")  payload.purchase_vendor  = null;
     if(!payload.funding_source_id||payload.funding_source_id==="")payload.funding_source_id= null;
     if(!payload.location_id      ||payload.location_id==="")      payload.location_id      = null;
+    if(!payload.pin_id           ||payload.pin_id===""           )payload.pin_id           = null;
+    if(!payload.rack_slot        ||payload.rack_slot===""        )payload.rack_slot         = null;
     const{data,error}=await SB.from("items").update(payload).eq("id",item.id).select().single();
     if(error){ alert("Could not update item: "+error.message); console.error(error); return; }
     if(data){
@@ -18673,20 +18735,226 @@ function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav }) {
 // ══════════════════════════════════════════════════════════════════════════════
 // STORAGE LOCATIONS — manage named locations, browse items by location
 // ══════════════════════════════════════════════════════════════════════════════
-const PIN_COLORS = ["#D4A843","#5299E0","#52C784","#D85A30","#9B6EBF","#1D9E75","#E24B4A","#BA7517","#2B5BA8","#C2185B"];
-const ROW_LABELS = { alpha:["A","B","C","D","E","F","G","H"], num:["1","2","3","4","5","6","7","8"], shelf:["Shelf 1","Shelf 2","Shelf 3","Shelf 4","Shelf 5","Shelf 6","Shelf 7","Shelf 8"], custom:["Top","Upper","Middle","Lower","Bottom"] };
-const COL_LABELS = { num:["1","2","3","4","5","6"], alpha:["A","B","C","D","E","F"], none:["","","","","",""] };
-
 // ── Room Map sub-component ──────────────────────────────────────────────────
 function RoomMap({ loc, items, userId, onUpdate }) {
-  const [pins,       setPins]       = useState(loc.map_pins || []);
-  const [adding,     setAdding]     = useState(false);
-  const [pending,    setPending]    = useState(null);
-  const [pinName,    setPinName]    = useState("");
-  const [pinNotes,   setPinNotes]   = useState("");
-  const [selPin,     setSelPin]     = useState(null);
-  const [uploading,  setUploading]  = useState(false);
+  const [pins,        setPins]        = useState(loc.map_pins || []);
+  const [adding,      setAdding]      = useState(false);
+  const [pending,     setPending]     = useState(null);
+  const [pinMode,     setPinMode]     = useState("link");   // "link" | "new"
+  const [pinName,     setPinName]     = useState("");
+  const [pinNotes,    setPinNotes]    = useState("");
+  const [linkedLocId, setLinkedLocId] = useState("");
+  const [allLocs,     setAllLocs]     = useState([]);
+  const [locsLoaded,  setLocsLoaded]  = useState(false);
+  const [selPin,      setSelPin]      = useState(null);
+  const [uploading,   setUploading]   = useState(false);
   const fileRef = useRef();
+
+  // Load all named locations for this org when pin form opens
+  useEffect(() => {
+    if (!pending || locsLoaded) return;
+    SB.from("storage_locations")
+      .select("id,name,location_type,code")
+      .eq("org_id", userId)
+      .neq("id", loc.id)
+      .order("name")
+      .then(({ data }) => { setAllLocs(data || []); setLocsLoaded(true); });
+  }, [pending]);
+
+  const savePins = async (newPins) => {
+    await SB.from("storage_locations").update({ map_pins: newPins }).eq("id", loc.id);
+    setPins(newPins);
+    onUpdate({ ...loc, map_pins: newPins });
+  };
+
+  const uploadPhoto = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    const ext  = file.name.split(".").pop();
+    const path = `${userId}/${loc.id}.${ext}`;
+    const { error } = await SB.storage.from("room-photos").upload(path, file, { upsert: true, contentType: file.type });
+    if (!error) {
+      const { data: { publicUrl } } = SB.storage.from("room-photos").getPublicUrl(path);
+      await SB.from("storage_locations").update({ map_photo_url: publicUrl }).eq("id", loc.id);
+      onUpdate({ ...loc, map_photo_url: publicUrl });
+    }
+    setUploading(false);
+  };
+
+  const onMapClick = (e) => {
+    if (!adding) return;
+    if (e.target.closest(".pin-dot")) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width * 100).toFixed(2);
+    const y = ((e.clientY - rect.top)  / rect.height * 100).toFixed(2);
+    setPending({ x: parseFloat(x), y: parseFloat(y) });
+    setPinName(""); setPinNotes(""); setLinkedLocId(""); setPinMode("link");
+  };
+
+  const savePin = async () => {
+    const color = PIN_COLORS[pins.length % PIN_COLORS.length];
+    let newPin;
+    if (pinMode === "link" && linkedLocId) {
+      const linked = allLocs.find(l => l.id === linkedLocId);
+      if (!linked) return;
+      newPin = { id: Date.now(), x: pending.x, y: pending.y, name: linked.name, notes: pinNotes.trim(), color, linked_location_id: linked.id };
+    } else {
+      if (!pinName.trim()) return;
+      newPin = { id: Date.now(), x: pending.x, y: pending.y, name: pinName.trim(), notes: pinNotes.trim(), color };
+    }
+    const newPins = [...pins, newPin];
+    await savePins(newPins);
+    setPending(null); setAdding(false);
+  };
+
+  const deletePin = async (id) => {
+    const newPins = pins.filter(p => p.id !== id);
+    await savePins(newPins);
+    setSelPin(null);
+  };
+
+  // Get item count for a pin — use linked location if set, otherwise fall back to room location
+  const getPinItemCount = (pin) => {
+    if (pin.linked_location_id) {
+      return items.filter(it => it.location_id === pin.linked_location_id).length;
+    }
+    return items.filter(it => it.location_id === loc.id && it.pin_id === pin.id).length;
+  };
+
+  const canSave = pinMode === "link" ? !!linkedLocId : !!pinName.trim();
+  const photoUrl = loc.map_photo_url;
+  const inp = { background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,padding:"8px 10px",color:"var(--text)",fontSize:13,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box" };
+  const typeIcon = (t) => t==="room"?"🗺️":t==="rack"?"🏗️":"📦";
+
+  // Locations not yet placed on this map
+  const unplacedLocs = allLocs.filter(l => !pins.find(p => p.linked_location_id === l.id));
+
+  return (
+    <div>
+      {!photoUrl ? (
+        <div style={{ border:"2px dashed var(--border)",borderRadius:10,padding:32,textAlign:"center",cursor:"pointer",background:"var(--parch)" }} onClick={() => fileRef.current?.click()}>
+          <div style={{ fontSize:32,marginBottom:8 }}>📷</div>
+          <div style={{ fontWeight:700,fontSize:14,marginBottom:4 }}>Upload a photo of this room</div>
+          <div style={{ fontSize:12,color:"var(--muted)",marginBottom:12 }}>Take a photo on your phone and upload it here</div>
+          {uploading ? <div style={{ color:"var(--muted)",fontSize:13 }}>Uploading…</div> : <button className="btn btn-o" onClick={e=>{e.stopPropagation();fileRef.current?.click();}}>Choose Photo</button>}
+          <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={e=>uploadPhoto(e.target.files[0])} />
+        </div>
+      ) : (
+        <div>
+          <div style={{ display:"flex",gap:8,marginBottom:10,alignItems:"center",flexWrap:"wrap" }}>
+            <button className={`btn ${adding?"btn-g":"btn-o"}`} style={{ fontSize:12 }} onClick={() => { setAdding(!adding); setPending(null); }}>
+              {adding ? "✕ Cancel" : "📍 Add Pin"}
+            </button>
+            <button className="btn btn-o" style={{ fontSize:12 }} onClick={() => fileRef.current?.click()}>🔄 Change Photo</button>
+            <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={e=>uploadPhoto(e.target.files[0])} />
+            {adding && <span style={{ fontSize:12,color:"var(--muted)",fontStyle:"italic" }}>Tap anywhere on the photo to drop a pin</span>}
+          </div>
+
+          <div style={{ position:"relative",borderRadius:10,overflow:"hidden",border:"1px solid var(--border)",cursor:adding?"crosshair":"default" }} onClick={onMapClick}>
+            <img src={photoUrl} style={{ width:"100%",display:"block",userSelect:"none" }} draggable={false} />
+            {pins.map((pin, i) => (
+              <div key={pin.id} className="pin-dot" style={{ position:"absolute",left:`${pin.x}%`,top:`${pin.y}%`,transform:"translate(-50%,-100%)",cursor:"pointer",zIndex:10 }} onClick={e=>{ e.stopPropagation(); setSelPin(selPin?.id===pin.id?null:pin); }}>
+                <div style={{ background:pin.color,borderRadius:"50% 50% 50% 0",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",transform:"rotate(-45deg)",border:"2px solid rgba(0,0,0,0.2)" }}>
+                  <span style={{ transform:"rotate(45deg)",color:"#fff",fontSize:11,fontWeight:700 }}>{i+1}</span>
+                </div>
+                {selPin?.id===pin.id && (
+                  <div style={{ position:"absolute",bottom:34,left:"50%",transform:"translateX(-50%)",background:"var(--dark2)",border:"1px solid var(--border)",borderRadius:8,padding:"10px 12px",minWidth:180,zIndex:20,whiteSpace:"nowrap" }}>
+                    <div style={{ fontWeight:700,fontSize:13,color:"var(--gold)",marginBottom:2 }}>{pin.name}</div>
+                    {pin.linked_location_id && <div style={{ fontSize:10,color:"var(--muted)",marginBottom:4 }}>🔗 Linked location</div>}
+                    {pin.notes && <div style={{ fontSize:11,color:"var(--muted)",marginBottom:6 }}>{pin.notes}</div>}
+                    <div style={{ fontSize:11,color:"var(--muted)",marginBottom:6 }}>{getPinItemCount(pin)} items stored here</div>
+                    <button onClick={()=>deletePin(pin.id)} style={{ fontSize:11,color:"var(--red)",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",padding:0 }}>Remove pin</button>
+                  </div>
+                )}
+              </div>
+            ))}
+            {pending && (
+              <div style={{ position:"absolute",left:`${pending.x}%`,top:`${pending.y}%`,transform:"translate(-50%,-100%)",pointerEvents:"none" }}>
+                <div style={{ background:"var(--gold)",borderRadius:"50% 50% 50% 0",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",transform:"rotate(-45deg)",border:"2px solid rgba(0,0,0,0.3)" }}>
+                  <span style={{ transform:"rotate(45deg)",color:"#1a0f00",fontSize:13 }}>?</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {pending && (
+            <div style={{ marginTop:12,padding:14,background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10 }}>
+              <div style={{ fontWeight:700,fontSize:13,marginBottom:12 }}>Place a pin here</div>
+
+              {/* Mode toggle */}
+              <div style={{ display:"flex",gap:6,marginBottom:14 }}>
+                <button onClick={()=>setPinMode("link")} style={{ flex:1,padding:"7px 0",fontSize:12,borderRadius:7,border:pinMode==="link"?"1.5px solid var(--gold)":"1px solid var(--border)",background:pinMode==="link"?"rgba(212,168,67,.1)":"var(--white)",color:pinMode==="link"?"var(--amber)":"var(--muted)",cursor:"pointer",fontFamily:"inherit",fontWeight:pinMode==="link"?700:400 }}>
+                  🔗 Link existing location
+                </button>
+                <button onClick={()=>setPinMode("new")} style={{ flex:1,padding:"7px 0",fontSize:12,borderRadius:7,border:pinMode==="new"?"1.5px solid var(--gold)":"1px solid var(--border)",background:pinMode==="new"?"rgba(212,168,67,.1)":"var(--white)",color:pinMode==="new"?"var(--amber)":"var(--muted)",cursor:"pointer",fontFamily:"inherit",fontWeight:pinMode==="new"?700:400 }}>
+                  ✏️ Create new pin
+                </button>
+              </div>
+
+              {pinMode === "link" ? (
+                <div>
+                  <div style={{ fontSize:12,color:"var(--muted)",marginBottom:8 }}>Choose an existing location to place on this map:</div>
+                  {!locsLoaded ? (
+                    <div style={{ fontSize:12,color:"var(--muted)",padding:"8px 0" }}>Loading locations…</div>
+                  ) : unplacedLocs.length === 0 ? (
+                    <div style={{ fontSize:12,color:"var(--muted)",padding:"8px 0",fontStyle:"italic" }}>All your locations are already on this map. Use "Create new pin" to add a new one.</div>
+                  ) : (
+                    <div style={{ display:"flex",flexDirection:"column",gap:6,maxHeight:200,overflowY:"auto" }}>
+                      {unplacedLocs.map(l => (
+                        <div key={l.id} onClick={() => setLinkedLocId(linkedLocId===l.id?"":l.id)}
+                          style={{ padding:"8px 10px",border:linkedLocId===l.id?"1.5px solid var(--gold)":"1px solid var(--border)",borderRadius:8,cursor:"pointer",background:linkedLocId===l.id?"rgba(212,168,67,.1)":"var(--white)",display:"flex",alignItems:"center",gap:8 }}>
+                          <span style={{ fontSize:16 }}>{typeIcon(l.location_type)}</span>
+                          <div style={{ flex:1,minWidth:0 }}>
+                            <div style={{ fontWeight:700,fontSize:13,color:linkedLocId===l.id?"var(--amber)":"var(--text)" }}>{l.name}</div>
+                            {l.code && <div style={{ fontSize:11,fontFamily:"monospace",color:"var(--muted)" }}>{l.code}</div>}
+                          </div>
+                          {linkedLocId===l.id && <span style={{ fontSize:16 }}>✓</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <input style={{ ...inp,marginBottom:8 }} value={pinName} onChange={e=>setPinName(e.target.value)} placeholder="e.g. Red Costume Tubs, Prop Shelf B" autoFocus onKeyDown={e=>e.key==="Enter"&&savePin()} />
+                </div>
+              )}
+
+              <textarea style={{ ...inp,minHeight:40,resize:"vertical",marginTop:10,marginBottom:10 }} value={pinNotes} onChange={e=>setPinNotes(e.target.value)} placeholder="Optional notes — row 3, left side, grey metal rack…" />
+
+              <div style={{ display:"flex",gap:8 }}>
+                <button className="btn btn-g" style={{ flex:1 }} onClick={savePin} disabled={!canSave}>
+                  {pinMode==="link" ? "Place Pin" : "Save Pin"}
+                </button>
+                <button className="btn btn-o" onClick={()=>{ setPending(null); setAdding(false); }}>Cancel</button>
+              </div>
+            </div>
+          )}
+
+          {pins.length > 0 && (
+            <div style={{ marginTop:12 }}>
+              <div style={{ fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:6 }}>Pinned locations</div>
+              {pins.map((pin, i) => (
+                <div key={pin.id} style={{ display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:"var(--parch)",border:"1px solid var(--border)",borderRadius:8,marginBottom:5,cursor:"pointer" }} onClick={()=>setSelPin(selPin?.id===pin.id?null:pin)}>
+                  <div style={{ width:20,height:20,borderRadius:"50%",background:pin.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
+                    <span style={{ fontSize:10,fontWeight:700,color:"#fff" }}>{i+1}</span>
+                  </div>
+                  <div style={{ flex:1,minWidth:0 }}>
+                    <div style={{ fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>
+                      {pin.linked_location_id && <span style={{ fontSize:11,marginRight:4 }}>🔗</span>}
+                      {pin.name}
+                    </div>
+                    <div style={{ fontSize:11,color:"var(--muted)" }}>{getPinItemCount(pin)} items</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
   const savePins = async (newPins) => {
     await SB.from("storage_locations").update({ map_pins: newPins }).eq("id", loc.id);
