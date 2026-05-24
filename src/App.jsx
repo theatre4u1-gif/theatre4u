@@ -14937,18 +14937,35 @@ function AdminDailyDigest() {
 
       {!loading&&data&&(
         <>
+          {/* Missed signups alert */}
+          {(data.missedSignups||[]).length > 0 && (
+            <div style={{background:"rgba(194,24,91,.08)",border:"1px solid rgba(194,24,91,.3)",borderRadius:10,padding:"12px 16px",marginBottom:16,display:"flex",alignItems:"flex-start",gap:10}}>
+              <span style={{fontSize:20}}>⚠️</span>
+              <div>
+                <div style={{fontWeight:700,fontSize:13,color:"var(--red)",marginBottom:4}}>
+                  {data.missedSignups.length} signup notification{data.missedSignups.length>1?"s":""} not yet sent
+                </div>
+                {data.missedSignups.map((s,i)=>(
+                  <div key={i} style={{fontSize:12,color:"var(--muted)",marginBottom:2}}>
+                    • {s.org_name} — <a href={`mailto:${s.org_email}`} style={{color:"var(--gold)"}}>{s.org_email}</a> ({s.plan})
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* KPI Cards */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:10,marginBottom:24}}>
             {[
-              {icon:"🎭",label:"New Signups",     n:data.newOrgs.length,          color:"var(--gold)"},
-              {icon:"📦",label:"Items Added",     n:data.newItems.length,          color:"#4caf50"},
-              {icon:"📥",label:"Beta Leads",      n:data.newLeads.length,          color:"#2196f3"},
-              {icon:"✉️",label:"Emails Sent",     n:data.emailsSent.length,        color:"#9c27b0"},
-              {icon:"👁", label:"Page Views",     n:data.pageViews,                color:"var(--muted)"},
-              {icon:"🔗",label:"Sessions",        n:data.uniqueSessions,           color:"var(--muted)"},
-              {icon:"🔑",label:"Logins",          n:data.loginRows.length,         color:"#ff9800"},
-              {icon:"💬",label:"Messages",        n:data.messages.length,          color:"#ff9800"},
-              {icon:"📋",label:"Feedback",        n:data.newFeedback.length,       color:"#e91e63"},
+              {icon:"🎭",label:"New Signups",    n:data.newOrgs.length,                         color:"var(--gold)"},
+              {icon:"👥",label:"Active Users",   n:data.activeUsers||0,                         color:"#4caf50"},
+              {icon:"🔑",label:"Logins Today",   n:(data.loginToday||[]).length,                color:"#ff9800"},
+              {icon:"📦",label:"Items Added",    n:data.newItems.length,                        color:"#4caf50"},
+              {icon:"📥",label:"Beta Leads",     n:data.newLeads.length,                        color:"#2196f3"},
+              {icon:"✉️",label:"Emails Sent",    n:data.emailsSent.length,                      color:"#9c27b0"},
+              {icon:"👁", label:"Page Views",    n:data.pageViews,                              color:"var(--muted)"},
+              {icon:"💬",label:"Messages",       n:data.messages.length,                        color:"#ff9800"},
+              {icon:"📋",label:"Feedback",       n:data.newFeedback.length,                     color:"#e91e63"},
             ].map(k=>(
               <div key={k.label} style={{...card,padding:"12px 14px",textAlign:"center"}}>
                 <div style={{fontSize:18,marginBottom:3}}>{k.icon}</div>
@@ -14956,6 +14973,26 @@ function AdminDailyDigest() {
                 <div style={{fontSize:10,color:"var(--muted)",marginTop:3,textTransform:"uppercase",letterSpacing:.4}}>{k.label}</div>
               </div>
             ))}
+          </div>
+
+          {/* Active users today */}
+          {(data.loginToday||[]).length > 0 && (
+            <div style={{...card,marginBottom:16}}>
+              {sectionHead("🔑","Active Today",(data.loginToday||[]).length)}
+              <div style={{padding:"8px 14px"}}>
+                {(data.loginToday||[]).map((l,i)=>(
+                  <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid var(--linen)"}}>
+                    <div>
+                      <span style={{fontWeight:700,fontSize:13}}>{l.org_name||l.email}</span>
+                      {l.plan&&<span style={{fontSize:11,color:"var(--muted)",marginLeft:8}}>{l.plan}</span>}
+                    </div>
+                    <span style={{fontSize:11,color:"var(--muted)"}}>{new Date(l.created_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/Los_Angeles"})}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           </div>
 
           {allQuiet&&(
@@ -15879,34 +15916,48 @@ function AdminHub({ currentUser, org }) {
         setLeads(data || []);
       }
        if (tab === "analytics") {
-         const { data: pv } = await SB.from("page_views")
-           .select("page,session_id,created_at,utm_source,utm_campaign,referrer,ref_code")
-           .order("created_at", { ascending: false }).limit(5000);
-         if (pv) {
-           const byPage={}, bySess={}, byDay={}, bySrc={};
-           pv.forEach(v => {
-             byPage[v.page] = (byPage[v.page]||0) + 1;
-             bySess[v.session_id] = true;
-             const day = (v.created_at||"").slice(0,10);
-             if (day) byDay[day] = (byDay[day]||0) + 1;
-             const src = v.utm_source||(v.referrer?.includes("facebook")?"facebook":v.referrer?.includes("google")?"google":v.referrer?.includes("instagram")?"instagram":"direct");
-             bySrc[src] = (bySrc[src]||0) + 1;
-           });
-           // Always include today so it shows on the chart even with 0 visits
-           const today = new Date().toISOString().slice(0,10);
-           if (!byDay[today]) byDay[today] = 0;
-           const dayEntries = Object.entries(byDay)
-             .sort(([a],[b]) => a > b ? 1 : -1).slice(-14);
-           const maxDay = Math.max(1, ...dayEntries.map(([,v])=>v));
-           setAnalytics({
-             views: pv.length,
-             sessions: Object.keys(bySess).length,
-             byPage: Object.entries(byPage).sort(([,a],[,b])=>b-a),
-             byDay: dayEntries,
-             maxDay,
-             bySrc: Object.entries(bySrc).sort(([,a],[,b])=>b-a),
-           });
-         }
+         const since90 = new Date(Date.now()-90*24*60*60*1000).toISOString();
+         const [{ data: pv }, { data: loginEvts }] = await Promise.all([
+           SB.from("page_views")
+             .select("page,session_id,created_at,utm_source,utm_campaign,referrer,ref_code")
+             .order("created_at", { ascending: false }).limit(5000),
+           SB.from("login_events")
+             .select("org_id,org_name,created_at")
+             .gte("created_at", since90)
+             .order("created_at", { ascending: false }),
+         ]);
+         const byPage={}, bySess={}, byDay={}, bySrc={}, byLoginDay={};
+         // Page views (landing page traffic)
+         (pv||[]).forEach(v => {
+           byPage[v.page] = (byPage[v.page]||0) + 1;
+           bySess[v.session_id] = true;
+           const day = (v.created_at||"").slice(0,10);
+           if (day) byDay[day] = (byDay[day]||0) + 1;
+           const src = v.utm_source||(v.referrer?.includes("facebook")?"facebook":v.referrer?.includes("google")?"google":v.referrer?.includes("instagram")?"instagram":"direct");
+           bySrc[src] = (bySrc[src]||0) + 1;
+         });
+         // Login events (real daily active users)
+         (loginEvts||[]).forEach(v => {
+           const day = (v.created_at||"").slice(0,10);
+           if (day) byLoginDay[day] = (byLoginDay[day]||0) + 1;
+         });
+         // Merge last 14 days — show both landing page views and active logins
+         const today = new Date().toISOString().slice(0,10);
+         if (!byDay[today]) byDay[today] = 0;
+         if (!byLoginDay[today]) byLoginDay[today] = 0;
+         const allDays = new Set([...Object.keys(byDay), ...Object.keys(byLoginDay)]);
+         const dayEntries = [...allDays].sort().slice(-14).map(d => [d, byDay[d]||0, byLoginDay[d]||0]);
+         const maxDay = Math.max(1, ...dayEntries.map(([,v,l])=>Math.max(v,l)));
+         setAnalytics({
+           views: (pv||[]).length,
+           sessions: Object.keys(bySess).length,
+           activeLogins: (loginEvts||[]).length,
+           activeUsers: new Set((loginEvts||[]).map(l=>l.org_id)).size,
+           byPage: Object.entries(byPage).sort(([,a],[,b])=>b-a),
+           byDay: dayEntries,
+           maxDay,
+           bySrc: Object.entries(bySrc).sort(([,a],[,b])=>b-a),
+         });
       }
       if (tab === "labels") {
         const { data } = await SB.from("label_orders")
@@ -15918,7 +15969,7 @@ function AdminHub({ currentUser, org }) {
         const [
           {data:newOrgs},   {data:newItems},  {data:newLeadsToday},
           {data:newEmails}, {data:pvToday},   {data:newMsgs},
-          {data:newFeedback24},
+          {data:newFeedback24}, {data:loginToday}, {data:missedSignups},
         ] = await Promise.all([
           SB.from("orgs").select("id,name,email,plan,created_at").gte("created_at",since),
           SB.from("items").select("id,name,category,org_id,added").gte("added",since).order("added",{ascending:false}),
@@ -15927,6 +15978,8 @@ function AdminHub({ currentUser, org }) {
           SB.from("page_views").select("page,session_id,created_at").gte("created_at",since),
           SB.from("messages").select("id,created_at").gte("created_at",since),
           SB.from("beta_feedback").select("id,category,org_name,message,created_at").gte("created_at",since),
+          SB.from("login_events").select("org_id,org_name,email,plan,created_at").gte("created_at",since).order("created_at",{ascending:false}),
+          SB.from("signup_notifications").select("org_name,org_email,plan,notified,notified_at").eq("notified",false).order("notified_at",{ascending:false}).limit(20),
         ]);
         const orgNames = {};
         (newItems||[]).forEach(i=>{ if(!orgNames[i.org_id]) orgNames[i.org_id]="Unknown"; });
@@ -15952,20 +16005,37 @@ function AdminHub({ currentUser, org }) {
           (orgNames2||[]).forEach(o=>{if(emailsByOrg[o.id])emailsByOrg[o.id].name=o.name;});
         }
         setDigest({
-          newOrgs:      newOrgs||[],
-          newItems:     (newItems||[]).map(i=>({...i,orgName:orgNames[i.org_id]||""})),
-          newLeads:     newLeadsToday||[],
-          emailsSent:   newEmails||[],
+          newOrgs:        newOrgs||[],
+          newItems:       (newItems||[]).map(i=>({...i,orgName:orgNames[i.org_id]||""})),
+          newLeads:       newLeadsToday||[],
+          emailsSent:     newEmails||[],
           emailsByOrg,
           emailLabels,
-          pageViews:    pvToday?.length||0,
+          pageViews:      pvToday?.length||0,
           uniqueSessions: sessions.size,
           pvByPage,
-          messages:     newMsgs||[],
-          newFeedback:  newFeedback24||[],
-          generatedAt:  new Date().toLocaleString("en-US",{timeZone:"America/Los_Angeles",
-            month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",timeZoneName:"short"}),
+          messages:       newMsgs||[],
+          newFeedback:    newFeedback24||[],
+          loginToday:     loginToday||[],
+          activeUsers:    new Set((loginToday||[]).map(l=>l.org_id)).size,
+          missedSignups:  missedSignups||[],
+          generatedAt:    new Date().toLocaleString("en-US",{timeZone:"America/Los_Angeles",month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",timeZoneName:"short"}),
         });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       }
       setLoading(false);
     })();
@@ -16586,14 +16656,22 @@ function AdminHub({ currentUser, org }) {
             {analytics.byDay.length===0
               ?<div style={{textAlign:"center",color:"var(--muted)",padding:32,fontSize:13}}>No data yet</div>
               :<div style={{overflowX:"auto"}}>
-                <div style={{display:"flex",gap:6,alignItems:"flex-end",minWidth:Math.max(400,analytics.byDay.length*44)+"px",height:160,padding:"0 4px 0"}}>
-                  {analytics.byDay.map(([day,count])=>{
-                    const barH = Math.max(6,(count/analytics.maxDay*120));
+                <div style={{display:"flex",gap:4,alignItems:"center",marginBottom:8}}>
+                  <div style={{width:10,height:10,borderRadius:2,background:"var(--gold)",flexShrink:0}}/><span style={{fontSize:11,color:"var(--muted)",marginRight:12}}>Landing page views</span>
+                  <div style={{width:10,height:10,borderRadius:2,background:"#4caf50",flexShrink:0}}/><span style={{fontSize:11,color:"var(--muted)"}}>Active logins</span>
+                </div>
+                <div style={{display:"flex",gap:6,alignItems:"flex-end",minWidth:Math.max(400,analytics.byDay.length*52)+"px",height:160,padding:"0 4px 0"}}>
+                  {analytics.byDay.map(([day,count,logins])=>{
+                    const barH  = Math.max(4,(count/(analytics.maxDay)*110));
+                    const loginH = Math.max(logins>0?4:0,((logins||0)/(analytics.maxDay)*110));
                     const mo = new Date(day+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"});
                     return(
-                      <div key={day} style={{flex:1,minWidth:36,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--gold)"}}>{count}</div>
-                        <div style={{width:"100%",maxWidth:44,background:"var(--gold)",borderRadius:"4px 4px 0 0",height:barH+"px",transition:"height .3s",opacity:.85}}/>
+                      <div key={day} style={{flex:1,minWidth:40,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                        <div style={{fontSize:10,color:"var(--muted)"}}>{(logins||0)>0?<span style={{color:"#4caf50",fontWeight:700}}>{logins}</span>:""}</div>
+                        <div style={{width:"100%",display:"flex",gap:2,alignItems:"flex-end",justifyContent:"center"}}>
+                          <div title={`${count} page views`} style={{width:"44%",maxWidth:18,background:"var(--gold)",borderRadius:"3px 3px 0 0",height:barH+"px",transition:"height .3s",opacity:.8}}/>
+                          <div title={`${logins||0} logins`} style={{width:"44%",maxWidth:18,background:"#4caf50",borderRadius:"3px 3px 0 0",height:loginH+"px",transition:"height .3s",opacity:.8}}/>
+                        </div>
                         <div style={{fontSize:10,color:"var(--muted)",textAlign:"center",lineHeight:1.2,whiteSpace:"nowrap"}}>{mo}</div>
                       </div>
                     );
@@ -18948,137 +19026,6 @@ function RoomMap({ loc, items, userId, onUpdate }) {
                   </div>
                 </div>
               ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-  const savePins = async (newPins) => {
-    await SB.from("storage_locations").update({ map_pins: newPins }).eq("id", loc.id);
-    setPins(newPins);
-    onUpdate({ ...loc, map_pins: newPins });
-  };
-
-  const uploadPhoto = async (file) => {
-    if (!file) return;
-    setUploading(true);
-    const ext  = file.name.split(".").pop();
-    const path = `${userId}/${loc.id}.${ext}`;
-    const { error } = await SB.storage.from("room-photos").upload(path, file, { upsert: true, contentType: file.type });
-    if (!error) {
-      const { data: { publicUrl } } = SB.storage.from("room-photos").getPublicUrl(path);
-      await SB.from("storage_locations").update({ map_photo_url: publicUrl }).eq("id", loc.id);
-      onUpdate({ ...loc, map_photo_url: publicUrl });
-    }
-    setUploading(false);
-  };
-
-  const onMapClick = (e) => {
-    if (!adding) return;
-    if (e.target.closest(".pin-dot")) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width * 100).toFixed(2);
-    const y = ((e.clientY - rect.top)  / rect.height * 100).toFixed(2);
-    setPending({ x: parseFloat(x), y: parseFloat(y) });
-    setPinName(""); setPinNotes("");
-  };
-
-  const savePin = async () => {
-    if (!pinName.trim()) return;
-    const newPin = { id: Date.now(), x: pending.x, y: pending.y, name: pinName.trim(), notes: pinNotes.trim(), color: PIN_COLORS[pins.length % PIN_COLORS.length] };
-    const newPins = [...pins, newPin];
-    await savePins(newPins);
-    setPending(null); setAdding(false);
-  };
-
-  const deletePin = async (id) => {
-    const newPins = pins.filter(p => p.id !== id);
-    await savePins(newPins);
-    setSelPin(null);
-  };
-
-  const photoUrl = loc.map_photo_url;
-  const inp = { background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,padding:"8px 10px",color:"var(--text)",fontSize:13,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box" };
-
-  return (
-    <div>
-      {!photoUrl ? (
-        <div style={{ border:"2px dashed var(--border)",borderRadius:10,padding:32,textAlign:"center",cursor:"pointer",background:"var(--parch)" }} onClick={() => fileRef.current?.click()}>
-          <div style={{ fontSize:32,marginBottom:8 }}>📷</div>
-          <div style={{ fontWeight:700,fontSize:14,marginBottom:4 }}>Upload a photo of this room</div>
-          <div style={{ fontSize:12,color:"var(--muted)",marginBottom:12 }}>Take a photo on your phone and upload it here</div>
-          {uploading ? <div style={{ color:"var(--muted)",fontSize:13 }}>Uploading…</div> : <button className="btn btn-o" onClick={e=>{e.stopPropagation();fileRef.current?.click();}}>Choose Photo</button>}
-          <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={e=>uploadPhoto(e.target.files[0])} />
-        </div>
-      ) : (
-        <div>
-          <div style={{ display:"flex",gap:8,marginBottom:10,alignItems:"center",flexWrap:"wrap" }}>
-            <button className={`btn ${adding?"btn-g":"btn-o"}`} style={{ fontSize:12 }} onClick={() => { setAdding(!adding); setPending(null); }}>
-              {adding ? "✕ Cancel" : "📍 Add Pin"}
-            </button>
-            <button className="btn btn-o" style={{ fontSize:12 }} onClick={() => fileRef.current?.click()}>🔄 Change Photo</button>
-            <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={e=>uploadPhoto(e.target.files[0])} />
-            {adding && <span style={{ fontSize:12,color:"var(--muted)",fontStyle:"italic" }}>Tap anywhere on the photo to drop a pin</span>}
-          </div>
-
-          <div style={{ position:"relative",borderRadius:10,overflow:"hidden",border:"1px solid var(--border)",cursor:adding?"crosshair":"default" }} onClick={onMapClick}>
-            <img src={photoUrl} style={{ width:"100%",display:"block",userSelect:"none" }} draggable={false} />
-            {pins.map((pin, i) => (
-              <div key={pin.id} className="pin-dot" style={{ position:"absolute",left:`${pin.x}%`,top:`${pin.y}%`,transform:"translate(-50%,-100%)",cursor:"pointer",zIndex:10 }} onClick={e=>{ e.stopPropagation(); setSelPin(selPin?.id===pin.id?null:pin); }}>
-                <div style={{ background:pin.color,borderRadius:"50% 50% 50% 0",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",transform:"rotate(-45deg)",border:"2px solid rgba(0,0,0,0.2)" }}>
-                  <span style={{ transform:"rotate(45deg)",color:"#fff",fontSize:11,fontWeight:700 }}>{i+1}</span>
-                </div>
-                {selPin?.id===pin.id && (
-                  <div style={{ position:"absolute",bottom:34,left:"50%",transform:"translateX(-50%)",background:"var(--dark2)",border:"1px solid var(--border)",borderRadius:8,padding:"10px 12px",minWidth:160,zIndex:20,whiteSpace:"nowrap" }}>
-                    <div style={{ fontWeight:700,fontSize:13,color:"var(--gold)",marginBottom:2 }}>{pin.name}</div>
-                    {pin.notes && <div style={{ fontSize:11,color:"var(--muted)",marginBottom:6 }}>{pin.notes}</div>}
-                    <div style={{ fontSize:11,color:"var(--muted)",marginBottom:6 }}>{items.filter(it=>it.location_id===loc.id&&it.pin_id===pin.id).length} items</div>
-                    <button onClick={()=>deletePin(pin.id)} style={{ fontSize:11,color:"var(--red)",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",padding:0 }}>Remove pin</button>
-                  </div>
-                )}
-              </div>
-            ))}
-            {pending && (
-              <div style={{ position:"absolute",left:`${pending.x}%`,top:`${pending.y}%`,transform:"translate(-50%,-100%)",pointerEvents:"none" }}>
-                <div style={{ background:"var(--gold)",borderRadius:"50% 50% 50% 0",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",transform:"rotate(-45deg)",border:"2px solid rgba(0,0,0,0.3)" }}>
-                  <span style={{ transform:"rotate(45deg)",color:"#1a0f00",fontSize:13 }}>?</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {pending && (
-            <div style={{ marginTop:12,padding:14,background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10 }}>
-              <div style={{ fontWeight:700,fontSize:13,marginBottom:10 }}>Name this pin</div>
-              <input style={{ ...inp,marginBottom:8 }} value={pinName} onChange={e=>setPinName(e.target.value)} placeholder="e.g. Red Costume Tubs, Prop Shelf B" autoFocus onKeyDown={e=>e.key==="Enter"&&savePin()} />
-              <textarea style={{ ...inp,minHeight:48,resize:"vertical",marginBottom:10 }} value={pinNotes} onChange={e=>setPinNotes(e.target.value)} placeholder="Optional — row 3, left side, grey metal rack..." />
-              <div style={{ display:"flex",gap:8 }}>
-                <button className="btn btn-g" style={{ flex:1 }} onClick={savePin} disabled={!pinName.trim()}>Save Pin</button>
-                <button className="btn btn-o" onClick={()=>{ setPending(null); setAdding(false); }}>Cancel</button>
-              </div>
-            </div>
-          )}
-
-          {pins.length > 0 && (
-            <div style={{ marginTop:12 }}>
-              <div style={{ fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:6 }}>Pinned locations</div>
-              {pins.map((pin, i) => {
-                const pinItems = items.filter(it => it.location_id === loc.id);
-                return (
-                  <div key={pin.id} style={{ display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:"var(--parch)",border:"1px solid var(--border)",borderRadius:8,marginBottom:5,cursor:"pointer" }} onClick={()=>setSelPin(selPin?.id===pin.id?null:pin)}>
-                    <div style={{ width:20,height:20,borderRadius:"50%",background:pin.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
-                      <span style={{ fontSize:10,fontWeight:700,color:"#fff" }}>{i+1}</span>
-                    </div>
-                    <div style={{ flex:1,minWidth:0 }}>
-                      <div style={{ fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{pin.name}</div>
-                      {pin.notes && <div style={{ fontSize:11,color:"var(--muted)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{pin.notes}</div>}
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           )}
         </div>
