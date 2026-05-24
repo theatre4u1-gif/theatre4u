@@ -14937,18 +14937,35 @@ function AdminDailyDigest() {
 
       {!loading&&data&&(
         <>
+          {/* Missed signups alert */}
+          {(data.missedSignups||[]).length > 0 && (
+            <div style={{background:"rgba(194,24,91,.08)",border:"1px solid rgba(194,24,91,.3)",borderRadius:10,padding:"12px 16px",marginBottom:16,display:"flex",alignItems:"flex-start",gap:10}}>
+              <span style={{fontSize:20}}>⚠️</span>
+              <div>
+                <div style={{fontWeight:700,fontSize:13,color:"var(--red)",marginBottom:4}}>
+                  {data.missedSignups.length} signup notification{data.missedSignups.length>1?"s":""} not yet sent
+                </div>
+                {data.missedSignups.map((s,i)=>(
+                  <div key={i} style={{fontSize:12,color:"var(--muted)",marginBottom:2}}>
+                    • {s.org_name} — <a href={`mailto:${s.org_email}`} style={{color:"var(--gold)"}}>{s.org_email}</a> ({s.plan})
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* KPI Cards */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:10,marginBottom:24}}>
             {[
-              {icon:"🎭",label:"New Signups",     n:data.newOrgs.length,          color:"var(--gold)"},
-              {icon:"📦",label:"Items Added",     n:data.newItems.length,          color:"#4caf50"},
-              {icon:"📥",label:"Beta Leads",      n:data.newLeads.length,          color:"#2196f3"},
-              {icon:"✉️",label:"Emails Sent",     n:data.emailsSent.length,        color:"#9c27b0"},
-              {icon:"👁", label:"Page Views",     n:data.pageViews,                color:"var(--muted)"},
-              {icon:"🔗",label:"Sessions",        n:data.uniqueSessions,           color:"var(--muted)"},
-              {icon:"🔑",label:"Logins",          n:data.loginRows.length,         color:"#ff9800"},
-              {icon:"💬",label:"Messages",        n:data.messages.length,          color:"#ff9800"},
-              {icon:"📋",label:"Feedback",        n:data.newFeedback.length,       color:"#e91e63"},
+              {icon:"🎭",label:"New Signups",    n:data.newOrgs.length,                         color:"var(--gold)"},
+              {icon:"👥",label:"Active Users",   n:data.activeUsers||0,                         color:"#4caf50"},
+              {icon:"🔑",label:"Logins Today",   n:(data.loginToday||[]).length,                color:"#ff9800"},
+              {icon:"📦",label:"Items Added",    n:data.newItems.length,                        color:"#4caf50"},
+              {icon:"📥",label:"Beta Leads",     n:data.newLeads.length,                        color:"#2196f3"},
+              {icon:"✉️",label:"Emails Sent",    n:data.emailsSent.length,                      color:"#9c27b0"},
+              {icon:"👁", label:"Page Views",    n:data.pageViews,                              color:"var(--muted)"},
+              {icon:"💬",label:"Messages",       n:data.messages.length,                        color:"#ff9800"},
+              {icon:"📋",label:"Feedback",       n:data.newFeedback.length,                     color:"#e91e63"},
             ].map(k=>(
               <div key={k.label} style={{...card,padding:"12px 14px",textAlign:"center"}}>
                 <div style={{fontSize:18,marginBottom:3}}>{k.icon}</div>
@@ -14956,6 +14973,26 @@ function AdminDailyDigest() {
                 <div style={{fontSize:10,color:"var(--muted)",marginTop:3,textTransform:"uppercase",letterSpacing:.4}}>{k.label}</div>
               </div>
             ))}
+          </div>
+
+          {/* Active users today */}
+          {(data.loginToday||[]).length > 0 && (
+            <div style={{...card,marginBottom:16}}>
+              {sectionHead("🔑","Active Today",(data.loginToday||[]).length)}
+              <div style={{padding:"8px 14px"}}>
+                {(data.loginToday||[]).map((l,i)=>(
+                  <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid var(--linen)"}}>
+                    <div>
+                      <span style={{fontWeight:700,fontSize:13}}>{l.org_name||l.email}</span>
+                      {l.plan&&<span style={{fontSize:11,color:"var(--muted)",marginLeft:8}}>{l.plan}</span>}
+                    </div>
+                    <span style={{fontSize:11,color:"var(--muted)"}}>{new Date(l.created_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/Los_Angeles"})}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           </div>
 
           {allQuiet&&(
@@ -15879,34 +15916,48 @@ function AdminHub({ currentUser, org }) {
         setLeads(data || []);
       }
        if (tab === "analytics") {
-         const { data: pv } = await SB.from("page_views")
-           .select("page,session_id,created_at,utm_source,utm_campaign,referrer,ref_code")
-           .order("created_at", { ascending: false }).limit(5000);
-         if (pv) {
-           const byPage={}, bySess={}, byDay={}, bySrc={};
-           pv.forEach(v => {
-             byPage[v.page] = (byPage[v.page]||0) + 1;
-             bySess[v.session_id] = true;
-             const day = (v.created_at||"").slice(0,10);
-             if (day) byDay[day] = (byDay[day]||0) + 1;
-             const src = v.utm_source||(v.referrer?.includes("facebook")?"facebook":v.referrer?.includes("google")?"google":v.referrer?.includes("instagram")?"instagram":"direct");
-             bySrc[src] = (bySrc[src]||0) + 1;
-           });
-           // Always include today so it shows on the chart even with 0 visits
-           const today = new Date().toISOString().slice(0,10);
-           if (!byDay[today]) byDay[today] = 0;
-           const dayEntries = Object.entries(byDay)
-             .sort(([a],[b]) => a > b ? 1 : -1).slice(-14);
-           const maxDay = Math.max(1, ...dayEntries.map(([,v])=>v));
-           setAnalytics({
-             views: pv.length,
-             sessions: Object.keys(bySess).length,
-             byPage: Object.entries(byPage).sort(([,a],[,b])=>b-a),
-             byDay: dayEntries,
-             maxDay,
-             bySrc: Object.entries(bySrc).sort(([,a],[,b])=>b-a),
-           });
-         }
+         const since90 = new Date(Date.now()-90*24*60*60*1000).toISOString();
+         const [{ data: pv }, { data: loginEvts }] = await Promise.all([
+           SB.from("page_views")
+             .select("page,session_id,created_at,utm_source,utm_campaign,referrer,ref_code")
+             .order("created_at", { ascending: false }).limit(5000),
+           SB.from("login_events")
+             .select("org_id,org_name,created_at")
+             .gte("created_at", since90)
+             .order("created_at", { ascending: false }),
+         ]);
+         const byPage={}, bySess={}, byDay={}, bySrc={}, byLoginDay={};
+         // Page views (landing page traffic)
+         (pv||[]).forEach(v => {
+           byPage[v.page] = (byPage[v.page]||0) + 1;
+           bySess[v.session_id] = true;
+           const day = (v.created_at||"").slice(0,10);
+           if (day) byDay[day] = (byDay[day]||0) + 1;
+           const src = v.utm_source||(v.referrer?.includes("facebook")?"facebook":v.referrer?.includes("google")?"google":v.referrer?.includes("instagram")?"instagram":"direct");
+           bySrc[src] = (bySrc[src]||0) + 1;
+         });
+         // Login events (real daily active users)
+         (loginEvts||[]).forEach(v => {
+           const day = (v.created_at||"").slice(0,10);
+           if (day) byLoginDay[day] = (byLoginDay[day]||0) + 1;
+         });
+         // Merge last 14 days — show both landing page views and active logins
+         const today = new Date().toISOString().slice(0,10);
+         if (!byDay[today]) byDay[today] = 0;
+         if (!byLoginDay[today]) byLoginDay[today] = 0;
+         const allDays = new Set([...Object.keys(byDay), ...Object.keys(byLoginDay)]);
+         const dayEntries = [...allDays].sort().slice(-14).map(d => [d, byDay[d]||0, byLoginDay[d]||0]);
+         const maxDay = Math.max(1, ...dayEntries.map(([,v,l])=>Math.max(v,l)));
+         setAnalytics({
+           views: (pv||[]).length,
+           sessions: Object.keys(bySess).length,
+           activeLogins: (loginEvts||[]).length,
+           activeUsers: new Set((loginEvts||[]).map(l=>l.org_id)).size,
+           byPage: Object.entries(byPage).sort(([,a],[,b])=>b-a),
+           byDay: dayEntries,
+           maxDay,
+           bySrc: Object.entries(bySrc).sort(([,a],[,b])=>b-a),
+         });
       }
       if (tab === "labels") {
         const { data } = await SB.from("label_orders")
@@ -15918,7 +15969,7 @@ function AdminHub({ currentUser, org }) {
         const [
           {data:newOrgs},   {data:newItems},  {data:newLeadsToday},
           {data:newEmails}, {data:pvToday},   {data:newMsgs},
-          {data:newFeedback24},
+          {data:newFeedback24}, {data:loginToday}, {data:missedSignups},
         ] = await Promise.all([
           SB.from("orgs").select("id,name,email,plan,created_at").gte("created_at",since),
           SB.from("items").select("id,name,category,org_id,added").gte("added",since).order("added",{ascending:false}),
@@ -15927,6 +15978,8 @@ function AdminHub({ currentUser, org }) {
           SB.from("page_views").select("page,session_id,created_at").gte("created_at",since),
           SB.from("messages").select("id,created_at").gte("created_at",since),
           SB.from("beta_feedback").select("id,category,org_name,message,created_at").gte("created_at",since),
+          SB.from("login_events").select("org_id,org_name,email,plan,created_at").gte("created_at",since).order("created_at",{ascending:false}),
+          SB.from("signup_notifications").select("org_name,org_email,plan,notified,notified_at").eq("notified",false).order("notified_at",{ascending:false}).limit(20),
         ]);
         const orgNames = {};
         (newItems||[]).forEach(i=>{ if(!orgNames[i.org_id]) orgNames[i.org_id]="Unknown"; });
@@ -15952,20 +16005,37 @@ function AdminHub({ currentUser, org }) {
           (orgNames2||[]).forEach(o=>{if(emailsByOrg[o.id])emailsByOrg[o.id].name=o.name;});
         }
         setDigest({
-          newOrgs:      newOrgs||[],
-          newItems:     (newItems||[]).map(i=>({...i,orgName:orgNames[i.org_id]||""})),
-          newLeads:     newLeadsToday||[],
-          emailsSent:   newEmails||[],
+          newOrgs:        newOrgs||[],
+          newItems:       (newItems||[]).map(i=>({...i,orgName:orgNames[i.org_id]||""})),
+          newLeads:       newLeadsToday||[],
+          emailsSent:     newEmails||[],
           emailsByOrg,
           emailLabels,
-          pageViews:    pvToday?.length||0,
+          pageViews:      pvToday?.length||0,
           uniqueSessions: sessions.size,
           pvByPage,
-          messages:     newMsgs||[],
-          newFeedback:  newFeedback24||[],
-          generatedAt:  new Date().toLocaleString("en-US",{timeZone:"America/Los_Angeles",
-            month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",timeZoneName:"short"}),
+          messages:       newMsgs||[],
+          newFeedback:    newFeedback24||[],
+          loginToday:     loginToday||[],
+          activeUsers:    new Set((loginToday||[]).map(l=>l.org_id)).size,
+          missedSignups:  missedSignups||[],
+          generatedAt:    new Date().toLocaleString("en-US",{timeZone:"America/Los_Angeles",month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",timeZoneName:"short"}),
         });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       }
       setLoading(false);
     })();
@@ -16586,14 +16656,22 @@ function AdminHub({ currentUser, org }) {
             {analytics.byDay.length===0
               ?<div style={{textAlign:"center",color:"var(--muted)",padding:32,fontSize:13}}>No data yet</div>
               :<div style={{overflowX:"auto"}}>
-                <div style={{display:"flex",gap:6,alignItems:"flex-end",minWidth:Math.max(400,analytics.byDay.length*44)+"px",height:160,padding:"0 4px 0"}}>
-                  {analytics.byDay.map(([day,count])=>{
-                    const barH = Math.max(6,(count/analytics.maxDay*120));
+                <div style={{display:"flex",gap:4,alignItems:"center",marginBottom:8}}>
+                  <div style={{width:10,height:10,borderRadius:2,background:"var(--gold)",flexShrink:0}}/><span style={{fontSize:11,color:"var(--muted)",marginRight:12}}>Landing page views</span>
+                  <div style={{width:10,height:10,borderRadius:2,background:"#4caf50",flexShrink:0}}/><span style={{fontSize:11,color:"var(--muted)"}}>Active logins</span>
+                </div>
+                <div style={{display:"flex",gap:6,alignItems:"flex-end",minWidth:Math.max(400,analytics.byDay.length*52)+"px",height:160,padding:"0 4px 0"}}>
+                  {analytics.byDay.map(([day,count,logins])=>{
+                    const barH  = Math.max(4,(count/(analytics.maxDay)*110));
+                    const loginH = Math.max(logins>0?4:0,((logins||0)/(analytics.maxDay)*110));
                     const mo = new Date(day+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"});
                     return(
-                      <div key={day} style={{flex:1,minWidth:36,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"var(--gold)"}}>{count}</div>
-                        <div style={{width:"100%",maxWidth:44,background:"var(--gold)",borderRadius:"4px 4px 0 0",height:barH+"px",transition:"height .3s",opacity:.85}}/>
+                      <div key={day} style={{flex:1,minWidth:40,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                        <div style={{fontSize:10,color:"var(--muted)"}}>{(logins||0)>0?<span style={{color:"#4caf50",fontWeight:700}}>{logins}</span>:""}</div>
+                        <div style={{width:"100%",display:"flex",gap:2,alignItems:"flex-end",justifyContent:"center"}}>
+                          <div title={`${count} page views`} style={{width:"44%",maxWidth:18,background:"var(--gold)",borderRadius:"3px 3px 0 0",height:barH+"px",transition:"height .3s",opacity:.8}}/>
+                          <div title={`${logins||0} logins`} style={{width:"44%",maxWidth:18,background:"#4caf50",borderRadius:"3px 3px 0 0",height:loginH+"px",transition:"height .3s",opacity:.8}}/>
+                        </div>
                         <div style={{fontSize:10,color:"var(--muted)",textAlign:"center",lineHeight:1.2,whiteSpace:"nowrap"}}>{mo}</div>
                       </div>
                     );
