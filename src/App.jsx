@@ -5378,7 +5378,7 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
               </div>
             )}
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Invite Modal */}
