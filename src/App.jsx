@@ -6840,6 +6840,8 @@ function AdminProgramsTab({ orgs, currentUser, flash }) {
                   }}>+ Add Item</button>
                 </div>
               )}
+
+              {editItem&&(
                 <div style={{background:"var(--parch)",border:"1px solid var(--gold)",
                   borderRadius:10,padding:16,marginBottom:16}}>
                   <div style={{fontWeight:700,fontSize:14,marginBottom:12,color:"var(--gold)"}}>
