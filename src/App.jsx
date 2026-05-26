@@ -6017,6 +6017,4256 @@ function AdminEditItemModal({ item, onClose, onSaved }) {
   );
 }
 
+function autoMatch(header) {
+  const h = header.toLowerCase().trim();
+  for (const f of CSV_FIELDS) {
+    if (h === f.key) return f.key;
+    if (f.hints.some(hint => h.includes(hint) || hint.includes(h))) return f.key;
+  }
+  return null;
+}
+
+// Parse a raw CSV string into rows
+function parseCSV(text) {
+  const lines = text.replace(/\r\n/g,"\n").replace(/\r/g,"\n").split("\n").filter(l=>l.trim());
+  const rows = [];
+  for (const line of lines) {
+    const cols = [];
+    let cur = "", inQ = false;
+    for (let i=0; i<line.length; i++) {
+      const c = line[i];
+      if (c==="\"" && inQ && line[i+1]==="\"") { cur+="\""; i++; }
+      else if (c==="\"") { inQ=!inQ; }
+      else if (c==="," && !inQ) { cols.push(cur); cur=""; }
+      else { cur+=c; }
+    }
+    cols.push(cur);
+    rows.push(cols.map(c=>c.trim()));
+  }
+  return rows;
+}
+
+// Coerce a raw string value into the right type/valid value for a field
+function coerce(key, raw) {
+  if (!raw && raw!==0) return undefined;
+  const v = String(raw).trim();
+  if (!v) return undefined;
+  switch(key) {
+    case "category": {
+      const lo = v.toLowerCase();
+      const match = CATS.find(c => lo.includes(c.id) || lo.includes(c.label.toLowerCase()) ||
+        c.label.toLowerCase().includes(lo));
+      return match ? match.id : "other";
+    }
+    case "condition": {
+      const match = CONDS.find(c=>c.toLowerCase()===v.toLowerCase());
+      return match || "Good";
+    }
+    case "size": {
+      const match = SIZES.find(s=>s.toLowerCase()===v.toLowerCase());
+      return match || "N/A";
+    }
+    case "avail": {
+      const match = AVAIL.find(a=>a.toLowerCase()===v.toLowerCase());
+      return match || "In Stock";
+    }
+    case "mkt": {
+      const match = MKT.find(m=>m.toLowerCase()===v.toLowerCase());
+      return match || "Not Listed";
+    }
+    case "qty":        { const n=parseInt(v); return isNaN(n)?1:Math.max(0,n); }
+    case "loan_period":{ const n=parseInt(v); return isNaN(n)?2:Math.max(1,n); }
+    case "rent":
+    case "sale": { const n=parseFloat(v.replace(/[$,]/g,"")); return isNaN(n)?0:Math.max(0,n); }
+    case "tags": { return v.split(/[;,|]/).map(t=>t.trim().toLowerCase()).filter(Boolean); }
+    case "img":  { return normalizeImageUrl(v); }
+    default:     return v;
+  }
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PRODUCTIONS  (Show Folders)
+// ══════════════════════════════════════════════════════════════════════════════
+
+const PROD_COLORS = [
+  "#d4a843","#c2185b","#7b1fa2","#1565c0","#2e7d32",
+  "#d84315","#00838f","#4e342e","#ad1457","#546e7a",
+];
+
+const PROD_STATUSES = [
+  { key:"needed",      label:"Needed",      color:"#9b93a8" },
+  { key:"confirmed",   label:"Confirmed",   color:"#4caf50" },
+  { key:"checked_out", label:"Checked Out", color:"#42a5f5" },
+  { key:"returned",    label:"Returned",    color:"#d4a843" },
+];
+const PROD_STATUS_MAP = Object.fromEntries(PROD_STATUSES.map(s=>[s.key,s]));
+
+// ── Add-to-Production picker (shown from item detail or card) ─────────────
+function AddToProductionPicker({ item, userId, onClose }) {
+  const [productions, setProductions] = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [saving,      setSaving]      = useState(null);
+  const [done,        setDone]        = useState({});
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await SB.from("productions")
+        .select("*, production_items(item_id)")
+        .eq("org_id", userId)
+        .neq("status","closed")
+        .order("created_at", { ascending: false });
+      setProductions(data || []);
+      setLoading(false);
+    })();
+  }, [userId]);
+
+  const toggle = async (prod) => {
+    const already = prod.production_items?.some(pi => pi.item_id === item.id);
+    setSaving(prod.id);
+    if (already) {
+      await SB.from("production_items")
+        .delete()
+        .eq("production_id", prod.id)
+        .eq("item_id", item.id);
+      setDone(p => ({ ...p, [prod.id]: false }));
+    } else {
+      await SB.from("production_items")
+        .insert({ production_id: prod.id, item_id: item.id, qty_needed: 1 });
+      setDone(p => ({ ...p, [prod.id]: true }));
+    }
+    // Refresh
+    const { data } = await SB.from("productions")
+      .select("*, production_items(item_id)")
+      .eq("org_id", userId)
+      .neq("status","closed")
+      .order("created_at", { ascending: false });
+    setProductions(data || []);
+    setSaving(null);
+  };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.72)", zIndex:3000,
+      display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ width:"100%", maxWidth:400, background:"#fdf6ec",
+        border:"1px solid var(--border)", borderRadius:14, overflow:"hidden",
+        boxShadow:"0 12px 48px rgba(0,0,0,.5)", animation:"su .2s ease" }}>
+        <div style={{ padding:"14px 18px", borderBottom:"1px solid var(--border)",
+          display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700 }}>Add to Production</div>
+            <div style={{ fontSize:12, color:"var(--muted)", marginTop:2 }}>{item.name}</div>
+          </div>
+          <button onClick={onClose} style={{ background:"none", border:"1px solid var(--border)",
+            color:"var(--muted)", borderRadius:6, padding:"3px 9px", cursor:"pointer", fontFamily:"inherit" }}>✕</button>
+        </div>
+        <div style={{ padding:14, maxHeight:360, overflowY:"auto" }}>
+          {loading ? (
+            <div style={{ textAlign:"center", padding:24, color:"var(--muted)" }}>Loading…</div>
+          ) : productions.length === 0 ? (
+            <div style={{ textAlign:"center", padding:24 }}>
+              <div style={{ fontSize:32, marginBottom:8 }}>🎭</div>
+              <p style={{ color:"var(--muted)", fontSize:13, marginBottom:12 }}>
+                No active productions yet. Create one on the Productions page first.
+              </p>
+            </div>
+          ) : (
+            productions.map(prod => {
+              const inProd = prod.production_items?.some(pi => pi.item_id === item.id);
+              const isDone = done[prod.id] !== undefined ? done[prod.id] : inProd;
+              return (
+                <div key={prod.id} onClick={() => saving !== prod.id && toggle(prod)}
+                  style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 12px",
+                    borderRadius:8, cursor:"pointer", marginBottom:4,
+                    background: isDone ? "rgba(76,175,80,.1)" : "rgba(255,255,255,.03)",
+                    border:`1px solid ${isDone ? "rgba(76,175,80,.25)" : "var(--border)"}`,
+                    transition:"all .15s" }}>
+                  <div style={{ width:10, height:10, borderRadius:"50%",
+                    background:prod.color||"var(--gold)", flexShrink:0 }}/>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontWeight:600, fontSize:14 }}>{prod.name}</div>
+                    {prod.opening_date && (
+                      <div style={{ fontSize:11, color:"var(--muted)" }}>
+                        Opens {new Date(prod.opening_date).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ fontSize:18, flexShrink:0 }}>
+                    {saving === prod.id ? "⏳" : isDone ? "✅" : "○"}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+        <div style={{ padding:"10px 14px", borderTop:"1px solid var(--border)",
+          textAlign:"center", fontSize:12, color:"var(--muted)" }}>
+          Click a production to add or remove this item
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Production Form ────────────────────────────────────────────────────────
+function ProductionForm({ prod, onSave, onCancel }) {
+  const [f, setF] = useState(prod || {
+    name:"", show_title:"", opening_date:"", closing_date:"",
+    notes:"", color:PROD_COLORS[0], status:"planning"
+  });
+  const s = (k,v) => setF(p => ({ ...p, [k]:v }));
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+      <div className="fg2">
+        <div className="fg fu">
+          <label className="fl">Production Name *</label>
+          <input className="fi" value={f.name} onChange={e=>s("name",e.target.value)}
+            placeholder="e.g. The Wiz — Spring 2026" autoFocus/>
+        </div>
+        <div className="fg">
+          <label className="fl">Show Title</label>
+          <input className="fi" value={f.show_title||""} onChange={e=>s("show_title",e.target.value)}
+            placeholder="The Wiz"/>
+        </div>
+        <div className="fg">
+          <label className="fl">Status</label>
+          <select className="fs" value={f.status} onChange={e=>s("status",e.target.value)}>
+            <option value="planning">Planning</option>
+            <option value="active">Active</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+        <div className="fg">
+          <label className="fl">Opening Date</label>
+          <input className="fi" type="date" value={f.opening_date||""} onChange={e=>s("opening_date",e.target.value)}/>
+        </div>
+        <div className="fg">
+          <label className="fl">Closing Date</label>
+          <input className="fi" type="date" value={f.closing_date||""} onChange={e=>s("closing_date",e.target.value)}/>
+        </div>
+        <div className="fg fu">
+          <label className="fl">Color Label</label>
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:4 }}>
+            {PROD_COLORS.map(c => (
+              <div key={c} onClick={()=>s("color",c)}
+                style={{ width:28, height:28, borderRadius:"50%", background:c, cursor:"pointer",
+                  border: f.color===c ? "3px solid white" : "3px solid transparent",
+                  boxShadow: f.color===c ? `0 0 0 2px ${c}` : "none",
+                  transition:"all .15s" }}/>
+            ))}
+          </div>
+        </div>
+        <div className="fg fu">
+          <label className="fl">Notes</label>
+          <textarea className="ft" value={f.notes||""} onChange={e=>s("notes",e.target.value)}
+            placeholder="Budget notes, director's vision, special requirements…"/>
+        </div>
+      </div>
+      <div style={{ display:"flex", gap:8, justifyContent:"flex-end", paddingTop:10,
+        borderTop:"1px solid var(--border)" }}>
+        <button className="btn btn-o" onClick={onCancel}>Cancel</button>
+        <button className="btn btn-g" disabled={!f.name.trim()} onClick={()=>onSave(f)}
+          style={!f.name.trim()?{opacity:.4}:{}}>
+          {prod ? "Save Changes" : "Create Production"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Shared: Print Production Report ──────────────────────────────────────────
+async function printProductionReport(prod, needs, prodItems, allItems, org) {
+  const today = new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
+  const orgName = org?.name || "Theatre Program";
+
+  // Status helpers
+  const statusLabel = { needed:"Still Needed", searching:"Searching", found:"Found",
+    acquired:"Acquired", not_needed:"Not Needed" };
+  const sourceLabel  = { unknown:"TBD", in_house:"From Our Inventory",
+    exchange:"Backstage Exchange", borrow:"Borrowing", buy:"Purchasing", donate:"Donated" };
+
+  // Stats
+  const totalNeeds = needs.length;
+  const acquiredN  = needs.filter(n=>n.status==="acquired").length;
+  const pct        = totalNeeds > 0 ? Math.round(acquiredN/totalNeeds*100) : 0;
+  const estCost    = needs.reduce((s,n)=>s+(parseFloat(n.estimated_cost)||0),0);
+  const actCost    = needs.reduce((s,n)=>s+(parseFloat(n.actual_cost)||0),0);
+
+  // Group needs by category
+  const needsByCat = {};
+  needs.forEach(n=>{
+    const cat = n.category||"other";
+    if(!needsByCat[cat]) needsByCat[cat]=[];
+    needsByCat[cat].push(n);
+  });
+
+  // Group inventory items by category
+  const enriched = prodItems.map(pi=>({...pi, item:allItems.find(i=>i.id===pi.item_id)}))
+    .filter(pi=>pi.item);
+  const invByCat = {};
+  enriched.forEach(pi=>{
+    const cat = pi.item?.category||"other";
+    if(!invByCat[cat]) invByCat[cat]=[];
+    invByCat[cat].push(pi);
+  });
+
+  const statusColor = { needed:"#c0392b", searching:"#e67e22", found:"#2980b9",
+    acquired:"#27ae60", not_needed:"#95a5a6" };
+
+  const needsHTML = Object.entries(needsByCat).map(([catId, catNeeds])=>{
+    const cat = catId.charAt(0).toUpperCase()+catId.slice(1);
+    const rows = catNeeds.map((n,i)=>`
+      <tr style="background:${i%2===0?"#fff":"#faf7f2"}">
+        <td style="padding:7px 12px;border-bottom:1px solid #eee">${n.name}${n.qty_needed>1?` ×${n.qty_needed}`:""}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid #eee">
+          <span style="color:${statusColor[n.status]||"#666"};font-weight:700;font-size:11px">
+            ${statusLabel[n.status]||n.status}
+          </span>
+        </td>
+        <td style="padding:7px 12px;border-bottom:1px solid #eee;font-size:12px;color:#666">
+          ${sourceLabel[n.source]||n.source}
+        </td>
+        <td style="padding:7px 12px;border-bottom:1px solid #eee;font-size:12px;color:#666">
+          ${n.resolved_notes||n.notes||"—"}
+        </td>
+        <td style="padding:7px 12px;border-bottom:1px solid #eee;text-align:right;font-size:12px">
+          ${n.actual_cost?`$${parseFloat(n.actual_cost).toFixed(2)}`:n.estimated_cost?`~$${parseFloat(n.estimated_cost).toFixed(2)}`:"—"}
+        </td>
+      </tr>`).join("");
+    return `
+      <div style="margin-bottom:24px;break-inside:avoid">
+        <div style="background:#f5ede0;padding:7px 12px;font-weight:700;font-size:12px;
+          text-transform:uppercase;letter-spacing:1px;color:#8a6a20;border-radius:4px 4px 0 0">
+          ${cat} (${catNeeds.length})
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:#fff8ef">
+            <th style="padding:6px 12px;text-align:left;border-bottom:2px solid #e8d89a;color:#666;font-size:11px">Item</th>
+            <th style="padding:6px 12px;text-align:left;border-bottom:2px solid #e8d89a;color:#666;font-size:11px">Status</th>
+            <th style="padding:6px 12px;text-align:left;border-bottom:2px solid #e8d89a;color:#666;font-size:11px">Source</th>
+            <th style="padding:6px 12px;text-align:left;border-bottom:2px solid #e8d89a;color:#666;font-size:11px">Notes</th>
+            <th style="padding:6px 12px;text-align:right;border-bottom:2px solid #e8d89a;color:#666;font-size:11px">Cost</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }).join("");
+
+  const invHTML = Object.entries(invByCat).length > 0 ? Object.entries(invByCat).map(([catId,items])=>{
+    const cat = catId.charAt(0).toUpperCase()+catId.slice(1);
+    const rows = items.map((pi,i)=>`
+      <tr style="background:${i%2===0?"#fff":"#faf7f2"}">
+        <td style="padding:7px 12px;border-bottom:1px solid #eee">${pi.item?.name||"—"}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid #eee;font-size:12px;color:#666">${pi.item?.condition||"—"}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid #eee;font-size:12px;color:#666">${pi.item?.location||"—"}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid #eee">
+          <span style="font-size:11px;font-weight:700;color:${
+            pi.status==="confirmed"||pi.status==="returned"?"#27ae60":
+            pi.status==="needed"?"#c0392b":"#e67e22"}">
+            ${pi.status||"needed"}
+          </span>
+        </td>
+      </tr>`).join("");
+    return `
+      <div style="margin-bottom:24px;break-inside:avoid">
+        <div style="background:#f5ede0;padding:7px 12px;font-weight:700;font-size:12px;
+          text-transform:uppercase;letter-spacing:1px;color:#8a6a20;border-radius:4px 4px 0 0">
+          ${cat} (${items.length})
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:#fff8ef">
+            <th style="padding:6px 12px;text-align:left;border-bottom:2px solid #e8d89a;color:#666;font-size:11px">Item</th>
+            <th style="padding:6px 12px;text-align:left;border-bottom:2px solid #e8d89a;color:#666;font-size:11px">Condition</th>
+            <th style="padding:6px 12px;text-align:left;border-bottom:2px solid #e8d89a;color:#666;font-size:11px">Location</th>
+            <th style="padding:6px 12px;text-align:left;border-bottom:2px solid #e8d89a;color:#666;font-size:11px">Status</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }).join("") : '<p style="color:#888;font-style:italic;font-size:13px">No inventory items assigned to this production.</p>';
+
+  const html = `<!DOCTYPE html><html><head><title>${prod.name} — Production Report</title>
+  <style>
+    body{font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1008;margin:0;padding:0}
+    @media print{body{margin:0}.no-print{display:none}}
+    h1,h2,h3{font-family:Georgia,serif}
+  </style></head><body>
+  <div style="max-width:860px;margin:0 auto;padding:40px 32px">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;
+      margin-bottom:32px;padding-bottom:20px;border-bottom:3px solid #1a1200">
+      <div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;
+          color:#c4922a;margin-bottom:6px">Production Report · Theatre4u™</div>
+        <h1 style="font-size:32px;font-weight:700;color:#1a1200;margin:0 0 4px">${prod.name}</h1>
+        ${prod.show_title?`<div style="font-size:16px;color:#666;margin-bottom:4px">${prod.show_title}</div>`:""}
+        <div style="font-size:13px;color:#888">${orgName}</div>
+      </div>
+      <div style="text-align:right">
+        ${prod.opening_date?`<div style="font-size:13px;color:#444;margin-bottom:3px">
+          <strong>Opens:</strong> ${new Date(prod.opening_date).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}
+        </div>`:""}
+        ${prod.closing_date?`<div style="font-size:13px;color:#444;margin-bottom:3px">
+          <strong>Closes:</strong> ${new Date(prod.closing_date).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}
+        </div>`:""}
+        <div style="font-size:11px;color:#aaa;margin-top:8px">Generated ${today}</div>
+      </div>
+    </div>
+
+    <!-- Summary stats -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:32px">
+      ${[
+        ["Needs List Items", totalNeeds],
+        ["Items Sourced",    acquiredN],
+        ["Progress",         pct+"%"],
+        ["Items from Inventory", enriched.length],
+      ].map(([l,v])=>`
+        <div style="border:1px solid #e8dcc8;border-radius:8px;padding:14px;text-align:center;background:#fffcf7">
+          <div style="font-size:26px;font-weight:700;font-family:Georgia,serif;color:#c4922a">${v}</div>
+          <div style="font-size:10px;color:#8a7a60;margin-top:3px;text-transform:uppercase;letter-spacing:.5px">${l}</div>
+        </div>`).join("")}
+    </div>
+
+    ${(estCost>0||actCost>0)?`
+    <!-- Cost summary -->
+    <div style="background:#fffcf7;border:1px solid #e8d89a;border-radius:8px;padding:16px 20px;
+      margin-bottom:28px;display:flex;gap:32px">
+      ${estCost>0?`<div><div style="font-size:11px;color:#8a7a60;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Estimated Budget</div>
+        <div style="font-size:22px;font-weight:700;font-family:Georgia,serif;color:#c4922a">$${estCost.toFixed(2)}</div></div>`:""}
+      ${actCost>0?`<div><div style="font-size:11px;color:#8a7a60;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Actual Spent</div>
+        <div style="font-size:22px;font-weight:700;font-family:Georgia,serif;color:#1a1200">$${actCost.toFixed(2)}</div></div>`:""}
+    </div>`:""}
+
+    ${prod.notes?`
+    <!-- Director notes -->
+    <div style="background:#f5f5f5;border-left:4px solid #c4922a;padding:12px 16px;
+      border-radius:0 6px 6px 0;margin-bottom:28px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+        color:#8a7a60;margin-bottom:6px">Director's Notes</div>
+      <div style="font-size:13px;color:#444;line-height:1.7">${prod.notes}</div>
+    </div>`:""}
+
+    <!-- Needs List -->
+    ${totalNeeds>0?`
+    <h2 style="font-size:20px;font-weight:700;color:#1a1200;margin:0 0 16px;
+      padding-bottom:8px;border-bottom:2px solid #e8dcc8">
+      📋 Needs List — What This Production Requires
+    </h2>
+    ${needsHTML}`:""}
+
+    <!-- From Inventory -->
+    <h2 style="font-size:20px;font-weight:700;color:#1a1200;margin:28px 0 16px;
+      padding-bottom:8px;border-bottom:2px solid #e8dcc8">
+      📦 Items from Your Inventory
+    </h2>
+    ${invHTML}
+
+    <!-- Footer -->
+    <div style="margin-top:40px;padding-top:16px;border-top:1px solid #eee;
+      font-size:11px;color:#aaa;text-align:center">
+      Generated by Theatre4u™ · theatre4u.org · ${today}
+    </div>
+  </div>
+  <script>window.onload=function(){window.print()}</script>
+  </body></html>`;
+
+  const w = window.open("","_blank","width=1000,height=750");
+  if(w){ w.document.write(html); w.document.close(); }
+}
+
+// ── Production Needs CSV Import ───────────────────────────────────────────────
+function ProductionNeedsImport({ prod, userId, onImported, onClose }) {
+  const [step,      setStep]      = useState("upload"); // upload → preview → done
+  const [rows,      setRows]      = useState([]);
+  const [headers,   setHeaders]   = useState([]);
+  const [mapping,   setMapping]   = useState({});
+  const [preview,   setPreview]   = useState([]);
+  const [importing, setImporting] = useState(false);
+  const [result,    setResult]    = useState(null);
+  const fileRef = useRef();
+
+  // Fields we can map from CSV
+  const FIELDS = [
+    { key:"name",           label:"Item Name *",     required:true  },
+    { key:"category",       label:"Category",        required:false },
+    { key:"qty_needed",     label:"Quantity",        required:false },
+    { key:"status",         label:"Status",          required:false },
+    { key:"source",         label:"Source",          required:false },
+    { key:"estimated_cost", label:"Estimated Cost",  required:false },
+    { key:"notes",          label:"Notes",           required:false },
+  ];
+
+  const downloadTemplate = () => {
+    const h = ["Item Name","Category","Quantity","Status","Source","Estimated Cost","Notes"];
+    const ex = [
+      ["Magic Wand","props","1","needed","unknown","","Check with Lincoln High"],
+      ["Victorian Ball Gown","costumes","2","searching","exchange","","Need size M and L"],
+      ["Crown","props","3","needed","buy","15.00","Party City or Amazon"],
+      ["Fog Machine","effects","1","found","in_house","","We have one in effects cage"],
+      ["Period Boots","costumes","4","needed","borrow","","Try Fountain Valley HS"],
+    ];
+    const csv = [h,...ex].map(r=>r.join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+    a.download = "production_needs_template.csv";
+    a.click();
+  };
+
+  // Auto-match column headers to field keys
+  const autoMatch = h => {
+    const s = h.toLowerCase().trim();
+    if (s.includes("name") || s.includes("item"))          return "name";
+    if (s.includes("cat"))                                  return "category";
+    if (s.includes("qty") || s.includes("quantity") || s.includes("num")) return "qty_needed";
+    if (s.includes("status"))                               return "status";
+    if (s.includes("source") || s.includes("how"))         return "source";
+    if (s.includes("cost") || s.includes("price") || s.includes("est")) return "estimated_cost";
+    if (s.includes("note") || s.includes("comment"))       return "notes";
+    return null;
+  };
+
+  const handleFile = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const allRows = parseCSV(ev.target.result);
+      if (allRows.length < 2) { alert("File must have a header row and at least one data row."); return; }
+      const hdrs = allRows[0];
+      const dataRows = allRows.slice(1).filter(r => r.some(c=>c));
+      setHeaders(hdrs);
+      setRows(dataRows);
+      // Auto-detect mapping
+      const auto = {};
+      hdrs.forEach((h,i) => { const m = autoMatch(h); if (m) auto[i] = m; });
+      setMapping(auto);
+      buildPreviewFromRows(hdrs, dataRows, auto);
+    };
+    reader.readAsText(file);
+  };
+
+  const buildPreviewFromRows = (hdrs, dataRows, map) => {
+    // Validate category and source values
+    const validCats   = CATS.map(c=>c.id);
+    const validStatus = ["needed","searching","found","acquired","not_needed"];
+    const validSource = ["unknown","in_house","exchange","borrow","buy","donate"];
+
+    const items = dataRows.map(row => {
+      const item = {
+        name:"", category:"other", qty_needed:1,
+        status:"needed", source:"unknown",
+        estimated_cost:null, notes:"",
+      };
+      Object.entries(map).forEach(([colIdx, fieldKey]) => {
+        const raw = (row[parseInt(colIdx)]||"").trim();
+        if (!raw) return;
+        switch(fieldKey) {
+          case "name":           item.name = raw; break;
+          case "category": {
+            const lc = raw.toLowerCase();
+            const match = validCats.find(c=>lc.includes(c)||c.includes(lc));
+            if (match) item.category = match;
+            else item.category = "other";
+            break;
+          }
+          case "qty_needed":     item.qty_needed = parseInt(raw)||1; break;
+          case "status": {
+            const lc = raw.toLowerCase();
+            item.status = validStatus.find(s=>s.includes(lc)||lc.includes(s))||"needed";
+            break;
+          }
+          case "source": {
+            const lc = raw.toLowerCase();
+            if (lc.includes("house")||lc.includes("own")||lc.includes("inventory")) item.source="in_house";
+            else if (lc.includes("exchange")||lc.includes("borrow exchange"))       item.source="exchange";
+            else if (lc.includes("borrow"))                                          item.source="borrow";
+            else if (lc.includes("buy")||lc.includes("purch"))                      item.source="buy";
+            else if (lc.includes("donat"))                                           item.source="donate";
+            else item.source="unknown";
+            break;
+          }
+          case "estimated_cost": item.estimated_cost = parseFloat(raw.replace(/[$,]/g,""))||null; break;
+          case "notes":          item.notes = raw; break;
+        }
+      });
+      return item;
+    }).filter(i => i.name.trim());
+
+    setPreview(items);
+    setStep("preview");
+  };
+
+  const doImport = async () => {
+    setImporting(true);
+    const now = new Date().toISOString();
+    const payload = preview.map(item => ({
+      ...item,
+      production_id: prod.id,
+      org_id: userId,
+      added_at: now,
+      updated_at: now,
+    }));
+
+    // Insert in batches of 50
+    let imported = 0;
+    for (let i=0; i<payload.length; i+=50) {
+      const { error } = await SB.from("production_needs").insert(payload.slice(i, i+50));
+      if (!error) imported += Math.min(50, payload.length-i);
+    }
+    setResult(imported);
+    setStep("done");
+    setImporting(false);
+  };
+
+  const card = { background:"var(--parch)", border:"1px solid var(--border)",
+    borderRadius:10, padding:20 };
+
+  // ── DONE ──
+  if (step === "done") return (
+    <div style={{...card, textAlign:"center"}}>
+      <div style={{fontSize:40,marginBottom:12}}>✅</div>
+      <h3 style={{fontFamily:"var(--serif)",marginBottom:8}}>Import Complete</h3>
+      <p style={{color:"var(--muted)",fontSize:13,marginBottom:20}}>
+        {result} item{result!==1?"s":""} added to your needs list.
+      </p>
+      <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+        <button className="btn btn-o btn-sm" onClick={()=>{
+          setStep("upload"); setPreview([]); setRows([]); setHeaders([]); setMapping({}); setResult(null);
+        }}>Import Another File</button>
+        <button className="btn btn-g btn-sm" onClick={()=>onImported()}>Done</button>
+      </div>
+    </div>
+  );
+
+  // ── PREVIEW ──
+  if (step === "preview") return (
+    <div style={card}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+        <div>
+          <div style={{fontWeight:700,fontSize:15,marginBottom:2}}>
+            Preview — {preview.length} items ready to import
+          </div>
+          <div style={{fontSize:12,color:"var(--muted)"}}>
+            Review the list below. Items with a blank name are skipped automatically.
+          </div>
+        </div>
+        <button className="btn btn-o btn-sm" onClick={()=>setStep("upload")}>← Back</button>
+      </div>
+
+      {/* Column mapping */}
+      <div style={{marginBottom:16,padding:"12px 14px",background:"rgba(255,255,255,.04)",
+        borderRadius:8,border:"1px solid var(--border)"}}>
+        <div style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,
+          color:"var(--muted)",marginBottom:10}}>Column Mapping</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:8}}>
+          {FIELDS.map(f=>{
+            const colIdx = Object.entries(mapping).find(([,v])=>v===f.key)?.[0];
+            return (
+              <div key={f.key} style={{display:"flex",alignItems:"center",gap:8,fontSize:12}}>
+                <span style={{color:"var(--muted)",width:110,flexShrink:0}}>{f.label}</span>
+                <select value={colIdx??""} className="fs"
+                  style={{fontSize:11,padding:"3px 6px",flex:1}}
+                  onChange={e=>{
+                    const newMap={...mapping};
+                    // Remove old mapping for this field
+                    Object.keys(newMap).forEach(k=>{ if(newMap[k]===f.key) delete newMap[k]; });
+                    if(e.target.value!=="") newMap[e.target.value]=f.key;
+                    setMapping(newMap);
+                    buildPreviewFromRows(headers, rows, newMap);
+                  }}>
+                  <option value="">— skip —</option>
+                  {headers.map((h,i)=><option key={i} value={i}>{h}</option>)}
+                </select>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Preview table */}
+      <div style={{maxHeight:280,overflowY:"auto",marginBottom:16,
+        border:"1px solid var(--border)",borderRadius:8}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+          <thead>
+            <tr style={{background:"rgba(255,255,255,.06)"}}>
+              {["Item","Category","Qty","Status","Source","Est. Cost","Notes"].map(h=>(
+                <th key={h} style={{padding:"7px 10px",textAlign:"left",fontSize:10,
+                  fontWeight:800,textTransform:"uppercase",letterSpacing:1,
+                  color:"var(--muted)",borderBottom:"1px solid var(--border)",
+                  whiteSpace:"nowrap"}}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {preview.map((item,i)=>(
+              <tr key={i} style={{borderBottom:"1px solid var(--border)"}}>
+                <td style={{padding:"6px 10px",fontWeight:600}}>{item.name}</td>
+                <td style={{padding:"6px 10px",color:"var(--muted)"}}>{item.category}</td>
+                <td style={{padding:"6px 10px",color:"var(--muted)"}}>{item.qty_needed}</td>
+                <td style={{padding:"6px 10px",color:"var(--muted)"}}>{item.status}</td>
+                <td style={{padding:"6px 10px",color:"var(--muted)"}}>{item.source}</td>
+                <td style={{padding:"6px 10px",color:"var(--muted)"}}>
+                  {item.estimated_cost?`$${item.estimated_cost.toFixed(2)}`:"—"}
+                </td>
+                <td style={{padding:"6px 10px",color:"var(--muted)",
+                  maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",
+                  whiteSpace:"nowrap"}}>{item.notes||"—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <button className="btn btn-o btn-sm" onClick={onClose}>Cancel</button>
+        <button className="btn btn-g" disabled={importing||preview.length===0} onClick={doImport}>
+          {importing ? "Importing…" : `Import ${preview.length} Items`}
+        </button>
+      </div>
+    </div>
+  );
+
+  // ── UPLOAD ──
+  return (
+    <div style={card}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+        <div style={{fontWeight:700,fontSize:15}}>Import Needs List from CSV</div>
+        <button className="btn btn-o btn-sm" onClick={onClose}>✕ Cancel</button>
+      </div>
+
+      <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.7,marginBottom:16}}>
+        Upload a spreadsheet of everything your production needs — props, costumes, lighting,
+        whatever you're tracking. We'll map your columns and import the list in one step.
+      </p>
+
+      {/* Download template */}
+      <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",
+        background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",
+        borderRadius:8,marginBottom:20}}>
+        <span style={{fontSize:24}}>📄</span>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:700,fontSize:13,marginBottom:2}}>Download our template</div>
+          <div style={{fontSize:12,color:"var(--muted)"}}>
+            Start with our CSV template — it has the right columns already set up with example items.
+          </div>
+        </div>
+        <button className="btn btn-o btn-sm" onClick={downloadTemplate}>
+          ⬇ Template
+        </button>
+      </div>
+
+      {/* Upload area */}
+      <label style={{display:"block",border:"2px dashed var(--border)",borderRadius:10,
+        padding:"32px 20px",textAlign:"center",cursor:"pointer",
+        background:"rgba(255,255,255,.02)",transition:"border .15s"}}
+        onDragOver={e=>{e.preventDefault();}}
+        onDrop={e=>{e.preventDefault();
+          const file = e.dataTransfer.files[0];
+          if(file){fileRef.current.files=e.dataTransfer.files;handleFile({target:{files:[file]}});}
+        }}>
+        <div style={{fontSize:36,marginBottom:10}}>📂</div>
+        <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>
+          Drop your CSV here, or click to browse
+        </div>
+        <div style={{fontSize:12,color:"var(--muted)"}}>
+          Supports .csv files. Columns can be in any order — we'll help you map them.
+        </div>
+        <input ref={fileRef} type="file" accept=".csv,text/csv" hidden onChange={handleFile}/>
+      </label>
+
+      {/* Accepted columns hint */}
+      <div style={{marginTop:14,padding:"10px 14px",background:"rgba(255,255,255,.03)",
+        borderRadius:8,fontSize:11,color:"var(--muted)",lineHeight:1.8}}>
+        <strong style={{color:"var(--text)"}}>Columns we recognize:</strong>{" "}
+        Item Name (required) · Category · Quantity · Status · Source · Estimated Cost · Notes
+      </div>
+    </div>
+  );
+}
+
+// ── Production Needs Checklist ────────────────────────────────────────────────
+// Planning layer: list what you need BEFORE you have it, then track how you source it
+
+const NEED_STATUSES = [
+  { key:"needed",     label:"Still Needed",  color:"var(--red)",   icon:"🔴" },
+  { key:"searching",  label:"Searching",     color:"var(--gold)",  icon:"🟡" },
+  { key:"found",      label:"Found",         color:"var(--blue)",  icon:"🔵" },
+  { key:"acquired",   label:"Acquired",      color:"var(--green)", icon:"🟢" },
+  { key:"not_needed", label:"Not Needed",    color:"var(--muted)", icon:"⚫" },
+];
+const NEED_SOURCES = [
+  { key:"unknown",   label:"Source TBD"      },
+  { key:"in_house",  label:"From Our Inventory" },
+  { key:"exchange",  label:"Backstage Exchange" },
+  { key:"borrow",    label:"Borrowing"       },
+  { key:"buy",       label:"Purchasing"      },
+  { key:"donate",    label:"Donated"         },
+];
+
+function ProductionNeedsChecklist({ prod, allItems, userId, org, onNavigateToExchange, memberRole=null }) {
+  // Role-based permissions
+  // director (null) + stage_manager: full access
+  // crew: can add and update status, cannot delete or import
+  // house: view only (but house can't see Productions at all in nav)
+  const canAdd    = memberRole !== "house";
+  const canEdit   = memberRole !== "house";
+  const canDelete = !memberRole || memberRole === "director" || memberRole === "stage_manager";
+  const canImport = !memberRole || memberRole === "director" || memberRole === "stage_manager";
+  const [needs,    setNeeds]   = useState([]);
+  const [loading,  setLoading] = useState(true);
+  const [adding,   setAdding]  = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [editing,  setEditing] = useState(null);
+  const [filter,   setFilter]  = useState("all"); // all | needed | acquired
+  const [catFilter,setCatFilter]= useState("all");
+
+  // Blank need form
+  const blank = () => ({
+    name:"", category:"costumes", qty_needed:1,
+    notes:"", status:"needed", source:"unknown",
+    resolved_item_id:null, resolved_notes:"",
+    estimated_cost:"", actual_cost:"",
+  });
+  const [form, setForm] = useState(blank());
+  const upd = (k,v) => setForm(p=>({...p,[k]:v}));
+
+  const load = async () => {
+    const { data } = await SB.from("production_needs")
+      .select("*")
+      .eq("production_id", prod.id)
+      .order("added_at");
+    setNeeds(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, [prod.id]);
+
+  const save = async () => {
+    if (!form.name.trim()) return;
+    const payload = {
+      ...form,
+      production_id: prod.id,
+      org_id: userId,
+      qty_needed: parseInt(form.qty_needed) || 1,
+      estimated_cost: form.estimated_cost ? parseFloat(form.estimated_cost) : null,
+      actual_cost: form.actual_cost ? parseFloat(form.actual_cost) : null,
+      updated_at: new Date().toISOString(),
+    };
+    // Strip id from payload
+    const { id: _id, ...rest } = payload;
+    if (editing) {
+      const { error } = await SB.from("production_needs").update(rest).eq("id", editing.id);
+      if (error) { alert("Save failed: " + error.message); return; }
+      setNeeds(p => p.map(n => n.id === editing.id ? { ...n, ...rest, id:editing.id } : n));
+    } else {
+      const { data, error } = await SB.from("production_needs").insert(payload).select().single();
+      if (error) { alert("Save failed: " + error.message); return; }
+      if (data) setNeeds(p => [...p, data]);
+    }
+    setAdding(false); setEditing(null); setForm(blank());
+  };
+
+  const deleteNeed = async (id) => {
+    const { error } = await SB.from("production_needs").delete().eq("id", id);
+    if (error) { alert("Delete failed: " + error.message); return; }
+    setNeeds(p => p.filter(n => n.id !== id));
+  };
+
+  const quickStatus = async (id, status) => {
+    const { error } = await SB.from("production_needs").update({ status, updated_at:new Date().toISOString() }).eq("id", id);
+    if (!error) setNeeds(p => p.map(n => n.id === id ? { ...n, status } : n));
+  };
+
+  const linkToInventory = async (needId, itemId) => {
+    const { error } = await SB.from("production_needs").update({
+      resolved_item_id: itemId,
+      source: "in_house",
+      status: "acquired",
+      updated_at: new Date().toISOString()
+    }).eq("id", needId);
+    if (!error) setNeeds(p => p.map(n => n.id === needId
+      ? { ...n, resolved_item_id:itemId, source:"in_house", status:"acquired" } : n));
+  };
+
+  // Filtered view
+  const filtered = needs.filter(n => {
+    if (filter === "needed" && (n.status === "acquired" || n.status === "not_needed")) return false;
+    if (filter === "acquired" && n.status !== "acquired") return false;
+    if (catFilter !== "all" && n.category !== catFilter) return false;
+    return true;
+  });
+
+  // Stats
+  const total    = needs.length;
+  const acquired = needs.filter(n => n.status === "acquired").length;
+  const pct      = total > 0 ? Math.round(acquired / total * 100) : 0;
+
+  // Categories present in this needs list
+  const catsUsed = [...new Set(needs.map(n => n.category))];
+
+  const card = { background:"var(--parch)", border:"1px solid var(--border)",
+    borderRadius:10, overflow:"hidden" };
+
+  const NeedForm = ({ onDone }) => (
+    <div style={{ ...card, padding:20, marginBottom:16 }}>
+      <div style={{ fontWeight:700, fontSize:14, marginBottom:16, color:"var(--gold)" }}>
+        {editing ? "Edit Item" : "Add to Needs List"}
+      </div>
+
+      {/* Name + Qty row */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr auto", gap:10, marginBottom:12 }}>
+        <div className="fg" style={{ margin:0 }}>
+          <label className="fl">Item Name *</label>
+          <input className="fi" value={form.name} autoFocus
+            onChange={e=>upd("name",e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&save()}
+            placeholder="e.g. Victorian Ball Gown, Magic Wand, Crown (3)"/>
+        </div>
+        <div className="fg" style={{ margin:0, width:70 }}>
+          <label className="fl">Qty</label>
+          <input className="fi" type="number" min="1" value={form.qty_needed}
+            onChange={e=>upd("qty_needed",e.target.value)}/>
+        </div>
+      </div>
+
+      {/* Category */}
+      <div className="fg" style={{ marginBottom:12 }}>
+        <label className="fl">Category</label>
+        <select className="fs" value={form.category} onChange={e=>upd("category",e.target.value)}>
+          {CATS.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+        </select>
+      </div>
+
+      {/* Source + Status row */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
+        <div className="fg" style={{ margin:0 }}>
+          <label className="fl">How will you source it?</label>
+          <select className="fs" value={form.source} onChange={e=>upd("source",e.target.value)}>
+            {NEED_SOURCES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+          </select>
+        </div>
+        <div className="fg" style={{ margin:0 }}>
+          <label className="fl">Status</label>
+          <select className="fs" value={form.status} onChange={e=>upd("status",e.target.value)}>
+            {NEED_STATUSES.map(s => <option key={s.key} value={s.key}>{s.icon} {s.label}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* Cost estimates — show only if buying */}
+      {(form.source === "buy" || form.source === "borrow") && (
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
+          <div className="fg" style={{ margin:0 }}>
+            <label className="fl">Est. Cost ($)</label>
+            <input className="fi" type="number" min="0" step="0.01"
+              value={form.estimated_cost} onChange={e=>upd("estimated_cost",e.target.value)}
+              placeholder="0.00"/>
+          </div>
+          <div className="fg" style={{ margin:0 }}>
+            <label className="fl">Actual Cost ($)</label>
+            <input className="fi" type="number" min="0" step="0.01"
+              value={form.actual_cost} onChange={e=>upd("actual_cost",e.target.value)}
+              placeholder="0.00"/>
+          </div>
+        </div>
+      )}
+
+      {/* Resolved notes */}
+      <div className="fg" style={{ marginBottom:16 }}>
+        <label className="fl">Notes</label>
+        <input className="fi" value={form.resolved_notes||form.notes||""}
+          onChange={e=>upd("resolved_notes",e.target.value)}
+          placeholder='e.g. "Check with Lincoln High", "Order from Amazon", "Grandma has one"'/>
+      </div>
+
+      <div style={{ display:"flex", gap:8, justifyContent:"flex-end" }}>
+        <button className="btn btn-o btn-sm" onClick={onDone}>Cancel</button>
+        <button className="btn btn-g btn-sm" disabled={!form.name.trim()} onClick={save}>
+          {editing ? "Save Changes" : "Add to List"}
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div>
+      {/* Stats row */}
+      {total > 0 && (
+        <div style={{ marginBottom:16 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", fontSize:12,
+            color:"var(--muted)", marginBottom:5 }}>
+            <span>{acquired} of {total} items sourced</span>
+            <span style={{ fontWeight:700, color:pct===100?"var(--green)":"var(--ink)" }}>{pct}%</span>
+          </div>
+          <div style={{ height:6, background:"rgba(255,255,255,.08)", borderRadius:4, overflow:"hidden" }}>
+            <div style={{ height:"100%", width:pct+"%", borderRadius:4,
+              background: pct===100 ? "var(--green)" : prod.color||"var(--gold)",
+              transition:"width .5s ease" }}/>
+          </div>
+
+          {/* Cost summary */}
+          {needs.some(n=>n.estimated_cost||n.actual_cost) && (
+            <div style={{ display:"flex", gap:16, marginTop:10 }}>
+              {[
+                { label:"Estimated", val: needs.reduce((s,n)=>s+(parseFloat(n.estimated_cost)||0),0) },
+                { label:"Actual",    val: needs.reduce((s,n)=>s+(parseFloat(n.actual_cost)||0),0) },
+              ].map(s => s.val > 0 && (
+                <div key={s.label} style={{ fontSize:12, color:"var(--muted)" }}>
+                  {s.label}: <strong style={{ color:"var(--text)" }}>${s.val.toFixed(2)}</strong>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Toolbar */}
+      <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:14, flexWrap:"wrap" }}>
+        {/* Filter pills */}
+        <div style={{ display:"flex", gap:5 }}>
+          {[["all","All"],["needed","Still Needed"],["acquired","Acquired"]].map(([k,l])=>(
+            <button key={k} onClick={()=>setFilter(k)}
+              className={"btn btn-o btn-sm"+(filter===k?" btn-active":"")}
+              style={{ padding:"4px 10px", fontSize:11,
+                background:filter===k?"var(--gold)":"var(--parch)",
+                color:filter===k?"#1a1000":"var(--muted)",
+                borderColor:filter===k?"var(--gold)":"var(--border)" }}>
+              {l}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display:"flex", gap:6, marginLeft:"auto" }}>
+          {canImport && (
+            <button className="btn btn-o btn-sm"
+              onClick={()=>{ setShowImport(true); setAdding(false); setEditing(null); }}
+              style={{ fontSize:11 }}>
+              ⬆ Import CSV
+            </button>
+          )}
+          {canAdd && (
+            <button className="btn btn-g btn-sm"
+              onClick={()=>{ setEditing(null); setForm(blank()); setAdding(true); setShowImport(false); }}>
+              + Add Item
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Import CSV */}
+      {showImport && (
+        <ProductionNeedsImport
+          prod={prod}
+          userId={userId}
+          onClose={()=>setShowImport(false)}
+          onImported={async()=>{ setShowImport(false); await load(); }}
+        />
+      )}
+
+      {/* Add / Edit form */}
+      {!showImport && (adding || editing) && (
+        <NeedForm onDone={()=>{ setAdding(false); setEditing(null); setForm(blank()); }}/>
+      )}
+
+      {/* Exchange shortcut callout */}
+      {needs.some(n=>n.status==="needed"||n.status==="searching") && org?.marketplace_enabled && (
+        <div style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px",
+          background:"rgba(82,153,224,.08)", border:"1px solid rgba(82,153,224,.2)",
+          borderRadius:8, marginBottom:14, cursor:"pointer" }}
+          onClick={onNavigateToExchange}>
+          <span style={{ fontSize:20 }}>🏪</span>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:"var(--blue)" }}>Check Backstage Exchange</div>
+            <div style={{ fontSize:11, color:"var(--muted)" }}>
+              Other programs near you may have items on your needs list available to borrow or rent.
+            </div>
+          </div>
+          <span style={{ color:"var(--blue)", fontSize:18 }}>→</span>
+        </div>
+      )}
+
+      {/* Needs list */}
+      {loading ? (
+        <div style={{ textAlign:"center", padding:32, color:"var(--muted)" }}>Loading…</div>
+      ) : total === 0 ? (
+        <div style={{ textAlign:"center", padding:36 }}>
+          <div style={{ fontSize:36, marginBottom:10 }}>📋</div>
+          <h3 style={{ fontFamily:"var(--serif)", marginBottom:8 }}>Start Your Needs List</h3>
+          <p style={{ color:"var(--muted)", fontSize:13, lineHeight:1.7, maxWidth:380, margin:"0 auto 16px" }}>
+            Add every prop, costume, and piece of gear your production needs —
+            even before you know where it's coming from. Then track how you source each one.
+          </p>
+          {canAdd && (
+            <button className="btn btn-g" onClick={()=>{ setForm(blank()); setAdding(true); }}>
+              + Add Your First Item
+            </button>
+          )}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div style={{ textAlign:"center", padding:20, color:"var(--muted)", fontSize:13 }}>
+          No items match this filter.
+        </div>
+      ) : (
+        // Group by category
+        Object.entries(
+          filtered.reduce((acc, n) => {
+            const cat = n.category || "other";
+            if (!acc[cat]) acc[cat] = [];
+            acc[cat].push(n);
+            return acc;
+          }, {})
+        ).map(([catId, catNeeds]) => {
+          const cat = CAT[catId] || CAT.other;
+          return (
+            <div key={catId} style={{ marginBottom:20 }}>
+              <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase",
+                letterSpacing:1.5, color:cat.color, marginBottom:8,
+                display:"flex", alignItems:"center", gap:6 }}>
+                {cat.icon} {cat.label} ({catNeeds.length})
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                {catNeeds.map(need => {
+                  const st  = NEED_STATUSES.find(s=>s.key===need.status)||NEED_STATUSES[0];
+                  const src = NEED_SOURCES.find(s=>s.key===need.source)||NEED_SOURCES[0];
+                  const linkedItem = need.resolved_item_id
+                    ? allItems.find(i=>i.id===need.resolved_item_id) : null;
+
+                  return (
+                    <div key={need.id} style={{
+                      padding:"10px 12px", borderRadius:8,
+                      background:"rgba(255,255,255,.03)",
+                      border:`1px solid ${need.status==="acquired"
+                        ? "rgba(82,199,132,.25)"
+                        : need.status==="not_needed"
+                        ? "var(--border)"
+                        : "var(--border)"}`,
+                      opacity: need.status==="not_needed" ? 0.5 : 1,
+                    }}>
+                      <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+                        {/* Status icon — click to cycle */}
+                        <div style={{ fontSize:16, cursor:"pointer", flexShrink:0, marginTop:1 }}
+                          title="Click to mark acquired"
+                          onClick={()=>{
+                            const next = need.status==="needed"?"searching"
+                              :need.status==="searching"?"found"
+                              :need.status==="found"?"acquired"
+                              :"needed";
+                            quickStatus(need.id, next);
+                          }}>
+                          {st.icon}
+                        </div>
+
+                        {/* Main info */}
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontWeight:600, fontSize:13,
+                            textDecoration:need.status==="not_needed"?"line-through":"none",
+                            color:need.status==="acquired"?"var(--green)":"var(--text)" }}>
+                            {need.name}
+                            {need.qty_needed > 1 && (
+                              <span style={{ fontSize:11, color:"var(--muted)",
+                                marginLeft:6, fontWeight:400 }}>×{need.qty_needed}</span>
+                            )}
+                          </div>
+                          <div style={{ fontSize:11, color:"var(--muted)", marginTop:2,
+                            display:"flex", gap:8, flexWrap:"wrap" }}>
+                            <span>{src.label}</span>
+                            {need.resolved_notes && <span>· {need.resolved_notes}</span>}
+                            {linkedItem && (
+                              <span style={{ color:"var(--green)" }}>
+                                · Linked: {linkedItem.name}
+                              </span>
+                            )}
+                            {(need.estimated_cost||need.actual_cost) && (
+                              <span>
+                                {need.actual_cost
+                                  ? ("· Actual $"+parseFloat(need.actual_cost).toFixed(2))
+                                  : ("· Est. $"+parseFloat(need.estimated_cost).toFixed(2))}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{ display:"flex", gap:5, flexShrink:0 }}>
+                          {/* Link to inventory */}
+                          {need.status !== "acquired" && allItems.length > 0 && (
+                            <select
+                              onChange={e=>{ if(e.target.value) linkToInventory(need.id, e.target.value); }}
+                              value=""
+                              style={{ background:"var(--parch)", border:"1px solid var(--border)",
+                                borderRadius:6, padding:"2px 6px", fontSize:10,
+                                color:"var(--muted)", fontFamily:"inherit", cursor:"pointer" }}
+                              title="Link to an item in your inventory">
+                              <option value="">Link inventory…</option>
+                              {allItems
+                                .filter(i=>i.category===need.category || need.category==="other")
+                                .slice(0,30)
+                                .map(i=>(
+                                  <option key={i.id} value={i.id}>{i.name}</option>
+                                ))}
+                            </select>
+                          )}
+                          {canEdit && (
+                            <button onClick={()=>{ setEditing(need); setForm({...need, estimated_cost:need.estimated_cost||"", actual_cost:need.actual_cost||""}); setAdding(false); }}
+                              style={{ background:"none", border:"none", color:"var(--muted)",
+                                cursor:"pointer", fontSize:13, padding:"0 3px" }}>✏️</button>
+                          )}
+                          {canDelete && (
+                            <button onClick={()=>deleteNeed(need.id)}
+                              style={{ background:"none", border:"none", color:"var(--muted)",
+                                cursor:"pointer", fontSize:14, padding:"0 3px" }}>✕</button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+// ── Production Detail (the folder view) ────────────────────────────────────
+function ProductionDetail({ prod, allItems, userId, onEdit, onDelete, onClose, onNavigateTo, org }) {
+  const [detailTab, setDetailTab] = useState("needs"); // needs | inventory
+  const [prodItems, setProdItems] = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [search,    setSearch]    = useState("");
+
+  const load = useCallback(async () => {
+    const { data } = await SB.from("production_items")
+      .select("*")
+      .eq("production_id", prod.id)
+      .order("added_at");
+    setProdItems(data || []);
+    setLoading(false);
+  }, [prod.id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const updateStatus = async (piId, status) => {
+    const { error } = await SB.from("production_items").update({ status }).eq("id", piId);
+    if (!error) setProdItems(p => p.map(x => x.id === piId ? { ...x, status } : x));
+  };
+
+  const removeItem = async (piId) => {
+    const { error } = await SB.from("production_items").delete().eq("id", piId);
+    if (!error) setProdItems(p => p.filter(x => x.id !== piId));
+  };
+
+  // Join production_items with allItems
+  const enriched = prodItems.map(pi => ({
+    ...pi,
+    item: allItems.find(i => i.id === pi.item_id)
+  })).filter(pi => {
+    if (!pi.item) return false;
+    if (!search) return true;
+    return pi.item.name.toLowerCase().includes(search.toLowerCase());
+  });
+
+  // Group by category
+  const byCategory = {};
+  enriched.forEach(pi => {
+    const cat = pi.item?.category || "other";
+    if (!byCategory[cat]) byCategory[cat] = [];
+    byCategory[cat].push(pi);
+  });
+
+  const total     = prodItems.length;
+  const confirmed = prodItems.filter(p => p.status === "confirmed" || p.status === "returned").length;
+  const pct       = total > 0 ? Math.round(confirmed / total * 100) : 0;
+
+  // Days until opening
+  const daysUntil = prod.opening_date
+    ? Math.ceil((new Date(prod.opening_date) - new Date()) / 86400000)
+    : null;
+
+  return (
+    <div>
+      {/* Header strip */}
+      <div style={{ display:"flex", alignItems:"flex-start", gap:14, marginBottom:20 }}>
+        <div style={{ width:48, height:48, borderRadius:10, background:prod.color||"var(--gold)",
+          flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:24 }}>🎭</div>
+        <div style={{ flex:1 }}>
+          <div style={{ fontFamily:"var(--serif)", fontSize:20, fontWeight:700 }}>{prod.name}</div>
+          {prod.show_title && <div style={{ fontSize:12, color:"var(--muted)" }}>{prod.show_title}</div>}
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:6 }}>
+            <span style={{ fontSize:11, padding:"2px 8px", borderRadius:8, fontWeight:700,
+              background:"rgba(255,255,255,.08)", color:"var(--muted)" }}>{prod.status}</span>
+            {prod.opening_date && (
+              <span style={{ fontSize:11, padding:"2px 8px", borderRadius:8, fontWeight:700,
+                background: daysUntil !== null && daysUntil <= 14 ? "rgba(212,168,67,.2)" : "rgba(255,255,255,.08)",
+                color: daysUntil !== null && daysUntil <= 14 ? "var(--gold)" : "var(--muted)" }}>
+                {daysUntil !== null && daysUntil > 0
+                  ? ("Opens in "+daysUntil+" day"+(daysUntil!==1?"s":""))
+                  : daysUntil === 0 ? "Opens today!"
+                  : ("Opened "+new Date(prod.opening_date).toLocaleDateString())}
+              </span>
+            )}
+          </div>
+        </div>
+        <div style={{ display:"flex", gap:6 }}>
+          <button className="btn btn-o btn-sm" onClick={onEdit}>Edit</button>
+          <button className="btn btn-o btn-sm"
+            onClick={async()=>{
+              const { data:needsData } = await SB.from("production_needs")
+                .select("*").eq("production_id", prod.id).order("added_at");
+              const { data:piData } = await SB.from("production_items")
+                .select("*").eq("production_id", prod.id).order("added_at");
+              printProductionReport(prod, needsData||[], piData||[], allItems, org);
+            }}
+            style={{ color:"var(--gold)", borderColor:"rgba(212,168,67,.3)" }}>
+            🖨 Print Report
+          </button>
+          <button className="btn btn-o btn-sm" style={{ color:"var(--red)" }}
+            onClick={()=>{ if(window.confirm("Delete this production?")) onDelete(prod.id); }}>
+            Delete
+          </button>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      {total > 0 && (
+        <div style={{ marginBottom:20 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", fontSize:12,
+            color:"var(--muted)", marginBottom:5 }}>
+            <span>{confirmed} of {total} items confirmed</span>
+            <span style={{ fontWeight:700, color: pct===100?"var(--green)":"var(--ink)" }}>{pct}%</span>
+          </div>
+          <div style={{ height:7, background:"rgba(255,255,255,.08)", borderRadius:4, overflow:"hidden" }}>
+            <div style={{ height:"100%", width:pct+"%", borderRadius:4,
+              background: pct===100 ? "var(--green)" : prod.color||"var(--gold)",
+              transition:"width .5s ease" }}/>
+          </div>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div style={{ display:"flex", gap:2, marginBottom:18, borderBottom:"1px solid var(--border)", paddingBottom:0 }}>
+        {[
+          { key:"needs",     label:"📋 Needs List",      desc:"Plan what you need" },
+          { key:"inventory", label:"📦 From Inventory",  desc:"Items from your collection" },
+        ].map(t => (
+          <button key={t.key} onClick={()=>setDetailTab(t.key)}
+            style={{ padding:"8px 16px", background:"none", border:"none",
+              borderBottom: detailTab===t.key ? "2px solid var(--gold)" : "2px solid transparent",
+              color: detailTab===t.key ? "var(--gold)" : "var(--muted)",
+              fontWeight: detailTab===t.key ? 700 : 400,
+              fontSize:13, cursor:"pointer", fontFamily:"inherit",
+              marginBottom:-1, transition:"all .15s" }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Needs List tab */}
+      {detailTab === "needs" && (
+        <ProductionNeedsChecklist
+          prod={prod}
+          allItems={allItems}
+          userId={userId}
+          org={org}
+          memberRole={org?._memberRole||null}
+          onNavigateToExchange={()=>onNavigateTo&&onNavigateTo("marketplace")}
+        />
+      )}
+
+      {/* From Inventory tab */}
+      {detailTab === "inventory" && (<>
+
+      {/* Search */}
+      {total > 3 && (
+        <div className="srch" style={{ marginBottom:14, width:"100%", maxWidth:280 }}>
+          {Ic.search}
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search items…"/>
+        </div>
+      )}
+
+      {/* Items grouped by category */}
+      {loading ? (
+        <div style={{ textAlign:"center", padding:32, color:"var(--muted)" }}>Loading…</div>
+      ) : total === 0 ? (
+        <div style={{ textAlign:"center", padding:36 }}>
+          <div style={{ fontSize:36, marginBottom:10 }}>📦</div>
+          <h3 style={{ fontFamily:"var(--serif)", marginBottom:6 }}>No Items Yet</h3>
+          <p style={{ color:"var(--muted)", fontSize:13, lineHeight:1.6 }}>
+            Open any item in Inventory and click "Add to Production" to start building your list.
+          </p>
+        </div>
+      ) : enriched.length === 0 ? (
+        <div style={{ textAlign:"center", padding:24, color:"var(--muted)" }}>No items match your search.</div>
+      ) : (
+        Object.entries(byCategory).map(([catId, items]) => {
+          const cat = CAT[catId] || CAT.other;
+          return (
+            <div key={catId} style={{ marginBottom:20 }}>
+              <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5,
+                color:cat.color, marginBottom:8, display:"flex", alignItems:"center", gap:6 }}>
+                {cat.icon} {cat.label} ({items.length})
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                {items.map(pi => {
+                  const st = PROD_STATUS_MAP[pi.status] || PROD_STATUS_MAP.needed;
+                  return (
+                    <div key={pi.id} style={{ display:"flex", alignItems:"center", gap:10,
+                      padding:"9px 12px", borderRadius:8,
+                      background:"rgba(255,255,255,.03)", border:"1px solid var(--border)" }}>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontWeight:600, fontSize:13,
+                          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                          {pi.item?.name}
+                        </div>
+                        <div style={{ fontSize:11, color:"var(--muted)", marginTop:1 }}>
+                          {pi.item?.location || pi.item?.condition || ""}
+                          {pi.qty_needed > 1 ? " · Need "+pi.qty_needed : ""}
+                        </div>
+                      </div>
+                      {/* Status toggle */}
+                      <select value={pi.status}
+                        onChange={e => updateStatus(pi.id, e.target.value)}
+                        style={{ background:"var(--parch)", border:`1px solid ${st.color}40`,
+                          borderRadius:6, padding:"3px 7px", fontSize:11, fontWeight:700,
+                          color:st.color, fontFamily:"inherit", cursor:"pointer", outline:"none" }}>
+                        {PROD_STATUSES.map(s => (
+                          <option key={s.key} value={s.key}>{s.label}</option>
+                        ))}
+                      </select>
+                      <button onClick={() => removeItem(pi.id)}
+                        style={{ background:"none", border:"none", color:"var(--muted)",
+                          cursor:"pointer", fontSize:16, padding:"0 2px", lineHeight:1,
+                          display:"flex", alignItems:"center" }}>✕</button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })
+      )}
+      {prod.notes && (
+        <div style={{ marginTop:16, padding:"10px 14px", background:"rgba(255,255,255,.03)",
+          borderRadius:8, border:"1px solid var(--border)" }}>
+          <div style={{ fontSize:11, fontWeight:700, color:"var(--muted)", marginBottom:4,
+            textTransform:"uppercase", letterSpacing:1 }}>Notes</div>
+          <div style={{ fontSize:13, color:"var(--ink)", lineHeight:1.6 }}>{prod.notes}</div>
+        </div>
+      )}
+      </>)}
+    </div>
+  );
+}
+
+// ── Productions Page ───────────────────────────────────────────────────────
+function Productions({ userId, allItems, org, onNavigateTo }) {
+  const [productions, setProductions] = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [modal,       setModal]       = useState(null); // "new" | "edit" | "detail"
+  const [active,      setActive]      = useState(null);
+  const [filter,      setFilter]      = useState("all"); // all | planning | active | closed
+
+  const load = useCallback(async () => {
+    const { data } = await SB.from("productions")
+      .select("*, production_items(id, status)")
+      .eq("org_id", userId)
+      .order("created_at", { ascending: false });
+    setProductions(data || []);
+    setLoading(false);
+  }, [userId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const saveProd = async (form) => {
+    // Strip fields that aren't columns (embedded joins, immutable fields)
+    const { id: _id, org_id: _org, created_at: _ca, production_items: _pi, ...payload } = form;
+    if (active && modal === "edit") {
+      const { data, error } = await SB.from("productions")
+        .update({ ...payload, updated_at: new Date().toISOString() })
+        .eq("id", active.id).select().single();
+      if (error) { alert("Save failed: " + error.message); return; }
+      if (data) {
+        setProductions(p => p.map(x => x.id === data.id ? { ...x, ...data } : x));
+        // If we came from detail view, update active so it reflects new dates
+        setActive(prev => prev ? { ...prev, ...data } : prev);
+      }
+    } else {
+      const { data, error } = await SB.from("productions")
+        .insert({ ...payload, org_id: userId }).select().single();
+      if (error) { alert("Save failed: " + error.message); return; }
+      if (data) setProductions(p => [data, ...p]);
+    }
+    // If editing from detail, go back to detail not close entirely
+    if (modal === "edit" && active) {
+      setModal("detail");
+    } else {
+      setModal(null); setActive(null);
+    }
+  };
+
+  const deleteProd = async (id) => {
+    await SB.from("productions").delete().eq("id", id);
+    setProductions(p => p.filter(x => x.id !== id));
+    setModal(null); setActive(null);
+  };
+
+  const visible = filter === "all" ? productions : productions.filter(p => p.status === filter);
+
+  return (
+    <div style={{ position:"relative" }}>
+      <img src={usp("photo-1503095396549-807759245b35", 1400, 900)} alt="" className="page-bg-img"/>
+      <div style={{ padding:"32px 36px 0" }}>
+        <div className="hero-wrap" style={{ height:220 }}>
+          <img src={usp("photo-1503095396549-807759245b35", 1100, 280)} alt="Productions" loading="eager"/>
+          <div className="hero-fade"/>
+          <div className="hero-body">
+            <div className="hero-eyebrow">🎭 Show Planning</div>
+            <h1 className="hero-title" style={{ fontSize:44 }}>Productions</h1>
+            <p className="hero-sub">Create a folder for each show. Track every costume, prop, and piece of gear from wishlist to opening night.</p>
+          </div>
+          <div className="hero-bar"/>
+        </div>
+      </div>
+
+      <div style={{ padding:"24px 36px 56px", position:"relative", zIndex:1 }}>
+        {/* Toolbar */}
+        <div style={{ display:"flex", flexWrap:"wrap", gap:10, marginBottom:20, alignItems:"center" }}>
+          <div className="vtog">
+            {["all","planning","active","closed"].map(f => (
+              <button key={f} className={filter===f?"on":""} onClick={()=>setFilter(f)}
+                style={{ textTransform:"capitalize" }}>{f}</button>
+            ))}
+          </div>
+          <div style={{ marginLeft:"auto" }}>
+            <button className="btn btn-g" onClick={()=>{ setActive(null); setModal("new"); }}>
+              <span style={{ width:15, height:15, display:"flex" }}>{Ic.plus}</span>
+              New Production
+            </button>
+          </div>
+        </div>
+
+        {loading ? (
+          <div style={{ textAlign:"center", padding:48, color:"var(--muted)" }}>Loading…</div>
+        ) : visible.length === 0 ? (
+          <div style={{ textAlign:"center", padding:56 }}>
+            <div style={{ fontSize:48, marginBottom:14 }}>🎭</div>
+            <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:8 }}>
+              {filter==="all" ? "No Productions Yet" : ("No "+filter+" productions")}
+            </h3>
+            <p style={{ color:"var(--muted)", fontSize:13, maxWidth:380, margin:"0 auto 20px", lineHeight:1.6 }}>
+              {filter==="all"
+                ? "Create a production folder for each show. Save items from your inventory to track exactly what you need."
+                : ("No shows in "+filter+" status.")}
+            </p>
+            {filter==="all" && (
+              <button className="btn btn-g" onClick={()=>{ setActive(null); setModal("new"); }}>
+                + Create First Production
+              </button>
+            )}
+          </div>
+        ) : (
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))", gap:14 }}>
+            {visible.map(prod => {
+              const total     = prod.production_items?.length || 0;
+              const confirmed = prod.production_items?.filter(pi =>
+                pi.status==="confirmed"||pi.status==="returned").length || 0;
+              const pct = total > 0 ? Math.round(confirmed/total*100) : 0;
+              const daysUntil = prod.opening_date
+                ? Math.ceil((new Date(prod.opening_date) - new Date()) / 86400000)
+                : null;
+              return (
+                <div key={prod.id} className="card card-p"
+                  style={{ cursor:"pointer", borderLeft:`4px solid ${prod.color||"var(--gold)"}` }}
+                  onClick={() => { setActive(prod); setModal("detail"); }}>
+                  <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10, marginBottom:10 }}>
+                    <div>
+                      <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700,
+                        lineHeight:1.3 }}>{prod.name}</div>
+                      {prod.show_title && (
+                        <div style={{ fontSize:12, color:"var(--muted)", marginTop:1 }}>{prod.show_title}</div>
+                      )}
+                    </div>
+                    <span style={{ fontSize:10, padding:"3px 8px", borderRadius:8, fontWeight:800,
+                      textTransform:"uppercase", letterSpacing:.5, flexShrink:0,
+                      background: prod.status==="active" ? "rgba(76,175,80,.15)" :
+                                  prod.status==="closed" ? "rgba(255,255,255,.07)" : "rgba(212,168,67,.12)",
+                      color: prod.status==="active" ? "var(--green)" :
+                             prod.status==="closed" ? "var(--muted)" : "var(--gold)" }}>
+                      {prod.status}
+                    </span>
+                  </div>
+
+                  {/* Progress */}
+                  <div style={{ marginBottom:10 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between",
+                      fontSize:11, color:"var(--muted)", marginBottom:4 }}>
+                      <span>{total} item{total!==1?"s":""}</span>
+                      <span style={{ fontWeight:700, color:pct===100?"var(--green)":undefined }}>{pct}% confirmed</span>
+                    </div>
+                    <div style={{ height:5, background:"rgba(255,255,255,.08)", borderRadius:3, overflow:"hidden" }}>
+                      <div style={{ height:"100%", width:pct+"%", borderRadius:3,
+                        background: pct===100 ? "var(--green)" : prod.color||"var(--gold)",
+                        transition:"width .5s" }}/>
+                    </div>
+                  </div>
+
+                  {/* Dates */}
+                  <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                    {prod.opening_date && (
+                      <span style={{ fontSize:11, color:"var(--muted)" }}>
+                        📅 {daysUntil !== null && daysUntil > 0
+                          ? ("Opens in "+daysUntil+"d")
+                          : new Date(prod.opening_date).toLocaleDateString()}
+                      </span>
+                    )}
+                    {prod.closing_date && (
+                      <span style={{ fontSize:11, color:"var(--muted)" }}>
+                        → {new Date(prod.closing_date).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      {(modal==="new"||modal==="edit") && (
+        <Modal title={modal==="new"?"New Production":"Edit Production"}
+          onClose={()=>{ setModal(null); setActive(null); }}>
+          <ProductionForm prod={modal==="edit"?active:null}
+            onSave={saveProd}
+            onCancel={()=>{ setModal(null); setActive(null); }}/>
+        </Modal>
+      )}
+      {modal==="detail" && active && (
+        <Modal title="Production Details"
+          onClose={()=>{ setModal(null); setActive(null); load(); }}>
+          <ProductionDetail
+            prod={active}
+            allItems={allItems}
+            userId={userId}
+            org={org}
+            onNavigateTo={onNavigateTo}
+            onEdit={()=>setModal("edit")}
+            onDelete={deleteProd}
+            onClose={()=>{ setModal(null); setActive(null); load(); }}
+          />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MESSAGING  (Chat)
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── New Conversation Modal (shown from Marketplace "Contact" button) ──────────
+function NewConversationModal({ item, itemOrgId, itemOrgName, currentUserId, currentOrgName, onOpen, onClose }) {
+  const [body,    setBody]    = useState("");
+  const [sending, setSending] = useState(false);
+  const [err,     setErr]     = useState("");
+
+  const send = async () => {
+    if (!body.trim()) return;
+    setSending(true); setErr("");
+    try {
+      // Check for existing conversation about this item
+      let convId = null;
+      const { data: existing } = await SB.from("conversations")
+        .select("id")
+        .eq("item_id", item?.id || null)
+        .eq("org_a", currentUserId)
+        .eq("org_b", itemOrgId)
+        .single();
+
+      if (existing) {
+        convId = existing.id;
+      } else {
+        const { data: newConv, error: convErr } = await SB.from("conversations").insert({
+          item_id:      item?.id   || null,
+          org_a:        currentUserId,
+          org_b:        itemOrgId,
+          item_name:    item?.name || null,
+          last_message: body.trim(),
+          last_at:      new Date().toISOString(),
+        }).select().single();
+        if (convErr) throw convErr;
+        convId = newConv.id;
+      }
+
+      // Insert message
+      const { error: msgErr } = await SB.from("messages").insert({
+        conversation_id: convId,
+        sender_id:       currentUserId,
+        body:            body.trim(),
+      });
+      if (msgErr) throw msgErr;
+
+      // Update conversation last_message
+      await SB.from("conversations").update({ last_message: body.trim(), last_at: new Date().toISOString() }).eq("id", convId);
+
+      // Email notification (non-blocking)
+      const { data: { session } } = await SB.auth.getSession();
+      fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/message-notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          conversation_id: convId,
+          recipient_id:    itemOrgId,
+          message_preview: body.trim().slice(0, 200),
+          item_name:       item?.name || null,
+          sender_name:     currentOrgName || "A theatre program",
+        })
+      }).catch(() => {});
+
+      onOpen(convId);
+      onClose();
+    } catch(e) {
+      setErr(EM.msgSend.body);
+    }
+    setSending(false);
+  };
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:3000,
+      display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{width:"100%",maxWidth:460,background:"#fdf6ec",border:"1px solid var(--border)",
+        borderRadius:14,overflow:"hidden",boxShadow:"0 12px 48px rgba(0,0,0,.4)",animation:"su .2s ease"}}>
+        <div style={{padding:"14px 18px",borderBottom:"1px solid var(--border)",display:"flex",
+          alignItems:"center",justifyContent:"space-between"}}>
+          <div>
+            <div style={{fontFamily:"'Playfair Display',serif",fontSize:17,fontWeight:700}}>
+              Contact {itemOrgName || "Program"}
+            </div>
+            {item?.name && <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>Re: {item.name}</div>}
+          </div>
+          <button onClick={onClose} style={{background:"none",border:"1px solid var(--border)",
+            color:"var(--muted)",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+        </div>
+        <div style={{padding:18}}>
+          <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,
+            color:"var(--muted)",display:"block",marginBottom:6}}>Your Message</label>
+          <textarea
+            value={body}
+            onChange={e=>setBody(e.target.value)}
+            placeholder={item
+              ? `Hi! I saw your listing for "${item.name}" on Theatre4u. Is it available for our production running March 15–22?`
+              : `Hi! I found your organization on Theatre4u and wanted to reach out…`}
+            autoFocus
+            rows={5}
+            style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--border)",
+              borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"'Raleway',sans-serif",
+              color:"var(--ink)",outline:"none",resize:"vertical",boxSizing:"border-box"}}
+            onFocus={e=>e.target.style.borderColor="var(--gold)"}
+            onBlur={e=>e.target.style.borderColor="var(--border)"}
+          />
+          {err && <div style={{color:"var(--red)",fontSize:12,marginTop:6}}>{err}</div>}
+          <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:14}}>
+            <button className="btn btn-o" onClick={onClose}>Cancel</button>
+            <button className="btn btn-g" onClick={send} disabled={!body.trim()||sending}>
+              {sending ? "Sending…" : "Send Message →"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Chat Window ────────────────────────────────────────────────────────────────
+function ChatWindow({ convId, currentUserId, orgNames, onClose, onUnreadChange }) {
+  const [messages,  setMessages]  = useState([]);
+  const [conv,      setConv]      = useState(null);
+  const [body,      setBody]      = useState("");
+  const [loading,   setLoading]   = useState(true);
+  const [sending,   setSending]   = useState(false);
+  const bottomRef = useRef();
+  const inputRef  = useRef();
+
+  // Load conversation + messages
+  const load = useCallback(async () => {
+    const { data: convData } = await SB.from("conversations").select("*").eq("id", convId).single();
+    setConv(convData);
+    const { data: msgs } = await SB.from("messages")
+      .select("*").eq("conversation_id", convId).order("created_at");
+    setMessages(msgs || []);
+    setLoading(false);
+    // Mark messages as read
+    await SB.from("messages").update({ read: true })
+      .eq("conversation_id", convId)
+      .neq("sender_id", currentUserId)
+      .eq("read", false);
+    onUnreadChange?.();
+  }, [convId, currentUserId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Realtime subscription
+  useEffect(() => {
+    const channel = SB.channel(`conv-${convId}`)
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "messages",
+        filter: `conversation_id=eq.${convId}`
+      }, payload => {
+        // Deduplicate — only add if this message ID isn't already in state
+        setMessages(p => p.some(m => m.id === payload.new.id) ? p : [...p, payload.new]);
+        if (payload.new.sender_id !== currentUserId) {
+          SB.from("messages").update({ read: true }).eq("id", payload.new.id);
+          onUnreadChange?.();
+        }
+      }).subscribe();
+    return () => SB.removeChannel(channel);
+  }, [convId, currentUserId]);
+
+  // Scroll to bottom on new message
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const send = async () => {
+    if (!body.trim() || sending) return;
+    setSending(true);
+    const text = body.trim();
+    setBody("");
+    const { data: msg } = await SB.from("messages").insert({
+      conversation_id: convId,
+      sender_id:       currentUserId,
+      body:            text,
+    }).select().single();
+    // Don't add to state here — realtime subscription handles it
+    // This prevents the duplicate message bug
+    await SB.from("conversations").update({ last_message: text, last_at: new Date().toISOString() }).eq("id", convId);
+
+    // Notify recipient
+    const otherId = conv?.org_a === currentUserId ? conv?.org_b : conv?.org_a;
+    if (otherId) {
+      const { data: { session } } = await SB.auth.getSession();
+      fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/message-notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          conversation_id: convId,
+          recipient_id:    otherId,
+          message_preview: text.slice(0, 200),
+          item_name:       conv?.item_name || null,
+          sender_name:     orgNames?.[currentUserId] || "A theatre program",
+        })
+      }).catch(() => {});
+    }
+    setSending(false);
+    inputRef.current?.focus();
+  };
+
+  const otherId = conv ? (conv.org_a === currentUserId ? conv.org_b : conv.org_a) : null;
+  const otherName = otherId ? (orgNames?.[otherId] || "Unknown Program") : "…";
+
+  const fmt = ts => {
+    const d = new Date(ts);
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    return isToday ? d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) : d.toLocaleDateString([], {month:"short",day:"numeric"}) + " " + d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+  };
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
+      {/* Header */}
+      <div style={{padding:"12px 16px",borderBottom:"1px solid var(--border)",
+        background:"var(--parch)",flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{width:36,height:36,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),var(--amber))",
+            display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>🎭</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontWeight:700,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{otherName}</div>
+            {conv?.item_name && <div style={{fontSize:11,color:"var(--muted)"}}>Re: {conv.item_name}</div>}
+          </div>
+          <button onClick={onClose} style={{background:"none",border:"none",color:"var(--muted)",
+            cursor:"pointer",fontSize:20,padding:"0 4px",lineHeight:1}}>✕</button>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div style={{flex:1,overflowY:"auto",padding:"16px",display:"flex",flexDirection:"column",gap:8}}>
+        {loading ? (
+          <div style={{textAlign:"center",padding:32,color:"var(--muted)"}}>Loading…</div>
+        ) : messages.length === 0 ? (
+          <div style={{textAlign:"center",padding:32,color:"var(--muted)"}}>
+            <div style={{fontSize:32,marginBottom:8}}>💬</div>
+            <div style={{fontSize:13}}>Start the conversation!</div>
+          </div>
+        ) : (
+          messages.map(msg => {
+            const isMe = msg.sender_id === currentUserId;
+            return (
+              <div key={msg.id} style={{display:"flex",flexDirection:"column",
+                alignItems:isMe?"flex-end":"flex-start"}}>
+                <div style={{maxWidth:"80%",padding:"9px 13px",borderRadius:isMe?"14px 14px 4px 14px":"14px 14px 14px 4px",
+                  background:isMe?"var(--ink)":"var(--parch)",
+                  color:isMe?"var(--gold)":"var(--ink)",
+                  border:isMe?"none":"1px solid var(--border)",
+                  fontSize:14,lineHeight:1.5}}>
+                  {msg.body}
+                </div>
+                <div style={{fontSize:10,color:"var(--faint)",marginTop:3,paddingLeft:4,paddingRight:4}}>
+                  {fmt(msg.created_at)}
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={bottomRef}/>
+      </div>
+
+      {/* Input */}
+      <div style={{padding:"12px",borderTop:"1px solid var(--border)",flexShrink:0,background:"var(--cream)"}}>
+        <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+          <textarea
+            ref={inputRef}
+            value={body}
+            onChange={e=>setBody(e.target.value)}
+            onKeyDown={e=>{ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(); }}}
+            placeholder="Type a message… (Enter to send)"
+            rows={2}
+            style={{flex:1,background:"var(--parch)",border:"1.5px solid var(--border)",borderRadius:8,
+              padding:"8px 11px",fontSize:13,fontFamily:"'Raleway',sans-serif",color:"var(--ink)",
+              outline:"none",resize:"none",boxSizing:"border-box"}}
+            onFocus={e=>e.target.style.borderColor="var(--gold)"}
+            onBlur={e=>e.target.style.borderColor="var(--border)"}
+          />
+          <button className="btn btn-g" onClick={send} disabled={!body.trim()||sending}
+            style={{padding:"10px 16px",fontSize:13,flexShrink:0}}>
+            {sending?"…":"Send"}
+          </button>
+        </div>
+        <div style={{fontSize:10,color:"var(--faint)",marginTop:4}}>Shift+Enter for new line</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Messages Page ──────────────────────────────────────────────────────────────
+function Messages({ userId, orgName, openConvId, onClearOpenConv }) {
+  const [conversations, setConversations] = useState([]);
+  const [orgNames,      setOrgNames]      = useState({});
+  const [activeConv,    setActiveConv]    = useState(openConvId || null);
+  const [loading,       setLoading]       = useState(true);
+  const [showNew,       setShowNew]       = useState(false);
+  const [searchOrg,     setSearchOrg]     = useState("");
+  const [foundOrgs,     setFoundOrgs]     = useState([]);
+  const [unreadCounts,  setUnreadCounts]  = useState({});
+
+  const loadConvs = useCallback(async () => {
+    const { data } = await SB.from("conversations")
+      .select("*")
+      .or(`org_a.eq.${userId},org_b.eq.${userId}`)
+      .order("last_at", { ascending: false });
+    setConversations(data || []);
+
+    // Load org names for all participants
+    const ids = new Set();
+    (data||[]).forEach(c => { ids.add(c.org_a); ids.add(c.org_b); });
+    ids.delete(userId);
+    if (ids.size > 0) {
+      const { data: orgs } = await SB.from("orgs").select("id,name").in("id", [...ids]);
+      const map = {};
+      (orgs||[]).forEach(o => map[o.id] = o.name);
+      map[userId] = orgName || "You";
+      setOrgNames(map);
+    }
+
+    // Count unread per conversation
+    const { data: unread } = await SB.from("messages")
+      .select("conversation_id")
+      .eq("read", false)
+      .neq("sender_id", userId);
+    const counts = {};
+    (unread||[]).forEach(m => { counts[m.conversation_id] = (counts[m.conversation_id]||0)+1; });
+    setUnreadCounts(counts);
+
+    setLoading(false);
+  }, [userId, orgName]);
+
+  useEffect(() => { loadConvs(); }, [loadConvs]);
+
+  // Handle externally-opened conv (from marketplace contact button)
+  useEffect(() => {
+    if (openConvId) { setActiveConv(openConvId); onClearOpenConv?.(); }
+  }, [openConvId]);
+
+  // Realtime: new conversations
+  useEffect(() => {
+    const ch = SB.channel("convs-list")
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversations" },
+        () => loadConvs())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" },
+        () => loadConvs())
+      .subscribe();
+    return () => SB.removeChannel(ch);
+  }, [loadConvs]);
+
+  // Search orgs for new general conversation
+  const searchOrgs = async (q) => {
+    if (q.length < 2) { setFoundOrgs([]); return; }
+    const { data } = await SB.from("orgs").select("id,name,location")
+      .ilike("name", `%${q}%`).neq("id", userId).limit(8);
+    setFoundOrgs(data || []);
+  };
+
+  const startGeneralConv = async (targetOrg) => {
+    setSearchOrg(""); setFoundOrgs([]); setShowNew(false);
+    // Check for existing general conv
+    const { data: existing } = await SB.from("conversations")
+      .select("id")
+      .is("item_id", null)
+      .eq("org_a", userId)
+      .eq("org_b", targetOrg.id)
+      .single();
+    if (existing) { setActiveConv(existing.id); return; }
+    const { data: newConv } = await SB.from("conversations").insert({
+      item_id: null, org_a: userId, org_b: targetOrg.id,
+      item_name: null, last_message: "", last_at: new Date().toISOString(),
+    }).select().single();
+    if (newConv) { await loadConvs(); setActiveConv(newConv.id); }
+  };
+
+  const totalUnread = Object.values(unreadCounts).reduce((s,n)=>s+n,0);
+
+  return (
+    <div style={{display:"flex",height:"calc(100vh - 60px)",background:"var(--cream)"}}>
+
+      {/* ── Conversation List (left panel) ── */}
+      <div style={{width:320,minWidth:280,borderRight:"1px solid var(--border)",
+        display:"flex",flexDirection:"column",background:"var(--cream)"}}>
+        {/* Header */}
+        <div style={{padding:"16px 16px 10px",borderBottom:"1px solid var(--border)"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+            <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700}}>
+              Messages {totalUnread>0&&<span style={{fontSize:13,background:"var(--ink)",color:"var(--gold)",borderRadius:9,padding:"1px 7px",marginLeft:6}}>{totalUnread}</span>}
+            </div>
+            <button className="btn btn-g btn-sm" onClick={()=>setShowNew(!showNew)}>+ New</button>
+          </div>
+          {/* Search to start new general conversation */}
+          {showNew && (
+            <div style={{marginBottom:8}}>
+              <input
+                value={searchOrg}
+                onChange={e=>{ setSearchOrg(e.target.value); searchOrgs(e.target.value); }}
+                placeholder="Search organizations…"
+                style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--border)",borderRadius:7,
+                  padding:"7px 10px",fontSize:13,fontFamily:"'Raleway',sans-serif",color:"var(--ink)",
+                  outline:"none",boxSizing:"border-box"}}
+                autoFocus
+              />
+              {foundOrgs.length > 0 && (
+                <div style={{border:"1px solid var(--border)",borderRadius:7,marginTop:4,background:"#fff",overflow:"hidden"}}>
+                  {foundOrgs.map(o => (
+                    <div key={o.id} onClick={()=>startGeneralConv(o)}
+                      style={{padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid var(--border)",fontSize:13}}
+                      onMouseEnter={e=>e.currentTarget.style.background="var(--parch)"}
+                      onMouseLeave={e=>e.currentTarget.style.background=""}>
+                      <div style={{fontWeight:600}}>{o.name}</div>
+                      {o.location&&<div style={{fontSize:11,color:"var(--muted)"}}>📍 {o.location}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {searchOrg.length>=2&&foundOrgs.length===0&&(
+                <div style={{fontSize:12,color:"var(--muted)",marginTop:4,textAlign:"center"}}>No organizations found</div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Conversation list */}
+        <div style={{flex:1,overflowY:"auto"}}>
+          {loading ? (
+            <div style={{textAlign:"center",padding:32,color:"var(--muted)"}}>Loading…</div>
+          ) : conversations.length === 0 ? (
+            <div style={{textAlign:"center",padding:40}}>
+              <div style={{fontSize:36,marginBottom:10}}>💬</div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:6}}>No messages yet</div>
+              <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>
+                Start a conversation by finding a program in Backstage Exchange, or wait for someone to reach out to you here.
+              </div>
+            </div>
+          ) : (
+            conversations.map(conv => {
+              const otherId = conv.org_a === userId ? conv.org_b : conv.org_a;
+              const otherName = orgNames[otherId] || "Unknown Program";
+              const isActive = activeConv === conv.id;
+              const unread = unreadCounts[conv.id] || 0;
+              const lastAt = conv.last_at ? new Date(conv.last_at).toLocaleDateString([], {month:"short",day:"numeric"}) : "";
+              return (
+                <div key={conv.id} onClick={()=>setActiveConv(conv.id)}
+                  style={{padding:"12px 16px",cursor:"pointer",borderBottom:"1px solid var(--border)",
+                    background:isActive?"rgba(212,168,67,.08)":"transparent",
+                    borderLeft:isActive?"3px solid var(--gold)":"3px solid transparent",
+                    transition:"all .15s"}}>
+                  <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+                    <div style={{width:38,height:38,borderRadius:"50%",
+                      background:"linear-gradient(135deg,var(--gold),var(--amber))",
+                      display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>🎭</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:2}}>
+                        <div style={{fontWeight:unread>0?800:600,fontSize:13,overflow:"hidden",
+                          textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{otherName}</div>
+                        <div style={{fontSize:10,color:"var(--faint)",marginLeft:6,flexShrink:0}}>{lastAt}</div>
+                      </div>
+                      {conv.item_name && (
+                        <div style={{fontSize:11,color:"var(--amber)",marginBottom:2,fontWeight:600}}>
+                          📦 {conv.item_name}
+                        </div>
+                      )}
+                      <div style={{fontSize:12,color:"var(--muted)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                        display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis"}}>{conv.last_message || "No messages yet"}</span>
+                        {unread > 0 && (
+                          <span style={{background:"var(--ink)",color:"var(--gold)",borderRadius:"50%",
+                            width:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",
+                            fontSize:10,fontWeight:800,flexShrink:0,marginLeft:6}}>{unread}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* ── Chat Window (right panel) ── */}
+      <div style={{flex:1,display:"flex",flexDirection:"column",background:"var(--cream)"}}>
+        {activeConv ? (
+          <ChatWindow
+            convId={activeConv}
+            currentUserId={userId}
+            orgNames={{...orgNames, [userId]: orgName||"You"}}
+            onClose={()=>setActiveConv(null)}
+            onUnreadChange={loadConvs}
+          />
+        ) : (
+          <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
+            justifyContent:"center",gap:12,color:"var(--muted)"}}>
+            <div style={{fontSize:56}}>💬</div>
+            <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--ink)"}}>Your Messages</div>
+            <div style={{fontSize:14,color:"var(--muted)",maxWidth:340,textAlign:"center",lineHeight:1.6}}>
+              Select a conversation on the left, or click "+ New" to message any organization. You can also contact programs directly from Backstage Exchange.
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+
+function normalizeImageUrl(url) {
+  if (!url) return null;
+  const u = url.trim();
+  if (!u.startsWith("http")) return null;
+  const gD=u.match(/drive\.google\.com\/file\/d\/([^/?]+)/);
+  if(gD) return `https://drive.google.com/thumbnail?id=${gD[1]}&sz=w800`;
+  const gO=u.match(/drive\.google\.com\/open\?id=([^&]+)/);
+  if(gO) return `https://drive.google.com/thumbnail?id=${gO[1]}&sz=w800`;
+  const gU=u.match(/drive\.google\.com\/uc[^?]*\?.*[?&]id=([^&]+)/);
+  if(gU) return `https://drive.google.com/thumbnail?id=${gU[1]}&sz=w800`;
+  if(u.includes("dropbox.com")) return u.replace("www.dropbox.com","dl.dropboxusercontent.com").replace(/[?&]dl=0/,"").replace(/[?&]raw=0/,"")+(u.includes("?")?"&":"?")+"raw=1";
+  if(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(u)) return u;
+  return u;
+}
+
+function CSVImport({ onImport, onClose, userId }) {
+  const [step,    setStep]    = useState("upload");   // upload → map → preview → done
+  const [headers, setHeaders] = useState([]);
+  const [rows,    setRows]    = useState([]);
+  const [mapping, setMapping] = useState({});         // csvCol → fieldKey
+  const [parsed,  setParsed]  = useState([]);
+  const [errors,  setErrors]  = useState([]);
+  const [importing, setImporting] = useState(false);
+  const [progress, setProgress]   = useState(0);
+  const [result,  setResult]  = useState(null);
+  const fileRef = useRef();
+
+  // ── Step 1: Upload & parse ───────────────────────────────────────────────
+  const handleFile = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const allRows = parseCSV(ev.target.result);
+      if (allRows.length < 2) { alert(EM.csvFormat.title+"\n\n"+EM.csvFormat.body); return; }
+      const hdrs = allRows[0];
+      const dataRows = allRows.slice(1).filter(r => r.some(c=>c));
+      setHeaders(hdrs);
+      setRows(dataRows);
+      // Auto-detect mapping
+      const auto = {};
+      hdrs.forEach((h,i) => { const match = autoMatch(h); if (match) auto[i] = match; });
+      setMapping(auto);
+      setStep("map");
+    };
+    reader.readAsText(file);
+  };
+
+  // Download our template
+  const downloadTemplate = () => {
+    const h = ["Name","Category","Condition","Size","Qty","Location","Availability","Market","Rent","Sale","Tags","Image URL","Notes"];
+    const ex = [
+      ["Victorian Ball Gown","costumes","Good","M","1","Costume Closet A","In Stock","For Rent","25","0","period;formal","Used in A Christmas Carol"],
+      ["Fog Machine 1000W","effects","Excellent","N/A","2","Effects Cage","In Stock","For Rent","20","0","atmosphere","Includes remote"],
+      ["Romeo & Juliet Scripts","scripts","Fair","N/A","30","Library","In Stock","For Sale","0","5","shakespeare","Director annotated"],
+    ];
+    const csv = [h,...ex].map(r=>r.join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+    a.download = "theatre4u_import_template.csv";
+    a.click();
+  };
+
+  // ── Step 2: Column mapping → build preview ───────────────────────────────
+  const buildPreview = () => {
+    const errs = [];
+    const nameCol = Object.entries(mapping).find(([,v])=>v==="name");
+    if (!nameCol) { errs.push(EM.csvNoName.body); setErrors(errs); return; }
+
+    const items = rows.map((row, ri) => {
+      const item = {
+        category: "other", condition: "Good", size: "N/A",
+        qty: 1, avail: "In Stock", mkt: "Not Listed",
+        rent: 0, sale: 0, tags: [], notes: "", location: "", img: null, description: ""
+      };
+      Object.entries(mapping).forEach(([colIdx, fieldKey]) => {
+        const raw = row[parseInt(colIdx)];
+        const val = coerce(fieldKey, raw);
+        if (val !== undefined) item[fieldKey] = val;
+      });
+      if (!item.name?.trim()) errs.push(`Row ${ri+2}: Item name is blank — row will be skipped.`);
+      return item;
+    }).filter(i => i.name?.trim());
+
+    setErrors(errs);
+    setParsed(items);
+    setStep("preview");
+  };
+
+  // ── Step 3: Import ────────────────────────────────────────────────────────
+  const doImport = async () => {
+    setImporting(true);
+    setProgress(0);
+    const BATCH = 50;
+    let imported = 0, failed = 0;
+    const now = new Date().toISOString();
+
+    for (let i=0; i<parsed.length; i+=BATCH) {
+      const batch = parsed.slice(i, i+BATCH).map(item => ({
+        ...item,
+        org_id: userId,
+        added: now,
+      }));
+      const { error } = await SB.from("items").insert(batch);
+      if (error) { failed += batch.length; console.error("Import batch error:", error); }
+      else { imported += batch.length; }
+      setProgress(Math.round(((i+BATCH)/parsed.length)*100));
+    }
+    setResult({ imported, failed, total: parsed.length });
+    setImporting(false);
+    setStep("done");
+    if (imported > 0) onImport(); // trigger reload
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  const W = { maxWidth:680, width:"100%" };
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(18,6,0,.78)",zIndex:2000,
+      display:"flex",alignItems:"center",justifyContent:"center",padding:16,animation:"fi .15s ease"}}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{...W,background:"#fdf6ec",border:"1px solid var(--border)",borderRadius:14,
+        maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 12px 56px rgba(0,0,0,.5)",
+        animation:"su .2s ease"}}>
+
+        {/* Header */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+          padding:"16px 22px",borderBottom:"1px solid var(--border)",flexShrink:0}}>
+          <div>
+            <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:20,marginBottom:2}}>Import from CSV</h2>
+            <div style={{display:"flex",gap:12,marginTop:6}}>
+              {["upload","map","preview","done"].map((s,i)=>(
+                <div key={s} style={{display:"flex",alignItems:"center",gap:5,fontSize:11,
+                  color:step===s?"var(--gold)":["upload","map","preview","done"].indexOf(step)>i?"var(--green)":"var(--muted)",
+                  fontWeight:step===s?700:400}}>
+                  <div style={{width:18,height:18,borderRadius:"50%",display:"flex",alignItems:"center",
+                    justifyContent:"center",fontSize:9,fontWeight:800,
+                    background:step===s?"var(--gold)":["upload","map","preview","done"].indexOf(step)>i?"var(--green)":"rgba(18,6,0,.1)",
+                    color:step===s||["upload","map","preview","done"].indexOf(step)>i?"#1a0f00":"var(--muted)"}}>
+                    {["upload","map","preview","done"].indexOf(step)>i?"✓":i+1}
+                  </div>
+                  {s[0].toUpperCase()+s.slice(1)}
+                </div>
+              ))}
+            </div>
+          </div>
+          <button onClick={onClose} style={{background:"none",border:"1px solid var(--border)",
+            color:"var(--muted)",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:13,fontFamily:"inherit"}}>✕</button>
+        </div>
+
+        {/* Body */}
+        <div style={{flex:1,overflowY:"auto",padding:"20px 22px"}}>
+
+          {/* ── STEP 1: UPLOAD ── */}
+          {step==="upload" && (
+            <div style={{display:"flex",flexDirection:"column",gap:16}}>
+              <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",
+                borderRadius:10,padding:16}}>
+                <div style={{fontWeight:700,fontSize:13,marginBottom:6,color:"var(--gold)"}}>💡 Two ways to import</div>
+                <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
+                  <strong style={{color:"var(--ink)"}}>Option A</strong> — Download our template, fill it in, upload it back.<br/>
+                  <strong style={{color:"var(--ink)"}}>Option B</strong> — Upload any spreadsheet you already have. We'll help you match your columns to ours.
+                </p>
+                <button onClick={downloadTemplate} style={{background:"none",border:"1px solid var(--border)",
+                  color:"var(--ink)",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:12,
+                  fontFamily:"inherit",fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
+                  ⬇ Download Template CSV
+                </button>
+              </div>
+
+              <label style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+                gap:10,border:"2px dashed var(--border)",borderRadius:12,padding:"36px 20px",
+                cursor:"pointer",transition:"border-color .2s",textAlign:"center"}}
+                onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor="var(--gold)"}}
+                onDragLeave={e=>{e.currentTarget.style.borderColor="var(--border)"}}
+                onDrop={e=>{e.preventDefault();e.currentTarget.style.borderColor="var(--border)";
+                  const f=e.dataTransfer.files[0];if(f){const dt=new DataTransfer();dt.items.add(f);fileRef.current.files=dt.files;handleFile({target:{files:[f]}})}}}>
+                <div style={{fontSize:40}}>📂</div>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:18}}>Drop your CSV here</div>
+                <div style={{fontSize:12,color:"var(--muted)"}}>or click to browse — .csv files only</div>
+                <input ref={fileRef} type="file" accept=".csv,text/csv" hidden onChange={handleFile}/>
+              </label>
+
+              <div style={{background:"rgba(66,165,245,.06)",border:"1px solid rgba(66,165,245,.18)",borderRadius:9,padding:"11px 14px",fontSize:12,color:"var(--muted)",lineHeight:1.65}}><strong style={{color:"#42a5f5"}}>📷 Adding Photos via Image URL</strong> — Add a column called <strong style={{color:"var(--ink)"}}>Image URL</strong> with a public Google Drive or Dropbox share link. Google Drive: right-click → Share → "Anyone with the link" → Copy link → paste in CSV.</div>
+              <div style={{fontSize:11,color:"var(--muted)",textAlign:"center"}}>
+                Supports exports from Google Sheets, Excel, Airtable, and most inventory apps.
+              </div>
+            </div>
+          )}
+
+          {/* ── STEP 2: MAP COLUMNS ── */}
+          {step==="map" && (
+            <div>
+              <p style={{fontSize:13,color:"var(--muted)",marginBottom:16,lineHeight:1.5}}>
+                We found <strong style={{color:"var(--ink)"}}>{headers.length} columns</strong> and <strong style={{color:"var(--ink)"}}>{rows.length} rows</strong> in your file.
+                Match each column to a Theatre4u field. We've auto-detected what we can — check and adjust below.
+              </p>
+
+              <div style={{border:"1px solid var(--border)",borderRadius:10,overflow:"hidden",marginBottom:14}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 28px 1fr",gap:0,
+                  background:"rgba(18,6,0,.06)",padding:"8px 14px",fontSize:10,
+                  textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",fontWeight:700}}>
+                  <span>Your Column</span><span/>
+                  <span>Maps To</span>
+                </div>
+                {headers.map((h,i)=>(
+                  <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 28px 1fr",
+                    alignItems:"center",gap:0,padding:"8px 14px",
+                    borderTop:"1px solid var(--border)",background:i%2===0?"transparent":"rgba(255,255,255,.02)"}}>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:600}}>{h||"(blank)"}</div>
+                      <div style={{fontSize:11,color:"var(--muted)",marginTop:1}}>
+                        e.g. {rows[0]?.[i]||"—"}
+                      </div>
+                    </div>
+                    <div style={{textAlign:"center",color:"var(--muted)",fontSize:16}}>→</div>
+                    <select value={mapping[i]||""} onChange={e=>{
+                        const v=e.target.value;
+                        setMapping(p=>{const n={...p};if(v)n[i]=v;else delete n[i];return n;});
+                      }}
+                      style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:6,
+                        padding:"5px 8px",color:mapping[i]?"var(--ink)":"var(--muted)",
+                        fontSize:12,fontFamily:"inherit",outline:"none",cursor:"pointer"}}>
+                      <option value="">— skip this column —</option>
+                      {CSV_FIELDS.map(f=>(
+                        <option key={f.key} value={f.key}>{f.label}{f.required?" *":""}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+
+              {errors.length>0&&<div style={{background:"rgba(194,24,91,.1)",border:"1px solid rgba(194,24,91,.25)",
+                borderRadius:8,padding:"10px 14px",marginBottom:12,fontSize:12,color:"var(--red)"}}>
+                {errors.map((e,i)=><div key={i}>⚠ {e}</div>)}
+              </div>}
+
+              <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                <button onClick={()=>setStep("upload")} style={{background:"none",border:"1px solid var(--border)",
+                  color:"var(--muted)",padding:"7px 16px",borderRadius:7,cursor:"pointer",fontSize:13,fontFamily:"inherit"}}>
+                  ← Back
+                </button>
+                <button onClick={buildPreview} className="btn btn-g" style={{padding:"7px 20px"}}>
+                  Preview Import →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── STEP 3: PREVIEW ── */}
+          {step==="preview" && (
+            <div>
+              {(()=>{const withImg=parsed.filter(i=>i.img).length;return withImg>0&&(<div style={{background:"rgba(66,165,245,.08)",border:"1px solid rgba(66,165,245,.2)",borderRadius:8,padding:"8px 12px",marginBottom:10,fontSize:12,color:"var(--muted)"}}>📷 <strong style={{color:"#42a5f5"}}>{withImg}</strong> of {parsed.length} items have image URLs.</div>);})()} 
+              <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16}}>
+                <div style={{flex:1,background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.2)",
+                  borderRadius:8,padding:"10px 14px",textAlign:"center"}}>
+                  <div style={{fontSize:22,fontWeight:800,color:"var(--green)"}}>{parsed.length}</div>
+                  <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>Items Ready</div>
+                </div>
+                {errors.length>0&&<div style={{flex:2,background:"rgba(255,167,38,.08)",border:"1px solid rgba(255,167,38,.2)",
+                  borderRadius:8,padding:"10px 14px"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#ffa726",marginBottom:4}}>⚠ {errors.length} warning{errors.length!==1?"s":""}</div>
+                  {errors.slice(0,3).map((e,i)=><div key={i} style={{fontSize:11,color:"var(--muted)"}}>{e}</div>)}
+                  {errors.length>3&&<div style={{fontSize:11,color:"var(--muted)"}}>+{errors.length-3} more…</div>}
+                </div>}
+              </div>
+
+              <div style={{border:"1px solid var(--border)",borderRadius:10,overflow:"hidden",marginBottom:16}}>
+                <div style={{overflowX:"auto",maxHeight:320}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                    <thead>
+                      <tr style={{background:"rgba(18,6,0,.07)",position:"sticky",top:0}}>
+                        {["#","Photo","Name","Category","Cond.","Qty","Location","Market","Notes"].map(h=>(
+                          <th key={h} style={{padding:"7px 10px",textAlign:"left",fontSize:10,
+                            textTransform:"uppercase",letterSpacing:.8,color:"var(--muted)",fontWeight:700,
+                            whiteSpace:"nowrap"}}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parsed.slice(0,100).map((item,i)=>{
+                        const cat=CAT[item.category]||CAT.other;
+                        return(
+                          <tr key={i} style={{borderTop:"1px solid var(--border)",
+                            background:i%2===0?"transparent":"rgba(18,6,0,.03)"}}>
+                            <td style={{padding:"6px 10px",color:"var(--muted)"}}>{i+1}</td>
+                            <td style={{padding:"6px 10px",fontWeight:600,maxWidth:160,
+                              overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</td>
+                            <td style={{padding:"6px 10px",whiteSpace:"nowrap"}}>{cat.icon} {cat.label}</td>
+                            <td style={{padding:"6px 10px",color:"var(--muted)"}}>{item.condition}</td>
+                            <td style={{padding:"6px 10px"}}>{item.qty}</td>
+                            <td style={{padding:"6px 10px",color:"var(--muted)",maxWidth:120,
+                              overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.location||"—"}</td>
+                            <td style={{padding:"6px 10px"}}>
+                              <span style={{fontSize:10,fontWeight:700,padding:"2px 6px",borderRadius:3,
+                                background:item.mkt==="Not Listed"?"rgba(255,255,255,.07)":"rgba(212,168,67,.15)",
+                                color:item.mkt==="Not Listed"?"var(--muted)":"var(--gold)"}}>{item.mkt}</span>
+                            </td>
+                            <td style={{padding:"6px 10px",color:"var(--muted)",maxWidth:140,
+                              overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.notes||"—"}</td>
+                          </tr>
+                        );
+                      })}
+                      {parsed.length>100&&(
+                        <tr><td colSpan={9} style={{padding:"8px 10px",textAlign:"center",
+                          color:"var(--muted)",fontSize:11,borderTop:"1px solid var(--border)"}}>
+                          + {parsed.length-100} more rows not shown in preview
+                        </td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div style={{display:"flex",gap:8,justifyContent:"flex-end",alignItems:"center"}}>
+                <button onClick={()=>setStep("map")} style={{background:"none",border:"1px solid var(--border)",
+                  color:"var(--muted)",padding:"7px 16px",borderRadius:7,cursor:"pointer",fontSize:13,fontFamily:"inherit"}}>
+                  ← Back
+                </button>
+                <button onClick={doImport} className="btn btn-g"
+                  style={{padding:"8px 22px",fontSize:14,fontWeight:800}} disabled={parsed.length===0||importing}>
+                  {importing
+                    ? <span style={{display:"flex",alignItems:"center",gap:8}}>
+                        <span style={{width:14,height:14,border:"2px solid rgba(255,255,255,.3)",borderTopColor:"#fff",
+                          borderRadius:"50%",animation:"spin .7s linear infinite",display:"inline-block"}}/>
+                        Importing… {progress}%
+                      </span>
+                    : `Import ${parsed.length} Item${parsed.length!==1?"s":""} →`}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── STEP 4: DONE ── */}
+          {step==="done" && result && (
+            <div style={{textAlign:"center",padding:"24px 0"}}>
+              <div style={{fontSize:56,marginBottom:16}}>{result.failed===0?"🎉":"⚠️"}</div>
+              <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:24,marginBottom:8}}>
+                {result.failed===0?"Import Complete!":"Import Finished with Errors"}
+              </h3>
+              <div style={{display:"flex",gap:12,justifyContent:"center",marginBottom:20,flexWrap:"wrap"}}>
+                <div style={{background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.2)",
+                  borderRadius:10,padding:"12px 24px",textAlign:"center"}}>
+                  <div style={{fontSize:28,fontWeight:800,color:"var(--green)"}}>{result.imported}</div>
+                  <div style={{fontSize:11,color:"var(--muted)"}}>Items Imported</div>
+                </div>
+                {result.failed>0&&<div style={{background:"rgba(194,24,91,.1)",border:"1px solid rgba(194,24,91,.2)",
+                  borderRadius:10,padding:"12px 24px",textAlign:"center"}}>
+                  <div style={{fontSize:28,fontWeight:800,color:"var(--red)"}}>{result.failed}</div>
+                  <div style={{fontSize:11,color:"var(--muted)"}}>Failed</div>
+                </div>}
+              </div>
+              <p style={{color:"var(--muted)",fontSize:13,marginBottom:20}}>
+                {result.imported>0
+                  ? "Your items are now in your Inventory. You can edit any of them individually to add photos or refine details."
+                  : "Something went wrong. Please check your CSV file and try again."}
+              </p>
+              <button onClick={onClose} className="btn btn-g" style={{padding:"9px 28px"}}>
+                Go to Inventory →
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COMMUNITY BOARD
+// ══════════════════════════════════════════════════════════════════════════════
+const POST_TYPES = [
+  { id:"show",         label:"Upcoming Show",    icon:"🎭", color:"#7b1fa2", desc:"Share your production dates and ticket info" },
+  { id:"audition",     label:"Audition Notice",  icon:"🎤", color:"#1565c0", desc:"Looking for cast or crew members" },
+  { id:"photo",        label:"Production Photos", icon:"📸", color:"#c2185b", desc:"Share photos from your recent shows" },
+  { id:"wanted",       label:"Item Wanted",       icon:"🔍", color:"#d84315", desc:"Looking for a specific prop, costume, or equipment" },
+  { id:"resource",     label:"Resource Share",    icon:"🤝", color:"#00838f", desc:"Offering props, costumes, or equipment to borrow or share" },
+  { id:"announcement", label:"Announcement",      icon:"📢", color:"#2e7d32", desc:"News, updates, or anything else" },
+];
+const PT = Object.fromEntries(POST_TYPES.map(p=>[p.id,p]));
+
+function CommunityPostForm({initial, onSave, onCancel, saving=false}) {
+  const blank = {type:"show",title:"",body:"",show_title:"",venue:"",start_date:"",end_date:"",ticket_url:"",contact_email:"",tags:[],images:[]};
+  const [f,setF] = useState(()=>initial ? {...blank,...initial,images:initial.images||[]} : blank);
+  const [tagInput,setTagInput] = useState("");
+  const [uploading,setUploading] = useState(false);
+  const photoRef = useRef();
+  const upd = (k,v)=>setF(p=>({...p,[k]:v}));
+
+  const handlePhotos = async(e)=>{
+    const files = Array.from(e.target.files||[]).slice(0,6-(f.images||[]).length);
+    if(!files.length) return;
+    setUploading(true);
+    const urls = [];
+    for(const file of files){
+      // Use resizeImg if available, otherwise compressImage
+      const resized = typeof resizeImg==="function"
+        ? await resizeImg(file,1200,0.85)
+        : await new Promise(res=>{
+            const reader=new FileReader();
+            reader.onload=e2=>{
+              const img=new Image();
+              img.onload=()=>{
+                const canvas=document.createElement("canvas");
+                let w=img.width,h=img.height;
+                if(w>1200){h=Math.round(1200/w*h);w=1200;}
+                canvas.width=w;canvas.height=h;
+                canvas.getContext("2d").drawImage(img,0,0,w,h);
+                res(canvas.toDataURL("image/jpeg",0.85));
+              };
+              img.src=e2.target.result;
+            };
+            reader.readAsDataURL(file);
+          });
+      // Upload to community-photos bucket
+      try{
+        const blob=await fetch(resized).then(r=>r.blob());
+        const path=`community/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+        const{data,error}=await SB.storage.from("community-photos").upload(path,blob,{contentType:"image/jpeg",upsert:false});
+        if(!error&&data){
+          const{data:urlData}=SB.storage.from("community-photos").getPublicUrl(path);
+          if(urlData?.publicUrl) urls.push(urlData.publicUrl);
+        }
+      }catch(err){console.error("Photo upload error:",err);}
+    }
+    upd("images",[...(f.images||[]),...urls]);
+    setUploading(false);
+    if(photoRef.current) photoRef.current.value="";
+  };
+
+  const removePhoto=(url)=>upd("images",(f.images||[]).filter(u=>u!==url));
+  const addTag=()=>{const t=tagInput.trim().toLowerCase();if(t&&!(f.tags||[]).includes(t))upd("tags",[...(f.tags||[]),t]);setTagInput("");};
+  const valid = f.title.trim() && f.type;
+
+  return(<div className="fg2">
+    <div className="fg fu">
+      <label className="fl">Post Type</label>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+        {POST_TYPES.map(pt=>(
+          <button key={pt.id} type="button" onClick={()=>upd("type",pt.id)}
+            style={{padding:"8px 14px",borderRadius:8,border:"1.5px solid",fontFamily:"inherit",fontSize:13,fontWeight:600,cursor:"pointer",
+              background:f.type===pt.id?pt.color+"22":"var(--parch)",
+              color:f.type===pt.id?pt.color:"var(--muted)",
+              borderColor:f.type===pt.id?pt.color:"var(--border)"}}>
+            {pt.icon} {pt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+    <div className="fg fu"><label className="fl">Title *</label><input className="fi" value={f.title} onChange={e=>upd("title",e.target.value)} placeholder={f.type==="show"?"e.g. Tickets Now Available — Into the Woods":f.type==="audition"?"e.g. Seeking Leads & Ensemble for Spring Musical":f.type==="wanted"?"e.g. Looking for Wizard of Oz costume set":"Title"} autoFocus/></div>
+    {(f.type==="show"||f.type==="audition")&&<>
+      <div className="fg"><label className="fl">Show Title</label><input className="fi" value={f.show_title||""} onChange={e=>upd("show_title",e.target.value)} placeholder="Into the Woods"/></div>
+      <div className="fg"><label className="fl">Venue</label><input className="fi" value={f.venue||""} onChange={e=>upd("venue",e.target.value)} placeholder="Lincoln High Auditorium"/></div>
+    </>}
+    {f.type==="show"&&<>
+      <div className="fg"><label className="fl">Opening Date</label><input className="fi" type="date" value={f.start_date||""} onChange={e=>upd("start_date",e.target.value)}/></div>
+      <div className="fg"><label className="fl">Closing Date</label><input className="fi" type="date" value={f.end_date||""} onChange={e=>upd("end_date",e.target.value)}/></div>
+      <div className="fg"><label className="fl">Ticket Link (optional)</label><input className="fi" type="url" value={f.ticket_url||""} onChange={e=>upd("ticket_url",e.target.value)} placeholder="https://..."/></div>
+    </>}
+    {f.type==="audition"&&<>
+      <div className="fg"><label className="fl">Audition Date(s)</label><input className="fi" type="date" value={f.start_date||""} onChange={e=>upd("start_date",e.target.value)}/></div>
+      <div className="fg"><label className="fl">Contact Email</label><input className="fi" type="email" value={f.contact_email||""} onChange={e=>upd("contact_email",e.target.value)} placeholder="director@school.edu"/></div>
+    </>}
+    <div className="fg fu"><label className="fl">{f.type==="photo"?"Caption / Description":f.type==="audition"?"What You're Looking For":"Details"}</label><textarea className="ft" value={f.body||""} onChange={e=>upd("body",e.target.value)} placeholder={f.type==="show"?"Tell the community about your production...":f.type==="audition"?"Describe the roles available, experience needed, rehearsal schedule...":f.type==="wanted"?"Describe exactly what you're looking for...":"What would you like to share?"}/></div>
+
+    <div className="fg fu">
+      <label className="fl">Tags</label>
+      <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:4}}>{(f.tags||[]).map(t=><span key={t} className="mt" style={{cursor:"pointer"}} onClick={()=>upd("tags",f.tags.filter(x=>x!==t))}>{t} ×</span>)}</div>
+      <div style={{display:"flex",gap:6}}><input className="fi" value={tagInput} onChange={e=>setTagInput(e.target.value)} placeholder="musical, drama, comedy..." style={{flex:1}} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addTag();}}}/><button className="btn btn-o btn-sm" onClick={addTag}>Add</button></div>
+    </div>
+    
+    {/* ── Photo Upload ─────────────────────────────────────────── */}
+    <div className="fg fu" style={{marginBottom:4}}>
+      <label className="fl" style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+        📸 Production Photos <span style={{fontWeight:400,color:"var(--muted)",fontSize:10}}>(up to 6)</span>
+      </label>
+      {(f.images||[]).length>0&&(
+        <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:10}}>
+          {(f.images||[]).map((url,i)=>(
+            <div key={i} style={{position:"relative",width:80,height:80,borderRadius:8,overflow:"hidden",border:"1.5px solid var(--border)",flexShrink:0}}>
+              <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+              <button onClick={()=>removePhoto(url)} style={{position:"absolute",top:2,right:2,width:18,height:18,borderRadius:"50%",background:"rgba(0,0,0,.75)",border:"none",color:"#fff",fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {(f.images||[]).length<6&&(
+        <label style={{display:"inline-flex",alignItems:"center",gap:7,padding:"8px 14px",borderRadius:8,border:"1.5px dashed var(--border)",cursor:"pointer",color:"var(--muted)",fontSize:13,fontWeight:600,transition:"all .15s"}}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--gold)";e.currentTarget.style.color="var(--gold)";}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.color="var(--muted)";}}>
+          {uploading?"⏳ Uploading…":"📷 Add Photos"}
+          <input ref={photoRef} type="file" accept="image/*" multiple hidden onChange={handlePhotos} disabled={uploading}/>
+        </label>
+      )}
+      {uploading&&<div style={{fontSize:12,color:"var(--gold)",marginTop:4}}>Uploading photos…</div>}
+    </div>
+    <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10,paddingTop:14,borderTop:"1.5px solid var(--border)",gridColumn:"1/-1"}}>
+      <button className="btn btn-o" onClick={onCancel}>Cancel</button>
+      <button className="btn btn-g" disabled={!valid||saving} style={(!valid||saving)?{opacity:.4}:{}} onClick={()=>onSave(f)}>{saving?"Posting…":initial?"Save Changes":"Post to Community"}</button>
+    </div>
+  </div>);
+}
+
+function CommunityPostCard({post, orgName, onEdit, onDelete, isOwn}) {
+  const pt = PT[post.type]||PT.announcement;
+  const [expanded,setExpanded] = useState(false);
+  const hasMore = post.body && post.body.length > 160;
+
+  return(
+    <div className="card" style={{marginBottom:14,overflow:"hidden",border:`1px solid ${pt.color}22`}}>
+      {/* Header stripe */}
+      <div style={{height:4,background:`linear-gradient(90deg,${pt.color},${pt.color}88)`}}/>
+      <div style={{padding:"14px 18px"}}>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:8}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,flex:1,minWidth:0}}>
+            <div style={{width:40,height:40,borderRadius:10,background:pt.color+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{pt.icon}</div>
+            <div style={{minWidth:0}}>
+              <div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:pt.color,marginBottom:2}}>{pt.label}</div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:17,lineHeight:1.2,color:"var(--ink)"}}>{post.title}</div>
+            </div>
+          </div>
+          {isOwn&&<div style={{display:"flex",gap:4,flexShrink:0}}>
+            <button className="ico-btn" onClick={()=>onEdit(post)}>{Ic.edit}</button>
+            <button className="ico-btn" style={{color:"var(--red)"}} onClick={()=>onDelete(post.id)}>{Ic.trash}</button>
+          </div>}
+        </div>
+
+        {/* Show/audition meta */}
+        {(post.show_title||post.venue||post.start_date)&&(
+          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:10}}>
+            {post.show_title&&<span style={{padding:"2px 9px",background:"var(--parch)",borderRadius:6,fontSize:12,fontWeight:600,color:"var(--ink)"}}>{post.show_title}</span>}
+            {post.venue&&<span style={{padding:"2px 9px",background:"var(--parch)",borderRadius:6,fontSize:12,color:"var(--muted)"}}>📍 {post.venue}</span>}
+            {post.start_date&&<span style={{padding:"2px 9px",background:pt.color+"15",borderRadius:6,fontSize:12,fontWeight:600,color:pt.color}}>📅 {new Date(post.start_date).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}{post.end_date&&post.end_date!==post.start_date?" – "+new Date(post.end_date).toLocaleDateString("en-US",{month:"short",day:"numeric"}):""}  </span>}
+          </div>
+        )}
+
+        {/* Body */}
+        {post.body&&(
+          <div style={{fontSize:13.5,color:"var(--muted)",lineHeight:1.7,marginBottom:10}}>
+            {expanded||!hasMore ? post.body : post.body.slice(0,160)+"…"}
+            {hasMore&&<button onClick={()=>setExpanded(!expanded)} style={{marginLeft:5,background:"none",border:"none",color:pt.color,cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit"}}>{expanded?"Show less":"Read more"}</button>}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{width:24,height:24,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),var(--amber))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>🎭</div>
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:"var(--ink)"}}>{orgName}</div>
+              {post.location&&<div style={{fontSize:11,color:"var(--faint)"}}>{post.location}</div>}
+            </div>
+          </div>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            {(post.tags||[]).slice(0,3).map(t=><span key={t} className="mt">#{t}</span>)}
+            {post.ticket_url&&<a href={post.ticket_url} target="_blank" rel="noreferrer" className="btn btn-o btn-sm" style={{fontSize:11,padding:"3px 10px"}}>🎟️ Tickets</a>}
+            {post.contact_email&&<a href={`mailto:${post.contact_email}`} className="btn btn-o btn-sm" style={{fontSize:11,padding:"3px 10px"}}>✉️ Contact</a>}
+            <FbShareBtn
+              url={"https://theatre4u.org/#/community"}
+              text={postShareText(post, orgName)}
+              compact={true}
+              style={{fontSize:11,padding:"3px 9px"}}
+            />
+            {post.distance_miles != null && (
+              <span style={{fontSize:11,fontWeight:700,padding:"1px 7px",background:"rgba(255,255,255,.06)",borderRadius:5,color:"var(--muted)"}}>
+                📍 {post.distance_miles < 1 ? "< 1" : Math.round(post.distance_miles)} mi
+              </span>
+            )}
+            <div style={{fontSize:11,color:"var(--faint)"}}>{new Date(post.created_at).toLocaleDateString()}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CommunityPage({userId, org, plan}) {
+  const [posts,    setPosts]   = useState([]);
+  const [orgs,     setOrgs]    = useState({});
+  const [loading,  setLoading] = useState(true);
+  const [viewerLoc,setViewerLoc] = useState(null);
+  const [typeF,    setTypeF]   = useState("all");
+  const [search,   setSearch]  = useState("");
+  const [modal,    setModal]   = useState(null);
+  const [active,   setActive]  = useState(null);
+  const [saving,   setSaving]  = useState(false);
+  const [msg,      setMsg]     = useState("");
+
+  const load = useCallback(async()=>{
+    setLoading(true);
+    // Get viewer location — use stored org coords only, no blocking network calls
+    const vLat = org?.lat || null;
+    const vLng = org?.lng || null;
+    setViewerLoc(vLat && vLng ? { lat: vLat, lng: vLng } : null);
+
+    // Use proximity RPC — falls back to recency if no location
+    const { data } = await SB.rpc("proximity_community_posts", {
+      viewer_lat:   vLat   || null,
+      viewer_lng:   vLng   || null,
+      radius_miles: 150,
+      row_limit:    80,
+    });
+    // Strip computed RPC columns (distance_miles) before storing
+    setPosts((data || []).map(({distance_miles, ...p}) => p));
+    // Load org names
+    const ids = [...new Set((data || []).map(p => p.org_id))];
+    if (ids.length > 0) {
+      const { data: orgData } = await SB.from("orgs").select("id,name,location").in("id", ids);
+      const map = {}; (orgData || []).forEach(o => { map[o.id] = o.name; });
+      setOrgs(map);
+    }
+    setLoading(false);
+  }, [org?.lat, org?.lng, org?.location]);
+
+  useEffect(()=>{load();},[load]);
+
+  const save = async(f)=>{
+    setSaving(true);
+    try {
+      // Use org's stored coordinates directly — no geocoding needed
+      // The org's lat/lng is already stored from profile setup
+      const geoFields = (org?.lat && org?.lng)
+        ? { lat: org.lat, lng: org.lng }
+        : viewerLoc
+          ? { lat: viewerLoc.lat, lng: viewerLoc.lng }
+          : {};
+      // Convert empty date strings to null — Postgres DATE columns reject ""
+      // Only include real community_posts columns — strip computed fields like distance_miles
+      const row = {
+        type:           f.type,
+        title:          f.title,
+        body:           f.body         || null,
+        show_title:     f.show_title   || null,
+        venue:          f.venue        || null,
+        location:       f.location     || null,
+        start_date:     f.start_date   || null,
+        end_date:       f.end_date     || null,
+        ticket_url:     f.ticket_url   || null,
+        contact_email:  f.contact_email|| null,
+        tags:           f.tags         || [],
+        images:         f.images       || [],
+        org_id:         userId,
+        status:         "active",
+        ...geoFields,
+      };
+      if(active&&modal==="edit"){
+        const{data,error}=await SB.from("community_posts").update(row).eq("id",active.id).select().single();
+        if(error) throw new Error(error.message);
+        if(data){setPosts(p=>p.map(x=>x.id===data.id?data:x));setMsg("✓ Post updated");}
+      } else {
+        const{data,error}=await SB.from("community_posts").insert(row).select().single();
+        if(error) throw new Error(error.message);
+        if(data){setPosts(p=>[data,...p]);setMsg("✓ Post published!");}
+      }
+      setModal(null);setActive(null);
+      setTimeout(()=>setMsg(""),3000);
+    } catch(err) {
+      console.error("Community post save error:", err);
+      setMsg("❌ " + EM.generic.body);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deletePost = async(id)=>{
+    if(!window.confirm("Delete this post?"))return;
+    await SB.from("community_posts").update({status:"archived"}).eq("id",id);
+    setPosts(p=>p.filter(x=>x.id!==id));
+  };
+
+  const filtered = posts.filter(p=>{
+    if(typeF!=="all"&&p.type!==typeF)return false;
+    if(search){const q=search.toLowerCase();return p.title.toLowerCase().includes(q)||(p.body||"").toLowerCase().includes(q)||(p.show_title||"").toLowerCase().includes(q)||(p.location||"").toLowerCase().includes(q)||(p.tags||[]).some(t=>t.includes(q));}
+    return true;
+  });
+
+  const myPosts = posts.filter(p=>p.org_id===userId);
+
+  return(
+    <div style={{position:"relative"}}>
+      <img src={usp("photo-1503095396549-807759245b35",1400,900)} alt="" className="page-bg-img"/>
+      <div style={{padding:"32px 36px 0"}}>
+        <div className="hero-wrap" style={{height:230}}>
+          <img src={usp("photo-1503095396549-807759245b35",1100,290)} alt="Community" loading="eager"/>
+          <div className="hero-fade"/>
+          <div className="hero-body">
+            <div className="hero-eyebrow">🎪 Theatre Community</div>
+            <h1 className="hero-title" style={{fontSize:44}}>Community Board</h1>
+            <p className="hero-sub">Upcoming shows, audition notices, production photos, and wanted items — from programs across the network.</p>
+          </div>
+          <div className="hero-bar"/>
+        </div>
+      </div>
+
+      <div style={{padding:"24px 36px 56px",position:"relative",zIndex:1}}>
+        {/* Actions bar */}
+        <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:20,alignItems:"center"}}>
+          <div className="srch" style={{position:"relative",flex:1,minWidth:220}}>
+            <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"var(--muted)",display:"flex",pointerEvents:"none"}}>{Ic.search}</span>
+            <input className="fi" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search shows, auditions, wanted items…" style={{paddingLeft:34,width:"100%"}}/>
+          </div>
+          <div style={{display:"flex",gap:0,border:"1px solid var(--border)",borderRadius:6,overflow:"hidden"}}>
+            {[["all","All"],["show","🎭 Shows"],["audition","🎤 Auditions"],["photo","📸 Photos"],["wanted","🔍 Wanted"],["announcement","📢 News"]].map(([id,label])=>(
+              <button key={id} onClick={()=>setTypeF(id)} style={{background:typeF===id?"var(--gold)":"transparent",color:typeF===id?"#1a0f00":"var(--muted)",border:"none",padding:"7px 12px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
+            {msg&&<span style={{color:msg.startsWith("❌")?"var(--red)":"var(--green)",fontWeight:700,fontSize:13}}>{msg}</span>}
+            <button className="btn btn-g" onClick={()=>{setActive(null);setModal("add");}}>+ Share Something</button>
+          </div>
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 320px",gap:24,alignItems:"start"}}>
+          {/* Main feed */}
+          <div>
+            <div style={{fontSize:12,color:"var(--muted)",marginBottom:12,fontWeight:600,display:"flex",alignItems:"center",gap:10}}>
+              <span>{filtered.length} post{filtered.length!==1?"s":""}{typeF!=="all"?` · ${PT[typeF]?.label}`:""}</span>
+              {viewerLoc
+                ? <span style={{color:"var(--green)",fontWeight:700}}>📍 Sorted by proximity to you</span>
+                : <span style={{color:"var(--amber)",fontSize:11}}>⚠️ Set your location in Profile for proximity sorting</span>}
+            </div>
+            {loading
+              ?<div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading community posts…</div>
+              :filtered.length===0
+                ?<div className="empty">
+                    <div className="empty-ico">🎪</div>
+                    <h3>Be the first to post</h3>
+                    <p>Share your upcoming show, post an audition notice, or let the community know what items you're looking for.</p>
+                    <button className="btn btn-g" onClick={()=>{setActive(null);setModal("add");}}>+ Share Something</button>
+                  </div>
+                :filtered.map(post=>(
+                    <CommunityPostCard key={post.id} post={post} orgName={orgs[post.org_id]||"A Theatre Program"} isOwn={post.org_id===userId} onEdit={p=>{setActive(p);setModal("edit");}} onDelete={deletePost}/>
+                  ))
+            }
+          </div>
+
+          {/* Sidebar */}
+          <div style={{position:"sticky",top:80}}>
+            {/* Your posts */}
+            {myPosts.length>0&&(
+              <div className="card card-p" style={{marginBottom:16}}>
+                <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:12}}>Your Posts</h3>
+                {myPosts.slice(0,5).map(p=>(
+                  <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid var(--linen)"}}>
+                    <span style={{fontSize:16}}>{PT[p.type]?.icon||"📢"}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.title}</div>
+                      <div style={{fontSize:10,color:"var(--muted)"}}>{new Date(p.created_at).toLocaleDateString()}</div>
+                    </div>
+                    <button className="ico-btn" style={{flexShrink:0,color:"var(--red)"}} onClick={()=>deletePost(p.id)}>{Ic.trash}</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* What to post guide */}
+            <div className="card card-p" style={{background:"linear-gradient(135deg,rgba(212,168,67,.08),rgba(212,168,67,.03))",borderColor:"rgba(212,168,67,.25)"}}>
+              <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:12,color:"var(--gold)"}}>What to Share</h3>
+              {POST_TYPES.map(pt=>(
+                <div key={pt.id} style={{display:"flex",gap:8,padding:"7px 0",borderBottom:"1px solid var(--linen)"}}>
+                  <span style={{fontSize:18,flexShrink:0}}>{pt.icon}</span>
+                  <div>
+                    <div style={{fontSize:12,fontWeight:700,color:pt.color}}>{pt.label}</div>
+                    <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.4}}>{pt.desc}</div>
+                  </div>
+                </div>
+              ))}
+              <div style={{marginTop:10,fontSize:11,color:"var(--muted)",lineHeight:1.5}}>Open to all Theatre4u™ members — free and Pro alike.</div>
+              <div style={{marginTop:8,fontSize:11,color:"var(--amber)",lineHeight:1.5,padding:"6px 8px",background:"rgba(212,168,67,.08)",borderRadius:6}}>
+                📍 Posts are sorted by proximity. Set your city in Profile for best results.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {(modal==="add"||modal==="edit")&&(
+        <Modal title={modal==="add"?"Share with the Community":"Edit Post"} onClose={()=>{setModal(null);setActive(null);}}>
+          <CommunityPostForm initial={modal==="edit"?active:null} onSave={save} onCancel={()=>{setModal(null);setActive(null);}} saving={saving}/>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COMMUNITY GATE — opt-in wrapper for CommunityPage
+// ══════════════════════════════════════════════════════════════════════════════
+function CommunityGate({userId, org, setOrg, plan}) {
+  const [joining, setJoining] = useState(false);
+
+  const join = async () => {
+    setJoining(true);
+    const updated = {...org, community_enabled: true};
+    setOrg(updated);
+    await SB.from("orgs").update({community_enabled: true}).eq("id", userId);
+    // no need to setJoining(false) — component will re-render as CommunityPage
+  };
+
+  if (org?.community_enabled) {
+    return <CommunityPage userId={userId} org={org} plan={plan}/>;
+  }
+
+  return (
+    <div style={{position:"relative",minHeight:"70vh"}}>
+      <img src={usp("photo-1503095396549-807759245b35",1400,900)} alt="" className="page-bg-img"/>
+      <div style={{padding:"32px 36px 0"}}>
+        <div className="hero-wrap" style={{height:230}}>
+          <img src={usp("photo-1503095396549-807759245b35",1100,290)} alt="Community" loading="eager"/>
+          <div className="hero-fade"/>
+          <div className="hero-body">
+            <div className="hero-eyebrow">🎪 Theatre Community</div>
+            <h1 className="hero-title" style={{fontSize:44}}>Community Board</h1>
+            <p className="hero-sub">Connect with theatre programs across the network.</p>
+          </div>
+          <div className="hero-bar"/>
+        </div>
+      </div>
+
+      <div style={{padding:"40px 36px 64px",position:"relative",zIndex:1,maxWidth:700}}>
+        <div className="card card-p" style={{borderColor:"rgba(212,168,67,.3)",background:"linear-gradient(135deg,rgba(212,168,67,.06),rgba(212,168,67,.02))"}}>
+          <div style={{fontSize:44,marginBottom:16,textAlign:"center"}}>🎪</div>
+          <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:26,marginBottom:12,textAlign:"center"}}>Join the Community Board</h2>
+          <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.7,marginBottom:20,textAlign:"center",maxWidth:500,margin:"0 auto 20px"}}>
+            The Community Board is a shared space for theatre programs to connect — post upcoming shows, audition notices, production photos, and wanted items. Other opted-in programs can see your posts.
+          </p>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:24}}>
+            {[
+              ["🎭","Post Show Announcements","Let the network know about your upcoming productions."],
+              ["🎤","Share Audition Notices","Find talent and help others find their next role."],
+              ["📸","Share Production Photos","Celebrate your work with the broader community."],
+              ["🔍","Post Wanted Items","Let others know what you're looking for."],
+            ].map(([icon,title,desc])=>(
+              <div key={title} style={{padding:"14px",background:"var(--parch)",borderRadius:10,border:"1px solid var(--linen)"}}>
+                <div style={{fontSize:24,marginBottom:6}}>{icon}</div>
+                <div style={{fontWeight:700,fontSize:13,marginBottom:4}}>{title}</div>
+                <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.4}}>{desc}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"10px 14px",marginBottom:20,fontSize:12,color:"var(--muted)",lineHeight:1.5}}>
+            📍 <strong>Proximity sorted</strong> — posts from nearby programs appear first. Set your city or zip in <strong>Profile</strong> for best results. You can leave the Community Board at any time from <strong>Settings</strong>.
+          </div>
+          <div style={{textAlign:"center"}}>
+            <button className="btn btn-g" style={{fontSize:15,padding:"11px 32px"}}
+              disabled={joining} onClick={join}>
+              {joining ? "Joining…" : "Join the Community Board →"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MARKETPLACE GATE — opt-in wrapper for Marketplace
+// ══════════════════════════════════════════════════════════════════════════════
+function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool, allSchoolsMode, onEdit=null, onDelete=null}) {
+  const [joining, setJoining] = useState(false);
+
+  const join = async () => {
+    setJoining(true);
+    const updated = {...org, marketplace_enabled: true};
+    setOrg(updated);
+    await SB.from("orgs").update({marketplace_enabled: true}).eq("id", userId);
+  };
+
+  // Free plan users see the upgrade prompt (Marketplace handles that internally)
+  // Pro/District users who haven't opted in see the gate
+  if (org?.marketplace_enabled || plan === "free") {
+    return <Marketplace items={items} org={org} plan={plan} activeSchool={activeSchool} allSchoolsMode={allSchoolsMode} onEdit={onEdit} onDelete={onDelete}/>;
+  }
+
+  return (
+    <div style={{position:"relative",minHeight:"70vh"}}>
+      <img src={usp(BG.marketplace,1400,900)} alt="" className="page-bg-img"/>
+      <div style={{padding:"32px 36px 0"}}>
+        <div className="hero-wrap" style={{height:280}}>
+          <img src={usp(BG.marketplace,1100,340)} alt="Backstage Exchange" loading="eager"/>
+          <div className="hero-fade"/>
+          <div className="hero-body">
+            <div className="hero-eyebrow">🏪 Backstage Exchange</div>
+            <h1 className="hero-title" style={{fontSize:46}}>Backstage Exchange</h1>
+            <p className="hero-sub">Rent, buy, or loan theatre assets from programs near you.</p>
+          </div>
+          <div className="hero-bar"/>
+        </div>
+      </div>
+
+      <div style={{padding:"40px 36px 64px",position:"relative",zIndex:1,maxWidth:720}}>
+        <div className="card card-p" style={{borderColor:"rgba(212,168,67,.3)",background:"linear-gradient(135deg,rgba(212,168,67,.06),rgba(212,168,67,.02))"}}>
+          <div style={{fontSize:44,marginBottom:16,textAlign:"center"}}>🏪</div>
+          <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:26,marginBottom:12,textAlign:"center"}}>Join Backstage Exchange</h2>
+          <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.7,marginBottom:24,textAlign:"center",maxWidth:520,margin:"0 auto 24px"}}>
+            Backstage Exchange is Theatre4u™'s optional resource-sharing network. You choose exactly which items to share — your full inventory stays completely private. Browse what other programs near you have available.
+          </p>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:24}}>
+            {[
+              ["🔍","Browse Nearby","Find costumes, props, lighting and sound from programs in your area."],
+              ["💰","Earn Revenue","List items for rent or sale and earn income for your program."],
+              ["🤝","Share Resources","Loan items to other programs and earn Stage Points in return."],
+            ].map(([icon,title,desc])=>(
+              <div key={title} style={{padding:"14px",background:"var(--parch)",borderRadius:10,border:"1px solid var(--linen)",textAlign:"center"}}>
+                <div style={{fontSize:28,marginBottom:8}}>{icon}</div>
+                <div style={{fontWeight:700,fontSize:13,marginBottom:5}}>{title}</div>
+                <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.4}}>{desc}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"10px 14px",marginBottom:20,fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
+            🏷️ <strong>What becomes visible:</strong> your organization name, city, and any items you've marked "For Rent", "For Sale", or "For Loan" in Inventory. Your full item list and private notes are never shared. You can leave Backstage Exchange at any time from <strong>Settings</strong>.
+          </div>
+          <div style={{textAlign:"center"}}>
+            <button className="btn btn-g" style={{fontSize:15,padding:"11px 32px"}}
+              disabled={joining} onClick={join}>
+              {joining ? "Joining…" : "Join Backstage Exchange →"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// THEATRE CREDITS PAGE
+// ══════════════════════════════════════════════════════════════════════════════
+function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
+  const [ledger,        setLedger]        = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [tab,           setTab]           = useState("overview");
+  const [adminOrg,      setAdminOrg]      = useState("");
+  const [adminAmt,      setAdminAmt]      = useState("");
+  const [adminMsg,      setAdminMsg]      = useState("");
+  const [adminSaving,   setAS]            = useState(false);
+  const [daysUntilElig, setDaysUntilElig] = useState(null);
+  const [redeeming,     setRedeeming]     = useState(false);
+  const [redeemMsg,     setRedeemMsg]     = useState("");
+  const isAdmin   = ADMIN_EMAILS?.includes?.(org?.email);
+  const isAnnual  = org?.plan_interval === "annual";
+  const earnMult  = isAnnual ? 1.5 : 1.0;
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const [{ data: ledgerData }, { data: bal }, { data: daysData }] = await Promise.all([
+      SB.from("credit_ledger").select("*").eq("org_id", userId)
+        .order("created_at", { ascending: false }).limit(100),
+      SB.rpc("get_my_credit_balance"),
+      SB.rpc("points_eligible_in_days", { p_org_id: userId }),
+    ]);
+    setLedger(ledgerData || []);
+    onBalanceChange?.(bal || 0);
+    setDaysUntilElig(typeof daysData === "number" ? daysData : null);
+    setLoading(false);
+  }, [userId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const totalEarned = ledger.filter(r => r.amount > 0).reduce((s, r) => s + r.amount, 0);
+  const totalSpent  = Math.abs(ledger.filter(r => r.amount < 0).reduce((s, r) => s + r.amount, 0));
+
+  const typeIcon = {
+    welcome_bonus:        "🎉", catalog_bonus:         "📸", rental_earn:  "🔑",
+    loan_earn:            "🤝", early_return_bonus:    "⚡", referral_earn: "👥",
+    spend_rental:         "🛒", spend_deposit:         "🔒", admin_adjust: "🔧",
+    expire:               "⏰", annual_bonus:          "⭐", annual_renewal_bonus: "⭐",
+    profile_complete:     "✅", items_10:              "📦", items_25_photos: "📸",
+    first_listing:        "🏪", first_request:         "📨", team_invite:  "👥",
+  };
+  const typeLabel = {
+    welcome_bonus:        "Welcome Bonus",       catalog_bonus:        "Catalog Milestone",
+    rental_earn:          "Rental Completed",    loan_earn:            "Loan Completed",
+    early_return_bonus:   "Early Return",        referral_earn:        "Referral Bonus",
+    spend_rental:         "Points Applied",      spend_deposit:        "Deposit Covered",
+    admin_adjust:         "Admin Adjustment",    expire:               "Points Expired",
+    annual_bonus:         "Annual Plan Bonus",   annual_renewal_bonus: "Annual Renewal Bonus",
+    profile_complete:     "Profile Completed",   items_10:             "10 Items Added",
+    items_25_photos:      "25 Items + Photos",   first_listing:        "First Exchange Listing",
+    first_request:        "First Exchange Request", team_invite:       "Team Member Invited",
+  };
+
+  const adminAward = async () => {
+    if (!adminOrg || !adminAmt) return;
+    setAS(true);
+    await SB.rpc("admin_award_credits", {
+      p_org_id: adminOrg, p_amount: parseInt(adminAmt), p_description: adminMsg || "Admin adjustment"
+    });
+    setAS(false); setAdminOrg(""); setAdminAmt(""); setAdminMsg("");
+    load();
+  };
+
+  return (
+    <div style={{ position: "relative" }}>
+      <img src={usp(BG.dashboard, 1400, 900)} alt="" className="page-bg-img" />
+      <div style={{ padding: "32px 36px 0" }}>
+        <div className="hero-wrap" style={{ height: 210 }}>
+          <img src={usp(BG.dashboard, 1100, 270)} alt="Credits" loading="eager" />
+          <div className="hero-fade" />
+          <div className="hero-body">
+            <div className="hero-eyebrow">🪙 Stage Economy</div>
+            <h1 className="hero-title" style={{ fontSize: 44 }}>Stage Points</h1>
+            <p className="hero-sub">Earn points by sharing inventory and completing Exchange deals. Spend them for discounts — or save up for a free month.</p>
+          </div>
+          <div className="hero-bar" />
+        </div>
+      </div>
+
+      <div style={{ padding: "24px 36px 56px", position: "relative", zIndex: 1 }}>
+
+        {/* Balance card */}
+        <div className="card card-p" style={{ marginBottom: 22, background: "linear-gradient(135deg,rgba(212,168,67,.12),rgba(212,168,67,.04))", borderColor: "rgba(212,168,67,.3)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", marginBottom: 6 }}>Your Balance</div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 64, color: "var(--gold)", lineHeight: 1 }}>{balance.toLocaleString()}</span>
+                <span style={{ fontSize: 18, color: "var(--muted)", fontWeight: 700 }}>points</span>
+              </div>
+              <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>1 point = $0.01 · 1,500 points = free Pro month</div>
+              {isAnnual && (
+                <div style={{ marginTop: 6, display: "inline-flex", alignItems: "center", gap: 6,
+                  background: "rgba(212,168,67,.15)", border: "1px solid rgba(212,168,67,.3)",
+                  borderRadius: 6, padding: "3px 10px", fontSize: 12, color: "var(--gold)", fontWeight: 700 }}>
+                  ⭐ Annual plan — earning at 1.5× rate on loans &amp; rentals
+                </div>
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              {[
+                { label: "Total Earned", val: totalEarned, icon: "📈", col: "var(--green)" },
+                { label: "Total Spent",  val: totalSpent,  icon: "📤", col: "var(--amber)" },
+                { label: "Transactions", val: ledger.length, icon: "📋", col: "var(--blue)" },
+              ].map(s => (
+                <div key={s.label} className="card card-p" style={{ textAlign: "center", padding: "12px 18px", minWidth: 100 }}>
+                  <div style={{ fontSize: 20, marginBottom: 3 }}>{s.icon}</div>
+                  <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, color: s.col }}>{s.val.toLocaleString()}</div>
+                  <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: .5, marginTop: 2 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* How to earn — always visible */}
+        <div className="card card-p" style={{ marginBottom: 22, display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 12 }}>
+          {[
+            { icon: "🎉", title: "Join & Welcome",      earn: "+25 pts",      note: "Awarded automatically on signup." },
+            { icon: "✅", title: "Complete Profile",    earn: "+25 pts",      note: "Add name, location, bio, and email." },
+            { icon: "📦", title: "Add 10 Items",        earn: "+25 pts",      note: "One-time milestone." },
+            { icon: "📸", title: "25 Items + Photos",   earn: "+50 pts",      note: "Quality catalog milestone." },
+            { icon: "🏪", title: "First Exchange Listing",earn: "+15 pts",    note: "List any item on the Exchange." },
+            { icon: "📨", title: "First Exchange Request",earn: "+10 pts",    note: "Send your first request to another program." },
+            { icon: "👥", title: "Invite a Team Member", earn: "+15 pts",     note: "Per member who signs in." },
+            { icon: "👋", title: "Refer a Program",     earn: "+50 pts",      note: "Per program that creates an account using your referral link." },
+            { icon: "🤝", title: "Loan Completed",       earn: isAnnual ? "+15–75 pts ⭐" : "+10–50 pts",
+              note: isAnnual ? "1.5× annual rate. Lighting/Sound = 75 pts." : "Varies by item category. Lighting/Sound = 50 pts." },
+            { icon: "🔑", title: "Rental Completed",     earn: isAnnual ? "+$1 = 1.5 pts ⭐" : "+$1 = 1 pt",
+              note: isAnnual ? "1.5× annual rate — 1.5 pts per dollar of rental price." : "1 point per dollar of rental price." },
+            { icon: "🛒", title: "Exchange Discount", earn: "Up to 50% off", note: "Apply points when requesting any rental or purchase." },
+            { icon: "🎟️", title: "Free Pro Month",    earn: "1,500 pts",   note: "Redeem 1,500 points for one free month of Pro." },
+          ].map(s => (
+            <div key={s.title} style={{ padding: "12px 14px", background: "var(--parch)", borderRadius: 10, border: "1px solid var(--linen)" }}>
+              <div style={{ fontSize: 22, marginBottom: 5 }}>{s.icon}</div>
+              <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 3 }}>{s.title}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: s.earn.startsWith("+") ? "var(--green)" : "var(--amber)", marginBottom: 4 }}>{s.earn}</div>
+              <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>{s.note}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Referral Link ── */}
+        {org?.referral_code && (
+          <div className="card card-p" style={{ marginBottom: 22,
+            background: "linear-gradient(135deg,rgba(212,168,67,.06),rgba(212,168,67,.02))",
+            border: "1px solid rgba(212,168,67,.25)" }}>
+            <div style={{ display: "flex", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
+              <span style={{ fontSize: 32, flexShrink: 0 }}>👋</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>
+                  Your Referral Link — Earn 50 Points Per Program
+                </div>
+                <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, marginBottom: 14 }}>
+                  Share this link with other theatre directors. When they sign up and create an account,
+                  you automatically earn 50 Stage Points. No limit on referrals.
+                </div>
+                {/* Referral link box */}
+                {(()=>{
+                  const refUrl = "https://theatre4u.org?ref=" + org.referral_code;
+                  const [copied, setCopied] = useState(false);
+                  const copy = () => {
+                    navigator.clipboard.writeText(refUrl).then(()=>{
+                      setCopied(true); setTimeout(()=>setCopied(false), 2500);
+                    });
+                  };
+                  return (
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                      <div style={{ flex: 1, minWidth: 200, background: "var(--parch)",
+                        border: "1px solid var(--border)", borderRadius: 8,
+                        padding: "9px 14px", fontFamily: "monospace", fontSize: 13,
+                        color: "var(--gold)", letterSpacing: 0.3, wordBreak: "break-all" }}>
+                        {refUrl}
+                      </div>
+                      <button onClick={copy}
+                        style={{ padding: "9px 18px", borderRadius: 8, border: "none",
+                          background: copied ? "var(--green)" : "var(--gold)",
+                          color: "#1a0f00", fontWeight: 700, fontSize: 13,
+                          cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
+                          transition: "background .2s" }}>
+                        {copied ? "✓ Copied!" : "Copy Link"}
+                      </button>
+                      <button onClick={()=>fbShare(refUrl,
+                        "🎭 I use Theatre4u to manage my theatre program's inventory and share resources with other programs through the Backstage Exchange. It's free right now — check it out!\n\ntheatre4u.org #Theatre #TheatreEducation")}
+                        style={{ padding: "9px 14px", borderRadius: 8,
+                          border: "1px solid rgba(24,119,242,.35)",
+                          background: "rgba(24,119,242,.08)", color: "#4285f4",
+                          fontSize: 13, fontWeight: 700, cursor: "pointer",
+                          fontFamily: "inherit", flexShrink: 0,
+                          display: "flex", alignItems: "center", gap: 6 }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                        </svg>
+                        Share
+                      </button>
+                    </div>
+                  );
+                })()}
+                <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
+                  Your referral code: <strong style={{ color: "var(--gold)", fontFamily: "monospace", letterSpacing: 1 }}>{org.referral_code}</strong>
+                  {" · "}Points appear in your ledger within seconds of the new program signing up.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Redeem Free Month ── */}
+        {plan !== "free" && (
+          <div className="card card-p" style={{ marginBottom: 22,
+            border: balance >= POINTS_FREE_MONTH ? "1.5px solid rgba(212,168,67,.5)" : "1px solid var(--border)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+              <div style={{ fontSize: 36 }}>🎟️</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 3 }}>Redeem for a Free Pro Month</div>
+                <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 6 }}>
+                  1,500 points = one free month of Pro ($15 value)
+                </div>
+                {/* Eligibility gate */}
+                {daysUntilElig !== null && daysUntilElig > 0 ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8,
+                    background: "rgba(107,100,120,.15)", border: "1px solid var(--border)",
+                    borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "var(--muted)" }}>
+                    🕐 Free-month redemption available in <strong style={{ color: "var(--text)" }}>&nbsp;{daysUntilElig} days</strong>
+                    &nbsp;· Exchange discounts available now
+                  </div>
+                ) : balance < POINTS_FREE_MONTH ? (
+                  <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                    {(POINTS_FREE_MONTH - balance).toLocaleString()} more points needed
+                    {/* Mini progress bar */}
+                    <div style={{ marginTop: 6, background: "var(--border)", borderRadius: 99, height: 4, overflow: "hidden" }}>
+                      <div style={{ height: "100%", borderRadius: 99, background: "var(--gold)",
+                        width: Math.min(100, balance / POINTS_FREE_MONTH * 100) + "%" }}/>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    {redeemMsg && (
+                      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8,
+                        color: redeemMsg.startsWith("✓") ? "var(--green)" : "var(--red)" }}>
+                        {redeemMsg}
+                      </div>
+                    )}
+                    <button
+                      disabled={redeeming || balance < POINTS_FREE_MONTH}
+                      onClick={async () => {
+                        setRedeeming(true); setRedeemMsg("");
+                        // Check eligibility server-side
+                        const { data: eligible } = await SB.rpc("is_points_eligible", { p_org_id: userId });
+                        if (!eligible) {
+                          setRedeemMsg("⚠️ Not yet eligible — 90 days of Pro required for free-month redemption.");
+                          setRedeeming(false); return;
+                        }
+                        const { data } = await SB.rpc("spend_credits", {
+                          p_org_id: userId, p_amount: POINTS_FREE_MONTH,
+                          p_type: "spend_rental",
+                          p_description: "Redeemed 1,500 pts for free Pro month"
+                        });
+                        if (data?.success) {
+                          setRedeemMsg("✓ 1,500 points redeemed! Your free month credit will be applied. Contact hello@theatre4u.org to confirm.");
+                          load();
+                        } else {
+                          setRedeemMsg("⚠️ " + (data?.error || "Could not redeem — please try again."));
+                        }
+                        setRedeeming(false);
+                      }}
+                      className="btn btn-g" style={{ marginTop: 4 }}>
+                      {redeeming ? "Processing…" : "Redeem 1,500 Points → Free Month"}
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 28,
+                  color: balance >= POINTS_FREE_MONTH ? "var(--gold)" : "var(--muted)",
+                  fontWeight: 700 }}>
+                  {balance.toLocaleString()}
+                </div>
+                <div style={{ fontSize: 11, color: "var(--muted)" }}>/ 1,500 pts</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div className="tabs" style={{ marginBottom: 18 }}>
+          {[["overview","📋 History"],["rules","📖 How It Works"],...( isAdmin ? [["admin","🔧 Admin"]] : [])].map(([t, l]) => (
+            <button key={t} className={`tab ${tab === t ? "on" : ""}`} onClick={() => setTab(t)}>{l}</button>
+          ))}
+        </div>
+
+        {/* ── History ── */}
+        {tab === "overview" && (
+          <div className="card" style={{ overflow: "hidden" }}>
+            {loading ? (
+              <div style={{ textAlign: "center", padding: 40, color: "var(--muted)" }}>Loading…</div>
+            ) : ledger.length === 0 ? (
+              <div className="empty">
+                <div className="empty-ico">🪙</div>
+                <h3>No credit activity yet</h3>
+                <p>Complete a loan or rental, add photos to 10+ items, or just wait — your welcome bonus should appear shortly.</p>
+              </div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--parch)" }}>
+                      {["Date", "Type", "Description", "Amount", "Balance"].map(h => (
+                        <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", fontWeight: 700, borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ledger.reduce((acc, row, i) => {
+                      // Running balance (ledger is newest-first, so we go reverse)
+                      const runningBal = ledger.slice(i).reduce((s, r) => s + r.amount, 0);
+                      acc.push(
+                        <tr key={row.id} style={{ borderBottom: "1px solid var(--linen)", background: i % 2 === 0 ? "transparent" : "rgba(243,230,204,.3)" }}>
+                          <td style={{ padding: "9px 14px", fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap" }}>
+                            {new Date(row.created_at).toLocaleDateString()}
+                          </td>
+                          <td style={{ padding: "9px 14px" }}>
+                            <span style={{ fontSize: 13 }}>{typeIcon[row.type] || "•"} {typeLabel[row.type] || row.type}</span>
+                          </td>
+                          <td style={{ padding: "9px 14px", fontSize: 13, maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {row.description}
+                          </td>
+                          <td style={{ padding: "9px 14px" }}>
+                            <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, color: row.amount > 0 ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
+                              {row.amount > 0 ? "+" : ""}{row.amount.toLocaleString()}
+                            </span>
+                          </td>
+                          <td style={{ padding: "9px 14px", fontFamily: "'Playfair Display',serif", fontSize: 15, color: "var(--gold)" }}>
+                            {runningBal.toLocaleString()}
+                          </td>
+                        </tr>
+                      );
+                      return acc;
+                    }, [])}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Rules ── */}
+        {tab === "rules" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {[
+              { title: "Earning Credits",
+                body: "Credits are earned automatically when a transaction is marked returned by the owner. For free loans, the item must have been out for at least 3 days to qualify. For rentals, you earn 1 credit per $1 of rental value (minimum 5, maximum 500 per transaction)." },
+              { title: "Spending Credits",
+                body: "When requesting a rental or purchase, you can apply credits to cover up to 50% of the price. The remaining cash balance must be paid directly to the item owner outside of Theatre4u — by check, Venmo, invoice, or any payment method agreed between your organizations. Theatre4u does not collect or transfer cash payments. Credits can also be used to cover 100% of a security deposit." },
+              { title: "Credit Value",
+                body: "1 credit = $1 of discount toward a rental or purchase. Credits have no cash value and cannot be refunded, transferred to another organization, or exchanged for money." },
+              { title: "Expiry & Forfeiture",
+                body: "Points expire 12 months after they are earned. Your maximum balance is 5,000 points. Points can be redeemed for Exchange discounts (up to 50% of transaction value) or traded for a free Pro month at 1,500 points. Points have no cash value and cannot be transferred between accounts." },
+              { title: "Fair Use",
+                body: "Theatre4u reserves the right to adjust or revoke credits in cases of abuse, fraudulent transactions, or violations of the Terms of Service. The admin_adjust transaction type will appear in your history if a correction is made." },
+            ].map(r => (
+              <div key={r.title} className="card card-p">
+                <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 17, marginBottom: 8 }}>{r.title}</h3>
+                <p style={{ fontSize: 14, color: "var(--muted)", lineHeight: 1.7 }}>{r.body}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Admin ── */}
+        {tab === "admin" && isAdmin && (
+          <div className="card card-p" style={{ maxWidth: 480 }}>
+            <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 18, marginBottom: 14 }}>🔧 Award Credits to Any Org</h3>
+            <div className="fg2">
+              <div className="fg fu">
+                <label className="fl">Org ID</label>
+                <input className="fi" value={adminOrg} onChange={e => setAdminOrg(e.target.value)} placeholder="Paste org UUID…" />
+              </div>
+              <div className="fg">
+                <label className="fl">Amount</label>
+                <input className="fi" type="number" min="1" value={adminAmt} onChange={e => setAdminAmt(e.target.value)} placeholder="50" />
+              </div>
+              <div className="fg fu">
+                <label className="fl">Description</label>
+                <input className="fi" value={adminMsg} onChange={e => setAdminMsg(e.target.value)} placeholder="Reason for adjustment…" />
+              </div>
+            </div>
+            <button className="btn btn-g" onClick={adminAward} disabled={adminSaving || !adminOrg || !adminAmt}>
+              {adminSaving ? "Awarding…" : "Award Credits"}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TEAM SETTINGS — Org member management with backstage roles
+// ══════════════════════════════════════════════════════════════════════════════
+const ROLES = [
+  { id: "stage_manager", label: "Stage Manager", icon: "📋", desc: "Add, edit, delete items · Funding Tracker · Backstage Exchange · Community" },
+  { id: "crew",          label: "Crew",          icon: "🔧", desc: "Add and edit items · Upload photos" },
+  { id: "house",         label: "House",         icon: "🎟", desc: "View and look up items only" },
+];
+const ROLE_MAP = Object.fromEntries(ROLES.map(r => [r.id, r]));
+
+function TeamSettings({ userId, orgName, plan }) {
+  const [members,  setMembers]  = useState([]);
+  const [invites,  setInvites]  = useState([]);
+  const [joinCode, setJoinCode] = useState(null);
+  const [loading,  setLoading]  = useState(true);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole,  setInviteRole]  = useState("crew");
+  const [sending,  setSending]  = useState(false);
+  const [msg,      setMsg]      = useState("");
+  const [showCode, setShowCode] = useState(false);
+
+  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(""), 3500); };
+
+  // Load team
+  const load = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    const [{ data: mData }, { data: iData }] = await Promise.all([
+      SB.from("org_members").select("*").eq("org_id", userId).order("created_at"),
+      SB.from("org_invites").select("*").eq("org_id", userId)
+        .is("accepted_at", null).order("created_at", { ascending: false }),
+    ]);
+    setMembers(mData || []);
+    // Find existing join code invite
+    const code = (iData || []).find(i => i.invite_type === "code");
+    setJoinCode(code?.join_code || null);
+    setInvites((iData || []).filter(i => i.invite_type === "email"));
+    setLoading(false);
+  }, [userId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Generate or show join code
+  const getJoinCode = async () => {
+    if (joinCode) { setShowCode(true); return; }
+    // Insert — DB trigger auto-generates join_code
+    const { error } = await SB.from("org_invites").insert({
+      org_id: userId,
+      role: "crew",
+      invite_type: "code",
+      is_permanent: true,
+      expires_at: new Date(Date.now() + 365*24*60*60*1000).toISOString(), // 1 year
+    });
+    if (error) { flash("❌ Could not generate join code. Try again."); return; }
+    // Re-fetch the newly created code invite (RLS: org_id = auth.uid())
+    const { data: fetched } = await SB.from("org_invites")
+      .select("join_code")
+      .eq("org_id", userId)
+      .eq("invite_type", "code")
+      .is("accepted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    if (fetched?.join_code) {
+      setJoinCode(fetched.join_code);
+      setShowCode(true);
+    } else {
+      flash("❌ Code generated but couldn't load — try refreshing.");
+    }
+  };
+
+  // Send email invite
+  const sendInvite = async () => {
+    if (!inviteEmail.trim()) return;
+    setSending(true);
+    // Step 1: Insert the invite row
+    const { data, error } = await SB.from("org_invites").insert({
+      org_id: userId,
+      email: inviteEmail.trim().toLowerCase(),
+      role: inviteRole,
+      invite_type: "email",
+    }).select().single();
+    if (error || !data) {
+      flash("❌ " + EM.sendInvite.body);
+      setSending(false);
+      return;
+    }
+    setInvites(p => [data, ...p]);
+    setInviteEmail("");
+    // Step 2: Call edge function to send the email
+    try {
+      const { data: { session } } = await SB.auth.getSession();
+      const res = await fetch(
+        "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/team-invite",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + session?.access_token,
+          },
+          body: JSON.stringify({ invite_id: data.id }),
+        }
+      );
+      const result = await res.json();
+      if (result.email_sent) {
+        flash("✓ Invite email sent to " + data.email);
+      } else {
+        flash("✓ Invite saved — copy the link below to share manually");
+      }
+    } catch {
+      flash("✓ Invite saved — copy the link below to share manually");
+    }
+    setSending(false);
+  };
+
+  // Remove a member
+  const removeMember = async (memberId, name) => {
+    if (!confirm(`Remove ${name} from your team?`)) return;
+    await SB.from("org_members").delete().eq("id", memberId);
+    setMembers(p => p.filter(m => m.id !== memberId));
+    flash("✓ Removed from team");
+  };
+
+  // Cancel a pending invite
+  const cancelInvite = async (inviteId) => {
+    await SB.from("org_invites").delete().eq("id", inviteId);
+    setInvites(p => p.filter(i => i.id !== inviteId));
+    flash("✓ Invite cancelled");
+  };
+
+  // Change a member's role
+  const changeRole = async (memberId, newRole) => {
+    await SB.from("org_members").update({ role: newRole }).eq("id", memberId);
+    setMembers(p => p.map(m => m.id === memberId ? { ...m, role: newRole } : m));
+    flash("✓ Role updated");
+  };
+
+  const joinUrl = joinCode ? `theatre4u.org/invite.html?code=${joinCode}` : null;
+
+  return (
+    <div className="card card-p" style={{ marginBottom: 20 }}>
+      <div className="sh">
+        <h2>🎭 Your Backstage Team</h2>
+        <p>Invite people to help manage your inventory. Each role has different access levels.</p>
+      </div>
+
+      {/* Role legend */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
+        {[{ id: "director", label: "Director", icon: "🎬", desc: "Full access — that's you" }, ...ROLES].map(r => (
+          <div key={r.id} style={{ background: "var(--parch)", border: "1px solid var(--border)",
+            borderRadius: 10, padding: "8px 12px", minWidth: 160 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>{r.icon} {r.label}</div>
+            <div style={{ fontSize: 11, color: "var(--faint)", lineHeight: 1.4 }}>{r.desc}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Current members */}
+      {loading ? (
+        <div style={{ color: "var(--faint)", fontSize: 13, padding: "12px 0" }}>Loading team…</div>
+      ) : members.length > 0 ? (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1,
+            color: "var(--faint)", marginBottom: 8 }}>Current Team</div>
+          {members.map(m => {
+            const r = ROLE_MAP[m.role] || { label: m.role, icon: "👤" };
+            return (
+              <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10,
+                padding: "9px 0", borderBottom: "1px solid var(--bd)" }}>
+                <div style={{ width: 34, height: 34, borderRadius: "50%", background: "var(--parch)",
+                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16,
+                  flexShrink: 0 }}>{r.icon}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13 }}>{m.email}</div>
+                  <div style={{ fontSize: 11, color: "var(--faint)" }}>
+                    Joined {new Date(m.joined_at).toLocaleDateString()}
+                  </div>
+                </div>
+                <select value={m.role} onChange={e => changeRole(m.id, e.target.value)}
+                  style={{ background: "var(--parch)", border: "1px solid var(--bd)", borderRadius: 6,
+                    padding: "4px 8px", color: "var(--text)", fontSize: 12, fontFamily: "inherit" }}>
+                  {ROLES.map(ro => <option key={ro.id} value={ro.id}>{ro.icon} {ro.label}</option>)}
+                </select>
+                <button onClick={() => removeMember(m.id, m.email)}
+                  style={{ background: "none", border: "none", color: "var(--faint)", cursor: "pointer",
+                    fontSize: 18, lineHeight: 1, padding: "0 4px" }} title="Remove">×</button>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div style={{ color: "var(--faint)", fontSize: 13, marginBottom: 20, fontStyle: "italic" }}>
+          No team members yet — invite someone below.
+        </div>
+      )}
+
+      {/* Pending invites */}
+      {invites.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1,
+            color: "var(--faint)", marginBottom: 8 }}>Pending Invites</div>
+          {invites.map(inv => (
+            <div key={inv.id} style={{ display: "flex", alignItems: "center", gap: 10,
+              padding: "8px 0", borderBottom: "1px solid var(--bd)" }}>
+              <div style={{ fontSize: 15 }}>✉️</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>{inv.email}</div>
+                <div style={{ fontSize: 11, color: "var(--faint)" }}>
+                  {ROLE_MAP[inv.role]?.label} · Expires {new Date(inv.expires_at).toLocaleDateString()}
+                </div>
+              </div>
+              <button onClick={() => {
+                const url = `https://theatre4u.org/invite.html?token=${inv.token}`;
+                if (navigator.clipboard?.writeText) {
+                  navigator.clipboard.writeText(url)
+                    .then(() => flash("✓ Invite link copied!"))
+                    .catch(() => { prompt("Copy this link:", url); });
+                } else { prompt("Copy this link:", url); }
+              }} style={{ background: "var(--parch)", border: "1px solid var(--bd)", borderRadius: 6,
+                color: "var(--muted)", padding: "4px 10px", cursor: "pointer", fontSize: 11,
+                fontFamily: "inherit" }}>Copy Link</button>
+              <button onClick={() => cancelInvite(inv.id)}
+                style={{ background: "none", border: "none", color: "var(--faint)", cursor: "pointer",
+                  fontSize: 18, lineHeight: 1, padding: "0 4px" }}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Invite by email */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1,
+          color: "var(--faint)", marginBottom: 8 }}>Invite by Email</div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <input className="fi" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
+            placeholder="colleague@school.edu" type="email"
+            onKeyDown={e => e.key === "Enter" && sendInvite()}
+            style={{ flex: "1 1 200px", minWidth: 0 }}/>
+          <select value={inviteRole} onChange={e => setInviteRole(e.target.value)}
+            className="fs" style={{ flex: "0 0 auto", minWidth: 130 }}>
+            {ROLES.map(r => <option key={r.id} value={r.id}>{r.icon} {r.label}</option>)}
+          </select>
+          <button className="btn bp" onClick={sendInvite} disabled={sending || !inviteEmail.trim()}
+            style={{ whiteSpace: "nowrap" }}>
+            {sending ? "Sending…" : "Send Invite"}
+          </button>
+        </div>
+        {inviteEmail && (
+          <div style={{ fontSize: 11, color: "var(--faint)", marginTop: 6 }}>
+            They'll get a link to join your team at <strong>{orgName}</strong> as <strong>{ROLE_MAP[inviteRole]?.label}</strong>.
+          </div>
+        )}
+      </div>
+
+      {/* Join code */}
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1,
+          color: "var(--faint)", marginBottom: 8 }}>Join Code — For Groups & Students</div>
+        {!showCode ? (
+          <button className="btn bs" onClick={getJoinCode}>
+            🔑 Generate Join Code
+          </button>
+        ) : (
+          <div style={{ background: "var(--parch)", border: "1px solid var(--bd)", borderRadius: 12,
+            padding: "16px 20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+              <div>
+                <div style={{ fontSize: 11, color: "var(--faint)", marginBottom: 4 }}>Share this code</div>
+                <div style={{ fontFamily: "monospace", fontSize: 28, fontWeight: 900,
+                  letterSpacing: 4, color: "var(--gold)" }}>{joinCode}</div>
+              </div>
+              <div style={{ flex: 1, minWidth: 160 }}>
+                <div style={{ fontSize: 11, color: "var(--faint)", marginBottom: 4 }}>Or share this link</div>
+                <div style={{ fontSize: 12, color: "var(--muted)", wordBreak: "break-all" }}>
+                  theatre4u.org/invite.html?code={joinCode}
+                </div>
+              </div>
+              <button className="btn bs bsm" onClick={() => {
+                navigator.clipboard?.writeText(`https://theatre4u.org/invite.html?code=${joinCode}`)
+                  .then(() => flash("✓ Link copied to clipboard!"))
+                  .catch(() => flash("✓ Link: https://theatre4u.org/invite.html?code=" + joinCode));
+                flash("✓ Link copied!");
+              }}>Copy Link</button>
+            </div>
+            <div style={{ fontSize: 11, color: "var(--faint)", marginTop: 12, lineHeight: 1.5 }}>
+              Anyone with this code joins as <strong>Crew</strong> — they can add and edit items.
+              Post it in your costume room or send it to your team. Expires in 30 days.
+            </div>
+          </div>
+        )}
+      </div>
+
+      {msg && (
+        <div style={{
+          position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
+          zIndex: 9999, background: msg.startsWith("❌") ? "#7f1d1d" : "#14532d",
+          color: "#fff", padding: "10px 22px", borderRadius: 10,
+          fontSize: 14, fontWeight: 700, boxShadow: "0 4px 20px rgba(0,0,0,.35)",
+          whiteSpace: "nowrap", pointerEvents: "none",
+        }}>
+          {msg}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+
+// ── QR Code Privacy Settings ─────────────────────────────────────────────────
+function QRPrivacySettings({ org, setOrg, userId }) {
+  const [saving, setSaving] = useState(false);
+  const [saved,  setSaved]  = useState(false);
+
+  const privacy       = org?.qr_privacy       ?? "contact";
+  const contactFields = org?.qr_contact_fields ?? ["name","email"];
+
+  const togglePrivacy = async (val) => {
+    setSaving(true);
+    const { error } = await SB.from("orgs").update({ qr_privacy: val }).eq("id", userId);
+    if (!error) setOrg(p => ({ ...p, qr_privacy: val }));
+    setSaving(false);
+  };
+
+  const toggleField = async (field) => {
+    const current = Array.isArray(contactFields) ? contactFields : ["name","email"];
+    const next    = current.includes(field) ? current.filter(f => f !== field) : [...current, field];
+    setSaving(true);
+    const { error } = await SB.from("orgs").update({ qr_contact_fields: next }).eq("id", userId);
+    if (!error) { setOrg(p => ({ ...p, qr_contact_fields: next })); setSaved(true); setTimeout(()=>setSaved(false),2000); }
+    setSaving(false);
+  };
+
+  const fields = [
+    { key:"name",     label:"Organization Name",  always: true },
+    { key:"email",    label:"Email Address" },
+    { key:"phone",    label:"Phone Number" },
+    { key:"location", label:"City / Location" },
+    { key:"bio",      label:"About / Bio" },
+  ];
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+      {/* Privacy mode toggle */}
+      <div style={{display:"flex",gap:0,border:"1px solid var(--border)",borderRadius:8,overflow:"hidden",width:"fit-content"}}>
+        {[{v:"contact",label:"🔒 Contact Only",desc:"Show org contact info only"},{v:"public",label:"🌐 Public Details",desc:"Show full item details"}].map(opt=>(
+          <button key={opt.v} onClick={()=>togglePrivacy(opt.v)} style={{
+            background: privacy===opt.v ? "var(--gold)" : "transparent",
+            color:      privacy===opt.v ? "#1a0f00" : "var(--muted)",
+            border:"none", padding:"9px 18px", cursor:"pointer",
+            fontFamily:"inherit", fontSize:13, fontWeight:700, transition:"all .15s"
+          }}>{opt.label}</button>
+        ))}
+      </div>
+      <p style={{fontSize:12.5,color:"var(--muted)",lineHeight:1.6,margin:0}}>
+        {privacy === "contact"
+          ? "When someone scans a QR label they are NOT a team member of, they will see your contact info and a prompt to sign in or request access."
+          : "Full item details are visible to anyone who scans a QR label — no sign-in required."}
+      </p>
+
+      {/* Contact fields (only relevant in contact mode) */}
+      {privacy === "contact" && (
+        <div>
+          <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:10}}>
+            Information shown to scanner
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {fields.map(f => {
+              const checked = f.always || (Array.isArray(contactFields) && contactFields.includes(f.key));
+              return (
+                <label key={f.key} style={{display:"flex",alignItems:"center",gap:10,cursor:f.always?"default":"pointer",opacity:f.always?.6:1}}>
+                  <div onClick={()=>!f.always&&toggleField(f.key)} style={{
+                    width:18, height:18, borderRadius:4,
+                    background: checked ? "var(--gold)" : "transparent",
+                    border: checked ? "2px solid var(--gold)" : "2px solid var(--border)",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    flexShrink:0, cursor:f.always?"default":"pointer", transition:"all .15s"
+                  }}>
+                    {checked && <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2.5" fill="none" stroke="#1a0f00" strokeWidth="1.8" strokeLinecap="round"/></svg>}
+                  </div>
+                  <span style={{fontSize:13.5,color:"var(--text)"}}>{f.label}</span>
+                  {f.always && <span style={{fontSize:11,color:"var(--faint)"}}>always shown</span>}
+                </label>
+              );
+            })}
+          </div>
+          {saved && <div style={{fontSize:12,color:"var(--grn,#4caf50)",marginTop:8,fontWeight:600}}>✓ Saved</div>}
+          <p style={{fontSize:12,color:"var(--faint)",lineHeight:1.6,marginTop:10}}>
+            Only the fields you check above will be visible to someone who scans a QR label. Your email is always the primary way for them to request access.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SELF-SERVICE ACCOUNT DELETION (owner-initiated, 30-day soft close)
+// ══════════════════════════════════════════════════════════════════════════════
+function SelfServiceDeleteAccount({ user, org }) {
+  const [open,    setOpen]    = useState(false);
+  const [reason,  setReason]  = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [working, setWorking] = useState(false);
+  const [done,    setDone]    = useState(false);
+  const [err,     setErr]     = useState("");
+  const CONFIRM_WORD = "CLOSE";
+
+  if (done) return (
+    <div style={{ background:"rgba(76,175,80,.08)",border:"1px solid rgba(76,175,80,.25)",
+      borderRadius:9,padding:"14px 16px",fontSize:13,lineHeight:1.7 }}>
+      <div style={{ fontWeight:700,fontSize:15,marginBottom:4 }}>✅ Account Closed</div>
+      <div>Your subscription has been canceled and your account is now closed.
+        A confirmation email has been sent to <strong>{org?.email}</strong>.</div>
+      <div style={{ marginTop:8,color:"var(--muted)" }}>
+        Your data will be permanently deleted in 30 days.
+        To restore your account before then, email <strong>hello@theatre4u.org</strong>.
+      </div>
+    </div>
+  );
+
+  if (!open) return (
+    <button onClick={() => setOpen(true)}
+      style={{ padding:"9px 18px",borderRadius:8,fontFamily:"inherit",fontWeight:700,
+        fontSize:13,cursor:"pointer",background:"rgba(194,24,91,.08)",
+        border:"1px solid rgba(194,24,91,.3)",color:"var(--red)" }}>
+      Close My Account →
+    </button>
+  );
+
+  const submit = async () => {
+    if (confirm !== CONFIRM_WORD) { setErr(`Type ${CONFIRM_WORD} to confirm`); return; }
+    setWorking(true); setErr("");
+    const { data: { session } } = await SB.auth.getSession();
+    const result = await callEdgeFn("close-org", {
+      org_id: user.id, reason: reason || "Owner requested", action: "close", is_admin_action: false
+    }, session?.access_token);
+    if (result?.success) {
+      setDone(true);
+      // Sign out after a short delay
+      setTimeout(() => SB.auth.signOut(), 3500);
+    } else {
+      setErr(result?.error || "Something went wrong. Email hello@theatre4u.org for help.");
+      setWorking(false);
+    }
+  };
+
+  return (
+    <div style={{ background:"rgba(194,24,91,.05)",border:"1px solid rgba(194,24,91,.2)",
+      borderRadius:10,padding:"16px" }}>
+      <div style={{ fontWeight:700,fontSize:14,marginBottom:10,color:"var(--red)" }}>
+        Confirm Account Closure
+      </div>
+      <div className="fg" style={{ marginBottom:12 }}>
+        <label className="fl">Why are you closing your account? (optional)</label>
+        <textarea className="ft" value={reason} onChange={e=>setReason(e.target.value)}
+          placeholder="Switching tools, program ended, budget cuts…" rows={2} />
+      </div>
+      <div className="fg" style={{ marginBottom:12 }}>
+        <label className="fl">
+          Type <strong style={{ color:"var(--red)",fontFamily:"monospace",letterSpacing:2 }}>{CONFIRM_WORD}</strong> to confirm
+        </label>
+        <input className="fi" value={confirm}
+          onChange={e=>setConfirm(e.target.value.toUpperCase())}
+          placeholder={CONFIRM_WORD}
+          style={{ fontFamily:"monospace",letterSpacing:3 }} />
+      </div>
+      {err && <div style={{ color:"var(--red)",fontSize:12,marginBottom:10 }}>{err}</div>}
+      <div style={{ display:"flex",gap:8 }}>
+        <button onClick={()=>{setOpen(false);setConfirm("");setReason("");setErr("");}}
+          className="btn btn-o">Cancel</button>
+        <button onClick={submit} disabled={working || confirm !== CONFIRM_WORD}
+          style={{ padding:"8px 18px",borderRadius:8,fontFamily:"inherit",fontWeight:800,
+            fontSize:13,cursor:working||confirm!==CONFIRM_WORD?"not-allowed":"pointer",
+            background:confirm===CONFIRM_WORD?"rgba(194,24,91,.8)":"rgba(194,24,91,.15)",
+            color:confirm===CONFIRM_WORD?"#fff":"var(--red)",border:"1px solid rgba(194,24,91,.4)",
+            opacity:working?.5:1 }}>
+          {working ? "Closing account…" : "Close My Account"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="free", userEmail="", setPlan, memberRole=null }) {
+  const [f,setF]       = useState(org);
+  const [saved,setSaved] = useState(false);
+  const upd = (k,v) => setF(p=>({...p,[k]:v}));
+  const save = async() => {
+    // Geocode location if it changed so community posts are proximity-sorted correctly
+    let geoUpdate = {};
+    let fData = {...f};
+    if (f.location && f.location !== org?.location) {
+      const geo = await geocodeLocation(f.location);
+      if (geo) { geoUpdate = { lat: geo.lat, lng: geo.lng }; fData = { ...fData, ...geoUpdate }; }
+    } else if (f.zipcode && f.zipcode !== org?.zipcode) {
+      const geo = await geocodeLocation(f.zipcode + ", USA");
+      if (geo) { geoUpdate = { lat: geo.lat, lng: geo.lng }; fData = { ...fData, ...geoUpdate }; }
+    }
+    await setOrg(fData);
+    setSaved(true);
+    setTimeout(()=>setSaved(false),2200);
+  };
+
+  return(
+    <div style={{position:"relative"}}>
+      <img src={usp(BG.settings,1400,900)} alt="" className="page-bg-img"/>
+
+      <div style={{padding:"32px 36px 0"}}>
+        <div className="hero-wrap" style={{height:210}}>
+          <img src={usp(BG.settings,1100,260)} alt="Settings" loading="lazy"/>
+          <div className="hero-fade"/>
+          <div className="hero-body">
+            <div className="hero-eyebrow">⚙️ Configuration</div>
+            <h1 className="hero-title" style={{fontSize:44}}>Profile</h1>
+            <p className="hero-sub">{f.name||"Your program"} — manage your profile and data.</p>
+          </div>
+          <div className="hero-bar"/>
+        </div>
+      </div>
+
+      <div style={{padding:"24px 36px 48px",position:"relative",zIndex:1,maxWidth:760}}>
+
+        {/* Org Profile */}
+        <div className="card card-p" style={{marginBottom:20}}>
+          <div className="sh"><h2>Organization Profile</h2><p>This information appears on your Exchange listings.</p></div>
+          <div className="fg2">
+            <div className="fg fu"><label className="fl">Organization Name</label><input className="fi" value={f.name||""} onChange={e=>upd("name",e.target.value)} placeholder="e.g. Lincoln High Drama Dept"/></div>
+            <div className="fg">
+              <label className="fl">Type</label>
+              <select className="fs" value={f.type||""} onChange={e=>upd("type",e.target.value)}>
+                <option value="">Select…</option>
+                {["School","District","Community Theatre","College","Professional","Other"].map(t=><option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className="fg"><label className="fl">Email</label><input className="fi" type="email" value={f.email||""} onChange={e=>upd("email",e.target.value)} placeholder="drama@school.edu"/></div>
+            <div className="fg"><label className="fl">Phone</label><input className="fi" value={f.phone||""} onChange={e=>upd("phone",e.target.value)} placeholder="(555) 123-4567"/></div>
+            <div className="fg"><label className="fl">City / Location</label><input className="fi" value={f.location||""} onChange={e=>upd("location",e.target.value)} placeholder="Huntington Beach, CA"/></div>
+            <div className="fg">
+              <label className="fl">State</label>
+              <select className="fs" value={f.state||""} onChange={e=>upd("state",e.target.value)}>
+                <option value="">Select state…</option>
+                {US_STATES.map(s=><option key={s} value={s}>{STATE_NAMES[s]} ({s})</option>)}
+              </select>
+            </div>
+            <div className="fg">
+              <label className="fl">Zip Code</label>
+              <input className="fi" value={f.zipcode||""} onChange={e=>upd("zipcode",e.target.value.replace(/[^0-9]/g,"").slice(0,5))} placeholder="e.g. 92648" maxLength={5}/>
+              <div style={{fontSize:11,color:"var(--muted)",marginTop:3}}>Used to sort Community Board posts by proximity to you</div>
+            </div>
+            <div className="fg fu"><label className="fl">About Your Program</label><textarea className="ft" value={f.bio||""} onChange={e=>upd("bio",e.target.value)} placeholder="Tell others about your program…"/></div>
+          </div>
+          <div style={{display:"flex",gap:10,alignItems:"center",marginTop:18,paddingTop:14,borderTop:"1.5px solid var(--border)"}}>
+            <button className="btn btn-p" onClick={save}><span style={{width:14,height:14,display:"flex"}}>{Ic.check}</span>Save Profile</button>
+            {saved&&<span style={{color:"var(--green)",fontWeight:800,fontSize:13.5}}>✓ Saved!</span>}
+          </div>
+        </div>
+
+        {/* Plans */}
+        <div className="card card-p" style={{marginBottom:20}}>
+          <div className="sh"><h2>Plans</h2><p>Choose the right plan for your program.</p></div>
+          {/* Billing toggle */}
+          <UpgradePlans userId={userId} userEmail={userEmail} plan={plan}/>
+          {/* Manage / Cancel billing — only shown to paid non-admin users */}
+          {plan !== "free" && !isAdminEmail(userEmail) && (
+            <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid var(--bd)"}}>
+              <div style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>
+                You are on the <strong style={{color:"var(--gold)",textTransform:"capitalize"}}>{plan}</strong> plan.
+                Your subscription renews automatically. Cancel anytime — you keep access until the end of your billing period.
+              </div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <a
+                  href={"https://billing.stripe.com/p/login/aFa4gydAZ2X1cpZ6UHgA800" + (userEmail ? "?prefilled_email=" + encodeURIComponent(userEmail) : "")}
+                  target="_blank" rel="noopener noreferrer"
+                  className="btn btn-o btn-sm"
+                  style={{fontSize:12}}>
+                  💳 Manage Billing &amp; Cancel
+                </a>
+                <a href="mailto:hello@theatre4u.org?subject=Cancel Subscription" className="btn btn-o btn-sm" style={{fontSize:12}}>
+                  ✉️ Email Us to Cancel
+                </a>
+              </div>
+              <div style={{fontSize:11,color:"var(--faint)",marginTop:8,lineHeight:1.6}}>
+                Need help? Email <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)"}}>hello@theatre4u.org</a> — we respond personally.
+              </div>
+              <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid var(--bd)",fontSize:12,color:"var(--muted)",lineHeight:1.7}}>
+                <span style={{fontWeight:700,color:"var(--text)"}}>🏛️ Paying by check or PO?</span> Email{" "}
+                <a href="mailto:hello@theatre4u.org?subject=Check/PO Subscription Request" style={{color:"var(--gold)"}}>hello@theatre4u.org</a>
+                {" "}and we'll send a formal invoice. Payment made payable to <strong>Artstracker LLC</strong>. Net-30 available for districts.
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Data */}
+        {/* Admin Test Panel — only visible to admin email */}
+        {isAdminEmail(userEmail)&&(
+          <div className="card card-p" style={{marginBottom:20,border:"1px solid rgba(212,168,67,.4)",background:"rgba(212,168,67,.04)"}}>
+            <div className="sh">
+              <h2 style={{color:"var(--gold)"}}>🔧 Admin: Plan Test Mode</h2>
+              <p>Simulate any subscription level. Changes are saved to the database so you can test the full flow.</p>
+            </div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
+              <span style={{fontSize:12,color:"var(--muted)",fontWeight:600}}>Current plan:</span>
+              <span style={{padding:"3px 10px",background:"var(--gold)",color:"#1a0f00",borderRadius:9,fontSize:12,fontWeight:700,textTransform:"uppercase"}}>{plan}</span>
+            </div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {["free","pro","district"].map(p=>(
+                <button key={p} className={"btn "+(plan===p?"btn-g":"btn-o")} style={{textTransform:"capitalize",opacity:plan===p?.6:1}}
+                  onClick={()=>plan!==p&&setPlan(p)}
+                  disabled={plan===p}>
+                  {plan===p?"✓ ":""}{p.charAt(0).toUpperCase()+p.slice(1)}{plan===p?" (active)":""}
+                </button>
+              ))}
+            </div>
+            <div style={{marginTop:10,fontSize:11.5,color:"var(--faint)",lineHeight:1.6}}>
+              <strong>Free:</strong> 25 item cap, no Exchange or Reports · <strong>Pro:</strong> unlimited items, Backstage Exchange · <strong>District:</strong> all Pro features + multi-org (future)
+            </div>
+          </div>
+        )}
+
+        {!memberRole&&<TeamSettings userId={userId} orgName={org?.name||"Your Program"} plan={plan}/>}
+
+        {/* ── Participation Toggles ─────────────────────────────────────── */}
+        {!memberRole&&(
+        <div className="card card-p">
+          <div className="sh">
+            <h2>Participation Settings</h2>
+            <p>Choose which Theatre4u features your program participates in. These settings are private and only visible to your account.</p>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:14,marginTop:16}}>
+            {[
+              {key:"community_enabled",  icon:"🎪", label:"Community Board",  desc:"Appear in the community directory and post to the shared board. Other programs can see your posts."},
+              {key:"marketplace_enabled",icon:"🏪", label:"Backstage Exchange",  desc:"Share selected items with other theatre programs in the region. You control exactly which items are posted. Browse what others have available."},
+            ].map(({key,icon,label,desc})=>(
+              <div key={key} style={{display:"flex",alignItems:"flex-start",gap:14,padding:"12px 0",borderBottom:"1px solid var(--border)"}}>
+                <div style={{fontSize:22,marginTop:2}}>{icon}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>{label}</div>
+                  <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>{desc}</div>
+                </div>
+                <label style={{display:"flex",alignItems:"center",cursor:"pointer",flexShrink:0}}>
+                  <input type="checkbox"
+                    checked={!!(org&&org[key])}
+                    onChange={async e=>{
+                      const val = e.target.checked;
+                      const updated = {...org,[key]:val};
+                      setOrg(updated);
+                      await SB.from("orgs").update({[key]:val}).eq("id",userId);
+                    }}
+                    style={{width:18,height:18,cursor:"pointer",accentColor:"var(--gold)"}}
+                  />
+                  <span style={{marginLeft:8,fontSize:13,color:"var(--muted)",fontWeight:600}}>
+                    {org&&org[key]?"On":"Off"}
+                  </span>
+                </label>
+              </div>
+            ))}
+          </div>
+          <p style={{fontSize:11,color:"var(--muted)",marginTop:14,fontStyle:"italic"}}>
+            Changes take effect immediately. Turning off Community or Backstage Exchange removes your content from shared views but does not delete it. The Funding Tracker is always private to your account.
+          </p>
+        </div>
+        )}
+
+        <div className="card card-p">
+          <div className="sh"><h2>🔒 QR Code Privacy</h2><p>Control what others see when they scan your item QR labels.</p></div>
+          <QRPrivacySettings org={org} setOrg={setOrg} userId={userId}/>
+        </div>
+
+        <div className="sc">
+          <div className="sh"><h2>Data Management</h2><p>Load sample data to explore, or reset everything to start fresh.</p></div>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+            <button className="btn btn-o" onClick={onSeed}><span style={{width:14,height:14,display:"flex"}}>{Ic.box}</span>Load Sample Data</button>
+            <button className="btn btn-d" onClick={async()=>{
+              if(!window.confirm("This will permanently delete ALL your inventory items from the database. Your account and organization profile will remain. This cannot be undone.")) return;
+              // Get current item IDs from state and delete each by primary key
+              // (more reliable than bulk delete against org_id with RLS)
+              const currentItems = items;
+              if(currentItems.length===0){window.alert("No items to delete.");return;}
+              let failed=0;
+              for(const item of currentItems){
+                const{error}=await SB.from("items").delete().eq("id",item.id);
+                if(error) failed++;
+              }
+              // Also try a bulk delete by org_id as belt-and-suspenders
+              await SB.from("items").delete().eq("org_id",user.id);
+              setItems([]);
+              if(failed>0) window.alert("Deleted with "+failed+" error(s). Refresh if items remain.");
+              else window.alert("All inventory items deleted.");
+            }}><span style={{width:14,height:14,display:"flex"}}>{Ic.trash}</span>Delete All Items</button>
+          </div>
+        </div>
+
+        {/* ── Delete My Account (self-service) ── */}
+        <div className="card card-p" style={{ borderColor:"rgba(194,24,91,.25)",background:"rgba(194,24,91,.02)" }}>
+          <div className="sh">
+            <h2 style={{ color:"var(--red)" }}>⚠️ Close My Account</h2>
+            <p>
+              Permanently close your Theatre4u account. Your Stripe subscription will be canceled immediately.
+              Your data will be preserved for 30 days — email <strong>hello@theatre4u.org</strong> within
+              30 days to restore your account. After 30 days, all data is permanently deleted.
+            </p>
+          </div>
+          <SelfServiceDeleteAccount user={user} org={org} />
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// AUTH SCREENS
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ─── Legal Modals ────────────────────────────────────────────────────────────
+function LegalModal({title, onClose, children}){
+  useEffect(()=>{const h=e=>e.key==="Escape"&&onClose();window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h)},[onClose]);
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{background:"var(--bg2,#15121b)",border:"1px solid rgba(212,168,67,.2)",borderRadius:14,width:"100%",maxWidth:680,maxHeight:"88vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 48px rgba(0,0,0,.6)"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,.08)"}}>
+          <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:18,color:"#ede8df"}}>{title}</h2>
+          <button onClick={onClose} style={{background:"none",border:"1px solid rgba(255,255,255,.15)",borderRadius:6,color:"#9b93a8",cursor:"pointer",padding:"4px 8px",fontSize:13}}>✕ Close</button>
+        </div>
+        <div style={{padding:"20px 24px",overflowY:"auto",flex:1,color:"#c8c0d4",fontSize:13.5,lineHeight:1.75}}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const TERMS_CONTENT = [
+  ["1. Acceptance of Terms","By accessing or using Theatre4u at theatre4u.org, you agree to be bound by these Terms of Service. If you do not agree, please do not use the Service. Theatre4u™ is a product of Artstracker LLC, a California limited liability company (theatre4u.org)."],
+  ["2. Description of Service","Theatre4u™ is a cloud-based inventory management, resource-sharing, and community platform for theatre programs, schools, community theatres, and performing arts organizations. We reserve the right to modify or discontinue the Service at any time with reasonable notice."],
+  ["3. Account Registration","You must create an account with accurate information and are responsible for maintaining confidentiality of your credentials. You must be at least 18 years old, or have authorization of a parent, guardian, or school administrator if a minor acting on behalf of an organization."],
+  ["4. Subscription Plans and Payments","Theatre4u offers Free, Pro ($15/month or $150/year), and District ($49/month or $500/year) plans billed via Stripe. Subscriptions auto-renew unless cancelled. We may change pricing with 30 days notice to current subscribers."],
+  ["4a. Cancellation Policy","You may cancel your subscription at any time through Settings → Plans → Manage Billing, or by emailing hello@theatre4u.org. Upon cancellation, your access continues until the end of the current billing period — no partial refunds are issued for unused time. For annual plans, a full refund is available within 30 days of purchase if you have added fewer than 10 items. After 30 days, annual plan fees are non-refundable. Your inventory data is preserved for 90 days after your plan downgrades to Free; you may export a full CSV backup at any time from the Reports page. Leading Players have guaranteed free Pro access through April 9, 2027 and are not affected by this policy."],
+  ["5. User Content & License Grant","You retain all ownership of content you upload to Theatre4u™, including text, photos, images, and other materials ('User Content'). By uploading User Content, you grant Theatre4u a worldwide, non-exclusive, royalty-free, perpetual, irrevocable license to store, display, reproduce, and use that content to operate, improve, and promote the Service. This license persists even if you later remove the content or close your account. You represent that you have all necessary rights to grant this license, that your content does not infringe any third-party rights, and that you have obtained appropriate permissions for any photographs or images of identifiable individuals. Theatre4u may remove any content that violates these Terms or applicable law."],
+  ["6. Exchange Transactions","Theatre4u™ provides the Backstage Exchange platform for listing items for rent, sale, or loan. We are not a party to any transaction between users. All agreements are solely between listing users and interested parties. We do not handle payments between users."],
+  ["7. Prohibited Conduct","You agree not to: use the Service unlawfully; upload false or fraudulent content; attempt unauthorized access; interfere with the Service; use automated scraping tools; impersonate others; or transmit spam or malware. Violations may result in immediate account termination."],
+  ["8. Intellectual Property","The Theatre4u™ name, logo, design, software, and all platform content are owned by Artstracker LLC and protected by United States and international intellectual property laws. Theatre4u™ is a trademark of Artstracker LLC. Nothing in these Terms grants you any right to use our trademarks, trade names, or other intellectual property without prior written consent. All rights not expressly granted are reserved."],
+  ["9. Disclaimer of Warranties","THE SERVICE IS PROVIDED AS IS WITHOUT WARRANTIES OF ANY KIND. We do not warrant that the Service will be uninterrupted, error-free, or free of harmful components."],
+  ["10. Limitation of Liability","TO THE FULLEST EXTENT PERMITTED BY CALIFORNIA LAW, WE SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES. Our total liability shall not exceed amounts paid by you in the three months preceding the claim."],
+  ["11. Governing Law","These Terms are governed by California law. Disputes shall be resolved through binding arbitration in California under AAA rules, except either party may seek injunctive relief in court. You waive the right to class action."],
+  ["12. Changes & Contact","We may modify these Terms with 14 days notice. Continued use constitutes acceptance. Questions: hello@theatre4u.org | Artstracker LLC, California, USA"],
+];
+
+const PRIVACY_CONTENT = [
+  ["1. Introduction", "Theatre4u™ (theatre4u.org) is a product of Artstracker LLC, a California limited liability company. We are committed to protecting the privacy and security of all users, with special attention to the requirements applicable to educational institutions and school districts. This Privacy Policy complies with the California Consumer Privacy Act (CCPA), CalOPPA, the Family Educational Rights and Privacy Act (FERPA), and the Children's Online Privacy Protection Act (COPPA)."],
+  ["2. Who Uses Theatre4u", "Theatre4u is designed for use by theatre educators, school drama departments, community theatre organizations, and district administrators. Users must be 18 years or older to create an account. Theatre4u is not intended for direct use by students under 18. School administrators and teachers are responsible for ensuring appropriate use within their programs."],
+  ["3. Information We Collect", "Account Information: organization name, email address, password (encrypted via Supabase Auth — we never see plaintext passwords), and optional profile details including phone, city, and bio. Inventory Data: item names, descriptions, photos, locations, and condition notes you add to your account. Communication Data: messages sent between organizations on the platform. Usage Data: pages visited and features used, to improve the platform. We do NOT collect student personally identifiable information (PII). All data belongs to your organization."],
+  ["4. How We Use Your Information", "To provide and operate the Theatre4u platform. To facilitate Backstage Exchange listings and rental/loan requests between theatre programs. To send transactional emails (request notifications, account confirmation) via Resend from hello@theatre4u.org. To improve the platform based on anonymized usage patterns. We do NOT sell your data. We do NOT use your data for advertising. We do NOT share your data with third parties except as described in section 5."],
+  ["5. Data Sharing & Third Parties", "Supabase (supabase.com): Our database and authentication provider, hosted in AWS us-east-1. All data is encrypted at rest and in transit. Supabase is SOC 2 Type II certified. Resend (resend.com): Transactional email delivery only. Vercel (vercel.com): Web hosting and CDN. No user data is stored by Vercel. Stripe (stripe.com): Payment processing for subscriptions only. Stripe does not receive inventory or student data. Other Theatre Programs: When you post items to Backstage Exchange, your organization name, location, and listed items are visible to other logged-in Theatre4u members. No other sharing occurs."],
+  ["6. FERPA Compliance", "Theatre4u acknowledges its role as a service provider to educational institutions subject to FERPA. Theatre4u does not collect, store, or process student education records as defined by FERPA. All inventory and operational data belongs to the subscribing organization (the school or district), not to individual students. School administrators retain full control over their organizational data and may request complete data deletion at any time. Theatre4u will not disclose organizational data to third parties without the written consent of the institution's authorized representative, except as required by law."],
+  ["7. Student Privacy (COPPA)", "Theatre4u accounts are for adults only (18+). If you believe a minor has created an account without authorization, contact hello@theatre4u.org immediately and we will delete the account and all associated data within 48 hours. Theatre4u does not knowingly collect personal information from children under 13."],
+  ["8. Data Security", "All data is encrypted in transit via TLS 1.2+. Database data is encrypted at rest via AES-256 (Supabase/AWS). Passwords are hashed using bcrypt — we cannot access your password. Authentication tokens expire automatically. Row-Level Security (RLS) is enforced on all database tables — each organization can only access its own data. Security headers (HSTS, CSP, X-Frame-Options) are enforced on all pages. The anon key exposed in the client is restricted by RLS policies and cannot access other organizations' private data."],
+  ["9. Data Retention & Deletion", "Your data is retained as long as your account is active. You may request complete deletion of your account and all associated data at any time by emailing hello@theatre4u.org. We will complete deletion within 30 days. Deleted data is not recoverable. Anonymized aggregate statistics (total item counts, etc.) may be retained. Backup snapshots are retained for 7 days before permanent deletion."],
+  ["10. Your Rights (CCPA)", "California residents have the right to: know what personal data we collect and how it is used; request deletion of your data; opt out of sale of personal data (we do not sell data); non-discrimination for exercising privacy rights. To exercise any right: email hello@theatre4u.org with 'Privacy Request' in the subject line."],
+  ["11. District Data Agreements", "For school district subscribers (District plan), Artstracker LLC will execute a Data Processing Agreement (DPA) upon request. Contact hello@theatre4u.org. We will cooperate with district IT security reviews and questionnaires. Theatre4u's infrastructure (Supabase/Vercel) can provide SOC 2 and ISO 27001 documentation upon request for your district's vendor review process."],
+  ["12. Changes & Contact", "We will notify users of material changes to this policy with at least 14 days notice via email. Questions, data requests, or security concerns: hello@theatre4u.org | theatre4u.org | Artstracker LLC, California, USA. For security vulnerabilities, please email hello@theatre4u.org with 'Security' in the subject line."],
+];
+// ── Landing Page ──────────────────────────────────────────────────────────────
 function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
   const[scrolled,setScrolled]=useState(false);
   useEffect(()=>{
@@ -8538,6 +12788,1275 @@ const AppWithBoundary = () => isDemoMode()
   : <ErrorBoundary><AppRoot/></ErrorBoundary>;
 
 export default AppWithBoundary;
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── AI Help Bubble ────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+function AIHelpBubble({ user }) {
+  const [open, setOpen]       = useState(false);
+  const [msgs, setMsgs]       = useState([]);
+  const [input, setInput]     = useState("");
+  const [loading, setLoading] = useState(false);
+  const [unread, setUnread]   = useState(false);
+  const bottomRef = useRef(null);
+  const inputRef  = useRef(null);
+
+  const EDGE_URL = "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/ai-help";
+
+  useEffect(() => {
+    if (open) {
+      setUnread(false);
+      setTimeout(() => inputRef.current?.focus(), 120);
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 80);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [msgs]);
+
+  const send = async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+    const userMsg = { role: "user", content: text };
+    setMsgs(p => [...p, userMsg]);
+    setInput("");
+    setLoading(true);
+    try {
+      const { data: { session } } = await SB.auth.getSession();
+      const res = await fetch(EDGE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { "Authorization": "Bearer " + session.access_token } : {}),
+        },
+        body: JSON.stringify({ messages: [...msgs, userMsg] }),
+      });
+      const json = await res.json();
+      const reply = json.reply || "Sorry, I had trouble with that. Try emailing hello@theatre4u.org.";
+      setMsgs(p => [...p, { role: "assistant", content: reply }]);
+      if (!open) setUnread(true);
+    } catch {
+      setMsgs(p => [...p, { role: "assistant", content: "Connection error. Please check your internet and try again, or email hello@theatre4u.org." }]);
+    }
+    setLoading(false);
+  };
+
+  const bubbleStyle = {
+    position: "fixed", bottom: 24, right: 24, zIndex: 9000,
+    display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10,
+    fontFamily: "'DM Sans', sans-serif",
+  };
+  const panelStyle = {
+    width: 340, maxWidth: "calc(100vw - 32px)",
+    height: 440, maxHeight: "calc(100vh - 120px)",
+    background: "var(--bg2)", border: "1px solid var(--bd)",
+    borderRadius: 16, display: "flex", flexDirection: "column",
+    boxShadow: "0 8px 40px rgba(0,0,0,.5)",
+    overflow: "hidden", animation: "su .2s ease",
+  };
+
+  return (
+    <div style={bubbleStyle}>
+      {open && (
+        <div style={panelStyle}>
+          {/* Header */}
+          <div style={{ padding: "12px 16px", background: "linear-gradient(135deg,#d4a843,#a37f2c)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              <span style={{ fontSize: 20 }}>🎭</span>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: "#1a0f00" }}>Theatre4u Help</div>
+                <div style={{ fontSize: 11, color: "rgba(26,15,0,.65)" }}>Powered by Claude AI</div>
+              </div>
+            </div>
+            <button onClick={() => setOpen(false)} style={{ background: "rgba(0,0,0,.15)", border: "none", borderRadius: 6, color: "#1a0f00", cursor: "pointer", padding: "4px 8px", fontSize: 16, lineHeight: 1 }}>×</button>
+          </div>
+          {/* Messages */}
+          <div style={{ flex: 1, overflowY: "auto", padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+            {msgs.length === 0 && (
+              <div style={{ textAlign: "center", padding: "24px 12px" }}>
+                <div style={{ fontSize: 32, marginBottom: 10 }}>👋</div>
+                <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, marginBottom: 6, color: "var(--t1)" }}>Hi! How can I help?</div>
+                <div style={{ fontSize: 12.5, color: "var(--t3)", lineHeight: 1.6 }}>Ask me anything about Theatre4u — inventory, QR codes, Exchange, team sharing, and more.</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center", marginTop: 14 }}>
+                  {["How do QR codes work?", "How do I invite my crew?", "What's in the Pro plan?", "How do I export my inventory?"].map(q => (
+                    <button key={q} onClick={() => { setInput(q); setTimeout(() => inputRef.current?.focus(), 50); }}
+                      style={{ background: "var(--bg3)", border: "1px solid var(--bd)", borderRadius: 20, padding: "5px 11px", fontSize: 11.5, color: "var(--t2)", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", transition: "all .15s" }}
+                      onMouseEnter={e => e.target.style.borderColor = "var(--gold)"}
+                      onMouseLeave={e => e.target.style.borderColor = "var(--bd)"}>
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {msgs.map((m, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
+                <div style={{
+                  maxWidth: "82%", padding: "9px 12px", borderRadius: m.role === "user" ? "12px 12px 3px 12px" : "12px 12px 12px 3px",
+                  background: m.role === "user" ? "linear-gradient(135deg,#d4a843,#a37f2c)" : "var(--bg3)",
+                  color: m.role === "user" ? "#1a0f00" : "var(--t1)",
+                  fontSize: 13, lineHeight: 1.55, border: m.role === "user" ? "none" : "1px solid var(--bd)",
+                  whiteSpace: "pre-wrap", wordBreak: "break-word",
+                }}>
+                  {m.content}
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div style={{ display: "flex", gap: 5, padding: "8px 12px" }}>
+                {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--gold)", animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`, opacity: 0.6 }}/>)}
+              </div>
+            )}
+            <div ref={bottomRef}/>
+          </div>
+          {/* Input */}
+          <div style={{ padding: "10px 12px", borderTop: "1px solid var(--bd)", flexShrink: 0, display: "flex", gap: 8, alignItems: "center", background: "var(--bg2)" }}>
+            <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), send())}
+              placeholder="Ask anything…"
+              style={{ flex: 1, background: "var(--bgi)", border: "1px solid var(--bd)", borderRadius: 8, padding: "8px 11px", color: "var(--t1)", fontSize: 13, fontFamily: "'DM Sans',sans-serif", outline: "none" }}
+              onFocus={e => e.target.style.borderColor = "var(--gold)"}
+              onBlur={e => e.target.style.borderColor = "var(--bd)"}
+            />
+            <button onClick={send} disabled={!input.trim() || loading}
+              style={{ background: "linear-gradient(135deg,#d4a843,#a37f2c)", border: "none", borderRadius: 8, padding: "8px 13px", cursor: input.trim() && !loading ? "pointer" : "not-allowed", opacity: input.trim() && !loading ? 1 : 0.5, fontSize: 16, display: "flex", alignItems: "center" }}>
+              ➤
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Floating button */}
+      <button onClick={() => setOpen(p => !p)}
+        style={{ width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg,#d4a843,#a37f2c)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, boxShadow: "0 4px 20px rgba(212,168,67,.45)", transition: "all .2s", position: "relative" }}
+        title="Get help"
+        onMouseEnter={e => e.currentTarget.style.transform = "scale(1.08)"}
+        onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}>
+        {open ? "×" : "?"}
+        {unread && !open && <span style={{ position: "absolute", top: 2, right: 2, width: 12, height: 12, background: "#c2185b", borderRadius: "50%", border: "2px solid var(--bg)" }}/>}
+      </button>
+    </div>
+  );
+}
+
+
+// PREVIEW MODE -- guest exploration before sign-up
+// Accessed via theatre4u.org?preview=1 or the "Take a Tour" button
+// Shows sample inventory, demo UI, and a persistent sign-up prompt
+const PREVIEW_ITEMS = [
+  { id:"p1",  name:"Victorian Ball Gown — Blue",      category:"costumes",  condition:"Good",      size:"M",       qty:1,  location:"Costume Closet A",  notes:"Used in A Christmas Carol 2024", mkt:"For Rent",    avail:"In Stock", sale:0,  rent:25, tags:["period","formal"] },
+  { id:"p2",  name:"Pirate Hat Collection (6pc)",     category:"costumes",  condition:"Fair",      size:"One Size",qty:6,  location:"Costume Closet B",  notes:"Assorted styles",               mkt:"Not Listed",  avail:"In Stock", sale:0,  rent:0,  tags:["adventure"] },
+  { id:"p3",  name:"Wireless Handheld Mic — Shure",  category:"sound",     condition:"Excellent", size:"N/A",     qty:4,  location:"Sound Booth",       notes:"SM58 compatible, 4 channels",   mkt:"For Rent",    avail:"In Stock", sale:0,  rent:15, tags:["audio"] },
+  { id:"p4",  name:"LED Par Can RGBW 54x3W",          category:"lighting",  condition:"New",       size:"N/A",     qty:12, location:"Lighting Storage",  notes:"DMX controllable",              mkt:"Rent or Sale",avail:"In Stock", sale:85, rent:10, tags:["dmx","led"] },
+  { id:"p5",  name:"Wooden Throne Chair",             category:"furniture", condition:"Good",      size:"N/A",     qty:1,  location:"Scene Shop",        notes:"Gold painted, red velvet",      mkt:"For Rent",    avail:"In Stock", sale:0,  rent:30, tags:["royalty"] },
+  { id:"p6",  name:"Fog Machine 1000W",              category:"effects",   condition:"Good",      size:"N/A",     qty:2,  location:"Effects Cage",      notes:"Includes remote",               mkt:"For Rent",    avail:"In Stock", sale:0,  rent:20, tags:["atmosphere"] },
+  { id:"p7",  name:"Romeo and Juliet Scripts (30)",   category:"scripts",   condition:"Fair",      size:"N/A",     qty:30, location:"Library",           notes:"Director annotated",            mkt:"For Sale",    avail:"In Stock", sale:5,  rent:0,  tags:["shakespeare"] },
+  { id:"p8",  name:"Ben Nye Master Makeup Kit",       category:"makeup",    condition:"Good",      size:"N/A",     qty:3,  location:"Dressing Room 1",   notes:"Full spectrum",                 mkt:"Not Listed",  avail:"In Stock", sale:0,  rent:0,  tags:["professional"] },
+  { id:"p9",  name:"Forest Backdrop Flat 8x12ft",     category:"sets",      condition:"Good",      size:"N/A",     qty:2,  location:"Scene Shop",        notes:"Painted muslin on frame",       mkt:"For Rent",    avail:"In Stock", sale:0,  rent:40, tags:["outdoor"] },
+  { id:"p10", name:"DeWalt Cordless Drill 20V",       category:"tools",     condition:"Good",      size:"N/A",     qty:2,  location:"Tool Cabinet",      notes:"With charger and bits",         mkt:"Not Listed",  avail:"In Stock", sale:0,  rent:0,  tags:["power tool"] },
+  { id:"p11", name:"Foam Rubber Swords (8pc)",        category:"props",     condition:"Fair",      size:"N/A",     qty:8,  location:"Props Table",       notes:"Safe for stage combat",         mkt:"For Sale",    avail:"In Stock", sale:12, rent:0,  tags:["combat"] },
+  { id:"p12", name:"Black Velvet Main Drape 20x40",   category:"fabrics",   condition:"Excellent", size:"N/A",     qty:1,  location:"Fly Loft",          notes:"Flame retardant",               mkt:"Not Listed",  avail:"In Use",   sale:0,  rent:0,  tags:["main stage"] },
+];
+
+const PREVIEW_CATS = {
+  costumes:"🥻",props:"🎭",sets:"🏗️",lighting:"💡",sound:"🔊",
+  scripts:"📜",makeup:"💄",furniture:"🪑",fabrics:"🧵",tools:"🔧",effects:"✨",other:"📦"
+};
+
+function PreviewMode({ onSignUp }) {
+  const [tab,     setTab]     = React.useState("inventory");
+  const [search,  setSearch]  = React.useState("");
+  const [catF,    setCatF]    = React.useState("all");
+  const [detail,  setDetail]  = React.useState(null);
+  const [showCTA, setShowCTA] = React.useState(false);
+
+  React.useEffect(() => {
+    const t = setTimeout(() => setShowCTA(true), 20000);
+    return () => clearTimeout(t);
+  }, []);
+
+  const filtered = PREVIEW_ITEMS.filter(i => {
+    if (catF !== "all" && i.category !== catF) return false;
+    if (search && !i.name.toLowerCase().includes(search.toLowerCase())
+        && !i.location.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const totalItems = PREVIEW_ITEMS.length;
+  const listed     = PREVIEW_ITEMS.filter(i => i.mkt !== "Not Listed").length;
+  const totalQty   = PREVIEW_ITEMS.reduce((s, i) => s + i.qty, 0);
+  const estValue   = PREVIEW_ITEMS.reduce((s, i) => s + (i.sale * i.qty), 0);
+
+  const gold = "#d4a843", dark = "#1a0f00", bg = "#0d0b11", bg2 = "#15121b";
+  const bd = "#282333", t1 = "#ede8df", t2 = "#9b93a8", t3 = "#685f76";
+
+  const navs = [
+    { id:"dashboard",  label:"Dashboard",         icon:"⌂" },
+    { id:"inventory",  label:"Inventory",          icon:"📦" },
+    { id:"marketplace",label:"Backstage Exchange", icon:"🏪" },
+    { id:"reports",    label:"Reports",            icon:"📊" },
+    { id:"funding",    label:"Funding Tracker",    icon:"💰" },
+  ];
+
+  const GoldBtn = ({ label, onClick, style = {} }) => (
+    <button onClick={onClick} style={{
+      display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6,
+      padding:"9px 20px", borderRadius:8, fontFamily:"'DM Sans',sans-serif",
+      fontSize:14, fontWeight:700, cursor:"pointer", border:"none",
+      background:`linear-gradient(135deg,${gold},#a37f2c)`, color:dark,
+      transition:"all .2s", ...style
+    }}>{label}</button>
+  );
+
+  const mktColor = (mkt) =>
+    mkt === "Not Listed" ? "rgba(107,100,120,.5)"
+    : mkt.includes("Rent") ? "rgba(66,165,245,.8)"
+    : "rgba(76,175,80,.8)";
+
+  return (
+    <div style={{ display:"flex", height:"100vh", overflow:"hidden",
+      background:bg, color:t1, fontFamily:"'DM Sans',sans-serif", fontSize:14 }}>
+
+      {/* Preview banner */}
+      <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:9999,
+        background:"linear-gradient(135deg,rgba(212,168,67,.97),rgba(163,127,44,.97))",
+        padding:"9px 20px", display:"flex", alignItems:"center",
+        justifyContent:"space-between", gap:12, flexWrap:"wrap",
+        boxShadow:"0 2px 12px rgba(0,0,0,.4)" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <span style={{ fontSize:18 }}>🎭</span>
+          <span style={{ fontWeight:800, color:dark, fontSize:14 }}>Preview Mode</span>
+          <span style={{ color:"rgba(26,15,0,.65)", fontSize:12 }}>
+            — Explore Theatre4u with sample data. No account needed.
+          </span>
+        </div>
+        <div style={{ display:"flex", gap:8 }}>
+          <button onClick={() => window.location.href = "https://theatre4u.org"}
+            style={{ padding:"6px 14px", borderRadius:6, fontFamily:"'DM Sans',sans-serif",
+              fontSize:12, fontWeight:600, cursor:"pointer",
+              background:"rgba(0,0,0,.15)", border:"1px solid rgba(0,0,0,.2)", color:dark }}>
+            Sign In
+          </button>
+          <GoldBtn label="Start Free Account →" onClick={onSignUp}
+            style={{ padding:"6px 18px", fontSize:13 }}/>
+        </div>
+      </div>
+
+      {/* Sidebar */}
+      <aside style={{ width:224, minWidth:224, background:bg2,
+        borderRight:`1px solid ${bd}`, display:"flex", flexDirection:"column",
+        paddingTop:48, overflowY:"auto", zIndex:100 }}>
+        <div style={{ padding:"18px 14px", borderBottom:`1px solid ${bd}`,
+          display:"flex", alignItems:"center", gap:10 }}>
+          <div style={{ width:38, height:38, borderRadius:8, fontSize:20,
+            background:`linear-gradient(135deg,${gold},#a37f2c)`,
+            display:"flex", alignItems:"center", justifyContent:"center" }}>🎭</div>
+          <div>
+            <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16,
+              fontWeight:700, color:gold }}>Theatre4u™</div>
+            <div style={{ fontSize:9, color:t3, textTransform:"uppercase", letterSpacing:2 }}>
+              Ocean View Drama
+            </div>
+          </div>
+        </div>
+
+        <nav style={{ padding:"12px 8px", flex:1 }}>
+          <div style={{ fontSize:9, textTransform:"uppercase", letterSpacing:2,
+            color:t3, padding:"8px 10px 4px" }}>Main</div>
+          {navs.map(n => (
+            <div key={n.id} onClick={() => setTab(n.id)}
+              style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px",
+                borderRadius:6, cursor:"pointer", fontSize:13, fontWeight:500, marginBottom:1,
+                color: tab === n.id ? gold : t2,
+                background: tab === n.id
+                  ? "linear-gradient(135deg,rgba(212,168,67,.12),rgba(212,168,67,.04))"
+                  : "transparent",
+                border: `1px solid ${tab === n.id ? "rgba(212,168,67,.2)" : "transparent"}` }}>
+              <span style={{ fontSize:15 }}>{n.icon}</span>
+              {n.label}
+              {n.id === "inventory" && (
+                <span style={{ marginLeft:"auto", background:bg, padding:"1px 6px",
+                  borderRadius:9, fontSize:10, color:t3 }}>{totalItems}</span>
+              )}
+            </div>
+          ))}
+        </nav>
+
+        <div style={{ padding:12, borderTop:`1px solid ${bd}` }}>
+          <div style={{ background:"rgba(212,168,67,.08)", border:"1px solid rgba(212,168,67,.2)",
+            borderRadius:10, padding:12 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:gold, marginBottom:4 }}>
+              🎟 Join for Free
+            </div>
+            <div style={{ fontSize:11, color:t2, lineHeight:1.5, marginBottom:8 }}>
+              Create your program's inventory, earn Stage Points, and share with nearby schools.
+            </div>
+            <GoldBtn label="Start Free →" onClick={onSignUp}
+              style={{ width:"100%", fontSize:12, padding:"8px 12px" }}/>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <main style={{ flex:1, display:"flex", flexDirection:"column",
+        overflow:"hidden", paddingTop:42 }}>
+        <div style={{ padding:"12px 24px", borderBottom:`1px solid ${bd}`,
+          background:bg2, display:"flex", alignItems:"center", gap:12 }}>
+          <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700 }}>
+            {navs.find(n => n.id === tab)?.label}
+          </h1>
+          <span style={{ marginLeft:"auto", fontSize:11, color:gold, fontWeight:600,
+            background:"rgba(212,168,67,.1)", border:"1px solid rgba(212,168,67,.2)",
+            padding:"3px 10px", borderRadius:12 }}>
+            👁 Preview — sample data only
+          </span>
+        </div>
+
+        <div style={{ flex:1, overflowY:"auto", padding:"20px 24px" }}>
+
+          {/* DASHBOARD */}
+          {tab === "dashboard" && (
+            <div>
+              <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>
+                Welcome to Ocean View Drama
+              </h2>
+              <p style={{ color:t2, fontSize:13, marginBottom:20 }}>
+                Your theatre inventory at a glance. (Sample data)
+              </p>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",
+                gap:12, marginBottom:20 }}>
+                {[
+                  { icon:"📦", label:"Cataloged Items",  val:totalItems },
+                  { icon:"🔢", label:"Total Quantity",    val:totalQty },
+                  { icon:"🏪", label:"Listed / Shared",   val:listed },
+                  { icon:"💰", label:"Est. Sale Value",   val:"$"+estValue.toLocaleString() },
+                ].map(s => (
+                  <div key={s.label} style={{ background:bg2, border:`1px solid ${bd}`,
+                    borderRadius:10, padding:16, textAlign:"center" }}>
+                    <div style={{ fontSize:24, marginBottom:4 }}>{s.icon}</div>
+                    <div style={{ fontFamily:"'Playfair Display',serif", fontSize:22,
+                      fontWeight:700, color:gold }}>{s.val}</div>
+                    <div style={{ fontSize:11, color:t3, marginTop:2 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10, padding:16, marginBottom:20 }}>
+                <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:16, marginBottom:12 }}>
+                  What Theatre4u™ Does
+                </h3>
+                {[
+                  ["📦","Inventory Management","Catalog every costume, prop, light, and piece of gear with photos, QR labels, and condition tracking."],
+                  ["🔲","QR Code Labels","Print scannable labels for any item. Any phone camera looks it up instantly."],
+                  ["🏪","Backstage Exchange","Share items with other theatre programs near you — rent, loan, or sell gear to your neighbours."],
+                  ["🪙","Stage Points","Earn points for cataloging and sharing inventory. Redeem for free months or Exchange discounts."],
+                  ["💰","Funding Tracker","Track grants, Prop 28 funds, and spending. Generate accountability reports for principals and boards."],
+                ].map(([icon, title, desc]) => (
+                  <div key={title} style={{ display:"flex", gap:12, padding:"10px 0",
+                    borderBottom:`1px solid rgba(255,255,255,.05)` }}>
+                    <span style={{ fontSize:20, flexShrink:0 }}>{icon}</span>
+                    <div>
+                      <div style={{ fontWeight:700, fontSize:13, marginBottom:2 }}>{title}</div>
+                      <div style={{ fontSize:12, color:t2, lineHeight:1.5 }}>{desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ textAlign:"center", padding:"16px 0" }}>
+                <GoldBtn label="🎟 Create Your Free Account →" onClick={onSignUp}
+                  style={{ fontSize:15, padding:"12px 32px" }}/>
+                <div style={{ fontSize:12, color:t3, marginTop:8 }}>
+                  No credit card required · Free forever for basic use
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* INVENTORY */}
+          {tab === "inventory" && (
+            <div>
+              <div style={{ display:"flex", gap:10, marginBottom:14, flexWrap:"wrap", alignItems:"center" }}>
+                <div style={{ position:"relative" }}>
+                  <input value={search} onChange={e => setSearch(e.target.value)}
+                    placeholder="Search items…"
+                    style={{ background:"#110f18", border:`1px solid ${bd}`, borderRadius:8,
+                      padding:"7px 10px 7px 32px", color:t1, fontSize:13, width:220, outline:"none" }}/>
+                  <span style={{ position:"absolute", left:10, top:"50%",
+                    transform:"translateY(-50%)", fontSize:14, color:t3 }}>🔍</span>
+                </div>
+                <select value={catF} onChange={e => setCatF(e.target.value)}
+                  style={{ background:"#110f18", border:`1px solid ${bd}`, borderRadius:8,
+                    padding:"7px 10px", color:t1, fontSize:13, outline:"none" }}>
+                  <option value="all">All Categories</option>
+                  {Object.keys(PREVIEW_CATS).map(c => (
+                    <option key={c} value={c}>
+                      {PREVIEW_CATS[c]} {c[0].toUpperCase() + c.slice(1)}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ fontSize:12, color:t3 }}>{filtered.length} items</span>
+                <button onClick={() => setShowCTA(true)}
+                  style={{ marginLeft:"auto", padding:"7px 14px", borderRadius:8,
+                    fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:700,
+                    cursor:"pointer", background:"rgba(212,168,67,.12)",
+                    border:"1px solid rgba(212,168,67,.25)", color:gold }}>
+                  + Add Item (sign up first)
+                </button>
+              </div>
+
+              <div style={{ display:"grid",
+                gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:12 }}>
+                {filtered.map(item => (
+                  <div key={item.id} onClick={() => setDetail(item)}
+                    style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:10,
+                      padding:14, cursor:"pointer", transition:"border-color .2s" }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(212,168,67,.4)"}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = bd}>
+                    <div style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:8 }}>
+                      <div style={{ fontSize:24, flexShrink:0 }}>{PREVIEW_CATS[item.category] || "📦"}</div>
+                      <div>
+                        <div style={{ fontWeight:700, fontSize:14, lineHeight:1.3 }}>{item.name}</div>
+                        <div style={{ fontSize:11, color:t3, marginTop:2 }}>{item.location}</div>
+                      </div>
+                    </div>
+                    <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:8 }}>
+                      {[item.condition, `x${item.qty}`, item.avail].map(tag => (
+                        <span key={tag} style={{ fontSize:10, padding:"2px 7px",
+                          background:"rgba(255,255,255,.05)", borderRadius:4, color:t2 }}>{tag}</span>
+                      ))}
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                      <span style={{ fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:10,
+                        background: mktColor(item.mkt) + "22", color: mktColor(item.mkt) }}>
+                        {item.mkt}
+                      </span>
+                      {(item.rent > 0 || item.sale > 0) && (
+                        <span style={{ fontSize:12, fontWeight:700, color:gold }}>
+                          {item.rent > 0 ? `$${item.rent}/wk` : ""}
+                          {item.rent > 0 && item.sale > 0 ? " · " : ""}
+                          {item.sale > 0 ? `$${item.sale}` : ""}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {detail && (
+                <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)",
+                  zIndex:3000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
+                  onClick={e => e.target === e.currentTarget && setDetail(null)}>
+                  <div style={{ background:bg2, border:`1px solid ${bd}`, borderRadius:14,
+                    width:"100%", maxWidth:520, padding:24, boxShadow:"0 8px 48px rgba(0,0,0,.5)" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between",
+                      alignItems:"flex-start", marginBottom:16 }}>
+                      <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                        <div style={{ fontSize:32 }}>{PREVIEW_CATS[detail.category] || "📦"}</div>
+                        <div>
+                          <div style={{ fontFamily:"'Playfair Display',serif",
+                            fontSize:18, fontWeight:700 }}>{detail.name}</div>
+                          <div style={{ fontSize:12, color:t3, marginTop:2 }}>
+                            {detail.category} · {detail.condition}
+                          </div>
+                        </div>
+                      </div>
+                      <button onClick={() => setDetail(null)}
+                        style={{ background:"none", border:`1px solid ${bd}`, color:t2,
+                          borderRadius:6, width:28, height:28, cursor:"pointer", fontSize:16,
+                          display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+                    </div>
+                    {[
+                      ["Location",      detail.location || "—"],
+                      ["Quantity",      detail.qty],
+                      ["Availability",  detail.avail],
+                      ["Market Status", detail.mkt],
+                      ...(detail.rent > 0 ? [["Rental Price", `$${detail.rent}/week`]] : []),
+                      ...(detail.sale > 0 ? [["Sale Price",   `$${detail.sale}`]]      : []),
+                      ...(detail.notes    ? [["Notes",        detail.notes]]            : []),
+                    ].map(([l, v]) => (
+                      <div key={l} style={{ display:"flex", padding:"7px 0",
+                        borderBottom:"1px solid rgba(255,255,255,.05)" }}>
+                        <span style={{ width:130, color:t3, fontSize:12, flexShrink:0 }}>{l}</span>
+                        <span style={{ fontSize:13 }}>{v}</span>
+                      </div>
+                    ))}
+                    <div style={{ marginTop:16, padding:12, background:"rgba(212,168,67,.06)",
+                      border:"1px solid rgba(212,168,67,.15)", borderRadius:9, textAlign:"center" }}>
+                      <div style={{ fontSize:12, color:t2, marginBottom:8 }}>
+                        Sign up to manage your own inventory, add photos, and print QR labels.
+                      </div>
+                      <GoldBtn label="🎟 Start Free Account →" onClick={onSignUp}
+                        style={{ width:"100%" }}/>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* OTHER TABS — teaser */}
+          {(tab === "marketplace" || tab === "reports" || tab === "funding") && (
+            <div style={{ textAlign:"center", padding:"60px 20px" }}>
+              <div style={{ fontSize:56, marginBottom:16 }}>
+                {tab === "marketplace" ? "🏪" : tab === "reports" ? "📊" : "💰"}
+              </div>
+              <div style={{ fontFamily:"'Playfair Display',serif", fontSize:26,
+                fontWeight:700, marginBottom:10 }}>
+                {tab === "marketplace" ? "Backstage Exchange"
+                  : tab === "reports"    ? "Reports & Analytics"
+                  : "Funding Tracker"}
+              </div>
+              <div style={{ color:t2, fontSize:14, maxWidth:480, margin:"0 auto 28px", lineHeight:1.8 }}>
+                {tab === "marketplace" && "Browse and request items from theatre programs near you — or list your own inventory to share with the community. Free loans between district schools, rentals, and sales."}
+                {tab === "reports"    && "Category breakdowns, condition reports, platform utilization reports for principals, and CSV export. The Platform Usage Report is designed to hand to an administrator showing how Theatre4u protects program assets."}
+                {tab === "funding"    && "Track grants, Prop 28 funds, and all program spending. Generate accountability reports for principals, arts directors, and boards — formatted and print-ready in one click."}
+              </div>
+              <GoldBtn label="🎟 Create Free Account to Access →" onClick={onSignUp}
+                style={{ fontSize:14, padding:"12px 32px" }}/>
+              <div style={{ fontSize:12, color:t3, marginTop:10 }}>
+                Full platform access · No credit card required
+              </div>
+            </div>
+          )}
+
+        </div>
+      </main>
+
+      {/* Floating CTA (appears after 20s) */}
+      {showCTA && (
+        <div style={{ position:"fixed", bottom:20, right:20, zIndex:9998,
+          background:bg2, border:"1px solid rgba(212,168,67,.4)", borderRadius:14,
+          padding:"16px 18px", maxWidth:280, boxShadow:"0 8px 32px rgba(0,0,0,.5)" }}>
+          <button onClick={() => setShowCTA(false)}
+            style={{ position:"absolute", top:8, right:10, background:"none",
+              border:"none", color:t3, cursor:"pointer", fontSize:16 }}>×</button>
+          <div style={{ fontSize:24, marginBottom:8 }}>🎟</div>
+          <div style={{ fontWeight:800, fontSize:14, marginBottom:4, color:t1 }}>
+            Ready to try it for your program?
+          </div>
+          <div style={{ fontSize:12, color:t2, lineHeight:1.5, marginBottom:12 }}>
+            Free to start. No credit card. Your inventory, QR labels, and Backstage Exchange access in under 5 minutes.
+          </div>
+          <GoldBtn label="Start Free Account →" onClick={onSignUp}
+            style={{ width:"100%", fontSize:13 }}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Small banner shown on dashboard and after signup to prompt label purchase
+function LabelStoreBanner({ onGoLabels }) {
+  return(    <div style={{background:"linear-gradient(135deg,rgba(212,168,67,.1),rgba(212,168,67,.04))",
+      border:"1px solid rgba(212,168,67,.25)",borderRadius:12,padding:"14px 18px",
+      display:"flex",gap:14,alignItems:"flex-start",marginBottom:18}}>
+      <div style={{fontSize:28,flexShrink:0}}>🏷</div>
+      <div style={{flex:1}}>
+        <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>
+          Get pre-printed QR labels for your inventory
+        </div>
+        <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
+          Stick them on costumes, props, set pieces, equipment, and storage bins.
+          Scan any label with a phone camera to instantly pull up the item.
+          Polyester labels for indoor use · Weatherproof for scene shops and storage.
+        </div>
+        <button className="btn btn-g btn-sm" onClick={onGoLabels}>
+          Shop Label Packs →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// LABELS PAGE — Three tabs: Print Now · Assign · Order Physical Labels
+// Pricing: WePrintBarcodes cost ~$0.10–0.15/label (standard), ~$0.20–0.25 (WP)
+// Retail packs with margin built in. Logo add-on option.
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Label pack definitions — retail prices with Theatre4u margin baked in
+// Our cost: standard ~$0.12/label + ~$5 shipping. Weatherproof ~$0.22/label + ~$5 shipping.
+// ── Label pack pricing ────────────────────────────────────────────────────────
+// Our cost basis (WePrintBarcodes estimates — update after vendor call):
+//   Standard polyester:  ~$0.12/label + ~$5 shipping
+//   Weatherproof vinyl:  ~$0.22/label + ~$5 shipping
+// Target: ~25% margin on cost. Round to clean buyer-friendly numbers.
+// Update retail cents here after confirming actual WePrintBarcodes pricing.
+//
+//  Pack          Our cost   Retail   Profit   Margin
+//  25 standard   $8.00      $10      $2.00    20%
+//  50 standard   $11.00     $15      $4.00    27%
+//  100 standard  $17.00     $23      $6.00    26%
+//  200 standard  $29.00     $39      $10.00   26%
+//  25 WP         $10.50     $14      $3.50    25%
+//  50 WP         $16.00     $21      $5.00    24%
+//  100 WP        $27.00     $36      $9.00    25%
+//  200 WP        $49.00     $65      $16.00   25%
+const LABEL_PACKS = [
+  { qty:25,  type:"standard",    label:"25 Standard",     retail:1000, desc:"Indoor use · polyester matte · water-resistant" },
+  { qty:50,  type:"standard",    label:"50 Standard",     retail:1500, desc:"Indoor use · polyester matte · water-resistant" },
+  { qty:100, type:"standard",    label:"100 Standard",    retail:2300, desc:"Indoor use · polyester matte · water-resistant" },
+  { qty:200, type:"standard",    label:"200 Standard",    retail:3900, desc:"Indoor use · polyester matte · water-resistant" },
+  { qty:25,  type:"weatherproof",label:"25 Weatherproof", retail:1400, desc:"Scene shop · outdoor storage · heavy-duty vinyl" },
+  { qty:50,  type:"weatherproof",label:"50 Weatherproof", retail:2100, desc:"Scene shop · outdoor storage · heavy-duty vinyl" },
+  { qty:100, type:"weatherproof",label:"100 Weatherproof",retail:3600, desc:"Scene shop · outdoor storage · heavy-duty vinyl" },
+  { qty:200, type:"weatherproof",label:"200 Weatherproof",retail:6500, desc:"Scene shop · outdoor storage · heavy-duty vinyl" },
+];
+const LOGO_ADDON_CENTS = 500; // $5 to include program logo on labels
+
+function LabelsPage({ org, userId, items=[], isAdmin=false }) {
+  const [tab, setTab]           = useState("print");
+  const [myItems, setMyItems]   = useState([]);
+  const [orders, setOrders]     = useState([]);
+  const [loadingItems, setLoadingItems] = useState(true);
+
+  // Print tab state
+  const [search, setSearch]     = useState("");
+  const [selected, setSelected] = useState([]);
+  const [printing, setPrinting] = useState(false);
+
+  // Assign tab state
+  const [assignCode, setAssignCode] = useState("");
+  const [assignItem, setAssignItem] = useState("");
+  const [assignMsg, setAssignMsg]   = useState("");
+  const [assignSaving, setAssignSaving] = useState(false);
+
+  // Order tab state
+  const [selPack, setSelPack]     = useState(null);   // index into LABEL_PACKS
+  const [includeLogo, setIncludeLogo] = useState(false);
+  const [logoUrl, setLogoUrl]     = useState(org?.logo_url||"");
+  const [orderName, setOrderName] = useState(org?.director_name||"");
+  const [orderAddrLine, setOrderAddrLine] = useState("");
+  const [orderCity, setOrderCity] = useState("");
+  const [orderState, setOrderState] = useState("");
+  const [orderZip, setOrderZip]   = useState("");
+  const [orderNotes, setOrderNotes] = useState("");
+  const [orderSubmitting, setOrderSubmitting] = useState(false);
+  const [orderDone, setOrderDone] = useState(false);
+  const [orderMsg, setOrderMsg]   = useState("");
+  const [extraSticky, setExtraSticky] = useState(0);
+  const [extraIronOn, setExtraIronOn] = useState(0);
+
+  useEffect(()=>{
+    (async()=>{
+      setLoadingItems(true);
+      const {data} = await SB.from("items")
+        .select("id,name,category,location,display_id,added,condition,qty")
+        .eq("org_id",userId).order("added",{ascending:false}).limit(500);
+
+      // Also load claimed labels so we know which items already have a physical label
+      const {data:claimed} = await SB.from("label_pool")
+        .select("code,item_id")
+        .eq("org_id",userId)
+        .eq("status","claimed");
+
+      // Build a map: item_id → label code
+      const labelMap = {};
+      (claimed||[]).forEach(l => { if(l.item_id) labelMap[l.item_id] = l.code; });
+
+      // Attach label_code to each item
+      setMyItems((data||[]).map(i => ({ ...i, label_code: labelMap[i.id] || null })));
+
+      const {data:ords} = await SB.from("label_orders")
+        .select("id,item_count,assigned_count,blank_count,costume_count,equipment_count,label_type,status,created_at,tracking,code_start,code_end,amount_cents,include_logo,vendor,vendor_order_ref,notes,reorder_of")
+        .eq("org_id",userId).order("created_at",{ascending:false});
+      setOrders(ords||[]);
+      setLoadingItems(false);
+    })();
+  },[userId]);
+
+  // ── PRINT TAB ────────────────────────────────────────────────────────────
+  const filtered = myItems.filter(i=>
+    !search || i.name.toLowerCase().includes(search.toLowerCase()) ||
+    (i.location||"").toLowerCase().includes(search.toLowerCase()) ||
+    (i.display_id||"").toLowerCase().includes(search.toLowerCase())
+  );
+  const toggleSel = id => setSelected(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
+  const selAll    = () => setSelected(filtered.map(i=>i.id));
+  const clearSel  = () => setSelected([]);
+
+  const printSelected = async () => {
+    const toPrint = myItems.filter(i=>selected.includes(i.id));
+    if(!toPrint.length) return;
+    setPrinting(true);
+    try {
+      const srcs = await Promise.all(toPrint.map(i=>
+        QR.toDataURL("https://theatre4u.org/#/item/"+i.id, 160)
+      ));
+      const w = window.open("","_blank","width=900,height=700");
+      if(!w){setPrinting(false);return;}
+      const labels = toPrint.map((item,n)=>{
+        const cat = CAT[item.category]||CAT.other;
+        const dispId = item.display_id||item.id.slice(0,8).toUpperCase();
+        return `<div class="lbl">
+          <div class="lbl-cat" style="color:${cat.color||"#888"}">${cat.icon} ${cat.label}</div>
+          <div class="lbl-name">${item.name}</div>
+          ${item.location?`<div class="lbl-loc">📍 ${item.location}</div>`:""}
+          <div class="lbl-id">${dispId}</div>
+          ${srcs[n]?`<img src="${srcs[n]}" class="lbl-qr"/>`:""}
+          <div class="lbl-brand">theatre4u.org</div>
+        </div>`;
+      }).join("");
+      w.document.write(`<!DOCTYPE html><html><head><title>QR Labels — ${org?.name||"Theatre4u"}</title>
+      <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:Arial,sans-serif;background:#fff;padding:12px}
+        .controls{text-align:center;margin-bottom:12px;font-size:13px}
+        .grid{display:flex;flex-wrap:wrap;gap:8px}
+        .lbl{width:160px;height:160px;border:1.5px solid #222;border-radius:6px;padding:8px;
+          display:flex;flex-direction:column;gap:2px;page-break-inside:avoid;background:#fff}
+        .lbl-cat{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+        .lbl-name{font-size:10px;font-weight:700;color:#111;line-height:1.2;flex:1;overflow:hidden;word-break:break-word}
+        .lbl-loc{font-size:8px;color:#555}
+        .lbl-id{font-size:9px;font-weight:800;color:#c4761a;font-family:monospace;letter-spacing:.5px}
+        .lbl-qr{width:56px;height:56px;margin-top:auto}
+        .lbl-brand{font-size:7px;color:#aaa}
+        @media print{.controls{display:none}.grid{gap:6px}.lbl{width:150px;height:150px}}
+      </style></head><body>
+      <div class="controls">
+        <strong>${org?.name||"Theatre4u"}</strong> — ${toPrint.length} label${toPrint.length!==1?"s":""}
+        <button onclick="window.print()" style="margin-left:16px;padding:5px 14px;background:#d4a843;border:none;border-radius:5px;font-weight:700;cursor:pointer">🖨 Print</button>
+        <button onclick="window.close()" style="margin-left:6px;padding:5px 14px;border:1px solid #ccc;border-radius:5px;cursor:pointer">Close</button>
+        <span style="margin-left:12px;color:#888;font-size:12px">Tip: In print dialog choose "Fit to page" or "No scaling" for best results</span>
+      </div>
+      <div class="grid">${labels}</div>
+      <script>setTimeout(function(){window.print()},600)<\/script>
+      </body></html>`);
+      w.document.close();
+    } finally { setPrinting(false); }
+  };
+
+  // ── ASSIGN TAB ───────────────────────────────────────────────────────────
+  const doAssign = async () => {
+    const code = assignCode.trim().toUpperCase();
+    const itemId = assignItem;
+    if(!code||!itemId){ setAssignMsg("⚠ Please enter a label code and select an item."); return; }
+    setAssignSaving(true);
+    setAssignMsg("");
+    try {
+      // Only update label_pool — do NOT touch display_id (that's the human-readable ID)
+      const { error } = await SB.from("label_pool")
+        .update({
+          status:     "claimed",
+          item_id:    itemId,
+          claimed_at: new Date().toISOString()
+        })
+        .eq("code", code)
+        .eq("org_id", userId);
+      if(error) throw error;
+      setMyItems(p => p.map(i => i.id === itemId ? { ...i, label_code: code } : i));
+      setAssignMsg("✅ Label " + code + " linked! Scanning it will now pull up that item.");
+      setAssignCode(""); setAssignItem("");
+    } catch(e) {
+      setAssignMsg("❌ " + (e.message || "Label not found. Check the code matches your T4U pool."));
+    }
+    setAssignSaving(false);
+  };
+
+  // Unassign a label from an item
+  const doUnassign = async (item) => {
+    if(!confirm("Unlink label from \"" + item.name + "\"? The code goes back to unassigned.")) return;
+    const { error } = await SB.from("label_pool")
+      .update({ status:"assigned", item_id:null, claimed_at:null })
+      .eq("item_id", item.id)
+      .eq("org_id", userId);
+    if(!error) setMyItems(p => p.map(i => i.id === item.id ? { ...i, label_code: null } : i));
+  };
+
+
+  // ── ORDER TAB ────────────────────────────────────────────────────────────
+  const pack = selPack != null ? LABEL_PACKS[selPack] : null;
+  const totalCents = pack ? pack.retail + (includeLogo ? LOGO_ADDON_CENTS : 0) : 0;
+
+  const submitOrder = async () => {
+    if(!pack){ setOrderMsg("⚠ Please select a label pack."); return; }
+    const addr = [orderAddrLine, orderCity, orderState, orderZip].filter(Boolean).join(", ");
+    if(!addr.trim()){ setOrderMsg("⚠ Please enter a shipping address."); return; }
+    setOrderSubmitting(true);
+    setOrderMsg("");
+    try {
+      await SB.from("label_orders").insert({
+        org_id:        userId,
+        org_name:      org?.name||"",
+        contact_email: org?.email||"",
+        contact_name:  orderName||"",
+        item_count:    pack.qty,
+        label_type:    pack.type,
+        include_logo:  includeLogo,
+        logo_url:      includeLogo ? (logoUrl||org?.logo_url||"") : null,
+        delivery_addr: JSON.stringify({
+          name:  orderName||org?.director_name||"",
+          street:orderAddrLine,
+          city:  orderCity,
+          state: orderState,
+          zip:   orderZip,
+        }),
+        notes:    orderNotes||"",
+        amount_cents: totalCents,
+        status:   "pending",
+      });
+      setOrders(p=>[{
+        item_count:pack.qty, label_type:pack.type, status:"pending",
+        created_at:new Date().toISOString(), amount_cents:totalCents, include_logo:includeLogo
+      },...p]);
+      setOrderDone(true);
+    } catch(e) {
+      setOrderMsg("❌ "+e.message);
+    }
+    setOrderSubmitting(false);
+  };
+
+  const card = {background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10};
+  const inputStyle = {
+    width:"100%",background:"var(--white)",border:"1.5px solid var(--border)",
+    borderRadius:7,padding:"8px 12px",fontSize:13,color:"var(--text)",outline:"none",fontFamily:"inherit"
+  };
+  const labelStyle = {
+    fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,
+    color:"var(--muted)",display:"block",marginBottom:5
+  };
+
+  return (
+    <div style={{padding:"24px 28px 80px",maxWidth:900}}>
+      {/* Header */}
+      <div style={{marginBottom:18}}>
+        <h1 style={{fontFamily:"var(--serif)",fontSize:26,margin:"0 0 4px"}}>🏷 QR Label Manager</h1>
+        <p style={{fontSize:13,color:"var(--muted)",margin:0}}>
+          Print labels instantly from your browser · Assign pre-ordered labels to inventory items · Order durable physical labels by mail
+        </p>
+      </div>
+
+      {/* How it works — 3 steps */}
+      <div style={{...card,padding:"14px 18px",marginBottom:20,
+        background:"linear-gradient(135deg,rgba(212,168,67,.07),rgba(212,168,67,.02))"}}>
+        <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>How Theatre4u QR labels work</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}}>
+          {[
+            {n:"1",ico:"🖨",t:"Print now — free",
+              b:"Use the Print tab to instantly generate and print QR code labels for any items. Works from any home or school printer. Best for getting started quickly."},
+            {n:"2",ico:"📬",t:"Order durable labels",
+              b:"Order professional polyester or weatherproof vinyl labels printed by WePrintBarcodes and mailed to your school. Pre-coded — stick them on bins now, assign to items anytime."},
+            {n:"3",ico:"🔗",t:"Assign codes to items",
+              b:"Got physical labels? Use the Assign tab to link any label code to any inventory item — current or future. Scan the label with any phone camera to pull up the item instantly."},
+          ].map(s=>(
+            <div key={s.n} style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+              <div style={{background:"var(--gold)",color:"#1a0f00",borderRadius:"50%",width:22,height:22,
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,flexShrink:0}}>
+                {s.n}
+              </div>
+              <div>
+                <div style={{fontSize:12,fontWeight:700,marginBottom:2}}>{s.ico} {s.t}</div>
+                <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.6}}>{s.b}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab bar */}
+      <div style={{display:"flex",gap:3,marginBottom:22,borderBottom:"1px solid var(--border)",paddingBottom:10}}>
+        {[["print","🖨 Print Labels"],["assign","🔗 Assign a Label"],["order","📬 Order Physical Labels"]].filter(([id])=>id!=="order"||isAdmin).map(([id,lbl])=>(
+          <button key={id} onClick={()=>setTab(id)}
+            style={{padding:"7px 16px",borderRadius:"8px 8px 0 0",border:"none",cursor:"pointer",fontSize:13,
+              fontWeight:tab===id?700:500,background:tab===id?"var(--gold)":"transparent",
+              color:tab===id?"#1a0f00":"var(--muted)",fontFamily:"inherit",transition:"all .15s"}}>
+            {lbl}{id==="order"&&orders.length>0?" ("+orders.length+")":""}
+          </button>
+        ))}
+      </div>
+
+      {/* ══ PRINT TAB ══ */}
+      {tab==="print"&&(
+        <div>
+          <p style={{fontSize:13,color:"var(--muted)",marginBottom:16}}>
+            Select items and click Print — your browser generates QR code labels you can print on any printer.
+            Each label includes the item name, category, location, ID code, and scannable QR code.
+            Any phone camera (no app needed) scans the code and pulls up the item instantly.
+          </p>
+          <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search items, locations, codes…"
+              style={{flex:1,minWidth:200,...inputStyle,width:"auto"}}/>
+            <button onClick={selAll} style={{padding:"7px 13px",borderRadius:7,border:"1px solid var(--border)",
+              background:"transparent",color:"var(--muted)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+              Select All ({filtered.length})
+            </button>
+            <button onClick={clearSel} style={{padding:"7px 13px",borderRadius:7,border:"1px solid var(--border)",
+              background:"transparent",color:"var(--muted)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+              Clear
+            </button>
+            <button onClick={printSelected} disabled={selected.length===0||printing}
+              style={{padding:"8px 20px",borderRadius:8,border:"none",fontFamily:"inherit",fontSize:13,fontWeight:700,
+                cursor:selected.length&&!printing?"pointer":"not-allowed",
+                background:selected.length&&!printing?"var(--gold)":"var(--border)",
+                color:selected.length&&!printing?"#1a0f00":"var(--muted)"}}>
+              {printing?"Generating…":selected.length?("🖨 Print "+selected.length+" Label"+(selected.length!==1?"s":"")):"Select items to print"}
+            </button>
+          </div>
+
+          {loadingItems?(
+            <div style={{textAlign:"center",padding:32,color:"var(--muted)"}}>Loading inventory…</div>
+          ):(
+            <div style={{...card,overflow:"hidden",marginBottom:10}}>
+              {filtered.length===0?(
+                <div style={{padding:32,textAlign:"center",color:"var(--muted)",fontSize:13}}>
+                  {myItems.length===0
+                    ?"Add items to your inventory first — then print labels here."
+                    :"No items match your search."}
+                </div>
+              ):(
+                filtered.map(item=>{
+                  const cat = CAT[item.category]||CAT.other;
+                  const isSel = selected.includes(item.id);
+                  return(
+                    <div key={item.id} onClick={()=>toggleSel(item.id)}
+                      style={{display:"flex",alignItems:"center",gap:12,padding:"9px 14px",
+                        borderBottom:"1px solid var(--border)",cursor:"pointer",
+                        background:isSel?"rgba(212,168,67,.07)":"transparent",transition:"background .1s"}}>
+                      <div style={{width:18,height:18,borderRadius:4,border:"1.5px solid",
+                        borderColor:isSel?"var(--gold)":"var(--border)",
+                        background:isSel?"var(--gold)":"transparent",flexShrink:0,
+                        display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        {isSel&&<span style={{color:"#1a0f00",fontSize:12,fontWeight:900}}>✓</span>}
+                      </div>
+                      <span style={{fontSize:16,flexShrink:0}}>{cat.icon}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                          {item.name}
+                        </div>
+                        <div style={{fontSize:11,color:"var(--muted)"}}>
+                          {cat.label}{item.location?" · "+item.location:""}
+                        </div>
+                      </div>
+                      {item.display_id&&(
+                        <span style={{fontSize:11,fontFamily:"monospace",fontWeight:700,
+                          color:"var(--amber)",background:"rgba(196,118,26,.1)",
+                          padding:"2px 7px",borderRadius:4,flexShrink:0}}>
+                          {item.display_id}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+          <div style={{fontSize:12,color:"var(--muted)"}}>
+            {selected.length} of {myItems.length} item{myItems.length!==1?"s":""} selected ·{" "}
+            Labels print at ~2" × 2" · 4 per row · PDF or print dialog from your browser
+          </div>
+        </div>
+      )}
+
+      {/* ══ ASSIGN TAB ══ */}
+      {tab==="assign"&&(
+        <div>
+          <p style={{fontSize:13,color:"var(--muted)",marginBottom:20}}>
+            Physical labels from your order each have a unique pre-printed code (like <strong style={{fontFamily:"monospace",color:"var(--amber)"}}>T4U-00142</strong>).
+            Enter the code and select the inventory item you want it to track.
+            You can also assign labels to items you haven't cataloged yet — add them later.
+          </p>
+
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:24}}>
+            {/* Link form */}
+            <div style={{...card,padding:"20px 22px"}}>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:14}}>🔗 Link a Label to an Item</div>
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                <div>
+                  <label style={labelStyle}>Label Code (from the sticker)</label>
+                  <input value={assignCode} onChange={e=>setAssignCode(e.target.value.toUpperCase())}
+                    placeholder="e.g. T4U-00142"
+                    style={{...inputStyle,fontFamily:"monospace",fontWeight:700,fontSize:15,
+                      color:"var(--amber)",letterSpacing:1}}/>
+                </div>
+                <div>
+                  <label style={labelStyle}>Inventory Item</label>
+                  <select value={assignItem} onChange={e=>setAssignItem(e.target.value)} style={inputStyle}>
+                    <option value="">— Choose an item —</option>
+                    {myItems.map(i=>(
+                      <option key={i.id} value={i.id}>
+                        {i.name}{i.location?" ("+i.location+")":""}{i.display_id?" ["+i.display_id+"]":""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button onClick={doAssign} disabled={assignSaving||!assignCode||!assignItem}
+                  style={{padding:"10px 20px",borderRadius:8,border:"none",fontFamily:"inherit",fontSize:13,
+                    fontWeight:700,cursor:assignCode&&assignItem&&!assignSaving?"pointer":"not-allowed",
+                    background:assignCode&&assignItem?"var(--gold)":"var(--border)",
+                    color:assignCode&&assignItem?"#1a0f00":"var(--muted)"}}>
+                  {assignSaving?"Saving…":"🔗 Assign Label"}
+                </button>
+                {assignMsg&&(
+                  <div style={{fontSize:13,padding:"8px 12px",borderRadius:7,
+                    background:assignMsg.startsWith("✅")?"rgba(76,175,80,.1)":"rgba(229,57,53,.08)",
+                    border:"1px solid",borderColor:assignMsg.startsWith("✅")?"rgba(76,175,80,.3)":"rgba(229,57,53,.2)",
+                    color:assignMsg.startsWith("✅")?"#4caf50":"#e53935"}}>
+                    {assignMsg}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Tips panel */}
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              <div style={{...card,padding:"14px 16px",background:"rgba(33,150,243,.04)",borderColor:"rgba(33,150,243,.2)"}}>
+                <div style={{fontWeight:700,fontSize:12,marginBottom:6}}>💡 How to find label codes</div>
+                <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.7}}>
+                  Your physical labels arrive with unique codes pre-printed (e.g. <code style={{fontFamily:"monospace",color:"var(--amber)"}}>T4U-00142</code>).
+                  Your code range is shown in your order history below — or check the email confirmation.
+                  You can assign any code from your range to any item at any time.
+                </div>
+              </div>
+              <div style={{...card,padding:"14px 16px",background:"rgba(76,175,80,.04)",borderColor:"rgba(76,175,80,.2)"}}>
+                <div style={{fontWeight:700,fontSize:12,marginBottom:6}}>📋 Assign labels in bulk</div>
+                <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.7}}>
+                  Strategy: stick a label on a bin or rack, then walk through your inventory room and assign each code to the item or container it's on.
+                  You don't need to catalog items first — assign the label, add item details later.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Items with assigned labels */}
+          {myItems.filter(i=>i.label_code).length>0&&(
+            <div>
+              <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>
+                Items with assigned labels ({myItems.filter(i=>i.label_code).length})
+              </div>
+              <div style={{...card,overflow:"hidden"}}>
+                {myItems.filter(i=>i.label_code).map(item=>{
+                  const cat = CAT[item.category]||CAT.other;
+                  return(
+                    <div key={item.id} style={{display:"flex",alignItems:"center",gap:10,
+                      padding:"9px 14px",borderBottom:"1px solid var(--border)"}}>
+                      <span style={{fontSize:15,flexShrink:0}}>{cat.icon}</span>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:13,fontWeight:600}}>{item.name}</div>
+                        {item.location&&<div style={{fontSize:11,color:"var(--muted)"}}>📍 {item.location}</div>}
+                      </div>
+                      <span style={{fontFamily:"monospace",fontSize:12,fontWeight:800,
+                        color:"var(--amber)",background:"rgba(196,118,26,.1)",
+                        padding:"3px 9px",borderRadius:5,flexShrink:0}}>
+                        {item.label_code||item.display_id}
+                      </span>
+                      <button onClick={()=>doUnassign(item)}
+                        style={{background:"none",border:"1px solid var(--border)",borderRadius:6,
+                          padding:"2px 8px",fontSize:11,color:"var(--muted)",cursor:"pointer",flexShrink:0}}>
+                        ✕ Unlink
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Code ranges from orders */}
+          {orders.filter(o=>o.code_start).length>0&&(
+            <div style={{marginTop:20}}>
+              <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>Your label code ranges</div>
+              <div style={{...card,overflow:"hidden"}}>
+                {orders.filter(o=>o.code_start).map((o,i)=>(
+                  <div key={i} style={{padding:"10px 14px",borderBottom:"1px solid var(--border)",
+                    display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:13,fontWeight:600}}>{o.item_count} {o.label_type} labels</div>
+                      <div style={{fontSize:12,fontFamily:"monospace",color:"var(--amber)",marginTop:2}}>
+                        {o.code_start} → {o.code_end}
+                      </div>
+                    </div>
+                    <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:6,textTransform:"capitalize",
+                      background:o.status==="shipped"||o.status==="delivered"?"rgba(76,175,80,.12)":"rgba(212,168,67,.1)",
+                      color:o.status==="shipped"||o.status==="delivered"?"#4caf50":"var(--gold)"}}>
+                      {o.status==="pending"?"⏳ Pending":o.status==="processing"?"🔄 Processing":
+                       o.status==="shipped"?"✈ Shipped":"✓ Delivered"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ══ ORDER TAB ══ */}
+      {tab==="order"&&!isAdmin&&(
+        <div style={{maxWidth:560}}>
+          <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,
+            padding:"40px 32px",textAlign:"center"}}>
+            <div style={{fontSize:52,marginBottom:16}}>🏷</div>
+            <div style={{fontFamily:"var(--serif)",fontSize:22,marginBottom:10,fontWeight:700}}>
+              Physical Label Ordering — Coming Soon
+            </div>
+            <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.8,marginBottom:12,maxWidth:420,margin:"0 auto 12px"}}>
+              We are finalizing our label printing partnership. Soon you will be able to order
+              professional pre-coded QR label stickers — sticky vinyl for props and equipment,
+              iron-on for costumes — mailed directly to your school.
+            </p>
+            <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.8,marginBottom:24,maxWidth:420,margin:"0 auto 24px"}}>
+              In the meantime, use the <strong style={{color:"var(--text)"}}>Print Labels</strong> tab
+              to generate and print QR labels instantly from any printer.
+            </p>
+            <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+              <button onClick={()=>setTab("print")}
+                style={{padding:"11px 24px",borderRadius:8,border:"none",fontFamily:"inherit",
+                  fontSize:14,fontWeight:700,cursor:"pointer",
+                  background:"var(--gold)",color:"#1a0f00"}}>
+                🖨 Print Labels Now
+              </button>
+              <a href={"mailto:hello@theatre4u.org?subject=Label Ordering Interest"}
+                style={{padding:"11px 24px",borderRadius:8,border:"1px solid var(--border)",
+                  fontFamily:"inherit",fontSize:14,fontWeight:600,cursor:"pointer",
+                  background:"transparent",color:"var(--text)",textDecoration:"none",
+                  display:"inline-flex",alignItems:"center"}}>
+                ✉ Notify Me When Ready
+              </a>
+            </div>
+            <div style={{marginTop:24,paddingTop:20,borderTop:"1px solid var(--border)",
+              fontSize:13,color:"var(--muted)"}}>
+              Questions? Email{" "}
+              <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)",fontWeight:600}}>
+                hello@theatre4u.org
+              </a>
+            </div>
+          </div>
+
+          {/* Show previous orders if any exist */}
+          {orders.length>0&&(
+            <div style={{marginTop:28}}>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:10}}>Your Label Orders</div>
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                {orders.map((o,i)=>(
+                  <div key={i} style={{background:"var(--parch)",border:"1px solid var(--border)",
+                    borderRadius:10,padding:"14px 16px"}}>
+                    {/* Header row */}
+                    <div style={{display:"flex",gap:10,alignItems:"flex-start",
+                      flexWrap:"wrap",marginBottom:8}}>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:14,fontWeight:700}}>
+                          {o.item_count} labels
+                          {o.assigned_count>0&&o.blank_count>0
+                            ? ` (${o.assigned_count} assigned + ${o.blank_count} blank)`
+                            : o.assigned_count>0 ? ` (${o.assigned_count} assigned)`
+                            : o.blank_count>0    ? ` (${o.blank_count} blank)` : ""}
+                        </div>
+                        <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>
+                          {new Date(o.created_at).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}
+                          {o.vendor&&" · "+o.vendor}
+                        </div>
+                      </div>
+                      <span style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:6,
+                        background:o.status==="delivered"?"rgba(76,175,80,.12)":
+                                   o.status==="shipped"?"rgba(66,165,245,.12)":
+                                   o.status==="processing"?"rgba(33,150,243,.12)":"rgba(212,168,67,.1)",
+                        color:o.status==="delivered"?"#4caf50":
+                              o.status==="shipped"?"#42a5f5":
+                              o.status==="processing"?"#2196f3":"var(--gold)"}}>
+                        {o.status==="pending"?"⏳ Pending":o.status==="processing"?"🔄 Processing":
+                         o.status==="shipped"?"✈️ Shipped":"✅ Delivered"}
+                      </span>
+                    </div>
+
+                    {/* Detail rows */}
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",
+                      gap:6,fontSize:12,color:"var(--muted)",marginBottom:o.tracking||o.vendor_order_ref?8:0}}>
+                      {o.code_start&&(
+                        <div>
+                          <span style={{fontFamily:"monospace",color:"var(--amber)"}}>
+                            {o.code_start}
+                          </span>
+                          {o.code_end&&o.code_end!==o.code_start&&(
+                            <span style={{fontFamily:"monospace",color:"var(--amber)"}}>
+                              {" → "+o.code_end}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {o.costume_count>0&&(
+                        <div>👗 {o.costume_count} iron-on (costumes)</div>
+                      )}
+                      {o.equipment_count>0&&(
+                        <div>🏷️ {o.equipment_count} polypropylene (equipment)</div>
+                      )}
+                    </div>
+
+                    {(o.tracking||o.vendor_order_ref)&&(
+                      <div style={{fontSize:12,color:"var(--muted)",marginBottom:8}}>
+                        {o.vendor_order_ref&&<div>📋 Order ref: <strong style={{color:"var(--text)"}}>{o.vendor_order_ref}</strong></div>}
+                        {o.tracking&&<div>📦 Tracking: <strong style={{color:"var(--text)"}}>{o.tracking}</strong></div>}
+                      </div>
+                    )}
+
+                    {/* Reorder button */}
+                    <button
+                      onClick={async()=>{
+                        const sum = await SB.rpc("get_label_order_summary",{p_org_id:userId});
+                        const s = sum?.data;
+                        if(!s)return;
+                        const msg = [
+                          `Based on your current inventory:`,
+                          `• ${s.unlabeled_items} items need labels`,
+                          `• ${s.pool_blank} blank labels still available`,
+                          `• Next blank codes start at: ${org?.label_prefix||"?"}-${String(s.next_blank_start).padStart(4,"0")}`,
+                          ``,
+                          `To request a new order, email hello@theatre4u.org with:`,
+                          `  - How many assigned labels (for specific items)`,
+                          `  - How many blank labels you want`,
+                          `  - Shipping address`,
+                        ].join("\n");
+                        alert(msg);
+                      }}
+                      style={{fontSize:12,fontWeight:600,padding:"5px 12px",borderRadius:6,
+                        border:"1px solid var(--border)",background:"var(--parch)",
+                        color:"var(--muted)",cursor:"pointer",fontFamily:"inherit",
+                        marginTop:4}}>
+                      🔄 Reorder / Request New Labels
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab==="order"&&isAdmin&&(
+        <div>
+          <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.3)",
+            borderRadius:10,padding:"10px 16px",marginBottom:20,display:"flex",
+            gap:10,alignItems:"center"}}>
+            <span style={{fontSize:16}}>🔧</span>
+            <span style={{fontSize:13,fontWeight:700,color:"var(--gold)"}}>Admin preview</span>
+            <span style={{fontSize:13,color:"var(--muted)"}}>
+              This order UI is visible only to you. Other programs see a Coming Soon page.
+            </span>
+          </div>
+          <p style={{fontSize:14,color:"var(--muted)",marginBottom:18,lineHeight:1.7}}>
+            Full order flow is accessible here for testing and development.
+            Tag each inventory item with a label type, add blank extras for future items,
+            then submit to generate an order in the database.
+          </p>
+          <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:20,marginBottom:16}}>
+            <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>Order flow is in development</div>
+            <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>
+              The complete order UI (item tagging, blank label extras, shipping address, cost summary)
+              will appear here once WePrintBarcodes pricing and CSV format are confirmed.
+              For now, use the Admin Hub Label Orders tab to manage orders manually.
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ADMIN DAILY DIGEST — standalone component used as first tab in AdminHub
+// Time windows: 24h | 7d | 30d
+// Sources: orgs, items, beta_leads, email_sequence, page_views (UTM),
+//          login_events, messages, beta_feedback
+// ══════════════════════════════════════════════════════════════════════════════
 function AdminDailyDigest() {
   const [window_, setWindow_] = useState("24h"); // "24h" | "7d" | "30d"
   const [data, setData]       = useState(null);
@@ -9143,9 +14662,7 @@ function AdminProgramsTab({ orgs, currentUser, flash }) {
     setSaving(true);
     const { id, org_id, added, ...payload } = editItem;
     const { error } = await SB.from("items").update(payload).eq("id", editItem.id);
-    if (!error) {
-      await SB.from("audit_log").insert({ action:"admin_item_edit", org_id:selected.id, detail:`Admin edited item: ${editItem.name}` });
-    }
+    if (!error) { await SB.from("audit_log").insert({ action:"admin_item_edit", org_id:selected.id, detail:`Admin edited item: ${editItem.name}` }); }
     setSaving(false);
     if (error) { showMsg("❌ "+error.message); return; }
     setItems(p => p.map(i => i.id===editItem.id ? editItem : i));
@@ -9336,21 +14853,8 @@ function AdminProgramsTab({ orgs, currentUser, flash }) {
           {/* ── INVENTORY ── */}
           {view==="inventory"&&(
             <div>
-              {/* Admin notice */}
-              <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"var(--amber)",marginBottom:12}}>
-                🔑 Admin view — changes you make here are logged to the audit trail
-              </div>
-              {/* Quick add item */}
-              {!editItem&&(
-                <div style={{display:"flex",gap:8,marginBottom:14}}>
-                  <input id="admin-new-item-name" className="fi" placeholder="New item name…" style={{flex:1}}
-                    onKeyDown={e=>{ if(e.key==="Enter"){ addItem(e.target.value); e.target.value=""; }}} />
-                  <button className="btn btn-g" disabled={saving} onClick={()=>{
-                    const el=document.getElementById("admin-new-item-name");
-                    if(el?.value.trim()){ addItem(el.value); el.value=""; }
-                  }}>+ Add Item</button>
-                </div>
-              )}
+              <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"var(--amber)",marginBottom:12}}>🔑 Admin view — changes you make here are logged to the audit trail</div>
+              {!editItem&&(<div style={{display:"flex",gap:8,marginBottom:14}}><input id="admin-new-item-name" className="fi" placeholder="New item name…" style={{flex:1}} onKeyDown={e=>{ if(e.key==="Enter"){ addItem(e.target.value); e.target.value=""; }}} /><button className="btn btn-g" disabled={saving} onClick={()=>{ const el=document.getElementById("admin-new-item-name"); if(el?.value.trim()){ addItem(el.value); el.value=""; } }}>+ Add Item</button></div>)}
               {editItem&&(
                 <div style={{background:"var(--parch)",border:"1px solid var(--gold)",
                   borderRadius:10,padding:16,marginBottom:16}}>
@@ -10715,19 +16219,8 @@ function AdminHub({ currentUser, org }) {
         <AdminProgramsTab orgs={orgs} currentUser={currentUser} flash={flash}/>
       )}
 
-      {!loading&&tab==="accounts"&&(
-        <AdminAccountsTab orgs={orgs} onRestore={(id)=>{
-          setOrgs(p=>p.map(o=>o.id===id?{...o,account_status:"active"}:o));
-          flash("✓ Account restored");
-        }}/>
-      )}
-
-      {!loading&&tab==="districts"&&(
-        <AdminDistrictAssignPanel orgs={orgs} onUpdated={()=>{
-          SB.rpc("get_admin_org_overview").then(({data})=>{ if(data) setOrgs(data); });
-          flash("✓ District updated");
-        }}/>
-      )}
+      {!loading&&tab==="accounts"&&(<AdminAccountsTab orgs={orgs} onRestore={(id)=>{ setOrgs(p=>p.map(o=>o.id===id?{...o,account_status:"active"}:o)); flash("✓ Restored"); }}/>)}
+      {!loading&&tab==="districts"&&(<AdminDistrictAssignPanel orgs={orgs} onUpdated={()=>{ SB.rpc("get_admin_org_overview").then(({data})=>{ if(data) setOrgs(data); }); flash("✓ Updated"); }}/>)}
 
       {/* ── TOOLS ── */}
       {!loading&&tab==="tools"&&(
