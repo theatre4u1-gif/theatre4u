@@ -15330,7 +15330,12 @@ function AdminHub({ currentUser, org }) {
   };
 
   const updateFeedback = async (id, status) => {
-    await SB.from("beta_feedback").update({ status }).eq("id", id);
+    const { error } = await SB.from("beta_feedback").update({ status }).eq("id", id);
+    if (error) {
+      flash("❌ Could not save status: " + error.message);
+      console.error("updateFeedback error:", error);
+      return;
+    }
     setFeedback(prev => prev.map(f => f.id===id ? {...f, status} : f));
     flash("✓ Status updated");
   };
