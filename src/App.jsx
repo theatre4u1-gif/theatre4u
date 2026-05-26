@@ -861,7 +861,7 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical
   const vAVAIL  = vConfig.availability;
   const vMKT    = vConfig.marketOptions;
   const defaultCat = vCATS[0]?.id || "costumes";
-  const blank={name:"",category:defaultCat,condition:vCONDS[2]||"Good",size:vSIZES.includes("N/A")?"N/A":vSIZES[0],qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,loan_period:2,deposit:0,avail:"In Stock",img:null,tags:[],purchase_cost:"",purchase_date:"",purchase_vendor:"",funding_source_id:""};
+  const blank={name:"",category:defaultCat,condition:vCONDS[2]||"Good",size:vSIZES.includes("N/A")?"N/A":vSIZES[0],qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,loan_period:2,deposit:0,avail:"In Stock",img:null,tags:[],purchase_cost:"",purchase_date:"",purchase_vendor:"",funding_source_id:"",location_id:null,pin_id:null,rack_slot:null};
   const[f,setF]=useState(item||blank);
   const[ti,setTi]=useState("");
   const[upl,setUpl]=useState(false);
@@ -11009,6 +11009,7 @@ function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
   useEffect(()=>{
     const h=()=>setScrolled(window.scrollY>60);
     window.addEventListener("scroll",h,{passive:true});
+    trackVisit("landing");
     return()=>window.removeEventListener("scroll",h);
   },[]);
 
@@ -17882,9 +17883,9 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
     if(!row.purchase_date  || row.purchase_date==="")   row.purchase_date    = null;
     if(!row.purchase_vendor|| row.purchase_vendor==="") row.purchase_vendor  = null;
     if(!row.funding_source_id||row.funding_source_id==="") row.funding_source_id = null;
-    if(!row.location_id    || row.location_id==="")     row.location_id      = null;
-    if(!row.pin_id         || row.pin_id==="")           row.pin_id           = null;
-    if(!row.rack_slot      || row.rack_slot==="")        row.rack_slot        = null;
+    if(!row.location_id  || row.location_id===""  || row.location_id===undefined) row.location_id = null;
+    if(!row.pin_id       || row.pin_id===""        || row.pin_id===undefined)       row.pin_id      = null;
+    if(!row.rack_slot    || row.rack_slot===""     || row.rack_slot===undefined)    row.rack_slot   = null;
     const{data,error}=await SB.from("items").insert(row).select().single();
     if(error){ alert("Could not save item: "+error.message); console.error(error); return; }
     if(data){
@@ -17917,8 +17918,8 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
     if(!payload.purchase_date    ||payload.purchase_date==="")    payload.purchase_date    = null;
     if(!payload.purchase_vendor  ||payload.purchase_vendor==="")  payload.purchase_vendor  = null;
     if(!payload.funding_source_id||payload.funding_source_id==="")payload.funding_source_id= null;
-    if(!payload.location_id      ||payload.location_id==="")      payload.location_id      = null;
-    if(!payload.pin_id           ||payload.pin_id===""           )payload.pin_id           = null;
+    if(!payload.location_id ||payload.location_id==="" ||payload.location_id===undefined) payload.location_id = null;
+    if(!payload.pin_id      ||payload.pin_id===""       ||payload.pin_id===undefined)       payload.pin_id      = null;
     if(!payload.rack_slot        ||payload.rack_slot===""        )payload.rack_slot         = null;
     const{data,error}=await SB.from("items").update(payload).eq("id",item.id).select().single();
     if(error){ alert("Could not update item: "+error.message); console.error(error); return; }
