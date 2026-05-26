@@ -5344,7 +5344,7 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
               </table>
             )}
           </div>
-        ) : (
+        ) : tab === "loans" ? (
           /* Loans tab */
           <div>
             {distLoans.length === 0 ? (
