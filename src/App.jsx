@@ -6108,22 +6108,33 @@ function AddToProductionPicker({ item, userId, onClose }) {
   const [loading,     setLoading]     = useState(true);
   const [saving,      setSaving]      = useState(null);
   const [done,        setDone]        = useState({});
+  const [qtyMap,      setQtyMap]      = useState({}); // productionId -> qty to check out
 
   useEffect(() => {
     (async () => {
       const { data } = await SB.from("productions")
-        .select("*, production_items(item_id)")
+        .select("*, production_items(item_id, qty_checked_out)")
         .eq("org_id", userId)
         .neq("status","closed")
         .order("created_at", { ascending: false });
       setProductions(data || []);
+      // Init qty map from existing assignments
+      const init = {};
+      (data || []).forEach(prod => {
+        const existing = prod.production_items?.find(pi => pi.item_id === item.id);
+        init[prod.id] = existing?.qty_checked_out || 1;
+      });
+      setQtyMap(init);
       setLoading(false);
     })();
   }, [userId]);
 
+  const totalQty = item.qty || 1;
+
   const toggle = async (prod) => {
     const already = prod.production_items?.some(pi => pi.item_id === item.id);
     setSaving(prod.id);
+    const qty = qtyMap[prod.id] || 1;
     if (already) {
       await SB.from("production_items")
         .delete()
@@ -6132,12 +6143,11 @@ function AddToProductionPicker({ item, userId, onClose }) {
       setDone(p => ({ ...p, [prod.id]: false }));
     } else {
       await SB.from("production_items")
-        .insert({ production_id: prod.id, item_id: item.id, qty_needed: 1 });
+        .insert({ production_id: prod.id, item_id: item.id, qty_needed: qty, qty_checked_out: qty });
       setDone(p => ({ ...p, [prod.id]: true }));
     }
-    // Refresh
     const { data } = await SB.from("productions")
-      .select("*, production_items(item_id)")
+      .select("*, production_items(item_id, qty_checked_out)")
       .eq("org_id", userId)
       .neq("status","closed")
       .order("created_at", { ascending: false });
@@ -6156,12 +6166,15 @@ function AddToProductionPicker({ item, userId, onClose }) {
           display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div>
             <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700 }}>Add to Production</div>
-            <div style={{ fontSize:12, color:"var(--muted)", marginTop:2 }}>{item.name}</div>
+            <div style={{ fontSize:12, color:"var(--muted)", marginTop:2 }}>
+              {item.name}
+              {totalQty > 1 && <span style={{ marginLeft:6, color:"var(--amber)", fontWeight:700 }}>×{totalQty} in inventory</span>}
+            </div>
           </div>
           <button onClick={onClose} style={{ background:"none", border:"1px solid var(--border)",
             color:"var(--muted)", borderRadius:6, padding:"3px 9px", cursor:"pointer", fontFamily:"inherit" }}>✕</button>
         </div>
-        <div style={{ padding:14, maxHeight:360, overflowY:"auto" }}>
+        <div style={{ padding:14, maxHeight:400, overflowY:"auto" }}>
           {loading ? (
             <div style={{ textAlign:"center", padding:24, color:"var(--muted)" }}>Loading…</div>
           ) : productions.length === 0 ? (
@@ -6175,10 +6188,11 @@ function AddToProductionPicker({ item, userId, onClose }) {
             productions.map(prod => {
               const inProd = prod.production_items?.some(pi => pi.item_id === item.id);
               const isDone = done[prod.id] !== undefined ? done[prod.id] : inProd;
+              const qty    = qtyMap[prod.id] || 1;
               return (
-                <div key={prod.id} onClick={() => saving !== prod.id && toggle(prod)}
-                  style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 12px",
-                    borderRadius:8, cursor:"pointer", marginBottom:4,
+                <div key={prod.id}
+                  style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px",
+                    borderRadius:8, marginBottom:4,
                     background: isDone ? "rgba(76,175,80,.1)" : "rgba(255,255,255,.03)",
                     border:`1px solid ${isDone ? "rgba(76,175,80,.25)" : "var(--border)"}`,
                     transition:"all .15s" }}>
@@ -6192,7 +6206,22 @@ function AddToProductionPicker({ item, userId, onClose }) {
                       </div>
                     )}
                   </div>
-                  <div style={{ fontSize:18, flexShrink:0 }}>
+                  {/* Quantity spinner — only shown when item has qty > 1 */}
+                  {totalQty > 1 && (
+                    <div style={{ display:"flex", alignItems:"center", gap:4, flexShrink:0 }}
+                      onClick={e=>e.stopPropagation()}>
+                      <button onClick={()=>setQtyMap(p=>({...p,[prod.id]:Math.max(1,qty-1)}))}
+                        style={{ width:22, height:22, borderRadius:4, border:"1px solid var(--border)",
+                          background:"var(--parch)", cursor:"pointer", fontFamily:"inherit", fontSize:14, lineHeight:1 }}>−</button>
+                      <span style={{ fontSize:13, fontWeight:700, minWidth:16, textAlign:"center" }}>{qty}</span>
+                      <button onClick={()=>setQtyMap(p=>({...p,[prod.id]:Math.min(totalQty,qty+1)}))}
+                        style={{ width:22, height:22, borderRadius:4, border:"1px solid var(--border)",
+                          background:"var(--parch)", cursor:"pointer", fontFamily:"inherit", fontSize:14, lineHeight:1 }}>+</button>
+                      <span style={{ fontSize:11, color:"var(--muted)" }}>of {totalQty}</span>
+                    </div>
+                  )}
+                  <div style={{ fontSize:18, flexShrink:0, cursor:"pointer" }}
+                    onClick={() => saving !== prod.id && toggle(prod)}>
                     {saving === prod.id ? "⏳" : isDone ? "✅" : "○"}
                   </div>
                 </div>
@@ -6202,7 +6231,7 @@ function AddToProductionPicker({ item, userId, onClose }) {
         </div>
         <div style={{ padding:"10px 14px", borderTop:"1px solid var(--border)",
           textAlign:"center", fontSize:12, color:"var(--muted)" }}>
-          Click a production to add or remove this item
+          {totalQty > 1 ? "Set quantity then click ○ to assign" : "Click a production to add or remove this item"}
         </div>
       </div>
     </div>
@@ -7204,7 +7233,8 @@ function ProductionNeedsChecklist({ prod, allItems, userId, org, onNavigateToExc
                                 .filter(i=>i.category===need.category || need.category==="other")
                                 .slice(0,30)
                                 .map(i=>(
-                                  <option key={i.id} value={i.id}>{i.name}</option>
+                                  <option key={i.id} value={i.id}>
+                                    {i.name}{i.qty>1?` (×${i.qty} in stock)`:""}</option>
                                 ))}
                             </select>
                           )}
@@ -7425,7 +7455,9 @@ function ProductionDetail({ prod, allItems, userId, onEdit, onDelete, onClose, o
                         </div>
                         <div style={{ fontSize:11, color:"var(--muted)", marginTop:1 }}>
                           {pi.item?.location || pi.item?.condition || ""}
-                          {pi.qty_needed > 1 ? " · Need "+pi.qty_needed : ""}
+                          {pi.qty_checked_out > 1
+                            ? ` · Using ${pi.qty_checked_out} of ${pi.item?.qty||1}`
+                            : pi.qty_needed > 1 ? " · Need "+pi.qty_needed : ""}
                         </div>
                       </div>
                       {/* Status toggle */}
