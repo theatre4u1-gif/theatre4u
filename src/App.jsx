@@ -6617,13 +6617,21 @@ function AdminDashboard({ currentUser }) {
                         {fb.lending_barrier&&<div style={{fontSize:12,color:"var(--muted)",marginBottom:3}}>🤝 Lending barrier: <strong>{{fear_damage:"Fear of damage",logistics:"Logistics",no_agreement:"No agreement/paperwork",trust:"Don't know the program",admin_approval:"Needs admin approval",never_thought:"Never thought about it",other:"Other"}[fb.lending_barrier]||fb.lending_barrier}</strong></div>}
                         {fb.wishlist_hour&&<div style={{fontSize:12,color:"var(--muted)"}}>⏱ Save an hour: <strong>{fb.wishlist_hour}</strong></div>}
                       </div>
-                      <button onClick={async()=>{
-                        const nextStatus=fb.status==="new"?"read":"new";
-                        await SB.from("beta_feedback").update({status:nextStatus}).eq("id",fb.id);
-                        setFeedback(p=>p.map(x=>x.id===fb.id?{...x,status:nextStatus}:x));
-                      }} className="btn btn-o btn-sm" style={{flexShrink:0,fontSize:11}}>
-                        {fb.status==="new"?"Mark Read":"Mark Unread"}
-                      </button>
+                      <div style={{display:"flex",gap:6,flexShrink:0,flexDirection:"column",alignItems:"flex-end"}}>
+                        {fb.org_email&&(
+                          <a href={`mailto:${fb.org_email}?subject=Re: Your Theatre4u Feedback&body=Hi,%0A%0AThank you for your feedback — "${(fb.message||"").slice(0,60).replace(/&/g,"and")}..."%0A%0A`}
+                            className="btn btn-o btn-sm" style={{fontSize:11,textDecoration:"none",display:"flex",alignItems:"center",gap:4}}>
+                            ✉️ Reply
+                          </a>
+                        )}
+                        <button onClick={async()=>{
+                          const nextStatus=fb.status==="new"?"read":"new";
+                          await SB.from("beta_feedback").update({status:nextStatus}).eq("id",fb.id);
+                          setFeedback(p=>p.map(x=>x.id===fb.id?{...x,status:nextStatus}:x));
+                        }} className="btn btn-o btn-sm" style={{flexShrink:0,fontSize:11}}>
+                          {fb.status==="new"?"Mark Read":"Mark Unread"}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -15898,8 +15906,8 @@ function AdminHub({ currentUser, org }) {
       }
       if (tab === "overview" || tab === "feedback") {
         const { data } = await SB.from("beta_feedback")
-          .select("*").order("created_at", { ascending: false }).limit(50);
-        setFeedback(data || []);
+          .select("*, orgs(email)").order("created_at", { ascending: false }).limit(50);
+        setFeedback((data||[]).map(fb=>({...fb, org_email: fb.orgs?.email||null})));
       }
       if (tab === "overview") {
         // Quick page views count for the overview stat card
