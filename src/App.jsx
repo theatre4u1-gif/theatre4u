@@ -861,7 +861,7 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical
   const vAVAIL  = vConfig.availability;
   const vMKT    = vConfig.marketOptions;
   const defaultCat = vCATS[0]?.id || "costumes";
-  const blank={name:"",category:defaultCat,condition:vCONDS[2]||"Good",size:vSIZES.includes("N/A")?"N/A":vSIZES[0],qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,loan_period:2,deposit:0,avail:"In Stock",img:null,tags:[],purchase_cost:"",purchase_date:"",purchase_vendor:"",funding_source_id:"",location_id:null,pin_id:null,rack_slot:null};
+  const blank={name:"",category:defaultCat,condition:vCONDS[2]||"Good",size:vSIZES.includes("N/A")?"N/A":vSIZES[0],qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,loan_period:2,deposit:0,avail:"In Stock",img:null,tags:[],purchase_cost:"",purchase_date:"",purchase_vendor:"",funding_source_id:""};
   const[f,setF]=useState(item||blank);
   const[ti,setTi]=useState("");
   const[upl,setUpl]=useState(false);
@@ -6017,14 +6017,2527 @@ function AdminEditItemModal({ item, onClose, onSaved }) {
   );
 }
 
+function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
+  const[scrolled,setScrolled]=useState(false);
+  useEffect(()=>{
+    const h=()=>setScrolled(window.scrollY>60);
+    window.addEventListener("scroll",h,{passive:true});
+    trackVisit("landing");
+    return()=>window.removeEventListener("scroll",h);
+  },[]);
+
+  const features=[
+    {icon:"📦",title:"Inventory That Actually Works",desc:"Catalog every costume, prop, light, and sound item your program owns. Add photos, tag by production, print QR labels for storage bins. Always know exactly what you have and where it lives."},
+    {icon:"🎭",title:"Productions Tracker",desc:"Create a folder for each show. Assign items from your inventory, track what's checked out, and see at a glance what every production needs from wishlist to opening night."},
+    {icon:"📱",title:"Mobile-Ready Backstage",desc:"Add items by taking a photo. Scan QR labels with your phone's camera — the iPhone Camera app reads Theatre4u labels instantly. Available on iPhone and Android — no app store required."},
+    {icon:"💰",title:"Funding Tracker",desc:"Track grants, district allocations, booster funds, earned income, and donations. Log expenditures against each source, generate reports, and export to CSV — for your records."},
+    {icon:"🏪",title:"Backstage Exchange",desc:"When you're ready, opt in to share selected items with other programs. You choose exactly which items to post — your full inventory stays completely private. Browse what others near you have available, rent, purchase, or arrange a loan."},
+    {icon:"🎪",title:"Community Board",desc:"Post audition notices, share upcoming show dates, upload production photos, and find items you need. A regional bulletin board for the performing arts community."},
+  ];
+
+  const plans=[
+    {name:"Free",price:"$0",period:"forever",color:"rgba(255,255,255,.15)",textColor:"rgba(255,255,255,.7)",features:["Up to 50 inventory items","QR labels & photos","Productions tracking","Browse Backstage Exchange","Community Board"],cta:"Get Started",primary:false},
+    {name:"Pro",price:"$15",period:"/month",annual:"$150/year",color:"linear-gradient(135deg,var(--gold),var(--goldd))",textColor:"#1a0f00",features:["Unlimited inventory","Full Backstage Exchange access","Stage Points","Reports & CSV export","Funding Tracker","Mobile app","Messages & requests"],cta:"Start Pro",primary:true},
+    {name:"District",price:"$49",period:"/month",annual:"$500/year",color:"linear-gradient(135deg,#1565c0,#0d47a1)",textColor:"#fff",features:["Everything in Pro","Up to 6 school sites","District dashboard","Shared Backstage Exchange","District funding rollup","Priority support"],cta:"Start District",primary:false},
+  ];
+
+  const steps=[
+    {n:"1",title:"Create your free account",desc:"Sign up in 60 seconds. No credit card needed. Your first 50 items are always free."},
+    {n:"2",title:"Build your inventory",desc:"Take photos on your phone or upload from your computer. Add name, category, condition, and location. Print QR labels for bins and racks."},
+    {n:"3",title:"Track your productions",desc:"Create a show folder and pull items straight from your inventory. See what's assigned, what's checked out, and what you still need."},
+    {n:"4",title:"Optionally join Backstage Exchange",desc:"When you're ready, opt in to Backstage Exchange. Post selected items for rent, loan, or sale. Browse what other programs near you have available."},
+  ];
+
+  return(<div style={{background:"var(--ink)",minHeight:"100vh",color:"var(--linen)",fontFamily:"'DM Sans',sans-serif"}}>
+    
+    {/* ── Sticky Nav ── */}
+    <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:1000,padding:"0 32px",height:64,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?"rgba(13,10,8,.97)":"transparent",borderBottom:scrolled?"1px solid rgba(255,255,255,.08)":"none",backdropFilter:scrolled?"blur(12px)":"none",transition:"all .3s"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{width:34,height:34,background:"linear-gradient(135deg,var(--gold),var(--goldd))",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🎭</div>
+        <span style={{fontFamily:"'Playfair Display',serif",fontSize:20,color:"var(--gold)"}}>Theatre4u™</span>
+      </div>
+      <div style={{display:"flex",gap:10,alignItems:"center"}}>
+        <button onClick={onSignIn} style={{background:"none",border:"1px solid rgba(255,255,255,.25)",color:"rgba(255,255,255,.8)",padding:"7px 16px",borderRadius:7,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:600}}>Sign In</button>
+        <button onClick={onSignUp} style={{background:"linear-gradient(135deg,var(--gold),var(--goldd))",border:"none",color:"#1a0f00",padding:"7px 18px",borderRadius:7,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:800}}>Get Started Free →</button>
+      </div>
+    </nav>
+
+    {/* ── Hero ── */}
+    <div style={{position:"relative",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",padding:"120px 24px 80px",overflow:"hidden"}}>
+      {/* Background image */}
+      <img src={usp("photo-1503095396549-807759245b35",1600,900)} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.2,pointerEvents:"none"}}/>
+      <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,rgba(13,10,8,.7) 0%,rgba(13,10,8,.5) 50%,rgba(13,10,8,.95) 100%)",pointerEvents:"none"}}/>
+      <div style={{position:"relative",zIndex:1,maxWidth:760}}>
+        <div style={{display:"inline-flex",alignItems:"center",gap:7,padding:"4px 14px",background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.3)",borderRadius:20,fontSize:12,fontWeight:700,color:"var(--gold)",textTransform:"uppercase",letterSpacing:1,marginBottom:20}}>
+          🎭 The Platform for Theatre Programs
+        </div>
+        <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(42px,7vw,76px)",lineHeight:1.05,marginBottom:20,color:"#fff"}}>
+          Everything your theatre program needs —{" "}
+          <span style={{color:"var(--gold)"}}>in one place</span>
+        </h1>
+        <p style={{fontSize:"clamp(16px,2.5vw,20px)",color:"rgba(255,255,255,.7)",lineHeight:1.7,marginBottom:36,maxWidth:600,margin:"0 auto 36px"}}>
+          Know what you have. Find what you need. Built specifically for theatre programs of every size.
+        </p>
+        <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+          <button onClick={onSignUp} style={{background:"linear-gradient(135deg,var(--gold),var(--goldd))",border:"none",color:"#1a0f00",padding:"14px 32px",borderRadius:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:16,fontWeight:800,boxShadow:"0 4px 24px rgba(212,168,67,.4)"}}>
+            Get Started Free — No credit card →
+          </button>
+          <button onClick={onSignIn} style={{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.2)",color:"#fff",padding:"14px 24px",borderRadius:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:15,fontWeight:600}}>
+            Sign In
+          </button>
+          {onTakeTour && (
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center"}}>
+              <button onClick={()=>window.location.href=window.location.href.split("?")[0]+"?demo=1"}
+                style={{background:"linear-gradient(135deg,rgba(212,168,67,.25),rgba(212,168,67,.1))",
+                  border:"1px solid rgba(212,168,67,.6)",color:"rgba(212,168,67,.95)",
+                  padding:"12px 22px",borderRadius:10,cursor:"pointer",
+                  fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:700}}>
+                🎭 Try the Full Demo
+              </button>
+              <button onClick={onTakeTour}
+                style={{background:"transparent",border:"1px solid rgba(255,255,255,.2)",
+                  color:"rgba(255,255,255,.65)",padding:"12px 20px",borderRadius:10,cursor:"pointer",
+                  fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:500}}>
+                👁 Quick Preview
+              </button>
+            </div>
+          )}
+        </div>
+        <div style={{marginTop:20,fontSize:12,color:"rgba(255,255,255,.4)"}}>
+          Free plan available · Pro from $15/month · No contracts
+        </div>
+      </div>
+    </div>
+
+    {/* ── Social proof strip ── */}
+    <div style={{background:"rgba(212,168,67,.08)",borderTop:"1px solid rgba(212,168,67,.15)",borderBottom:"1px solid rgba(212,168,67,.15)",padding:"16px 32px",display:"flex",flexWrap:"wrap",gap:24,justifyContent:"center",alignItems:"center"}}>
+      {[["📦","Inventory management"],["🎭","Productions tracker"],["📱","Mobile-ready"],["💰","Funding Tracker"],["🏪","Backstage Exchange"],["🎪","Community board"]].map(([ico,lbl])=>(
+        <div key={lbl} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,fontWeight:600,color:"rgba(255,255,255,.7)"}}>
+          <span style={{fontSize:16}}>{ico}</span>{lbl}
+        </div>
+      ))}
+    </div>
+
+    {/* ── Features ── */}
+    <div style={{padding:"80px 32px",maxWidth:1100,margin:"0 auto"}}>
+      <div style={{textAlign:"center",marginBottom:52}}>
+        <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>What Theatre4u™ does</div>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(32px,5vw,48px)",color:"#fff",lineHeight:1.15}}>Built for busy drama directors</h2>
+        <p style={{fontSize:16,color:"rgba(255,255,255,.55)",marginTop:12,maxWidth:520,margin:"12px auto 0"}}>Not a generic inventory app. Built specifically for theatre programs, schools, and the broader performing arts community — by someone who has lived it.</p>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:20}}>
+        {features.map(f=>(
+          <div key={f.title} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:14,padding:"24px 22px",transition:"all .2s"}}
+            onMouseEnter={e=>{e.currentTarget.style.background="rgba(212,168,67,.08)";e.currentTarget.style.borderColor="rgba(212,168,67,.25)";}}
+            onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.04)";e.currentTarget.style.borderColor="rgba(255,255,255,.08)";}}>
+            <div style={{fontSize:32,marginBottom:12}}>{f.icon}</div>
+            <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:19,color:"#fff",marginBottom:8,lineHeight:1.2}}>{f.title}</h3>
+            <p style={{fontSize:13.5,color:"rgba(255,255,255,.55)",lineHeight:1.7}}>{f.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* ── How it works ── */}
+    <div style={{background:"rgba(255,255,255,.03)",borderTop:"1px solid rgba(255,255,255,.06)",borderBottom:"1px solid rgba(255,255,255,.06)",padding:"72px 32px"}}>
+      <div style={{maxWidth:900,margin:"0 auto"}}>
+        <div style={{textAlign:"center",marginBottom:48}}>
+          <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>Get started in minutes</div>
+          <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(28px,4vw,42px)",color:"#fff"}}>How it works</h2>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:24}}>
+          {steps.map(s=>(
+            <div key={s.n} style={{textAlign:"center"}}>
+              <div style={{width:48,height:48,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),var(--goldd))",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontSize:22,color:"#1a0f00",margin:"0 auto 14px"}}>{s.n}</div>
+              <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:16,color:"#fff",marginBottom:7}}>{s.title}</h3>
+              <p style={{fontSize:13,color:"rgba(255,255,255,.5)",lineHeight:1.6}}>{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    {/* ── Pricing ── */}
+    <div style={{padding:"80px 32px",maxWidth:1000,margin:"0 auto"}}>
+      <div style={{textAlign:"center",marginBottom:48}}>
+        <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>Simple, honest pricing</div>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(28px,4vw,42px)",color:"#fff"}}>Plans for every program</h2>
+        <p style={{fontSize:14,color:"rgba(255,255,255,.45)",marginTop:10}}>Annual plans available — save up to 2 months free</p>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:20}}>
+        {plans.map(p=>(
+          <div key={p.name} style={{borderRadius:16,overflow:"hidden",border:p.primary?"1px solid rgba(212,168,67,.4)":"1px solid rgba(255,255,255,.1)",position:"relative",boxShadow:p.primary?"0 8px 40px rgba(212,168,67,.2)":"none"}}>
+            {p.primary&&<div style={{position:"absolute",top:14,right:14,background:"var(--gold)",color:"#1a0f00",fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:10,textTransform:"uppercase",letterSpacing:.5}}>Most Popular</div>}
+            <div style={{background:p.color,padding:"28px 24px 20px"}}>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:p.textColor,marginBottom:4}}>{p.name}</div>
+              <div style={{display:"flex",alignItems:"baseline",gap:4}}>
+                <span style={{fontFamily:"'Playfair Display',serif",fontSize:42,color:p.textColor}}>{p.price}</span>
+                <span style={{fontSize:14,color:p.textColor,opacity:.7}}>{p.period}</span>
+              </div>
+              {p.annual&&<div style={{fontSize:11,color:p.textColor,opacity:.6,marginTop:3}}>{p.annual} · save 2 months</div>}
+            </div>
+            <div style={{background:"rgba(255,255,255,.04)",padding:"20px 24px 24px"}}>
+              <div style={{display:"flex",flexDirection:"column",gap:9,marginBottom:20}}>
+                {p.features.map(f=>(
+                  <div key={f} style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:"rgba(255,255,255,.75)"}}>
+                    <span style={{color:"var(--gold)",fontWeight:800,flexShrink:0}}>✓</span>{f}
+                  </div>
+                ))}
+              </div>
+              <button onClick={onSignUp} style={{width:"100%",padding:"11px",borderRadius:9,border:"none",background:p.primary?"linear-gradient(135deg,var(--gold),var(--goldd))":"rgba(255,255,255,.12)",color:p.primary?"#1a0f00":"rgba(255,255,255,.85)",fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>
+                {p.cta} →
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* ── Final CTA ── */}
+    <div style={{textAlign:"center",padding:"72px 32px 96px",borderTop:"1px solid rgba(255,255,255,.06)"}}>
+      <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(28px,5vw,52px)",color:"#fff",marginBottom:16,lineHeight:1.15}}>
+        Ready to get your<br/><span style={{color:"var(--gold)"}}>theatre organized?</span>
+      </h2>
+      <p style={{fontSize:16,color:"rgba(255,255,255,.5)",marginBottom:32,maxWidth:440,margin:"0 auto 32px"}}>Join theatre programs already using Theatre4u™ to get their inventory under control, track their shows, and connect with their community.</p>
+      <button onClick={onSignUp} style={{background:"linear-gradient(135deg,var(--gold),var(--goldd))",border:"none",color:"#1a0f00",padding:"16px 40px",borderRadius:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:18,fontWeight:800,boxShadow:"0 4px 32px rgba(212,168,67,.45)"}}>
+        Start Free — No credit card required →
+      </button>
+      <div style={{marginTop:14,fontSize:12,color:"rgba(255,255,255,.3)"}}>Free plan · No contracts · Cancel anytime</div>
+    </div>
+
+    {/* Our Story */}
+    <div style={{padding:"80px 32px",maxWidth:900,margin:"0 auto",textAlign:"center"}}>
+      <div style={{display:"inline-block",padding:"4px 14px",background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.2)",borderRadius:20,fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:20}}>
+        Our Story
+      </div>
+      <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(26px,4vw,40px)",marginBottom:24,lineHeight:1.2}}>
+        Built by a Theatre Person,<br/><span style={{color:"var(--gold)"}}>For Theatre People.</span>
+      </h2>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,textAlign:"left",marginBottom:48}}>
+        <div>
+          <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)",marginBottom:16}}>
+            After spending over 30 years in the theatre and 18+ years in the classroom, I know how quickly props and costumes can seem to explode out of control. As theatre artists moving from one production to the next, we need to know which box that magic wand for Puffs lives in.
+          </p>
+          <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)"}}>
+            And we need a chance to connect with other theatre programs that may have something we need, or need something we have. This is why Theatre4u was started.
+          </p>
+        </div>
+        <div>
+          <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)",marginBottom:16}}>
+            Theatre4u keeps track of everything your program owns — and opens the door to a community of programs ready to share resources, collaborate, and support each other.
+          </p>
+          <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)"}}>
+            <strong style={{color:"#fff"}}>Theatre is always better together.</strong> This platform was built to help make that connection easier — from the wings to the whole community.
+          </p>
+          <div style={{marginTop:28,paddingTop:20,borderTop:"1px solid rgba(255,255,255,.1)",display:"flex",alignItems:"center",gap:12}}>
+            <div style={{width:40,height:40,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),#8a6a20)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1000" strokeWidth="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            </div>
+            <div>
+              <div style={{fontWeight:700,fontSize:14,color:"#fff"}}>Robert Zick</div>
+              <div style={{fontSize:12,color:"rgba(255,255,255,.45)"}}>Founder, Theatre4u™ &amp; Artstracker · 18+ years in the classroom</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:24,justifyContent:"center",flexWrap:"wrap"}}>
+        {[
+          {ico:"🎭",val:"30+",lbl:"Years in theatre"},
+          {ico:"🎓",lbl:"Studied & performed theatre"},
+          {ico:"🏫",lbl:"Built for the classroom"},
+          {ico:"🤝",lbl:"Teacher to teacher"},
+        ].map(s=>(
+          <div key={s.lbl} style={{textAlign:"center",padding:"16px 20px",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,minWidth:130}}>
+            <div style={{fontSize:26,marginBottom:6}}>{s.ico}</div>
+            {s.val&&<div style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:"var(--gold)",marginBottom:2}}>{s.val}</div>}
+            <div style={{fontSize:12,color:"rgba(255,255,255,.5)",fontWeight:600}}>{s.lbl}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Footer */}
+    <div style={{borderTop:"1px solid rgba(255,255,255,.06)",padding:"24px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
+      <div style={{display:"flex",alignItems:"center",gap:8}}>
+        <div style={{width:26,height:26,background:"linear-gradient(135deg,var(--gold),var(--goldd))",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🎭</div>
+        <span style={{fontFamily:"'Playfair Display',serif",fontSize:15,color:"var(--gold)"}}>Theatre4u™</span>
+        <span style={{fontSize:12,color:"rgba(255,255,255,.3)"}}>© 2026 Artstracker LLC</span>
+      </div>
+      <div style={{display:"flex",gap:18,fontSize:12,color:"rgba(255,255,255,.35)"}}>
+        <a href="/help.html" target="_blank" style={{color:"rgba(255,255,255,.35)",textDecoration:"none"}} onMouseEnter={e=>e.target.style.color="var(--gold)"} onMouseLeave={e=>e.target.style.color="rgba(255,255,255,.35)"}>Help Center</a>
+        <a href="/contact.html" target="_blank" style={{color:"rgba(255,255,255,.35)",textDecoration:"none"}} onMouseEnter={e=>e.target.style.color="var(--gold)"} onMouseLeave={e=>e.target.style.color="rgba(255,255,255,.35)"}>Contact</a>
+        <span style={{cursor:"pointer"}} onClick={onSignIn}>Sign In</span>
+        <span style={{cursor:"pointer"}} onClick={onSignUp}>Sign Up</span>
+        <span>hello@theatre4u.org</span>
+      </div>
+    </div>
+  </div>);
+}
+
+
+function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
+  const[visible,setVisible]=useState(false);
+  const[mode,setMode]=useState("login");
+  const[email,setEmail]=useState(()=>{ try { return sessionStorage.getItem("t4u_prefill_email")||""; } catch{return "";} });
+  const[pass,setPass]=useState("");
+  const[orgName,setOrgName]=useState(()=>{ try { return sessionStorage.getItem("t4u_prefill_org")||""; } catch{return "";} });
+  const[err,setErr]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[done,setDone]=useState(false);
+  const[legal,setLegal]=useState(null);
+  const[showPass,setShowPass]=useState(false);
+  const[ageConfirmed,setAgeConfirmed]=useState(false);
+
+  useEffect(()=>{
+    window.__t4u_show_auth=(m)=>{setMode(m||"login");setErr("");setVisible(true);};
+    return()=>{delete window.__t4u_show_auth;};
+  },[]);
+
+  useEffect(()=>{
+    if(pendingInvite&&!visible){
+      // Default to login — existing accounts are the common case for district invites
+      setMode("login");setVisible(true);
+      if(inviteInfo?.email) setEmail(inviteInfo.email);
+      if(inviteInfo?.school_name) setOrgName(inviteInfo.school_name);
+    }
+  },[pendingInvite,inviteInfo]);
+
+  if(!visible) return null;
+
+  const close=()=>{setVisible(false);setErr("");setEmail("");setPass("");setOrgName("");setDone(false);};
+
+  const submit=async()=>{
+    setErr("");
+    if(!email.trim()){setErr("Please enter your email address.");return;}
+    if(!pass){setErr("Please enter a password.");return;}
+    if(mode==="signup"&&pass.length<6){setErr("Password must be at least 6 characters.");return;}
+    if(mode==="signup"&&!ageConfirmed){setErr("Please confirm you are 13 years of age or older.");return;}
+    setLoading(true);
+
+      // ── Demo mode fast-path ───────────────────────────────────────────────
+      if(isDemoMode()){
+        const demoUser = { id:"demo-user-id", email, created_at:new Date().toISOString() };
+        if(mode==="signup"){
+          if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
+          await SB.from("orgs").upsert({
+            id:demoUser.id, name:orgName, email,
+            type:"", phone:"", location:"", bio:"",
+            temp_pro:true, onboarding_step:0,
+            plan:"pro", created_at:new Date().toISOString(),
+          },{onConflict:"id",ignoreDuplicates:false});
+          if(window.__demoStore) window.__demoStore.seedItems();
+        }
+        onAuth(demoUser);
+        close();
+        return;
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
+    try{
+      if(mode==="signup"){
+        if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
+        // All signups during beta get temp_pro — no access code needed
+        const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName},emailRedirectTo:"https://theatre4u.org"}});
+        if(error){
+          if(error.message?.toLowerCase().includes('already registered')||error.message?.toLowerCase().includes('already exists')){
+            setMode("login");
+            setErr("An account with this email already exists — switching you to Sign In. Use Forgot password if needed.");
+            setLoading(false); return;
+          }
+          throw error;
+        }
+        if(data.user){
+          // Team members arrive via invite.html — they join an existing org, no new org needed
+          const isTeamMember = data.user.user_metadata?.is_team_member === true;
+          if (isTeamMember) {
+            const pendingCode = localStorage.getItem("t4u_pending_join_code");
+            if (pendingCode) {
+              localStorage.removeItem("t4u_pending_join_code");
+              await SB.rpc("accept_team_invite_by_code", { p_code: pendingCode }).catch(()=>{});
+            }
+            setDone(true);
+            return;
+          }
+          // Track signup conversion with UTM attribution
+          const _sid = window.__t4u_sid || sessionStorage.getItem("t4u_sid") || null;
+          const _utm = window.__t4u_utm || JSON.parse(sessionStorage.getItem("t4u_utm")||"{}");
+          await SB.from("signup_events").insert({
+            session_id: _sid, org_id: data.user.id,
+            utm_source: _utm.source||null, utm_medium: _utm.medium||null, utm_campaign: _utm.campaign||null,
+            referrer: document.referrer||null
+          }).then(()=>{}).catch(()=>{}); // fire and forget
+          await SB.from("orgs").upsert({
+            id:data.user.id, name:orgName, email,
+            type:"", phone:"", location:"", bio:"",
+            // All beta signups get temp_pro — full Pro access during beta period
+            temp_pro: true,
+            temp_pro_granted_at: new Date().toISOString(),
+            temp_pro_note: "Beta signup — auto-granted",
+          },{onConflict:"id",ignoreDuplicates:false});
+          // Look up referrer by ref code and link them
+          const refCode = getRefCode();
+          if (refCode) {
+            const { data: referrer } = await SB.from("orgs")
+              .select("id").eq("referral_code", refCode).single();
+            if (referrer?.id && referrer.id !== data.user.id) {
+              await SB.from("orgs").update({ referred_by_org: referrer.id })
+                .eq("id", data.user.id);
+              // Award 50 Stage Points to referrer immediately
+              await SB.rpc("award_referral_points", { p_new_org_id: data.user.id });
+              try { sessionStorage.removeItem("t4u_ref"); } catch(e) {}
+            }
+          }
+          // Auto-generate label prefix
+          try {
+            const { data: pfxData } = await SB.rpc("generate_label_prefix", { p_name: orgName });
+            if (pfxData) await SB.from("orgs").update({ label_prefix: pfxData }).eq("id", data.user.id);
+          } catch(e) { /* non-fatal */ }
+          // Clear any demo pre-fill data
+          try { sessionStorage.removeItem("t4u_prefill_org"); sessionStorage.removeItem("t4u_prefill_email"); } catch(e) {}
+          // Process any pending join code (user arrived via ?code=XYZ before signing up)
+          const pendingCode = localStorage.getItem("t4u_pending_join_code");
+          if (pendingCode) {
+            localStorage.removeItem("t4u_pending_join_code");
+            try {
+              await SB.rpc("accept_team_invite_by_code", { p_code: pendingCode });
+            } catch(e) { /* non-fatal */ }
+          }
+          setDone(true);
+        }
+      } else {
+        const{data,error}=await SB.auth.signInWithPassword({email,password:pass});
+        if(error){
+          // If credentials invalid — could be wrong password OR no account yet
+          if(error.message?.toLowerCase().includes("invalid")||error.message?.toLowerCase().includes("credentials")){
+            throw new Error("Incorrect email or password. If you don't have an account yet, click Create Account above. Or use Forgot password to reset.");
+          }
+          throw error;
+        }
+        // Track login event
+        try {
+          const sid = window.__t4u_sid || sessionStorage.getItem("t4u_sid") || "";
+          const { data:orgData } = await SB.from("orgs").select("name,plan").eq("id",data.user.id).single();
+          await SB.from("login_events").insert({
+            org_id:     data.user.id,
+            org_name:   orgData?.name || null,
+            email:      data.user.email,
+            plan:       orgData?.plan || null,
+            session_id: sid,
+            user_agent: navigator.userAgent,
+            referrer:   document.referrer || null,
+            utm_source: window.__t4u_utm?.source || null,
+          });
+        } catch(_) {}
+        onAuth(data.user);
+        close();
+      }
+    }catch(e){const k=authErrKey(e.message);setErr(k?EM[k].body:EM.generic.body);}
+    setLoading(false);
+  };
+
+  const resetPass=async()=>{
+    if(!email){setErr("Enter your email above first.");return;}
+    const{error:re}=await SB.auth.resetPasswordForEmail(email,{redirectTo:"https://theatre4u.org"});
+    if(re){setErr(EM.resetPass.body);return;}
+    setErr("✓ Password reset email sent — check your inbox.");
+  };
+
+  const overlayStyle={position:"fixed",inset:0,background:"rgba(0,0,0,.82)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(4px)"};
+  const cardStyle={background:"#15121b",border:"1px solid #282333",borderRadius:16,width:"100%",maxWidth:440,padding:"36px 36px 32px",boxShadow:"0 16px 56px rgba(0,0,0,.6)",animation:"lp-rise .2s ease",fontFamily:"'DM Sans',sans-serif",color:"#ede8df"};
+  const inputStyle={width:"100%",background:"#110f18",border:"1px solid #282333",borderRadius:6,padding:"10px 12px",color:"#ede8df",fontSize:14,fontFamily:"'DM Sans',sans-serif",outline:"none",boxSizing:"border-box"};
+  const labelStyle={fontSize:11,fontWeight:600,color:"#9b93a8",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4};
+
+  if(done) return(
+    <div style={overlayStyle}>
+      <div style={{...cardStyle,textAlign:"center"}}>
+        <div style={{fontSize:52,marginBottom:12}}>🎭</div>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:"#d4a843",marginBottom:8}}>{inviteInfo?"Almost there!":"Check your email!"}</h2>
+        <p style={{color:"#9b93a8",fontSize:14,lineHeight:1.6,marginBottom:24}}>{inviteInfo?<>We sent a confirmation link to <strong style={{color:"#ede8df"}}>{email}</strong>. Click it to activate and you'll be linked to {inviteInfo.district_name||"your district"}.</>:<>We sent a confirmation link to <strong style={{color:"#ede8df"}}>{email}</strong>. Click it to activate your account.</>}</p>
+        <button onClick={()=>{setDone(false);setMode("login");}} style={{background:"#1d1925",border:"1px solid #282333",color:"#ede8df",padding:"10px 24px",borderRadius:6,cursor:"pointer",fontSize:14,fontFamily:"'DM Sans',sans-serif"}}>Back to Sign In</button>
+      </div>
+    </div>
+  );
+
+  return(
+    <div style={overlayStyle} onClick={e=>{if(!loading&&e.target===e.currentTarget)close();}}>
+      <div style={cardStyle} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:24}}>
+          <div>
+            <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:"#ede8df"}}>{mode==="login"?"Welcome back":"Get started free"}</div>
+            <div style={{fontSize:12,color:"#685f76",marginTop:3}}>{mode==="login"?"Sign in to your Theatre4u™ account":"Create your free Theatre4u™ account"}</div>
+          </div>
+          <button onClick={close} style={{background:"none",border:"1px solid #282333",borderRadius:6,color:"#9b93a8",cursor:"pointer",padding:"4px 9px",fontSize:14,lineHeight:1}}>×</button>
+        </div>
+        {pendingInvite&&inviteInfo&&(
+          <div style={{background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.28)",borderRadius:10,padding:"12px 14px",marginBottom:18}}>
+            <div style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:10}}>
+              <span style={{fontSize:20,flexShrink:0}}>🎭</span>
+              <div>
+                <div style={{fontWeight:700,fontSize:13,color:"#d4a843",marginBottom:2}}>District Invite</div>
+                <div style={{fontSize:12.5,color:"#c8c0d4",lineHeight:1.5}}>
+                  {inviteInfo.district_name?<>Join <strong style={{color:"#ede8df"}}>{inviteInfo.district_name}</strong> on Theatre4u™.</>:"You've been invited to join a district on Theatre4u™."}
+                  {inviteInfo.school_name&&<> School: <strong style={{color:"#ede8df"}}>{inviteInfo.school_name}</strong>.</>}
+                </div>
+              </div>
+            </div>
+            <div style={{background:"rgba(0,0,0,.25)",borderRadius:7,padding:"9px 11px",fontSize:12,color:"#9b93a8",lineHeight:1.6}}>
+              <strong style={{color:"#ede8df"}}>Already have a Theatre4u™ account?</strong> Sign in below — your existing inventory and data will be linked to the district automatically.<br/>
+              <strong style={{color:"#ede8df"}}>New to Theatre4u™?</strong> Switch to Create Account to set up a new school account.
+            </div>
+          </div>
+        )}
+        {/* Tabs */}
+        <div style={{display:"flex",borderBottom:"2px solid #282333",marginBottom:22,gap:2}}>
+          {["login","signup"].map(m=>(
+            <button key={m} onClick={()=>{setMode(m);setErr("");setShowPass(false);}} style={{flex:1,background:"none",border:"none",borderBottom:`3px solid ${mode===m?"#d4a843":"transparent"}`,padding:"7px 0 9px",fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:13,color:mode===m?"#d4a843":"#685f76",cursor:"pointer",textTransform:"uppercase",letterSpacing:1,marginBottom:-2,transition:"all .2s"}}>
+              {m==="login"?"Sign In":"Create Account"}
+            </button>
+          ))}
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          {mode==="signup"&&(<>
+            <div><label style={labelStyle}>Program / Organization Name *</label>
+              <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High School Drama" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
+            </div>
+            {/* Beta access notice */}
+            <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.25)",
+              borderRadius:9,padding:"12px 14px"}}>
+              <div style={{fontWeight:700,fontSize:13,color:"#d4a843",marginBottom:6}}>
+                ⭐ Free Pro Access During Beta
+              </div>
+              <div style={{fontSize:12,color:"rgba(255,255,255,.65)",lineHeight:1.7}}>
+                All programs that sign up during Theatre4u's beta phase get full Pro access at no charge.
+                When Theatre4u launches, beta programs that have added 25+ items and shared feedback
+                will receive a{" "}
+                <strong style={{color:"rgba(255,255,255,.85)"}}>founding member rate of $9.99/month</strong>
+                {" "}— instead of the standard $15 — locked in for as long as you subscribe.
+              </div>
+            </div>
+          </>)}
+          <div><label style={labelStyle}>Email</label>
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@school.edu" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"} onKeyDown={e=>e.key==="Enter"&&submit()}/>
+          </div>
+          <div><label style={labelStyle}>Password</label>
+            <div style={{position:"relative"}}>
+              <input type={showPass?"text":"password"} value={pass} onChange={e=>setPass(e.target.value)}
+                placeholder={mode==="signup"?"Min. 6 characters":"••••••••"}
+                style={{...inputStyle,paddingRight:42}}
+                onFocus={e=>e.target.style.borderColor="#d4a843"}
+                onBlur={e=>e.target.style.borderColor="#282333"}
+                onKeyDown={e=>e.key==="Enter"&&submit()}/>
+              <button type="button" onClick={()=>setShowPass(p=>!p)}
+                style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",
+                  background:"none",border:"none",cursor:"pointer",color:"#685f76",
+                  fontSize:13,fontFamily:"'DM Sans',sans-serif",padding:"2px 4px",
+                  fontWeight:600,userSelect:"none"}}
+                title={showPass?"Hide password":"Show password"}>
+                {showPass?"Hide":"Show"}
+              </button>
+            </div>
+          </div>
+        </div>
+        {err&&<div style={{marginTop:12,padding:"9px 12px",background:err.includes("sent")?"rgba(76,175,80,.1)":"rgba(194,24,91,.1)",border:`1px solid ${err.includes("sent")?"rgba(76,175,80,.3)":"rgba(194,24,91,.25)"}`,borderRadius:7,fontSize:13,color:err.includes("sent")?"#4caf50":"#e57373"}}>{err}</div>}
+        {mode==="signup"&&(
+          <label style={{display:"flex",alignItems:"flex-start",gap:8,marginTop:14,cursor:"pointer"}}>
+            <input type="checkbox" checked={ageConfirmed} onChange={e=>setAgeConfirmed(e.target.checked)}
+              style={{marginTop:2,accentColor:"#d4a843",flexShrink:0,width:15,height:15}}/>
+            <span style={{fontSize:12,color:"rgba(255,255,255,.55)",lineHeight:1.5}}>
+              I confirm I am <strong style={{color:"rgba(255,255,255,.75)"}}>13 years of age or older</strong>.
+              If you are under 13, please have a parent or guardian create this account on your behalf.
+            </span>
+          </label>
+        )}
+        {mode==="signup"&&<p style={{fontSize:11,color:"rgba(255,255,255,.4)",textAlign:"center",marginTop:16,lineHeight:1.6}}>
+          By creating an account you agree to our{" "}
+          <span style={{color:"var(--gold)",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setLegal("terms")}>Terms of Service</span>
+          {" "}and{" "}
+          <span style={{color:"var(--gold)",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setLegal("privacy")}>Privacy Policy</span>,
+          including the grant of a perpetual license to content you upload.
+        </p>}
+        <button onClick={submit} disabled={loading} style={{marginTop:12,width:"100%",background:"linear-gradient(135deg,#d4a843,#a37f2c)",color:"#1a0f00",border:"none",borderRadius:6,padding:"12px",fontSize:15,fontWeight:700,cursor:loading?"not-allowed":"pointer",fontFamily:"'DM Sans',sans-serif",opacity:loading?.7:1}}>
+          {loading?"Please wait…":mode==="login"?"Sign In →":"Create Free Account →"}
+        </button>
+
+        {mode==="login"&&<button onClick={resetPass} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:"#685f76",fontSize:12.5,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textDecoration:"underline"}}>Forgot password?</button>}
+        <div style={{textAlign:"center",marginTop:14,fontSize:12.5,color:"#685f76"}}>
+          {mode==="login"?<>Don&apos;t have an account? <button onClick={()=>{setMode("signup");setErr("");}} style={{background:"none",border:"none",color:"#d4a843",cursor:"pointer",fontSize:12.5,fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>Sign up free</button></>:<>Already have an account? <button onClick={()=>{setMode("login");setErr("");}} style={{background:"none",border:"none",color:"#d4a843",cursor:"pointer",fontSize:12.5,fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>Sign in</button></>}
+        </div>
+        {mode==="signup"&&(
+          <p style={{textAlign:"center",fontSize:11,color:"#685f76",marginTop:14,lineHeight:1.5}}>
+            Full Pro access during beta · No credit card required · Cancel anytime
+          </p>
+        )}
+      </div>
+      {legal==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegal(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
+      {legal==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegal(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
+    </div>
+  );
+}
+
+function AuthScreen({onAuth}){
+  const[mode,setMode]=useState("login");
+  const[email,setEmail]=useState("");
+  const[pass,setPass]=useState("");
+  const[orgName,setOrgName]=useState("");
+  const[betaCode,setBetaCode]=useState("");
+  const[err,setErr]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[done,setDone]=useState(false);
+  const[legal,setLegal]=useState(null);
+
+  const submit=async()=>{
+    setErr("");
+    if(!email.trim()){setErr("Please enter your email address.");return;}
+    if(!pass){setErr("Please enter a password.");return;}
+    if(mode==="signup"&&pass.length<6){setErr("Password must be at least 6 characters.");return;}
+    setLoading(true);
+
+      // ── Demo mode fast-path ───────────────────────────────────────────────
+      if(isDemoMode()){
+        const demoUser = { id:"demo-user-id", email, created_at:new Date().toISOString() };
+        if(mode==="signup"){
+          if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
+          await SB.from("orgs").upsert({
+            id:demoUser.id, name:orgName, email,
+            type:"", phone:"", location:"", bio:"",
+            temp_pro:true, onboarding_step:0,
+            plan:"pro", created_at:new Date().toISOString(),
+          },{onConflict:"id",ignoreDuplicates:false});
+          if(window.__demoStore) window.__demoStore.seedItems();
+        }
+        onAuth(demoUser);
+        close();
+        return;
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
+    try{
+      if(mode==="signup"){
+        if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
+        // Validate beta code if provided
+        let codeData = null;
+        const code = betaCode.trim().toUpperCase();
+        if(code){
+          const{data:cd,error:codeErr}=await SB.from("beta_codes").select("code,max_uses,used_count,active").eq("code",code).eq("active",true).single();
+          if(codeErr||!cd){throw new Error("Invalid or expired access code. Please check with your contact.");}
+          if(cd.used_count>=cd.max_uses){throw new Error("This access code has reached its limit. Contact hello@theatre4u.org.");}
+          codeData = cd;
+        }
+        const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName},emailRedirectTo:"https://theatre4u.org"}});
+        if(error)throw error;
+        if(data.user){
+          const isLeadingPlayer = !!code;
+          await SB.from("orgs").upsert({id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:"",beta_code:code||null,is_leading_player:isLeadingPlayer},{onConflict:"id",ignoreDuplicates:false});
+          if(code&&codeData){
+            await SB.from("beta_codes").update({used_count:codeData.used_count+1}).eq("code",code);
+          }
+          if(data.session){
+            // Email confirmation is OFF — user is already logged in
+            if(typeof onAuth==="function") onAuth(data.user);
+          } else {
+            setDone(true);
+          }
+        }
+      } else {
+        const{data,error}=await SB.auth.signInWithPassword({email,password:pass});
+        if(error)throw error;
+        onAuth(data.user);
+      }
+    }catch(e){const k=authErrKey(e.message);setErr(k?EM[k].body:EM.generic.body);}
+    setLoading(false);
+  };
+
+  const resetPass=async()=>{
+    if(!email){setErr("Enter your email above first.");return;}
+    const{error:re}=await SB.auth.resetPasswordForEmail(email,{redirectTo:"https://theatre4u.org"});
+    if(re){setErr(EM.resetPass.body);return;}
+    setErr("✓ Password reset email sent — check your inbox.");
+  };
+
+  if(done) return(
+    <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+      <style>{CSS}</style>
+      <div style={{background:"var(--cream)",borderRadius:16,padding:"48px 40px",maxWidth:440,width:"100%",textAlign:"center",boxShadow:"0 12px 48px rgba(0,0,0,.4)"}}>
+        <div style={{fontSize:52,marginBottom:12}}>🎭</div>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:28,color:"var(--ink)",marginBottom:8}}>Check your email!</h2>
+        <p style={{color:"var(--muted)",fontSize:15,lineHeight:1.6,marginBottom:24}}>We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account and get started.</p>
+        <button className="btn btn-o" onClick={()=>{setDone(false);setMode("login");}}>Back to Login</button>
+      </div>
+    </div>
+  );
+
+  return(
+    <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",padding:24,position:"relative",overflow:"hidden"}}>
+      <style>{CSS}</style>
+      <img src={usp(BG.dashboard,1400,900)} alt="" style={{position:"fixed",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.18,filter:"sepia(.6)",pointerEvents:"none"}}/>
+      <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:440}}>
+        {/* Logo */}
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{fontSize:52,marginBottom:6}}>🎭</div>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:36,color:"var(--gold)",letterSpacing:1}}>Theatre4u™</div>
+          <div style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:15,color:"rgba(255,255,255,.5)",marginTop:2}}>Inventory · Backstage Exchange · Community</div>
+        </div>
+        {/* Card */}
+        <div style={{background:"var(--cream)",borderRadius:16,padding:"36px 36px 32px",boxShadow:"0 16px 56px rgba(0,0,0,.5)"}}>
+          {/* Tabs */}
+          <div style={{display:"flex",borderBottom:"2px solid var(--linen)",marginBottom:24,gap:2}}>
+            {["login","signup"].map(m=>(
+              <button key={m} onClick={()=>{setMode(m);setErr("");}} style={{flex:1,background:"none",border:"none",borderBottom:`3px solid ${mode===m?"var(--gold)":"transparent"}`,padding:"8px 0 10px",fontFamily:"'Raleway',sans-serif",fontWeight:800,fontSize:14,color:mode===m?"var(--amber)":"var(--faint)",cursor:"pointer",textTransform:"uppercase",letterSpacing:1,marginBottom:-2,transition:"all .2s"}}>
+                {m==="login"?"Sign In":"Create Account"}
+              </button>
+            ))}
+          </div>
+          {/* Fields */}
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            {mode==="signup"&&(
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                <div>
+                  <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Organization Name</label>
+                  <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High Drama Dept." style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--linen)",borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"'Raleway',sans-serif",color:"var(--ink)",outline:"none",boxSizing:"border-box"}}
+                    onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--linen)"}/>
+                </div>
+                <div>
+                  <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Access Code <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:10}}>(optional — leave blank if you don't have one)</span></label>
+                  <input value={betaCode} onChange={e=>setBetaCode(e.target.value.toUpperCase())}
+                    placeholder="e.g. LEADINGPLAYER"
+                    style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--linen)",borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"monospace",letterSpacing:2,color:"var(--ink)",outline:"none",boxSizing:"border-box"}}
+                    onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--linen)"}/>
+                  {betaCode.trim()&&<div style={{fontSize:11,color:"var(--amber)",marginTop:4}}>🎭 Leading Player access — you'll be part of shaping Theatre4u™ from the ground up.</div>}
+                </div>
+              </div>
+            )}
+            <div>
+              <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Email</label>
+              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@school.edu" style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--linen)",borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"'Raleway',sans-serif",color:"var(--ink)",outline:"none",boxSizing:"border-box"}}
+                onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--linen)"}
+                onKeyDown={e=>e.key==="Enter"&&submit()}/>
+            </div>
+            <div>
+              <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Password</label>
+              <input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder={mode==="signup"?"Min. 6 characters":"••••••••"} style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--linen)",borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"'Raleway',sans-serif",color:"var(--ink)",outline:"none",boxSizing:"border-box"}}
+                onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--linen)"}
+                onKeyDown={e=>e.key==="Enter"&&submit()}/>
+            </div>
+          </div>
+          {err&&<div style={{marginTop:12,padding:"9px 12px",background:err.includes("sent")?"rgba(38,94,42,.1)":"rgba(139,26,42,.08)",border:`1px solid ${err.includes("sent")?"rgba(38,94,42,.3)":"rgba(139,26,42,.2)"}`,borderRadius:7,fontSize:13,color:err.includes("sent")?"var(--green)":"var(--red)"}}>{err}</div>}
+          <button className="btn btn-g btn-full" style={{marginTop:20,padding:"12px",fontSize:15,letterSpacing:.3}} onClick={submit} disabled={loading}>
+            {loading?"Please wait…":mode==="login"?"Sign In →":"Create Free Account →"}
+          </button>
+          {mode==="login"&&<button onClick={resetPass} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:"var(--faint)",fontSize:12.5,cursor:"pointer",fontFamily:"'Raleway',sans-serif",textDecoration:"underline"}}>Forgot password?</button>}
+          {mode==="signup"&&<p style={{fontSize:12,color:"var(--faint)",textAlign:"center",marginTop:14,lineHeight:1.6}}>Free to start — no credit card needed. By creating an account you agree to our{" "}<span onClick={()=>setLegal("terms")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Terms of Service</span>{" "}and{" "}<span onClick={()=>setLegal("privacy")} style={{color:"var(--gold)",textDecoration:"underline",cursor:"pointer"}}>Privacy Policy</span>.</p>}
+        </div>
+        <p style={{textAlign:"center",color:"rgba(255,255,255,.25)",fontSize:12,marginTop:20}}>Theatre4u™ · Artstracker LLC · theatre4u.org</p>
+      </div>
+      {legal==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegal(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
+      {legal==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegal(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// APP ROOT
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Public Item Page (no login required) ─────────────────────────────────────
+function PublicOrgPage({ slug }) {
+  const [org,   setOrg]   = useState(null);
+  const [items, setItems] = useState([]);
+  const [err,   setErr]   = useState(null);
+
+  useEffect(()=>{
+    (async()=>{
+      const { data: orgData, error } = await SB.from("orgs")
+        .select("id,name,type,location,bio,email,phone,website,facebook,instagram,logo_url,founded_year,student_count,profile_public,label_prefix,director_name,director_title")
+        .eq("slug", slug).eq("profile_public", true).single();
+      if (error || !orgData) { setErr("Program not found or profile is private."); return; }
+      setOrg(orgData);
+      const { data: listed } = await SB.from("items")
+        .select("id,name,category,img,mkt,rent,sale,avail,condition,display_id,location")
+        .eq("org_id", orgData.id)
+        .neq("mkt", "Not Listed")
+        .eq("avail", "In Stock")
+        .limit(24);
+      setItems(listed || []);
+    })();
+  }, [slug]);
+
+  const Header = () => (
+    <div style={{background:"linear-gradient(135deg,#1a0d2e,#0d1829)",borderBottom:"1px solid rgba(255,255,255,.08)",padding:"14px 20px",display:"flex",alignItems:"center",gap:10}}>
+      <span style={{fontSize:26}}>🎭</span>
+      <div>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"var(--gold)",lineHeight:1}}>Theatre4u™</div>
+        <div style={{fontSize:10,color:"rgba(255,255,255,.4)",letterSpacing:2,textTransform:"uppercase"}}>Inventory · Backstage Exchange · Community</div>
+      </div>
+      <a href="https://theatre4u.org" style={{marginLeft:"auto",fontSize:12,color:"var(--gold)",textDecoration:"none",border:"1px solid rgba(212,168,67,.3)",borderRadius:6,padding:"5px 12px"}}>Visit Site →</a>
+    </div>
+  );
+
+  return (
+    <>
+      <style>{CSS}</style>
+      <div style={{minHeight:"100vh",background:"var(--ink)",color:"var(--linen)",fontFamily:"'DM Sans',sans-serif",padding:"0 0 60px"}}>
+        <Header/>
+        <div style={{maxWidth:700,margin:"0 auto",padding:"28px 16px"}}>
+
+          {err && (
+            <div style={{textAlign:"center",padding:"40px 16px"}}>
+              <div style={{fontSize:42,marginBottom:12}}>🔍</div>
+              <div style={{fontSize:18,color:"var(--gold)",fontFamily:"'Playfair Display',serif",marginBottom:8}}>Profile Not Found</div>
+              <div style={{fontSize:13,color:"rgba(255,255,255,.5)"}}>{err}</div>
+            </div>
+          )}
+
+          {!org && !err && (
+            <div style={{textAlign:"center",padding:60,color:"rgba(255,255,255,.4)"}}>
+              <div style={{fontSize:42,marginBottom:12}}>🎭</div>
+              <div>Loading…</div>
+            </div>
+          )}
+
+          {org && (<>
+            {/* Org header */}
+            <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:24,
+              background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",
+              borderRadius:14,padding:20}}>
+              <div style={{width:64,height:64,borderRadius:12,flexShrink:0,overflow:"hidden",
+                background:"linear-gradient(135deg,rgba(212,168,67,.3),rgba(212,168,67,.1))",
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:32}}>
+                {org.logo_url
+                  ? <img src={org.logo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  : "🎭"}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,lineHeight:1.2,marginBottom:4}}>
+                  {org.name}
+                </div>
+                <div style={{fontSize:13,color:"rgba(255,255,255,.5)"}}>
+                  {[org.type, org.location].filter(Boolean).join(" · ")}
+                </div>
+                {org.director_name && (
+                  <div style={{fontSize:12,color:"var(--gold)",marginTop:4}}>
+                    {org.director_name}{org.director_title ? " · "+org.director_title : ""}
+                  </div>
+                )}
+                {org.label_prefix && (
+                  <div style={{fontFamily:"monospace",fontSize:11,color:"rgba(212,168,67,.6)",
+                    marginTop:4,letterSpacing:1}}>{org.label_prefix}</div>
+                )}
+              </div>
+            </div>
+
+            {/* Bio + stats */}
+            {org.bio && (
+              <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",
+                borderRadius:10,padding:16,marginBottom:16,fontSize:13.5,
+                color:"rgba(255,255,255,.65)",lineHeight:1.7}}>
+                {org.bio}
+              </div>
+            )}
+
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:20}}>
+              {org.founded_year&&<span style={{padding:"3px 10px",background:"rgba(212,168,67,.1)",color:"var(--gold)",borderRadius:6,fontSize:12,fontWeight:700}}>Est. {org.founded_year}</span>}
+              {org.student_count&&<span style={{padding:"3px 10px",background:"rgba(82,199,132,.1)",color:"#4caf50",borderRadius:6,fontSize:12,fontWeight:700}}>{org.student_count.toLocaleString()} students</span>}
+              {items.length>0&&<span style={{padding:"3px 10px",background:"rgba(66,165,245,.1)",color:"#42a5f5",borderRadius:6,fontSize:12,fontWeight:700}}>{items.length} items on Exchange</span>}
+            </div>
+
+            {/* Contact */}
+            <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:24}}>
+              {org.email&&<a href={"mailto:"+org.email} style={{fontSize:13,color:"var(--gold)",textDecoration:"none"}}>✉️ {org.email}</a>}
+              {org.phone&&<span style={{fontSize:13,color:"rgba(255,255,255,.5)"}}>📞 {org.phone}</span>}
+              {org.website&&<a href={org.website} target="_blank" rel="noreferrer" style={{fontSize:13,color:"var(--gold)",textDecoration:"none"}}>🌐 Website</a>}
+            </div>
+
+            {/* Exchange listings */}
+            {items.length > 0 && (<>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,marginBottom:14}}>
+                Backstage Exchange Listings
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12,marginBottom:24}}>
+                {items.map(item=>{
+                  const cat = CAT_MAP[item.category]||CAT_MAP.other;
+                  const mB  = item.mkt==="For Rent"?"r":item.mkt==="For Sale"?"s":"b";
+                  return(
+                    <a key={item.id} href={"#/item/"+(item.display_id||item.id)}
+                      style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",
+                        borderRadius:10,padding:14,textDecoration:"none",color:"var(--linen)",
+                        display:"block",transition:"border-color .15s"}}
+                      onMouseOver={e=>e.currentTarget.style.borderColor="rgba(212,168,67,.4)"}
+                      onMouseOut={e=>e.currentTarget.style.borderColor="rgba(255,255,255,.08)"}>
+                      {item.img&&<div style={{height:100,borderRadius:7,overflow:"hidden",marginBottom:10,background:"rgba(0,0,0,.2)"}}>
+                        <img src={item.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                      </div>}
+                      <div style={{fontSize:12,color:cat.color,fontWeight:700,marginBottom:3}}>{cat.icon} {cat.label}</div>
+                      <div style={{fontSize:14,fontWeight:600,marginBottom:6,lineHeight:1.3}}>{item.name}</div>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <span className={"mb "+mB} style={{fontSize:10}}>{item.mkt}</span>
+                        <span style={{fontSize:13,fontWeight:700,color:"var(--gold)"}}>
+                          {item.rent>0?"$"+Number(item.rent).toFixed(2)+"/wk":""}
+                          {item.rent>0&&item.sale>0?" · ":""}
+                          {item.sale>0?"$"+Number(item.sale).toFixed(2):""}
+                        </span>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            </>)}
+
+            <div style={{textAlign:"center",marginTop:20}}>
+              <a href="https://theatre4u.org?signin=1"
+                style={{display:"inline-flex",alignItems:"center",gap:8,padding:"11px 24px",
+                  background:"linear-gradient(135deg,#c4922a,#8b6914)",color:"#1a0f00",
+                  borderRadius:8,textDecoration:"none",fontSize:14,fontWeight:700}}>
+                🎭 Browse the Backstage Exchange →
+              </a>
+            </div>
+          </>)}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── UnassignedLabelAssigner ───────────────────────────────────────────────────
+// Shown when someone scans a blank label. Lets the owner assign it to an item
+// or add a new item, all from the scan page.
+function UnassignedLabelAssigner({ labelCode, onDone }) {
+  const [session,    setSession]    = useState(null);
+  const [items,      setItems]      = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [search,     setSearch]     = useState("");
+  const [saving,     setSaving]     = useState(false);
+  const [err,        setErr]        = useState("");
+  const [mode,       setMode]       = useState("pick"); // "pick" | "new"
+  const [newName,    setNewName]    = useState("");
+  const [newCat,     setNewCat]     = useState("costumes");
+  const [newLoc,     setNewLoc]     = useState("");
+
+  useEffect(()=>{
+    (async()=>{
+      const { data:{ session:s } } = await SB.auth.getSession();
+      setSession(s);
+      if(s){
+        // Load items that don't already have a label
+        const {data} = await SB.from("items")
+          .select("id,name,category,location,display_id")
+          .eq("org_id", s.user.id)
+          .order("name");
+        setItems(data||[]);
+      }
+      setLoading(false);
+    })();
+  },[]);
+
+  const assign = async(itemId) => {
+    setSaving(true); setErr("");
+    const {error} = await SB.from("label_pool")
+      .update({ item_id: itemId, status:"claimed", claimed_at: new Date().toISOString() })
+      .eq("code", labelCode);
+    if(error){ setErr("Could not assign label. Try again."); setSaving(false); return; }
+    // Also write the label code back to the item
+    await SB.from("items").update({ item_number: labelCode }).eq("id", itemId);
+    onDone();
+  };
+
+  const createAndAssign = async() => {
+    if(!newName.trim()){ setErr("Please enter an item name."); return; }
+    setSaving(true); setErr("");
+    const newItem = {
+      id: crypto.randomUUID(),
+      org_id: session.user.id,
+      name: newName.trim(),
+      category: newCat,
+      location: newLoc.trim(),
+      condition:"Good", qty:1, avail:"In Stock", mkt:"Not Listed",
+      added: new Date().toISOString(),
+    };
+    const {error} = await SB.from("items").insert(newItem);
+    if(error){ setErr("Could not create item. Try again."); setSaving(false); return; }
+    await assign(newItem.id);
+  };
+
+  if(loading) return <div style={{color:"rgba(255,255,255,.4)",fontSize:13}}>Checking account…</div>;
+
+  // Not logged in
+  if(!session) return (
+    <div>
+      <div style={{color:"rgba(255,255,255,.5)",fontSize:13,marginBottom:16}}>
+        Sign in to assign this label to one of your inventory items.
+      </div>
+      <a href={`https://theatre4u.org?signin=1&next=${encodeURIComponent("#/item/"+labelCode)}`}
+        style={{display:"inline-block",padding:"11px 28px",
+          background:"linear-gradient(135deg,#c4922a,#8b6914)",
+          borderRadius:8,color:"#1a0f00",fontWeight:700,
+          textDecoration:"none",fontSize:14}}>
+        Sign In to Assign →
+      </a>
+    </div>
+  );
+
+  const filtered = items.filter(i =>
+    !search || i.name.toLowerCase().includes(search.toLowerCase()) ||
+    (i.location||"").toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div style={{textAlign:"left",maxWidth:400,margin:"0 auto"}}>
+      {err && <div style={{background:"rgba(194,24,91,.15)",border:"1px solid rgba(194,24,91,.3)",
+        borderRadius:8,padding:"10px 14px",color:"#e06090",fontSize:13,marginBottom:12}}>{err}</div>}
+
+      {/* Mode toggle */}
+      <div style={{display:"flex",gap:8,marginBottom:16}}>
+        <button onClick={()=>setMode("pick")}
+          style={{flex:1,padding:"9px",borderRadius:8,fontFamily:"inherit",fontSize:13,
+            fontWeight:600,cursor:"pointer",border:"1px solid rgba(255,255,255,.15)",
+            background:mode==="pick"?"var(--gold)":"rgba(255,255,255,.06)",
+            color:mode==="pick"?"#1a0f00":"rgba(255,255,255,.7)"}}>
+          📦 Assign to Existing Item
+        </button>
+        <button onClick={()=>setMode("new")}
+          style={{flex:1,padding:"9px",borderRadius:8,fontFamily:"inherit",fontSize:13,
+            fontWeight:600,cursor:"pointer",border:"1px solid rgba(255,255,255,.15)",
+            background:mode==="new"?"var(--gold)":"rgba(255,255,255,.06)",
+            color:mode==="new"?"#1a0f00":"rgba(255,255,255,.7)"}}>
+          ✨ Add New Item
+        </button>
+      </div>
+
+      {/* Pick existing item */}
+      {mode==="pick" && (<>
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="Search your items…"
+          style={{width:"100%",padding:"9px 12px",borderRadius:8,border:"1px solid rgba(255,255,255,.15)",
+            background:"rgba(255,255,255,.06)",color:"#fff",fontSize:14,
+            fontFamily:"inherit",outline:"none",marginBottom:10}}/>
+        {filtered.length===0
+          ? <div style={{color:"rgba(255,255,255,.4)",fontSize:13,textAlign:"center",padding:20}}>
+              No items found. Try a different search or add a new item.
+            </div>
+          : <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:280,overflowY:"auto"}}>
+              {filtered.map(i=>(
+                <button key={i.id} onClick={()=>assign(i.id)} disabled={saving}
+                  style={{textAlign:"left",padding:"10px 14px",borderRadius:8,
+                    border:"1px solid rgba(255,255,255,.12)",
+                    background:"rgba(255,255,255,.05)",cursor:"pointer",
+                    fontFamily:"inherit",color:"#fff",width:"100%",
+                    opacity:saving?.5:1}}>
+                  <div style={{fontWeight:600,fontSize:13}}>{i.name}</div>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginTop:2}}>
+                    {i.category}{i.location?" · "+i.location:""}
+                    {i.display_id?" · "+i.display_id:""}
+                  </div>
+                </button>
+              ))}
+            </div>
+        }
+      </>)}
+
+      {/* Add new item */}
+      {mode==="new" && (
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,.5)",marginBottom:4,
+              textTransform:"uppercase",letterSpacing:1}}>Item Name *</div>
+            <input value={newName} onChange={e=>setNewName(e.target.value)}
+              placeholder="e.g. Victorian Ball Gown"
+              style={{width:"100%",padding:"9px 12px",borderRadius:8,
+                border:"1px solid rgba(255,255,255,.15)",
+                background:"rgba(255,255,255,.06)",color:"#fff",
+                fontSize:14,fontFamily:"inherit",outline:"none"}}/>
+          </div>
+          <div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,.5)",marginBottom:4,
+              textTransform:"uppercase",letterSpacing:1}}>Category</div>
+            <select value={newCat} onChange={e=>setNewCat(e.target.value)}
+              style={{width:"100%",padding:"9px 12px",borderRadius:8,
+                border:"1px solid rgba(255,255,255,.15)",
+                background:"#1a1520",color:"#fff",fontSize:14,fontFamily:"inherit"}}>
+              {Object.entries(CAT_MAP).map(([id,c])=>(
+                <option key={id} value={id}>{c.icon} {c.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,.5)",marginBottom:4,
+              textTransform:"uppercase",letterSpacing:1}}>Location</div>
+            <input value={newLoc} onChange={e=>setNewLoc(e.target.value)}
+              placeholder="e.g. Storage Bin 3A"
+              style={{width:"100%",padding:"9px 12px",borderRadius:8,
+                border:"1px solid rgba(255,255,255,.15)",
+                background:"rgba(255,255,255,.06)",color:"#fff",
+                fontSize:14,fontFamily:"inherit",outline:"none"}}/>
+          </div>
+          <button onClick={createAndAssign} disabled={saving||!newName.trim()}
+            style={{padding:"12px",borderRadius:8,border:"none",
+              background:"linear-gradient(135deg,#c4922a,#8b6914)",
+              color:"#1a0f00",fontWeight:700,fontSize:14,cursor:"pointer",
+              fontFamily:"inherit",opacity:saving||!newName.trim()?.6:1}}>
+            {saving?"Saving…":"✨ Create Item & Assign Label"}
+          </button>
+          <div style={{fontSize:12,color:"rgba(255,255,255,.35)",textAlign:"center"}}>
+            You can add more details (photos, condition, notes) after assignment in Theatre4u.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+function PublicItemPage({ itemId }) {
+  const [item,    setItem]    = useState(null);
+  const [org,     setOrg]     = useState(null);
+  const [err,     setErr]     = useState(null);
+  const [legacy,  setLegacy]  = useState(false);
+  const [lb,      setLb]      = useState(null);
+  const [access,  setAccess]  = useState("full"); // "full" | "loan" | "guest" | "contact"
+  const [contact, setContact] = useState(null);
+
+  const [poolLabel,   setPoolLabel]   = useState(null); // {code, org_name, status}
+  const [assigning,   setAssigning]   = useState(false);
+  const [assignDone,  setAssignDone]  = useState(false);
+
+  useEffect(()=>{
+    (async()=>{
+      const cleanId = (itemId || "").trim();
+      if(!cleanId) return;
+      try {
+        const { data: { session } } = await SB.auth.getSession();
+        const token = session?.access_token;
+        const headers = token ? { "x-t4u-token": token } : {};
+        const res  = await fetch(
+          "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/public-item?id=" + encodeURIComponent(cleanId),
+          { headers }
+        );
+        const json = await res.json();
+
+        // ── Unassigned pool label ─────────────────────────────────────────
+        if (json.pool_code && !json.item) {
+          setPoolLabel({
+            code:     json.label_code || cleanId,
+            org_name: json.org_name   || null,
+            org_id:   json.org_id     || null,
+            status:   json.status     || "assigned",
+          });
+          return;
+        }
+
+        if (!res.ok || !json.item) {
+          setLegacy(!!json.legacy);
+          setErr("Item not found.");
+          return;
+        }
+        setAccess(json.access || "full");
+        if (json.contact) setContact(json.contact);
+        const raw = json.item;
+        setItem({
+          ...raw,
+          quantity:     raw.qty,
+          availability: raw.avail,
+          images:       raw.img ? [raw.img] : [],
+        });
+        if (json.org) setOrg(json.org);
+      } catch(e) {
+        setErr("Item not found.");
+      }
+    })();
+  }, [itemId]);
+
+  const cat    = item ? (CAT_MAP[item.category] || CAT_MAP.other) : null;
+  const mkt    = item?.mkt || item?.marketStatus || "Not Listed";
+  const rentalPrice = item?.rent || item?.rentalPrice || 0;
+  const salePrice   = item?.sale || item?.salePrice  || 0;
+  const mB     = mkt==="For Rent"?"r":mkt==="For Sale"?"s":mkt==="Rent or Sale"?"b":"n";
+  const imgs   = item?.images || [];
+  const prefix = org?.label_prefix || "";
+
+  // Header bar — same for all access levels
+  const Header = () => (
+    <div style={{background:"linear-gradient(135deg,#1a0d2e,#0d1829)",borderBottom:"1px solid rgba(255,255,255,.08)",padding:"14px 20px",display:"flex",alignItems:"center",gap:10}}>
+      <span style={{fontSize:26}}>🎭</span>
+      <div>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"var(--gold)",lineHeight:1}}>Theatre4u™</div>
+        <div style={{fontSize:10,color:"rgba(255,255,255,.4)",letterSpacing:2,textTransform:"uppercase"}}>Inventory · Backstage Exchange · Community</div>
+      </div>
+      <a href="https://theatre4u.org" style={{marginLeft:"auto",fontSize:12,color:"var(--gold)",textDecoration:"none",border:"1px solid rgba(212,168,67,.3)",borderRadius:6,padding:"5px 12px"}}>Visit Site →</a>
+    </div>
+  );
+
+  // Owner badge shown on guest + loan views
+  const OwnerBadge = () => (
+    <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",
+      background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",
+      borderRadius:8,marginBottom:16}}>
+      <div style={{fontFamily:"monospace",fontSize:13,fontWeight:800,color:"var(--gold)",
+        background:"rgba(212,168,67,.15)",padding:"3px 10px",borderRadius:5,letterSpacing:1}}>
+        {prefix || "T4U"}
+      </div>
+      <div>
+        <div style={{fontSize:13,fontWeight:700}}>{org?.name || "Theatre4u Program"}</div>
+        {org?.city && <div style={{fontSize:11,color:"rgba(255,255,255,.45)"}}>📍 {org.city}</div>}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <style>{CSS}</style>
+      <div style={{minHeight:"100vh",background:"var(--ink)",color:"var(--linen)",fontFamily:"'DM Sans',sans-serif",padding:"0 0 60px"}}>
+        {lb && <div className="lightbox" onClick={()=>setLb(null)}><img src={lb} alt=""/></div>}
+        <Header/>
+
+        <div style={{maxWidth:640,margin:"0 auto",padding:"24px 16px"}}>
+
+          {/* Loading */}
+          {!item && !err && (
+            <div style={{textAlign:"center",padding:60,color:"rgba(255,255,255,.4)"}}>
+              <div style={{fontSize:42,marginBottom:12}}>🎭</div>
+              <div>Loading item…</div>
+            </div>
+          )}
+
+          {/* ── Unassigned pool label ──────────────────────────────────────── */}
+          {poolLabel && !assignDone && (
+            <div style={{textAlign:"center",padding:"40px 16px"}}>
+              <div style={{fontSize:48,marginBottom:12}}>🏷️</div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,
+                color:"var(--gold)",marginBottom:8}}>
+                Unassigned Label
+              </div>
+              <div style={{fontFamily:"monospace",fontSize:14,color:"rgba(255,255,255,.5)",
+                marginBottom:16,background:"rgba(255,255,255,.05)",display:"inline-block",
+                padding:"4px 12px",borderRadius:6,letterSpacing:1}}>
+                {poolLabel.code}
+              </div>
+              <div style={{color:"rgba(255,255,255,.6)",fontSize:14,lineHeight:1.7,
+                maxWidth:360,margin:"0 auto 28px"}}>
+                This label hasn't been assigned to an item yet.
+                {poolLabel.org_name && <><br/><strong style={{color:"rgba(255,255,255,.8)"}}>
+                  {poolLabel.org_name}</strong> — scan this label from your Theatre4u
+                  inventory to assign it to an item.</>}
+              </div>
+
+              {/* Two paths: logged-in owner can assign now, others prompted to sign in */}
+              <UnassignedLabelAssigner
+                labelCode={poolLabel.code}
+                onDone={()=>setAssignDone(true)}
+              />
+            </div>
+          )}
+
+          {poolLabel && assignDone && (
+            <div style={{textAlign:"center",padding:"40px 16px"}}>
+              <div style={{fontSize:48,marginBottom:12}}>✅</div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,
+                color:"var(--gold)",marginBottom:12}}>Label Assigned!</div>
+              <div style={{color:"rgba(255,255,255,.6)",fontSize:14,marginBottom:24}}>
+                Next time someone scans this label, they'll see the item details.
+              </div>
+              <a href="https://theatre4u.org" style={{display:"inline-block",
+                padding:"10px 24px",background:"linear-gradient(135deg,#c4922a,#8b6914)",
+                borderRadius:8,color:"#1a0f00",fontWeight:700,textDecoration:"none",fontSize:14}}>
+                Back to Theatre4u →
+              </a>
+            </div>
+          )}
+
+          {/* Not found */}
+          {err && (
+            <div style={{textAlign:"center",padding:"40px 16px"}}>
+              <div style={{fontSize:42,marginBottom:12}}>🔍</div>
+              <div style={{fontSize:20,fontFamily:"'Playfair Display',serif",marginBottom:10,color:"var(--gold)"}}>Item Not Found</div>
+              <div style={{color:"rgba(255,255,255,.6)",fontSize:14,lineHeight:1.7,marginBottom:20}}>
+                {legacy
+                  ? "This QR label was printed with an older format. The item owner needs to reprint the label from their Theatre4u inventory."
+                  : "This item may have been deleted or the QR label may be damaged."}
+              </div>
+              <a href="https://theatre4u.org?signin=1" style={{display:"inline-block",padding:"10px 24px",background:"linear-gradient(135deg,#c4922a,#8b6914)",borderRadius:8,color:"#1a0f00",fontWeight:700,textDecoration:"none",fontSize:14}}>
+                Sign In to Theatre4u →
+              </a>
+            </div>
+          )}
+
+          {/* ── FULL ACCESS (owner or team member) ─────────────────────────── */}
+          {item && access === "full" && (<>
+            {imgs.length > 0 && (
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:20}}>
+                {imgs.map((src,i)=>(
+                  <img key={i} src={src} alt="" onClick={()=>setLb(src)}
+                    style={{width:i===0?"100%":"calc(33% - 6px)",height:i===0?260:90,
+                      objectFit:"cover",borderRadius:i===0?10:6,cursor:"pointer",
+                      border:"1px solid rgba(255,255,255,.08)"}}/>
+                ))}
+              </div>
+            )}
+            <div style={{display:"flex",alignItems:"flex-start",gap:12,marginBottom:16}}>
+              <div style={{width:44,height:44,borderRadius:8,background:cat.color+"33",
+                display:"flex",alignItems:"center",justifyContent:72,fontSize:22,flexShrink:0}}>
+                {cat.icon}
+              </div>
+              <div>
+                <div style={{fontSize:11,color:cat.color,fontWeight:700,textTransform:"uppercase",letterSpacing:1,marginBottom:2}}>{cat.label}</div>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,lineHeight:1.2}}>{item.name}</div>
+                {prefix && <div style={{fontFamily:"monospace",fontSize:11,color:"var(--gold)",marginTop:3,letterSpacing:1}}>{prefix}-{(item.display_id||"").replace(/[^0-9]/g,"").padStart(4,"0") || "—"}</div>}
+              </div>
+            </div>
+            {(item.tags||[]).length>0 && (
+              <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:14}}>
+                {item.tags.map(t=><span key={t} style={{padding:"2px 8px",background:"rgba(212,168,67,.12)",color:"var(--gold)",borderRadius:4,fontSize:11}}>#{t}</span>)}
+              </div>
+            )}
+            <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:10,padding:16,marginBottom:14}}>
+              <div style={{fontWeight:700,fontSize:12,textTransform:"uppercase",letterSpacing:1,color:"rgba(255,255,255,.4)",marginBottom:10}}>Item Details</div>
+              {[
+                ["Condition",    item.condition],
+                ["Size",         item.size!=="N/A"?item.size:null],
+                ["Quantity",     item.quantity],
+                ["Location",     item.location],
+                ["Availability", item.availability],
+                item.notes && ["Notes", item.notes],
+              ].filter(r=>r&&r[1]).map(([l,v])=>(
+                <div key={l} style={{display:"flex",padding:"5px 0",borderTop:"1px solid rgba(255,255,255,.05)"}}>
+                  <span style={{width:120,color:"rgba(255,255,255,.4)",fontSize:12,flexShrink:0}}>{l}</span>
+                  <span style={{fontSize:13}}>{v}</span>
+                </div>
+              ))}
+            </div>
+            {mkt !== "Not Listed" && (
+              <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:10,padding:16,marginBottom:14}}>
+                <div style={{fontWeight:700,fontSize:12,textTransform:"uppercase",letterSpacing:1,color:"rgba(255,255,255,.4)",marginBottom:10}}>Backstage Exchange</div>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <span className={"mb "+mB}>{mkt}</span>
+                  <span style={{fontWeight:700,color:"var(--gold)",fontSize:15}}>
+                    {rentalPrice>0 ? ("$"+Number(rentalPrice).toFixed(2)+"/wk") : ""}
+                    {rentalPrice>0&&salePrice>0 ? " · " : ""}
+                    {salePrice>0 ? ("$"+Number(salePrice).toFixed(2)) : ""}
+                  </span>
+                </div>
+              </div>
+            )}
+            {org && (
+              <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid rgba(255,255,255,.08)",fontSize:12,color:"rgba(255,255,255,.35)",textAlign:"center"}}>
+                {org.name} · Theatre4u™
+              </div>
+            )}
+            {/* Open in App — deep links to the item in the main app */}
+            <a href={"https://theatre4u.org/#/item/"+(item.display_id||itemId)}
+              style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+                marginTop:16,background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.25)",
+                color:"var(--gold)",padding:"10px 16px",borderRadius:8,
+                textDecoration:"none",fontSize:13,fontWeight:600}}>
+              🎭 Open in Theatre4u →
+            </a>
+          </>)}
+
+          {/* ── LOAN ACCESS (another Theatre4u program borrowing this item) ─── */}
+          {item && access === "loan" && (
+            <div>
+              {org && <OwnerBadge/>}
+              <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:20,marginBottom:14}}>
+                <div style={{fontSize:11,color:"rgba(255,255,255,.4)",textTransform:"uppercase",letterSpacing:1,fontWeight:700,marginBottom:6}}>Item on Loan</div>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                  {cat && <div style={{width:36,height:36,borderRadius:7,background:cat.color+"33",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{cat.icon}</div>}
+                  <div>
+                    <div style={{fontFamily:"'Playfair Display',serif",fontSize:20}}>{item.name}</div>
+                    <div style={{fontSize:11,color:"rgba(255,255,255,.4)"}}>{cat?.label}</div>
+                  </div>
+                </div>
+                {[
+                  ["Condition",  item.condition],
+                  ["Quantity",   item.quantity],
+                ].filter(r=>r&&r[1]).map(([l,v])=>(
+                  <div key={l} style={{display:"flex",padding:"5px 0",borderTop:"1px solid rgba(255,255,255,.05)"}}>
+                    <span style={{width:120,color:"rgba(255,255,255,.4)",fontSize:12}}>{l}</span>
+                    <span style={{fontSize:13}}>{v}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{background:"rgba(66,165,245,.08)",border:"1px solid rgba(66,165,245,.2)",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
+                <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>📋 On Loan via Backstage Exchange</div>
+                <p style={{fontSize:13,color:"rgba(255,255,255,.6)",lineHeight:1.7,margin:0}}>
+                  {"This item is currently on loan from "+( org?.name||"another program")+". " +
+                   "You can manage this loan through the Backstage Exchange in your Theatre4u account."}
+                </p>
+              </div>
+              <a href={"https://theatre4u.org?signin=1&next="+encodeURIComponent("#/item/"+itemId)}
+                style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"linear-gradient(135deg,#c4922a,#8b6914)",color:"#1a0f00",padding:"12px 16px",borderRadius:8,textDecoration:"none",fontSize:14,fontWeight:700}}>
+                🎭 Open in Theatre4u →
+              </a>
+            </div>
+          )}
+
+          {/* ── GUEST ACCESS (Theatre4u member, not the owner, not borrowing) ─ */}
+          {item && access === "guest" && (
+            <div>
+              {org && <OwnerBadge/>}
+              <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:20,marginBottom:14}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                  {cat && <div style={{width:36,height:36,borderRadius:7,background:cat.color+"33",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{cat.icon}</div>}
+                  <div>
+                    <div style={{fontFamily:"'Playfair Display',serif",fontSize:20}}>{item.name}</div>
+                    <div style={{fontSize:11,color:"rgba(255,255,255,.4)"}}>{cat?.label} · {item.condition}</div>
+                  </div>
+                </div>
+                {prefix && item.display_id && (
+                  <div style={{fontFamily:"monospace",fontSize:12,color:"var(--gold)",letterSpacing:1,marginBottom:8}}>
+                    {prefix+"-"+((item.display_id||"").replace(/[^0-9]/g,"").padStart(4,"0"))}
+                  </div>
+                )}
+              </div>
+              {mkt !== "Not Listed" && (
+                <div style={{background:"rgba(76,175,80,.08)",border:"1px solid rgba(76,175,80,.2)",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
+                  <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>🏪 Available on Backstage Exchange</div>
+                  <p style={{fontSize:13,color:"rgba(255,255,255,.65)",lineHeight:1.7,margin:"0 0 12px"}}>
+                    {"This item is listed for "+mkt.toLowerCase()+" on the Backstage Exchange. " +
+                     "Sign in to Theatre4u to request it for your program."}
+                  </p>
+                  <div style={{fontWeight:700,color:"var(--gold)",fontSize:16,marginBottom:10}}>
+                    {rentalPrice>0 ? ("$"+Number(rentalPrice).toFixed(2)+"/wk") : ""}
+                    {rentalPrice>0&&salePrice>0 ? " · " : ""}
+                    {salePrice>0 ? ("$"+Number(salePrice).toFixed(2)) : ""}
+                  </div>
+                  <a href={"https://theatre4u.org?signin=1&next="+encodeURIComponent("#/item/"+itemId)}
+                    style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"linear-gradient(135deg,#c4922a,#8b6914)",color:"#1a0f00",padding:"10px 16px",borderRadius:8,textDecoration:"none",fontSize:13,fontWeight:700}}>
+                    Request via Backstage Exchange →
+                  </a>
+                </div>
+              )}
+              {mkt === "Not Listed" && (
+                <div style={{background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.2)",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
+                  <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>💬 Not Currently Listed</div>
+                  <p style={{fontSize:13,color:"rgba(255,255,255,.6)",lineHeight:1.7,margin:"0 0 12px"}}>
+                    {"This item isn't listed on the Backstage Exchange right now, but you can reach out to "+( org?.name||"this program")+" directly to ask about borrowing or purchasing it."}
+                  </p>
+                  {contact?.email && (
+                    <a href={"mailto:"+contact.email+"?subject=Item Inquiry: "+encodeURIComponent(item.name||"")+"&body=Hi, I scanned a Theatre4u QR code for '"+encodeURIComponent(item.name||"")+"' and am interested in borrowing it for our program. Could we discuss this through the Backstage Exchange?"}
+                      style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",color:"#fff",padding:"10px 16px",borderRadius:8,textDecoration:"none",fontSize:13,fontWeight:600}}>
+                      ✉️ Contact {org?.name||"this program"}
+                    </a>
+                  )}
+                </div>
+              )}
+              <a href={"https://theatre4u.org?signin=1&next="+encodeURIComponent("#/item/"+itemId)}
+                style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"linear-gradient(135deg,#1a3a2a,#0d2419)",border:"1px solid rgba(76,175,80,.3)",color:"rgba(255,255,255,.8)",padding:"10px 16px",borderRadius:8,textDecoration:"none",fontSize:13,fontWeight:600,marginTop:8}}>
+                🎭 Open in Theatre4u
+              </a>
+            </div>
+          )}
+
+          {/* ── CONTACT ONLY (private inventory, not a Theatre4u member) ────── */}
+          {item && access === "contact" && (
+            <div>
+              {org && <OwnerBadge/>}
+              <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:20,marginBottom:14}}>
+                <div style={{fontSize:11,color:"rgba(255,255,255,.4)",textTransform:"uppercase",letterSpacing:1,fontWeight:700,marginBottom:4}}>Item Scanned</div>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:4}}>{item.name}</div>
+                {item.display_id && <div style={{fontSize:12,color:"var(--gold)",fontWeight:700}}>{item.display_id}</div>}
+              </div>
+              <div style={{background:"rgba(212,168,67,.06)",border:"1px solid rgba(212,168,67,.2)",borderRadius:12,padding:20,marginBottom:14}}>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:17,color:"var(--gold)",marginBottom:10}}>🔒 Private Inventory</div>
+                <p style={{fontSize:13.5,color:"rgba(255,255,255,.65)",lineHeight:1.7,margin:0}}>
+                  This item belongs to a private Theatre4u inventory. To view full details, sign in to Theatre4u or contact the program directly.
+                </p>
+              </div>
+              {contact && Object.keys(contact).length > 0 && (
+                <div style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:20,marginBottom:14}}>
+                  <div style={{fontSize:12,color:"rgba(255,255,255,.4)",textTransform:"uppercase",letterSpacing:1,fontWeight:700,marginBottom:10}}>Program Contact</div>
+                  {contact.name     && <div style={{fontSize:16,fontWeight:700,marginBottom:4}}>{contact.name}</div>}
+                  {contact.location && <div style={{fontSize:13,color:"rgba(255,255,255,.5)",marginBottom:8}}>📍 {contact.location}</div>}
+                  {contact.bio      && <div style={{fontSize:13,color:"rgba(255,255,255,.55)",lineHeight:1.6,marginBottom:10}}>{contact.bio}</div>}
+                  {contact.email && (
+                    <a href={"mailto:"+contact.email+"?subject=Item Inquiry: "+encodeURIComponent(item.name||"")+"&body=Hi, I scanned a Theatre4u QR code for '"+encodeURIComponent(item.name||"")+"' and would like to learn more or request access."}
+                      style={{display:"flex",alignItems:"center",gap:8,background:"var(--gold)",color:"#1a0f00",padding:"10px 16px",borderRadius:8,textDecoration:"none",fontWeight:700,fontSize:14,marginBottom:8}}>
+                      ✉️ Email to Request Access
+                    </a>
+                  )}
+                  {contact.phone && (
+                    <a href={"tel:"+contact.phone} style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",color:"#fff",padding:"10px 16px",borderRadius:8,textDecoration:"none",fontWeight:600,fontSize:14}}>
+                      📞 {contact.phone}
+                    </a>
+                  )}
+                </div>
+              )}
+              <a href={"https://theatre4u.org?signin=1&next="+encodeURIComponent("#/item/"+itemId)}
+                style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"linear-gradient(135deg,#c4922a,#8b6914)",color:"#1a0f00",padding:"12px 16px",borderRadius:8,textDecoration:"none",fontSize:14,fontWeight:700}}>
+                🎭 Sign In to Theatre4u
+              </a>
+            </div>
+          )}
+
+        </div>
+      </div>
+    </>
+  );
+}
 
 
 // ══════════════════════════════════════════════════════════════════════════════
-// ADMIN DAILY DIGEST — standalone component used as first tab in AdminHub
-// Time windows: 24h | 7d | 30d
-// Sources: orgs, items, beta_leads, email_sequence, page_views (UTM),
-//          login_events, messages, beta_feedback
+// PUBLIC ORG PROFILE
 // ══════════════════════════════════════════════════════════════════════════════
+
+// ── Profile page (embedded in app, accessible via sidebar) ───────────────────
+function OrgProfilePage({ userId, org, setOrg, plan, items }) {
+  const [editing, setEditing]     = useState(false);
+  const [f, setF]                  = useState(null);
+  const [saving, setSaving]        = useState(false);
+  const [msg, setMsg]              = useState("");
+  const [copied, setCopied]        = useState(false);
+
+  useEffect(() => {
+    // Load fresh org data including new profile fields
+    (async () => {
+      const { data } = await SB.from("orgs").select("*").eq("id", userId).single();
+      if (data) {
+        setOrg(o => ({ ...o, ...data }));
+        setF(data);
+      }
+    })();
+  }, [userId]);
+
+  const upd = (k, v) => setF(p => ({ ...p, [k]: v }));
+
+  const save = async () => {
+    if (!f) return;
+    setSaving(true);
+    // Auto-generate slug if empty
+    let slug = f.slug;
+    if (!slug && f.name) {
+      const base = f.name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-').slice(0, 50);
+      slug = base;
+    }
+    // Geocode location once on profile save — stored permanently, no repeated network calls
+    let latLng = {};
+    if (f.location && f.location.trim().length > 2) {
+      try {
+        const geo = await geocodeLocation(f.location);
+        if (geo) latLng = { lat: geo.lat, lng: geo.lng };
+      } catch { /* geocoding optional */ }
+    }
+    const { data, error } = await SB.from("orgs").update({
+      name: f.name, type: f.type, email: f.email, phone: f.phone,
+      director_name: f.director_name, director_title: f.director_title,
+      location: f.location, bio: f.bio, website: f.website,
+      facebook: f.facebook, instagram: f.instagram,
+      logo_url: f.logo_url, founded_year: f.founded_year,
+      student_count: f.student_count, profile_public: f.profile_public,
+      slug, ...latLng,
+    }).eq("id", userId).select().single();
+    if (data) {
+      setOrg(o => ({ ...o, ...data }));
+      setF(data);
+      setMsg("✓ Profile saved");
+      setTimeout(() => setMsg(""), 2500);
+    }
+    setSaving(false);
+    setEditing(false);
+  };
+
+  const profileUrl = org?.slug
+    ? `https://theatre4u.org/#/org/${org.slug}`
+    : null;
+
+  const copyUrl = () => {
+    if (!profileUrl) return;
+    navigator.clipboard.writeText(profileUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const listed = items.filter(i => i.marketStatus && i.marketStatus !== "Not Listed").length;
+
+  if (!f) return <div style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>Loading…</div>;
+
+  return (
+    <div style={{ position: "relative" }}>
+      <img src={usp(BG.dashboard, 1400, 900)} alt="" className="page-bg-img" />
+
+      <div style={{ padding: "32px 36px 0" }}>
+        <div className="hero-wrap" style={{ height: 200 }}>
+          <img src={usp("photo-1503095396549-807759245b35", 1100, 260)} alt="Profile" loading="eager" />
+          <div className="hero-fade" />
+          <div className="hero-body">
+            <div className="hero-eyebrow">👤 Your Organization</div>
+            <h1 className="hero-title" style={{ fontSize: 40 }}>Public Profile</h1>
+            <p className="hero-sub">Your shareable page for other programs and the public to discover you.</p>
+          </div>
+          <div className="hero-bar" />
+        </div>
+      </div>
+
+      <div style={{ padding: "24px 36px 56px", position: "relative", zIndex: 1 }}>
+
+        {/* Public URL card */}
+        <div className="card card-p" style={{ marginBottom: 20, borderColor: profileUrl ? "rgba(82,199,132,.3)" : "var(--border)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", marginBottom: 4 }}>
+                Your Public Profile URL
+              </div>
+              {profileUrl
+                ? <div style={{ fontFamily: "monospace", fontSize: 15, color: "var(--green)", fontWeight: 700 }}>{profileUrl}</div>
+                : <div style={{ fontSize: 13, color: "var(--muted)" }}>Save your profile to generate your URL.</div>
+              }
+              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
+                Share this link so other programs, parents, and community members can discover your inventory listings.
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              {profileUrl && <>
+                <button className="btn btn-o btn-sm" onClick={copyUrl}>
+                  {copied ? "✓ Copied!" : "📋 Copy Link"}
+                </button>
+                <a href={profileUrl} target="_blank" rel="noreferrer" className="btn btn-o btn-sm">
+                  🔗 Preview
+                </a>
+              </>}
+            </div>
+          </div>
+        </div>
+
+        {/* Visibility toggle */}
+        <div className="card card-p" style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>Profile Visibility</div>
+            <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>
+              {f.profile_public ? "Your profile is public — anyone with the link can see it." : "Your profile is private — only you can see it."}
+            </div>
+          </div>
+          <button onClick={async () => {
+            const next = !f.profile_public;
+            upd("profile_public", next);
+            await SB.from("orgs").update({ profile_public: next }).eq("id", userId);
+            setMsg(next ? "✓ Profile is now public" : "✓ Profile is now private");
+            setTimeout(() => setMsg(""), 2000);
+          }} style={{
+            padding: "8px 18px", borderRadius: 8, border: "1.5px solid",
+            fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer",
+            background: f.profile_public ? "rgba(82,199,132,.15)" : "var(--parch)",
+            color: f.profile_public ? "var(--green)" : "var(--muted)",
+            borderColor: f.profile_public ? "var(--green)" : "var(--border)",
+          }}>
+            {f.profile_public ? "🌐 Public" : "🔒 Private"}
+          </button>
+        </div>
+
+        {/* Profile preview card */}
+        {!editing && (
+          <div className="card card-p" style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+              <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20 }}>Profile Preview</h3>
+              <button className="btn btn-o btn-sm" onClick={() => setEditing(true)}>✏️ Edit Profile</button>
+            </div>
+
+            {/* Preview of what public sees */}
+            <div style={{ background: "var(--white)", borderRadius: 10, padding: 20, border: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+                <div style={{
+                  width: 60, height: 60, borderRadius: 12, background: "linear-gradient(135deg,var(--gold2),var(--gold))",
+                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0
+                }}>
+                  {f.logo_url ? <img src={f.logo_url} alt="" style={{ width: "100%", height: "100%", borderRadius: 12, objectFit: "cover" }} /> : "🎭"}
+                </div>
+                <div>
+                  <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 22 }}>{f.name || "Your Program Name"}</div>
+                  <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>
+                    {[f.type, f.location].filter(Boolean).join(" · ") || "Location not set"}
+                  </div>
+                </div>
+              </div>
+              {f.bio && <p style={{ fontSize: 13.5, color: "var(--muted)", lineHeight: 1.7, marginBottom: 12 }}>{f.bio}</p>}
+
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                {f.founded_year && <span style={{ padding: "3px 10px", background: "rgba(212,168,67,.1)", color: "var(--gold)", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>Est. {f.founded_year}</span>}
+                {f.student_count && <span style={{ padding: "3px 10px", background: "rgba(82,199,132,.1)", color: "var(--green)", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>{f.student_count.toLocaleString()} students</span>}
+                {listed > 0 && <span style={{ padding: "3px 10px", background: "rgba(66,165,245,.1)", color: "#42a5f5", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>{listed} items listed</span>}
+                {plan !== "free" && <span style={{ padding: "3px 10px", background: "rgba(212,168,67,.15)", color: "var(--gold)", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>🪙 Accepts Stage Points</span>}
+              </div>
+
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {f.email && <a href={`mailto:${f.email}`} style={{ fontSize: 12, color: "var(--amber)" }}>✉️ {f.email}</a>}
+                {f.phone && <span style={{ fontSize: 12, color: "var(--muted)" }}>📞 {f.phone}</span>}
+                {f.website && <a href={f.website} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--amber)" }}>🌐 Website</a>}
+                {f.instagram && <a href={`https://instagram.com/${f.instagram.replace('@','')}`} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--amber)" }}>📸 Instagram</a>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit form */}
+        {editing && (
+          <div className="card card-p" style={{ marginBottom: 20 }}>
+            <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, marginBottom: 16 }}>Edit Profile</h3>
+            <div className="fg2">
+              <div className="fg fu"><label className="fl">Organization Name</label>
+                <input className="fi" value={f.name || ""} onChange={e => upd("name", e.target.value)} placeholder="Lincoln High Drama Dept." /></div>
+
+              <div className="fg"><label className="fl">Your Name (Director)</label>
+                <input className="fi" value={f.director_name || ""} onChange={e => upd("director_name", e.target.value)} placeholder="Jane Smith" /></div>
+
+              <div className="fg"><label className="fl">Your Title</label>
+                <input className="fi" value={f.director_title || ""} onChange={e => upd("director_title", e.target.value)} placeholder="Theatre Director" /></div>
+
+              <div className="fg fu">
+                <label className="fl">Profile Photo / Logo URL</label>
+                <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+                  {f.logo_url && <img src={f.logo_url} alt="Logo preview" style={{width:52,height:52,borderRadius:8,objectFit:"cover",border:"1px solid var(--border)",flexShrink:0}}/>}
+                  <div style={{flex:1}}>
+                    <input className="fi" value={f.logo_url || ""} onChange={e => upd("logo_url", e.target.value)}
+                      placeholder="Paste an image URL (Google Drive, Dropbox, etc.)" />
+                    <div style={{fontSize:11,color:"var(--muted)",marginTop:4}}>
+                      Paste any direct image URL. For Google Drive: share the image → Copy link → replace /view with nothing and add &sz=w400 to the end.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="fg"><label className="fl">Type</label>
+                <select className="fs" value={f.type || ""} onChange={e => upd("type", e.target.value)}>
+                  <option value="">Select…</option>
+                  {["School","Community Theatre","College","District","Professional","Other"].map(t => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+
+              <div className="fg"><label className="fl">City / Location</label>
+                <input className="fi" value={f.location || ""} onChange={e => upd("location", e.target.value)} placeholder="Portland, OR" /></div>
+
+              <div className="fg"><label className="fl">Contact Email</label>
+                <input className="fi" type="email" value={f.email || ""} onChange={e => upd("email", e.target.value)} placeholder="drama@school.edu" /></div>
+
+              <div className="fg"><label className="fl">Phone</label>
+                <input className="fi" value={f.phone || ""} onChange={e => upd("phone", e.target.value)} placeholder="(555) 123-4567" /></div>
+
+              <div className="fg"><label className="fl">Year Founded</label>
+                <input className="fi" type="number" min="1800" max="2026" value={f.founded_year || ""} onChange={e => upd("founded_year", parseInt(e.target.value) || null)} placeholder="e.g. 1998" /></div>
+
+              <div className="fg"><label className="fl">Students Served (approx.)</label>
+                <input className="fi" type="number" min="0" value={f.student_count || ""} onChange={e => upd("student_count", parseInt(e.target.value) || null)} placeholder="e.g. 350" /></div>
+
+              <div className="fg fu"><label className="fl">About Your Program</label>
+                <textarea className="ft" value={f.bio || ""} onChange={e => upd("bio", e.target.value)}
+                  placeholder="Tell other programs and the community about your theatre program…" style={{ minHeight: 80 }} /></div>
+
+              <div style={{ gridColumn: "1/-1", borderTop: "1px solid var(--border)", paddingTop: 14, marginTop: 4 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", marginBottom: 12 }}>Links & Social</div>
+              </div>
+
+              <div className="fg"><label className="fl">Website URL</label>
+                <input className="fi" value={f.website || ""} onChange={e => upd("website", e.target.value)} placeholder="https://yourschool.edu/drama" /></div>
+
+              <div className="fg"><label className="fl">Instagram Handle</label>
+                <input className="fi" value={f.instagram || ""} onChange={e => upd("instagram", e.target.value)} placeholder="@lincolnhighdrama" /></div>
+
+              <div className="fg fu"><label className="fl">Logo Image URL (optional)</label>
+                <input className="fi" value={f.logo_url || ""} onChange={e => upd("logo_url", e.target.value)} placeholder="https://drive.google.com/… or direct image URL" />
+                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>Paste a public image URL for your program's logo. Shown on your public profile.</div>
+              </div>
+
+              <div className="fg fu"><label className="fl">Profile URL Slug</label>
+                <input className="fi" value={f.slug || ""} onChange={e => upd("slug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} placeholder="lincoln-high-drama" />
+                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>Your profile will be at: theatre4u.org/org/<strong>{f.slug || "your-slug-here"}</strong></div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
+              <button className="btn btn-o" onClick={() => setEditing(false)}>Cancel</button>
+              <button className="btn btn-g" onClick={save} disabled={saving}>{saving ? "Saving…" : "✓ Save Profile"}</button>
+              {msg && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13, alignSelf: "center" }}>{msg}</span>}
+            </div>
+          </div>
+        )}
+
+        {/* Listed items preview */}
+        {listed > 0 && (
+          <div className="card card-p">
+            <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 18, marginBottom: 4 }}>Backstage Exchange — Your Listings</h3>
+            <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 14 }}>These items appear on your public profile. Anyone can browse them without logging in.</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 10 }}>
+              {items.filter(i => i.market_status && i.market_status !== "Not Listed" && i.market_status !== "Private").slice(0, 6).map(item => {
+                const catColor = { costumes: "#c2185b", props: "#7b1fa2", sets: "#1565c0", lighting: "#f9a825", sound: "#2e7d32", scripts: "#d84315", makeup: "#ad1457", furniture: "#4e342e", fabrics: "#6a1b9a", tools: "#546e7a", effects: "#00838f", other: "#757575" }[item.category] || "#757575";
+                return (
+                  <div key={item.id} style={{ background: "var(--white)", borderRadius: 8, padding: 12, border: "1px solid var(--border)" }}>
+                    {item.img
+                      ? <img src={item.img} alt={item.name} style={{ width: "100%", height: 80, objectFit: "cover", borderRadius: 6, marginBottom: 8 }} />
+                      : <div style={{ height: 80, borderRadius: 6, background: catColor + "22", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, marginBottom: 8 }}>📦</div>}
+                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+                    <div style={{ fontSize: 11, color: "var(--muted)" }}>{item.market_status}</div>
+                    {item.rental_price > 0 && <div style={{ fontSize: 13, color: "var(--green)", fontWeight: 700, marginTop: 2 }}>${item.rental_price}/wk</div>}
+                    {item.sale_price > 0 && <div style={{ fontSize: 13, color: "var(--green)", fontWeight: 700, marginTop: 2 }}>${item.sale_price}</div>}
+                  </div>
+                );
+              })}
+            </div>
+            {listed > 6 && <div style={{ textAlign: "center", marginTop: 10, fontSize: 13, color: "var(--muted)" }}>+{listed - 6} more items on your public profile</div>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BETA FEEDBACK — floating widget + leading player survey
+// ══════════════════════════════════════════════════════════════════════════════
+
+function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
+  const [open,    setOpen]    = useState(false);
+  const [tab,     setTab]     = useState("quick");  // quick | survey
+  const [saving,  setSaving]  = useState(false);
+  const [done,    setDone]    = useState(false);
+  const [page,    setPage]    = useState("");
+
+  // Quick feedback state
+  const [category, setCategory] = useState("bug");
+  const [message,  setMessage]  = useState("");
+  const [rating,   setRating]   = useState(null);
+
+  // Leading Player survey state
+  const [q1, setQ1] = useState("");   // hardest inventory
+  const [q2, setQ2] = useState(null); // prop28 pain 1-10
+  const [q3, setQ3] = useState("");   // lending barrier
+  const [q4, setQ4] = useState("");   // wishlist hour
+
+  useEffect(() => {
+    // Track current page for context
+    const handler = () => setPage(window.location.pathname || document.title);
+    window.__t4u_feedback_page = (p) => setPage(p);
+    return () => { delete window.__t4u_feedback_page; };
+  }, []);
+
+  const submitQuick = async () => {
+    if (!message.trim() && !rating) return;
+    setSaving(true);
+    await SB.from("beta_feedback").insert({
+      org_id: userId, org_name: orgName,
+      category, message: message.trim(),
+      rating, page_context: page,
+    });
+    setSaving(false);
+    setDone(true);
+    setTimeout(() => { setDone(false); setOpen(false); setMessage(""); setRating(null); }, 2000);
+  };
+
+  const submitSurvey = async () => {
+    if (!q1 && !q2 && !q3 && !q4) return;
+    setSaving(true);
+    await SB.from("beta_feedback").insert({
+      org_id: userId, org_name: orgName,
+      category: "feature",
+      hardest_inventory: q1.trim(),
+      prop28_pain_score: q2,
+      lending_barrier: q3.trim(),
+      wishlist_hour: q4.trim(),
+      page_context: "leading-player-survey",
+    });
+    setSaving(false);
+    setDone(true);
+    setTimeout(() => { setDone(false); setOpen(false); }, 2500);
+  };
+
+  const cats = [
+    { id:"bug",      label:"🐛 Bug",      color:"#c2185b" },
+    { id:"feature",  label:"💡 Idea",     color:"#1554a0" },
+    { id:"praise",   label:"🙌 Love it",  color:"#27723a" },
+    { id:"confusion",label:"😕 Confused", color:"#d35400" },
+    { id:"other",    label:"💬 Other",    color:"#546e7a" },
+  ];
+
+  return (
+    <>
+      {/* Floating trigger button */}
+      {/* Leading Players get the prominent gold pill */}
+      {isLeadingPlayer ? (
+        <button onClick={() => setOpen(!open)} style={{
+          position:"fixed", top:16, right:16, zIndex:900,
+          height:40, borderRadius:20, padding:"0 16px",
+          background:"linear-gradient(135deg,#ffcd3c,#f4a800)",
+          border:"2px solid rgba(255,220,80,.6)",
+          boxShadow:"0 0 18px rgba(255,200,0,.7), 0 4px 24px rgba(212,168,67,.6)",
+          cursor:"pointer", display:"flex", alignItems:"center",
+          gap:8, fontSize:15,
+          transition:"transform .2s,box-shadow .2s",
+        }}
+        onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.05)";e.currentTarget.style.boxShadow="0 0 28px rgba(255,210,0,.9), 0 6px 32px rgba(212,168,67,.7)";}}
+        onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.boxShadow="0 0 18px rgba(255,200,0,.7), 0 4px 24px rgba(212,168,67,.6)";}}
+        title="Share feedback">
+          {open ? <>✕ <span style={{fontSize:13,fontWeight:700}}>Close</span></> : <><span style={{fontSize:15}}>💬</span><span style={{fontSize:12,fontWeight:900,letterSpacing:.3,color:"#1a0f00",textShadow:"none"}}>Leading Players Feedback</span></>}
+        </button>
+      ) : (
+        /* Regular users get a small subtle link */
+        <button onClick={() => setOpen(!open)} style={{
+          position:"fixed", top:16, right:16, zIndex:900,
+          background:"none", border:"none",
+          color:"var(--muted,#9b93a8)", fontSize:11, fontWeight:600,
+          cursor:"pointer", padding:"4px 8px", borderRadius:6,
+          fontFamily:"'DM Sans',sans-serif",
+          opacity: open ? 1 : 0.6,
+          transition:"opacity .2s",
+          letterSpacing:.3,
+        }}
+        onMouseEnter={e=>e.currentTarget.style.opacity="1"}
+        onMouseLeave={e=>{if(!open)e.currentTarget.style.opacity="0.6";}}
+        title="Share feedback">
+          {open ? "✕ Close" : "💬 Feedback"}
+        </button>
+      )}
+
+      {/* Feedback panel */}
+      {open && (
+        <div style={{
+          position:"fixed", top:64, right:16, zIndex:900,
+          width:420, background:"#ffffff", border:"1.5px solid #e0d8f0",
+          borderRadius:14, boxShadow:"0 8px 40px rgba(0,0,0,.18)",
+          overflow:"hidden", animation:"feedIn .2s ease",
+          color:"#1a1008",
+        }}>
+          <style>{`@keyframes feedIn{from{opacity:0;transform:translateY(-10px) scale(.97)}to{opacity:1;transform:none}}`}</style>
+
+          {/* Header */}
+          <div style={{background:"linear-gradient(135deg,#2d1054,#4a1a8a)",padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",borderRadius:"12px 12px 0 0"}}>
+            <div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"#f0c866"}}>Share Feedback</div>
+              <div style={{fontSize:13,color:"rgba(255,255,255,.85)",marginTop:2}}>You're a Leading Player — your voice shapes this tool.</div>
+            </div>
+            {isLeadingPlayer && <span style={{fontSize:11,background:"rgba(212,168,67,.3)",color:"#f0c866",padding:"2px 8px",borderRadius:6,fontWeight:800}}>🎭 LEADING PLAYER</span>}
+          </div>
+
+          {/* Tabs */}
+          {isLeadingPlayer && (
+            <div style={{display:"flex",borderBottom:"1px solid #e0d8f0",background:"#f8f5ff"}}>
+              {[["quick","Quick Note"],["survey","Leading Player Survey"]].map(([id,label])=>(
+                <button key={id} onClick={()=>setTab(id)} style={{
+                  flex:1,padding:"9px 12px",background:"none",border:"none",
+                  borderBottom:`2px solid ${tab===id?"#7c3aed":"transparent"}`,
+                  color:tab===id?"#7c3aed":"#6b7280",fontFamily:"inherit",
+                  fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .15s",
+                }}>{label}</button>
+              ))}
+            </div>
+          )}
+
+          <div style={{padding:"20px 22px",background:"#ffffff",color:"#1a1008"}}>
+            {done ? (
+              <div style={{textAlign:"center",padding:"24px 0"}}>
+                <div style={{fontSize:44,marginBottom:12}}>🙏</div>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,color:"var(--green)"}}>Thank you!</div>
+                <div style={{fontSize:13,color:"var(--muted)",marginTop:4}}>Your feedback is making Theatre4u better.</div>
+              </div>
+            ) : tab === "quick" ? (
+              <>
+                {/* Category chips */}
+                <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:12}}>
+                  {cats.map(c=>(
+                    <button key={c.id} onClick={()=>setCategory(c.id)} style={{
+                      padding:"4px 10px",borderRadius:20,border:"1.5px solid",
+                      fontFamily:"inherit",fontSize:13,fontWeight:700,cursor:"pointer",
+                      background:category===c.id?c.color+"22":"#f3f4f6",
+                      color:category===c.id?c.color:"#374151",
+                      borderColor:category===c.id?c.color:"#d1d5db",
+                    }}>{c.label}</button>
+                  ))}
+                </div>
+
+                {/* Message */}
+                <textarea value={message} onChange={e=>setMessage(e.target.value)}
+                  placeholder={
+                    category==="bug"?"Describe what happened and what you expected…":
+                    category==="feature"?"What feature would make your life easier?":
+                    category==="praise"?"What's working well for you?":
+                    category==="confusion"?"What was confusing or hard to find?":
+                    "Tell us anything on your mind…"
+                  }
+                  style={{
+                    width:"100%",minHeight:80,background:"#f9fafb",
+                    border:"1.5px solid #d1d5db",borderRadius:8,padding:"9px 11px",
+                    color:"#111827",fontFamily:"'DM Sans',sans-serif",
+                    fontSize:14,resize:"vertical",outline:"none",lineHeight:1.6,
+                    marginBottom:12,
+                  }}
+                  onFocus={e=>e.target.style.borderColor="#7c3aed"}
+                  onBlur={e=>e.target.style.borderColor="#d1d5db"}
+                />
+
+                {/* Star rating */}
+                <div style={{marginBottom:14}}>
+                  <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"#6b7280",marginBottom:8}}>
+                    Overall experience so far
+                  </div>
+                  <div style={{display:"flex",gap:4}}>
+                    {[1,2,3,4,5].map(n=>(
+                      <button key={n} onClick={()=>setRating(n)} style={{
+                        background:"none",border:"none",fontSize:22,cursor:"pointer",
+                        color:rating>=n?"#f9a825":"#d1d5db",transition:"color .1s",padding:"0 2px",
+                      }}>★</button>
+                    ))}
+                  </div>
+                </div>
+
+                <button onClick={submitQuick} disabled={saving||(!message.trim()&&!rating)} style={{
+                  width:"100%",padding:"10px 0",borderRadius:8,border:"none",
+                  background:(!message.trim()&&!rating)?"#e5e7eb":"linear-gradient(135deg,#f0c866,#d4a843)",
+                  color:(!message.trim()&&!rating)?"#9ca3af":"#1a1200",
+                  fontFamily:"inherit",fontSize:15,fontWeight:700,cursor:(!message.trim()&&!rating)?"default":"pointer",
+                }}>
+                  {saving?"Sending…":"Send Feedback"}
+                </button>
+              </>
+            ) : (
+              /* Leading Player Survey */
+              <>
+                <div style={{fontSize:12,color:"#6b7280",marginBottom:14,lineHeight:1.6}}>
+                  Your answers directly shape the next features we build. Takes about 3 minutes.
+                </div>
+
+                {/* Q1 */}
+                <div style={{marginBottom:14}}>
+                  <label style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"#6b7280",display:"block",marginBottom:8}}>
+                    1. What inventory is hardest to track right now?
+                  </label>
+                  <input value={q1} onChange={e=>setQ1(e.target.value)}
+                    placeholder="e.g. Small props, lighting gels, period costumes…"
+                    style={{width:"100%",background:"#f9fafb",border:"1.5px solid #d1d5db",
+                      borderRadius:8,padding:"10px 12px",color:"#111827",fontFamily:"inherit",fontSize:14,outline:"none"}}
+                    onFocus={e=>e.target.style.borderColor="#7c3aed"} onBlur={e=>e.target.style.borderColor="#d1d5db"}
+                  />
+                </div>
+
+                {/* Q2 */}
+                <div style={{marginBottom:14}}>
+                  <label style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"#6b7280",display:"block",marginBottom:8}}>
+                    2. How useful is the Funding Tracker — 1 (not useful) to 10 (essential)?
+                  </label>
+                  <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                    {[1,2,3,4,5,6,7,8,9,10].map(n=>(
+                      <button key={n} onClick={()=>setQ2(n)} style={{
+                        width:34,height:34,borderRadius:6,border:"1.5px solid",
+                        background:q2===n?"var(--gold)":"transparent",
+                        color:q2===n?"#1a1200":"#374151",
+                        fontFamily:"inherit",fontSize:13,fontWeight:700,cursor:"pointer",
+                        borderColor:q2===n?"#d4a843":"#d1d5db",
+                      }}>{n}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Q3 */}
+                <div style={{marginBottom:14}}>
+                  <label style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"#6b7280",display:"block",marginBottom:8}}>
+                    3. What stops you from lending items to other schools?
+                  </label>
+                  <select value={q3} onChange={e=>setQ3(e.target.value)} style={{
+                    width:"100%",background:"#f9fafb",border:"1.5px solid #d1d5db",
+                    borderRadius:8,padding:"10px 12px",color:"#111827",fontFamily:"inherit",fontSize:14,outline:"none",
+                  }}>
+                    <option value="">Select the biggest one…</option>
+                    <option value="fear_damage">Fear of damage or loss</option>
+                    <option value="logistics">Logistics — pickup, dropoff, timing</option>
+                    <option value="no_agreement">No formal agreement / paperwork</option>
+                    <option value="trust">Don't know the other program</option>
+                    <option value="admin_approval">Need district/admin approval</option>
+                    <option value="never_thought">Never thought about it before</option>
+                    <option value="other">Something else</option>
+                  </select>
+                </div>
+
+                {/* Q4 */}
+                <div style={{marginBottom:16}}>
+                  <label style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:.8,color:"#6b7280",display:"block",marginBottom:8}}>
+                    4. What one thing could save you an hour a week?
+                  </label>
+                  <textarea value={q4} onChange={e=>setQ4(e.target.value)}
+                    placeholder="e.g. Better funding reports, scan items in/out on my phone…"
+                    style={{width:"100%",minHeight:64,background:"#f9fafb",border:"1.5px solid #d1d5db",
+                      borderRadius:8,padding:"8px 10px",color:"#111827",fontFamily:"inherit",fontSize:12,
+                      resize:"vertical",outline:"none",lineHeight:1.5}}
+                    onFocus={e=>e.target.style.borderColor="#7c3aed"} onBlur={e=>e.target.style.borderColor="#d1d5db"}
+                  />
+                </div>
+
+                <button onClick={submitSurvey} disabled={saving||(!q1&&!q2&&!q3&&!q4)} style={{
+                  width:"100%",padding:"10px 0",borderRadius:8,border:"none",
+                  background:"linear-gradient(135deg,var(--gold2),var(--gold))",
+                  color:"#1a1200",fontFamily:"inherit",fontSize:14,fontWeight:700,cursor:"pointer",
+                }}>
+                  {saving?"Submitting…":"Submit Leading Player Survey 🎭"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+class ErrorBoundary extends React.Component {
+  constructor(p){super(p);this.state={err:null,info:null};}
+  static getDerivedStateFromError(e){return{err:e};}
+  componentDidCatch(e,info){console.error("App crashed:",e,info);}
+  render(){
+    if(this.state.err)return(
+      <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+        height:"100vh",gap:20,padding:40,textAlign:"center",background:"var(--bg,#0d0b11)",color:"var(--t1,#ede8df)"}}>
+        <div style={{fontSize:52}}>🎭</div>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--gold,#d4a843)"}}>
+          Something went wrong
+        </div>
+        <div style={{fontSize:13,color:"var(--t3,#9b93a8)",maxWidth:360,lineHeight:1.7}}>
+          {this.state.err?.message||"An unexpected error occurred. This has been noted."}
+        </div>
+        <button onClick={()=>window.location.reload()} 
+          style={{background:"linear-gradient(135deg,#d4a843,#a37f2c)",border:"none",color:"#1a1200",
+            padding:"10px 24px",borderRadius:8,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
+          Reload App
+        </button>
+        <a href="mailto:hello@theatre4u.org" style={{fontSize:12,color:"var(--t3,#9b93a8)"}}>
+          Contact support
+        </a>
+      </div>
+    );
+    return this.props.children;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DEMO MODE — Full app running with in-memory store, no real Supabase writes
+// Access via theatre4u.org?demo=1
+// Shows the real signup → onboarding → full app experience
+// ══════════════════════════════════════════════════════════════════════════════
+
+const DEMO_ORG = {
+  id: "demo-org-id",
+  name: "", // filled in during signup demo
+  email: "",
+  type: "", phone: "", location: "", bio: "",
+  plan: "pro", temp_pro: true,
+  director_name: "", director_title: "Theatre Director",
+  label_prefix: "DEMO",
+  is_leading_player: false,
+  beta_acknowledged: false,
+  profile_public: false,
+  onboarding_step: 0,
+  created_at: new Date().toISOString(),
+};
+
+const DEMO_ITEMS = [
+  { id:"di1", name:"Victorian Ball Gown — Blue", category:"costumes", condition:"Good", size:"M", qty:1, location:"Costume Closet A", notes:"Used in A Christmas Carol 2024", mkt:"For Rent", avail:"In Stock", sale:0, rent:25, tags:["period","formal"], img:null, display_id:"DEMO-0001", org_id:"demo-org-id", added:new Date().toISOString() },
+  { id:"di2", name:"Pirate Hat Collection (6pc)", category:"costumes", condition:"Fair", size:"One Size", qty:6, location:"Costume Closet B", notes:"Assorted styles", mkt:"Not Listed", avail:"In Stock", sale:0, rent:0, tags:["adventure"], img:null, display_id:"DEMO-0002", org_id:"demo-org-id", added:new Date().toISOString() },
+  { id:"di3", name:"Wireless Handheld Mic — Shure SM58", category:"sound", condition:"Excellent", size:"N/A", qty:4, location:"Sound Booth", notes:"4 channels, includes cases", mkt:"For Rent", avail:"In Stock", sale:0, rent:15, tags:["audio"], img:null, display_id:"DEMO-0003", org_id:"demo-org-id", added:new Date().toISOString() },
+  { id:"di4", name:"LED Par Can RGBW", category:"lighting", condition:"New", size:"N/A", qty:12, location:"Lighting Storage", notes:"DMX controllable", mkt:"Rent or Sale", avail:"In Stock", sale:85, rent:10, tags:["dmx","led"], img:null, display_id:"DEMO-0004", org_id:"demo-org-id", added:new Date().toISOString() },
+  { id:"di5", name:"Fog Machine 1000W", category:"effects", condition:"Good", size:"N/A", qty:2, location:"Effects Cage", notes:"Includes remote", mkt:"For Rent", avail:"In Stock", sale:0, rent:20, tags:["atmosphere"], img:null, display_id:"DEMO-0005", org_id:"demo-org-id", added:new Date().toISOString() },
+  { id:"di6", name:"Forest Backdrop 8x12ft", category:"sets", condition:"Good", size:"N/A", qty:2, location:"Scene Shop", notes:"Painted muslin on frame", mkt:"For Rent", avail:"In Stock", sale:0, rent:40, tags:["outdoor"], img:null, display_id:"DEMO-0006", org_id:"demo-org-id", added:new Date().toISOString() },
+  { id:"di7", name:"Foam Rubber Swords (8pc)", category:"props", condition:"Fair", size:"N/A", qty:8, location:"Props Table", notes:"Safe for stage combat", mkt:"For Sale", avail:"In Stock", sale:12, rent:0, tags:["combat"], img:null, display_id:"DEMO-0007", org_id:"demo-org-id", added:new Date().toISOString() },
+  { id:"di8", name:"Ben Nye Master Makeup Kit", category:"makeup", condition:"Good", size:"N/A", qty:3, location:"Dressing Room 1", notes:"Full spectrum palette", mkt:"Not Listed", avail:"In Stock", sale:0, rent:0, tags:["professional"], img:null, display_id:"DEMO-0008", org_id:"demo-org-id", added:new Date().toISOString() },
+];
+
+// In-memory store for demo — mimics Supabase table structure
+function createDemoStore() {
+  // Generic in-memory store — works for ANY table name automatically
+  // Key: table name, Value: array of row objects
+  const tables = {
+    orgs:  [],
+    items: [],
+  };
+  let seeded = false;
+
+  const uid = () => "demo-" + Math.random().toString(36).slice(2,10);
+
+  // Get or create a table
+  const tbl = (name) => {
+    if (!tables[name]) tables[name] = [];
+    return tables[name];
+  };
+
+  const mockTable = (table) => {
+    const chain = {
+      _filters: [],
+      _data:    undefined,  // undefined = "not set", null = "explicitly null"
+      _single:  false,
+      _count:   false,
+
+      select:   (cols) => {
+        // If selecting with a nested join like "*, orgs(name,...)", enrich items with org data
+        if (cols && typeof cols === "string" && cols.includes("orgs(") && table === "items") {
+          chain._enrichWithOrg = true;
+        }
+        return chain;
+      },
+      order:    ()             => chain,
+      limit:    ()             => chain,
+      range:    ()             => chain,
+      neq:      (col, val)     => { chain._filters.push(r => r[col] !== val); return chain; },
+      gte:      (col, val)     => { chain._filters.push(r => r[col] >= val);  return chain; },
+      lte:      (col, val)     => { chain._filters.push(r => r[col] <= val);  return chain; },
+      lt:       (col, val)     => { chain._filters.push(r => r[col] < val);   return chain; },
+      gt:       (col, val)     => { chain._filters.push(r => r[col] > val);   return chain; },
+      ilike:    (col, val)     => { chain._filters.push(r => String(r[col]||"").toLowerCase().includes(String(val||"").toLowerCase().replace(/%/g,""))); return chain; },
+      in:       (col, vals)    => { chain._filters.push(r => vals.includes(r[col])); return chain; },
+      contains: ()             => chain,
+      not:      ()             => chain,
+      or:       ()             => chain,
+      eq: (col, val) => {
+        chain._filters.push(r => r[col] === val);
+        return chain;
+      },
+      is: (col, val) => {
+        chain._filters.push(r => val === null ? (r[col] == null) : r[col] === val);
+        return chain;
+      },
+      single: () => { chain._single = true; return chain; },
+
+      insert: (data) => {
+        const rows = Array.isArray(data) ? data : [data];
+        const inserted = rows.map(r => ({
+          ...r,
+          id:         r.id         || uid(),
+          created_at: r.created_at || new Date().toISOString(),
+          updated_at: r.updated_at || new Date().toISOString(),
+        }));
+        tbl(table).push(...inserted);
+        // Always store the array — then() will unwrap to single if .single() was chained
+        chain._data = inserted;
+        return chain;
+      },
+
+      upsert: (data, opts) => {
+        const rows = Array.isArray(data) ? data : [data];
+        const conflictKey = opts?.onConflict || "id";
+        rows.forEach(r => {
+          const store = tbl(table);
+          const idx = store.findIndex(x => x[conflictKey] === r[conflictKey]);
+          if (idx >= 0) {
+            store[idx] = { ...store[idx], ...r, updated_at: new Date().toISOString() };
+          } else {
+            store.push({ ...r, id: r.id||uid(), created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+          }
+        });
+        const result = tbl(table).find(x => x[conflictKey] === rows[0]?.[conflictKey]);
+        // Store as array so then() can unwrap for .single()
+        chain._data = result ? [result] : [];
+        return chain;
+      },
+
+      update: (data) => {
+        const store = tbl(table);
+        const updated = [];
+        store.forEach((r, i) => {
+          if (chain._filters.every(f => f(r))) {
+            store[i] = { ...r, ...data, updated_at: new Date().toISOString() };
+            updated.push(store[i]);
+          }
+        });
+        // Store updated rows so chained .select().single() returns the row
+        chain._data = updated;
+        return chain;
+      },
+
+      delete: () => {
+        tables[table] = tbl(table).filter(r => !chain._filters.every(f => f(r)));
+        chain._data = null;
+        return chain;
+      },
+
+      // Thenable — makes await work on every query
+      then: (resolve, reject) => {
+        try {
+          let data;
+          if (chain._data !== undefined) {
+            data = chain._data;
+            if (chain._single && Array.isArray(data)) data = data[0] || null;
+          } else {
+            const store = tbl(table);
+            const filtered = store.filter(r => chain._filters.every(f => f(r)));
+            data = chain._single ? (filtered[0] || null) : filtered;
+          }
+          // Enrich items with org data when a nested join was requested
+          if (chain._enrichWithOrg && Array.isArray(data)) {
+            const orgStore = tbl("orgs");
+            data = data.map(item => {
+              const org = orgStore.find(o => o.id === item.org_id) || {};
+              return { ...item, orgs: {
+                name: org.name || "Demo Theatre Program",
+                location: org.location || "Demo City, CA",
+                state: org.state || "CA",
+                zipcode: org.zipcode || "92648",
+                lat: null, lng: null,
+                marketplace_enabled: true,
+              }};
+            });
+          }
+          const count = Array.isArray(data) ? data.length : (data ? 1 : 0);
+          resolve({ data, error: null, count });
+        } catch(e) {
+          if (reject) reject(e);
+          else resolve({ data: null, error: e });
+        }
+      },
+    };
+    chain[Symbol.toStringTag] = "DemoQuery";
+    return chain;
+  };
+
+  return {
+    getStore: () => tables,
+    seedItems: () => {
+      if (!seeded) { tables.items = [...DEMO_ITEMS]; seeded = true; }
+    },
+    from: (table) => mockTable(table),
+    rpc:  (fn, args) => {
+      // Handle specific RPCs that need to return useful data
+      if (fn === "generate_label_prefix") {
+        const name = args?.p_name || "DEMO";
+        const prefix = name.replace(/[^A-Z]/gi, "").toUpperCase().slice(0,4) || "DEMO";
+        return Promise.resolve({ data: prefix, error: null });
+      }
+      // Credits spending always succeeds in demo
+      if (fn === "spend_credits") return Promise.resolve({ data: { success: true }, error: null });
+      // Points awarding, referrals, etc. — all succeed silently
+      if (fn === "award_milestone_points")  return Promise.resolve({ data: null, error: null });
+      if (fn === "award_referral_points")   return Promise.resolve({ data: null, error: null });
+      if (fn === "get_my_credit_balance")   return Promise.resolve({ data: 150, error: null });
+      if (fn === "points_eligible_in_days") return Promise.resolve({ data: 0,   error: null });
+      if (fn === "lookup_label")            return Promise.resolve({ data: null, error: null });
+      if (fn === "is_org_member")           return Promise.resolve({ data: false, error: null });
+      return Promise.resolve({ data: null, error: null });
+    },
+    auth: {
+      getSession:        () => Promise.resolve({ data: { session: null } }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: ()=>{} } } }),
+      signInWithPassword:() => Promise.resolve({ data: { user: null }, error: { message: "Demo mode" } }),
+      signUp: (creds) => {
+        const u = { id:"demo-user-id", email:creds.email, created_at:new Date().toISOString() };
+        return Promise.resolve({ data: { user: u, session: { access_token:"demo-token", user:u } }, error: null });
+      },
+      signOut: () => { window.location.href = "https://theatre4u.org"; return Promise.resolve(); },
+      admin: { getUserById: () => Promise.resolve({ data: null }) },
+    },
+    // Realtime — no-op in demo (no live updates needed)
+    channel: (name) => {
+      const noop = { on: ()=>noop, subscribe: ()=>noop, unsubscribe: ()=>{} };
+      return noop;
+    },
+    removeChannel: () => {},
+    removeAllChannels: () => {},
+    storage: {
+      from: () => ({
+        upload:       () => Promise.resolve({ data: null, error: null }),
+        getPublicUrl: () => ({ data: { publicUrl: "" } }),
+        remove:       () => Promise.resolve({ data: null, error: null }),
+      })
+    },
+  };
+}
+
+// Demo wrapper — replaces SB globally when ?demo=1
+function DemoApp() {
+  const [started,  setStarted]  = useState(false);
+  const [store]    = useState(() => createDemoStore());
+  const [showNudge,setShowNudge]= useState(false);
+  const [demoUser, setDemoUser] = useState(null); // set when user clicks "Enter Demo"
+
+  const enterDemo = async (orgName="Demo Theatre Program") => {
+    // Create the demo org in the in-memory store
+    const user = { id:"demo-user-id", email:"demo@theatre4u.org", created_at:new Date().toISOString() };
+    await store.from("orgs").upsert({
+      id: user.id, name: orgName, email: user.email,
+      type:"School", phone:"", location:"", bio:"",
+      temp_pro:true, onboarding_step:0,
+      plan:"pro", created_at:new Date().toISOString(),
+      label_prefix:"DEMO",
+    },{onConflict:"id",ignoreDuplicates:false});
+    store.seedItems();
+    setDemoUser(user);
+  };
+
+  useEffect(() => {
+    window.__demoStore = store;
+    window.__isDemo = true;
+    setStarted(true);
+    const t = setTimeout(() => setShowNudge(true), 3 * 60 * 1000);
+    return () => clearTimeout(t);
+  }, [store]);
+
+  if (!started) return null;
+
+  // Don't render AppRoot until the user has clicked Enter Demo
+  // Once demoUser is set, AppRoot mounts fresh with that user as the initial state
+  if (!demoUser) return (
+    <>
+      <style>{CSS}</style>
+      {/* Demo ribbon shown even on entry screen */}
+      <div style={{position:"fixed",top:0,left:0,right:0,zIndex:99999,
+        background:"linear-gradient(135deg,#1a0d2e,#0d1225)",
+        borderBottom:"2px solid #d4a843",
+        padding:"7px 20px",display:"flex",alignItems:"center",
+        justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:16}}>🎭</span>
+          <span style={{fontWeight:800,color:"#d4a843",fontSize:14}}>Demo Mode</span>
+          <span style={{color:"rgba(255,255,255,.55)",fontSize:12}}>
+            — Nothing is saved. Close the tab to reset.
+          </span>
+        </div>
+        <a href="https://theatre4u.org"
+          style={{padding:"5px 14px",borderRadius:6,fontSize:12,fontWeight:600,
+            color:"rgba(255,255,255,.7)",border:"1px solid rgba(255,255,255,.2)",
+            textDecoration:"none"}}>
+          Exit Demo
+        </a>
+      </div>
+      {/* Entry screen */}
+      <div style={{minHeight:"100vh",background:"#0d0b11",display:"flex",flexDirection:"column",
+        alignItems:"center",justifyContent:"center",padding:"80px 20px 40px",textAlign:"center",
+        fontFamily:"'DM Sans',sans-serif",color:"#ede8df"}}>
+        <div style={{fontSize:56,marginBottom:16}}>🎭</div>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:32,color:"#d4a843",marginBottom:8}}>
+          Theatre4u™ Demo
+        </div>
+        <p style={{fontSize:16,color:"rgba(255,255,255,.55)",maxWidth:440,lineHeight:1.7,marginBottom:36}}>
+          Explore the full platform with sample data. Add items, browse the Backstage Exchange,
+          and see how Theatre4u works — no account needed.
+        </p>
+        <div style={{display:"flex",flexDirection:"column",gap:14,alignItems:"center",width:"100%",maxWidth:340}}>
+          <button
+            onClick={()=>enterDemo("Ocean View High School Drama")}
+            style={{width:"100%",padding:"16px 32px",borderRadius:10,border:"none",
+              background:"linear-gradient(135deg,#d4a843,#a37f2c)",color:"#1a0f00",
+              fontSize:17,fontWeight:800,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",
+              boxShadow:"0 4px 20px rgba(212,168,67,.3)"}}>
+            🎭 Enter Demo →
+          </button>
+          <div style={{fontSize:13,color:"rgba(255,255,255,.35)"}}>
+            — or personalize with your program name —
+          </div>
+          <div style={{display:"flex",gap:8,width:"100%"}}>
+            <input
+              id="demo-org-input"
+              placeholder="e.g. Lincoln High Drama"
+              style={{flex:1,padding:"11px 14px",borderRadius:8,
+                border:"1px solid rgba(255,255,255,.15)",
+                background:"rgba(255,255,255,.06)",color:"#fff",
+                fontSize:14,fontFamily:"'DM Sans',sans-serif",outline:"none"}}
+              onKeyDown={e=>{
+                if(e.key==="Enter"){
+                  const v=e.target.value.trim();
+                  enterDemo(v||"Ocean View High School Drama");
+                }
+              }}
+            />
+            <button
+              onClick={()=>{
+                const v=document.getElementById("demo-org-input")?.value?.trim();
+                enterDemo(v||"Ocean View High School Drama");
+              }}
+              style={{padding:"11px 18px",borderRadius:8,
+                border:"1px solid rgba(212,168,67,.4)",
+                background:"rgba(212,168,67,.12)",color:"#d4a843",
+                fontSize:14,fontWeight:700,cursor:"pointer",
+                fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"}}>
+              Go →
+            </button>
+          </div>
+          <a href="https://theatre4u.org?signup=1"
+            style={{fontSize:13,color:"rgba(255,255,255,.3)",textDecoration:"none",marginTop:4}}>
+            Ready to create a real account? →
+          </a>
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <div style={{position:"relative"}}>
+      {/* Demo ribbon */}
+      <div style={{position:"fixed",top:0,left:0,right:0,zIndex:99999,
+        background:"linear-gradient(135deg,#1a0d2e,#0d1225)",
+        borderBottom:"2px solid var(--gold, #d4a843)",
+        padding:"7px 20px",display:"flex",alignItems:"center",
+        justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:16}}>🎭</span>
+          <span style={{fontWeight:800,color:"#d4a843",fontSize:14}}>Demo Mode</span>
+          <span style={{color:"rgba(255,255,255,.55)",fontSize:12}}>
+            — Experience Theatre4u as a new user. Nothing is saved. Close the tab to reset.
+          </span>
+        </div>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <a href="https://theatre4u.org" style={{padding:"5px 14px",borderRadius:6,
+            fontSize:12,fontWeight:600,color:"rgba(255,255,255,.7)",
+            border:"1px solid rgba(255,255,255,.2)",textDecoration:"none"}}>
+            Exit Demo
+          </a>
+          <button onClick={()=>{
+            // Carry over org name if user typed one during the demo
+            const demoOrg = store.getStore().orgs?.[0];
+            const orgName = demoOrg?.name || "";
+            const email   = demoOrg?.email || "";
+            // Store for pre-filling the real signup form
+            try {
+              if(orgName) sessionStorage.setItem("t4u_prefill_org",   orgName);
+              if(email)   sessionStorage.setItem("t4u_prefill_email", email);
+            } catch(e) {}
+            window.location.href = "https://theatre4u.org?signup=1";
+          }} style={{padding:"6px 16px",borderRadius:6,fontSize:13,fontWeight:700,
+            color:"#1a0f00",background:"#d4a843",border:"none",cursor:"pointer",
+            fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
+            ⭐ Create Real Account →
+          </button>
+        </div>
+      </div>
+      <div style={{paddingTop:40}}>
+        {/* Timed conversion nudge — appears after 3 minutes */}
+        {showNudge&&(
+          <div style={{margin:"12px 16px 0",padding:"14px 18px",borderRadius:10,
+            background:"linear-gradient(135deg,rgba(76,175,80,.15),rgba(76,175,80,.08))",
+            border:"1px solid rgba(76,175,80,.35)",display:"flex",gap:12,
+            alignItems:"center",flexWrap:"wrap"}}>
+            <span style={{fontSize:22}}>🎭</span>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:14,color:"#4caf50",marginBottom:2}}>
+                Ready to save your work?
+              </div>
+              <div style={{fontSize:13,color:"rgba(255,255,255,.65)",lineHeight:1.5}}>
+                Everything you've done disappears when you close this tab.
+                Create a free account to keep it — it takes 30 seconds.
+              </div>
+            </div>
+            <div style={{display:"flex",gap:8,flexShrink:0}}>
+              <button onClick={()=>{
+                const demoOrg = store.getStore().orgs?.[0];
+                try {
+                  if(demoOrg?.name)  sessionStorage.setItem("t4u_prefill_org",   demoOrg.name);
+                  if(demoOrg?.email) sessionStorage.setItem("t4u_prefill_email", demoOrg.email);
+                } catch(e) {}
+                window.location.href = "https://theatre4u.org?signup=1";
+              }} style={{padding:"8px 18px",borderRadius:7,border:"none",fontFamily:"inherit",
+                fontSize:13,fontWeight:700,cursor:"pointer",
+                background:"#4caf50",color:"#fff"}}>
+                ⭐ Create Free Account
+              </button>
+              <button onClick={()=>setShowNudge(false)}
+                style={{background:"none",border:"1px solid rgba(255,255,255,.15)",
+                  borderRadius:7,padding:"8px 12px",color:"rgba(255,255,255,.5)",
+                  fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+                Maybe later
+              </button>
+            </div>
+          </div>
+        )}
+        <ErrorBoundary><AppRoot demoStore={store} demoUser={demoUser} onEnterDemo={enterDemo}/></ErrorBoundary>
+      </div>
+    </div>
+  );
+}
+
+const isDemoMode = () => {
+  try { return new URLSearchParams(window.location.search).get("demo") === "1"; } catch { return false; }
+};
+
+const AppWithBoundary = () => isDemoMode()
+  ? <DemoApp/>
+  : <ErrorBoundary><AppRoot/></ErrorBoundary>;
+
+export default AppWithBoundary;
 function AdminDailyDigest() {
   const [window_, setWindow_] = useState("24h"); // "24h" | "7d" | "30d"
   const [data, setData]       = useState(null);
@@ -6631,7 +9144,6 @@ function AdminProgramsTab({ orgs, currentUser, flash }) {
     const { id, org_id, added, ...payload } = editItem;
     const { error } = await SB.from("items").update(payload).eq("id", editItem.id);
     if (!error) {
-      // Log admin edit in audit log
       await SB.from("audit_log").insert({ action:"admin_item_edit", org_id:selected.id, detail:`Admin edited item: ${editItem.name}` });
     }
     setSaving(false);
@@ -6644,7 +9156,7 @@ function AdminProgramsTab({ orgs, currentUser, flash }) {
   const addItem = async (name) => {
     if (!name?.trim() || !selected) return;
     setSaving(true);
-    const newItem = { org_id:selected.id, name:name.trim(), category:"other", condition:"Good", size:"N/A", qty:1, avail:"In Stock", mkt:"Not Listed", location:"", notes:"", tags:[], rent:0, sale:0, loan_period:2, deposit:0, vertical: selected.vertical||"theatre" };
+    const newItem = { org_id:selected.id, name:name.trim(), category:"other", condition:"Good", size:"N/A", qty:1, avail:"In Stock", mkt:"Not Listed", location:"", notes:"", tags:[], rent:0, sale:0, loan_period:2, deposit:0, vertical:selected.vertical||"theatre" };
     const { data, error } = await SB.from("items").insert(newItem).select().single();
     if (!error && data) {
       await SB.from("audit_log").insert({ action:"admin_item_add", org_id:selected.id, detail:`Admin added item: ${name.trim()}` });
@@ -6828,7 +9340,6 @@ function AdminProgramsTab({ orgs, currentUser, flash }) {
               <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"var(--amber)",marginBottom:12}}>
                 🔑 Admin view — changes you make here are logged to the audit trail
               </div>
-
               {/* Quick add item */}
               {!editItem&&(
                 <div style={{display:"flex",gap:8,marginBottom:14}}>
@@ -6840,7 +9351,6 @@ function AdminProgramsTab({ orgs, currentUser, flash }) {
                   }}>+ Add Item</button>
                 </div>
               )}
-
               {editItem&&(
                 <div style={{background:"var(--parch)",border:"1px solid var(--gold)",
                   borderRadius:10,padding:16,marginBottom:16}}>
@@ -7165,8 +9675,8 @@ function AdminHub({ currentUser, org }) {
       }
       if (tab === "overview" || tab === "feedback") {
         const { data } = await SB.from("beta_feedback")
-          .select("*, orgs(email)").order("created_at", { ascending: false }).limit(50);
-        setFeedback((data||[]).map(fb=>({...fb, org_email: fb.orgs?.email||null})));
+          .select("*").order("created_at", { ascending: false }).limit(50);
+        setFeedback(data || []);
       }
       if (tab === "overview") {
         // Quick page views count for the overview stat card
@@ -8205,7 +10715,6 @@ function AdminHub({ currentUser, org }) {
         <AdminProgramsTab orgs={orgs} currentUser={currentUser} flash={flash}/>
       )}
 
-      {/* ── ACCOUNTS ── */}
       {!loading&&tab==="accounts"&&(
         <AdminAccountsTab orgs={orgs} onRestore={(id)=>{
           setOrgs(p=>p.map(o=>o.id===id?{...o,account_status:"active"}:o));
@@ -8213,7 +10722,6 @@ function AdminHub({ currentUser, org }) {
         }}/>
       )}
 
-      {/* ── DISTRICTS ── */}
       {!loading&&tab==="districts"&&(
         <AdminDistrictAssignPanel orgs={orgs} onUpdated={()=>{
           SB.rpc("get_admin_org_overview").then(({data})=>{ if(data) setOrgs(data); });
@@ -9168,9 +11676,9 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
     if(!row.purchase_date  || row.purchase_date==="")   row.purchase_date    = null;
     if(!row.purchase_vendor|| row.purchase_vendor==="") row.purchase_vendor  = null;
     if(!row.funding_source_id||row.funding_source_id==="") row.funding_source_id = null;
-    if(!row.location_id  || row.location_id===""  || row.location_id===undefined) row.location_id = null;
-    if(!row.pin_id       || row.pin_id===""        || row.pin_id===undefined)       row.pin_id      = null;
-    if(!row.rack_slot    || row.rack_slot===""     || row.rack_slot===undefined)    row.rack_slot   = null;
+    if(!row.location_id    || row.location_id==="")     row.location_id      = null;
+    if(!row.pin_id         || row.pin_id==="")           row.pin_id           = null;
+    if(!row.rack_slot      || row.rack_slot==="")        row.rack_slot        = null;
     const{data,error}=await SB.from("items").insert(row).select().single();
     if(error){ alert("Could not save item: "+error.message); console.error(error); return; }
     if(data){
@@ -9203,8 +11711,8 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
     if(!payload.purchase_date    ||payload.purchase_date==="")    payload.purchase_date    = null;
     if(!payload.purchase_vendor  ||payload.purchase_vendor==="")  payload.purchase_vendor  = null;
     if(!payload.funding_source_id||payload.funding_source_id==="")payload.funding_source_id= null;
-    if(!payload.location_id ||payload.location_id==="" ||payload.location_id===undefined) payload.location_id = null;
-    if(!payload.pin_id      ||payload.pin_id===""       ||payload.pin_id===undefined)       payload.pin_id      = null;
+    if(!payload.location_id      ||payload.location_id==="")      payload.location_id      = null;
+    if(!payload.pin_id           ||payload.pin_id===""           )payload.pin_id           = null;
     if(!payload.rack_slot        ||payload.rack_slot===""        )payload.rack_slot         = null;
     const{data,error}=await SB.from("items").update(payload).eq("id",item.id).select().single();
     if(error){ alert("Could not update item: "+error.message); console.error(error); return; }
@@ -11772,473 +14280,3 @@ function ExpModal({initial, sources, saving, onSave, onCancel}){
     </Modal>
   );
 }
-
-class ErrorBoundary extends React.Component {
-  constructor(p){super(p);this.state={err:null,info:null};}
-  static getDerivedStateFromError(e){return{err:e};}
-  componentDidCatch(e,info){console.error("App crashed:",e,info);}
-  render(){
-    if(this.state.err)return(
-      <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
-        height:"100vh",gap:20,padding:40,textAlign:"center",background:"var(--bg,#0d0b11)",color:"var(--t1,#ede8df)"}}>
-        <div style={{fontSize:52}}>🎭</div>
-        <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--gold,#d4a843)"}}>
-          Something went wrong
-        </div>
-        <div style={{fontSize:13,color:"var(--t3,#9b93a8)",maxWidth:360,lineHeight:1.7}}>
-          {this.state.err?.message||"An unexpected error occurred. This has been noted."}
-        </div>
-        <button onClick={()=>window.location.reload()} 
-          style={{background:"linear-gradient(135deg,#d4a843,#a37f2c)",border:"none",color:"#1a1200",
-            padding:"10px 24px",borderRadius:8,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
-          Reload App
-        </button>
-        <a href="mailto:hello@theatre4u.org" style={{fontSize:12,color:"var(--t3,#9b93a8)"}}>
-          Contact support
-        </a>
-      </div>
-    );
-    return this.props.children;
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// DEMO MODE — Full app running with in-memory store, no real Supabase writes
-// Access via theatre4u.org?demo=1
-// Shows the real signup → onboarding → full app experience
-// ══════════════════════════════════════════════════════════════════════════════
-
-const DEMO_ORG = {
-  id: "demo-org-id",
-  name: "", // filled in during signup demo
-  email: "",
-  type: "", phone: "", location: "", bio: "",
-  plan: "pro", temp_pro: true,
-  director_name: "", director_title: "Theatre Director",
-  label_prefix: "DEMO",
-  is_leading_player: false,
-  beta_acknowledged: false,
-  profile_public: false,
-  onboarding_step: 0,
-  created_at: new Date().toISOString(),
-};
-
-const DEMO_ITEMS = [
-  { id:"di1", name:"Victorian Ball Gown — Blue", category:"costumes", condition:"Good", size:"M", qty:1, location:"Costume Closet A", notes:"Used in A Christmas Carol 2024", mkt:"For Rent", avail:"In Stock", sale:0, rent:25, tags:["period","formal"], img:null, display_id:"DEMO-0001", org_id:"demo-org-id", added:new Date().toISOString() },
-  { id:"di2", name:"Pirate Hat Collection (6pc)", category:"costumes", condition:"Fair", size:"One Size", qty:6, location:"Costume Closet B", notes:"Assorted styles", mkt:"Not Listed", avail:"In Stock", sale:0, rent:0, tags:["adventure"], img:null, display_id:"DEMO-0002", org_id:"demo-org-id", added:new Date().toISOString() },
-  { id:"di3", name:"Wireless Handheld Mic — Shure SM58", category:"sound", condition:"Excellent", size:"N/A", qty:4, location:"Sound Booth", notes:"4 channels, includes cases", mkt:"For Rent", avail:"In Stock", sale:0, rent:15, tags:["audio"], img:null, display_id:"DEMO-0003", org_id:"demo-org-id", added:new Date().toISOString() },
-  { id:"di4", name:"LED Par Can RGBW", category:"lighting", condition:"New", size:"N/A", qty:12, location:"Lighting Storage", notes:"DMX controllable", mkt:"Rent or Sale", avail:"In Stock", sale:85, rent:10, tags:["dmx","led"], img:null, display_id:"DEMO-0004", org_id:"demo-org-id", added:new Date().toISOString() },
-  { id:"di5", name:"Fog Machine 1000W", category:"effects", condition:"Good", size:"N/A", qty:2, location:"Effects Cage", notes:"Includes remote", mkt:"For Rent", avail:"In Stock", sale:0, rent:20, tags:["atmosphere"], img:null, display_id:"DEMO-0005", org_id:"demo-org-id", added:new Date().toISOString() },
-  { id:"di6", name:"Forest Backdrop 8x12ft", category:"sets", condition:"Good", size:"N/A", qty:2, location:"Scene Shop", notes:"Painted muslin on frame", mkt:"For Rent", avail:"In Stock", sale:0, rent:40, tags:["outdoor"], img:null, display_id:"DEMO-0006", org_id:"demo-org-id", added:new Date().toISOString() },
-  { id:"di7", name:"Foam Rubber Swords (8pc)", category:"props", condition:"Fair", size:"N/A", qty:8, location:"Props Table", notes:"Safe for stage combat", mkt:"For Sale", avail:"In Stock", sale:12, rent:0, tags:["combat"], img:null, display_id:"DEMO-0007", org_id:"demo-org-id", added:new Date().toISOString() },
-  { id:"di8", name:"Ben Nye Master Makeup Kit", category:"makeup", condition:"Good", size:"N/A", qty:3, location:"Dressing Room 1", notes:"Full spectrum palette", mkt:"Not Listed", avail:"In Stock", sale:0, rent:0, tags:["professional"], img:null, display_id:"DEMO-0008", org_id:"demo-org-id", added:new Date().toISOString() },
-];
-
-// In-memory store for demo — mimics Supabase table structure
-function createDemoStore() {
-  // Generic in-memory store — works for ANY table name automatically
-  // Key: table name, Value: array of row objects
-  const tables = {
-    orgs:  [],
-    items: [],
-  };
-  let seeded = false;
-
-  const uid = () => "demo-" + Math.random().toString(36).slice(2,10);
-
-  // Get or create a table
-  const tbl = (name) => {
-    if (!tables[name]) tables[name] = [];
-    return tables[name];
-  };
-
-  const mockTable = (table) => {
-    const chain = {
-      _filters: [],
-      _data:    undefined,  // undefined = "not set", null = "explicitly null"
-      _single:  false,
-      _count:   false,
-
-      select:   (cols) => {
-        // If selecting with a nested join like "*, orgs(name,...)", enrich items with org data
-        if (cols && typeof cols === "string" && cols.includes("orgs(") && table === "items") {
-          chain._enrichWithOrg = true;
-        }
-        return chain;
-      },
-      order:    ()             => chain,
-      limit:    ()             => chain,
-      range:    ()             => chain,
-      neq:      (col, val)     => { chain._filters.push(r => r[col] !== val); return chain; },
-      gte:      (col, val)     => { chain._filters.push(r => r[col] >= val);  return chain; },
-      lte:      (col, val)     => { chain._filters.push(r => r[col] <= val);  return chain; },
-      lt:       (col, val)     => { chain._filters.push(r => r[col] < val);   return chain; },
-      gt:       (col, val)     => { chain._filters.push(r => r[col] > val);   return chain; },
-      ilike:    (col, val)     => { chain._filters.push(r => String(r[col]||"").toLowerCase().includes(String(val||"").toLowerCase().replace(/%/g,""))); return chain; },
-      in:       (col, vals)    => { chain._filters.push(r => vals.includes(r[col])); return chain; },
-      contains: ()             => chain,
-      not:      ()             => chain,
-      or:       ()             => chain,
-      eq: (col, val) => {
-        chain._filters.push(r => r[col] === val);
-        return chain;
-      },
-      is: (col, val) => {
-        chain._filters.push(r => val === null ? (r[col] == null) : r[col] === val);
-        return chain;
-      },
-      single: () => { chain._single = true; return chain; },
-
-      insert: (data) => {
-        const rows = Array.isArray(data) ? data : [data];
-        const inserted = rows.map(r => ({
-          ...r,
-          id:         r.id         || uid(),
-          created_at: r.created_at || new Date().toISOString(),
-          updated_at: r.updated_at || new Date().toISOString(),
-        }));
-        tbl(table).push(...inserted);
-        // Always store the array — then() will unwrap to single if .single() was chained
-        chain._data = inserted;
-        return chain;
-      },
-
-      upsert: (data, opts) => {
-        const rows = Array.isArray(data) ? data : [data];
-        const conflictKey = opts?.onConflict || "id";
-        rows.forEach(r => {
-          const store = tbl(table);
-          const idx = store.findIndex(x => x[conflictKey] === r[conflictKey]);
-          if (idx >= 0) {
-            store[idx] = { ...store[idx], ...r, updated_at: new Date().toISOString() };
-          } else {
-            store.push({ ...r, id: r.id||uid(), created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
-          }
-        });
-        const result = tbl(table).find(x => x[conflictKey] === rows[0]?.[conflictKey]);
-        // Store as array so then() can unwrap for .single()
-        chain._data = result ? [result] : [];
-        return chain;
-      },
-
-      update: (data) => {
-        const store = tbl(table);
-        const updated = [];
-        store.forEach((r, i) => {
-          if (chain._filters.every(f => f(r))) {
-            store[i] = { ...r, ...data, updated_at: new Date().toISOString() };
-            updated.push(store[i]);
-          }
-        });
-        // Store updated rows so chained .select().single() returns the row
-        chain._data = updated;
-        return chain;
-      },
-
-      delete: () => {
-        tables[table] = tbl(table).filter(r => !chain._filters.every(f => f(r)));
-        chain._data = null;
-        return chain;
-      },
-
-      // Thenable — makes await work on every query
-      then: (resolve, reject) => {
-        try {
-          let data;
-          if (chain._data !== undefined) {
-            data = chain._data;
-            if (chain._single && Array.isArray(data)) data = data[0] || null;
-          } else {
-            const store = tbl(table);
-            const filtered = store.filter(r => chain._filters.every(f => f(r)));
-            data = chain._single ? (filtered[0] || null) : filtered;
-          }
-          // Enrich items with org data when a nested join was requested
-          if (chain._enrichWithOrg && Array.isArray(data)) {
-            const orgStore = tbl("orgs");
-            data = data.map(item => {
-              const org = orgStore.find(o => o.id === item.org_id) || {};
-              return { ...item, orgs: {
-                name: org.name || "Demo Theatre Program",
-                location: org.location || "Demo City, CA",
-                state: org.state || "CA",
-                zipcode: org.zipcode || "92648",
-                lat: null, lng: null,
-                marketplace_enabled: true,
-              }};
-            });
-          }
-          const count = Array.isArray(data) ? data.length : (data ? 1 : 0);
-          resolve({ data, error: null, count });
-        } catch(e) {
-          if (reject) reject(e);
-          else resolve({ data: null, error: e });
-        }
-      },
-    };
-    chain[Symbol.toStringTag] = "DemoQuery";
-    return chain;
-  };
-
-  return {
-    getStore: () => tables,
-    seedItems: () => {
-      if (!seeded) { tables.items = [...DEMO_ITEMS]; seeded = true; }
-    },
-    from: (table) => mockTable(table),
-    rpc:  (fn, args) => {
-      // Handle specific RPCs that need to return useful data
-      if (fn === "generate_label_prefix") {
-        const name = args?.p_name || "DEMO";
-        const prefix = name.replace(/[^A-Z]/gi, "").toUpperCase().slice(0,4) || "DEMO";
-        return Promise.resolve({ data: prefix, error: null });
-      }
-      // Credits spending always succeeds in demo
-      if (fn === "spend_credits") return Promise.resolve({ data: { success: true }, error: null });
-      // Points awarding, referrals, etc. — all succeed silently
-      if (fn === "award_milestone_points")  return Promise.resolve({ data: null, error: null });
-      if (fn === "award_referral_points")   return Promise.resolve({ data: null, error: null });
-      if (fn === "get_my_credit_balance")   return Promise.resolve({ data: 150, error: null });
-      if (fn === "points_eligible_in_days") return Promise.resolve({ data: 0,   error: null });
-      if (fn === "lookup_label")            return Promise.resolve({ data: null, error: null });
-      if (fn === "is_org_member")           return Promise.resolve({ data: false, error: null });
-      return Promise.resolve({ data: null, error: null });
-    },
-    auth: {
-      getSession:        () => Promise.resolve({ data: { session: null } }),
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: ()=>{} } } }),
-      signInWithPassword:() => Promise.resolve({ data: { user: null }, error: { message: "Demo mode" } }),
-      signUp: (creds) => {
-        const u = { id:"demo-user-id", email:creds.email, created_at:new Date().toISOString() };
-        return Promise.resolve({ data: { user: u, session: { access_token:"demo-token", user:u } }, error: null });
-      },
-      signOut: () => { window.location.href = "https://theatre4u.org"; return Promise.resolve(); },
-      admin: { getUserById: () => Promise.resolve({ data: null }) },
-    },
-    // Realtime — no-op in demo (no live updates needed)
-    channel: (name) => {
-      const noop = { on: ()=>noop, subscribe: ()=>noop, unsubscribe: ()=>{} };
-      return noop;
-    },
-    removeChannel: () => {},
-    removeAllChannels: () => {},
-    storage: {
-      from: () => ({
-        upload:       () => Promise.resolve({ data: null, error: null }),
-        getPublicUrl: () => ({ data: { publicUrl: "" } }),
-        remove:       () => Promise.resolve({ data: null, error: null }),
-      })
-    },
-  };
-}
-
-// Demo wrapper — replaces SB globally when ?demo=1
-function DemoApp() {
-  const [started,  setStarted]  = useState(false);
-  const [store]    = useState(() => createDemoStore());
-  const [showNudge,setShowNudge]= useState(false);
-  const [demoUser, setDemoUser] = useState(null); // set when user clicks "Enter Demo"
-
-  const enterDemo = async (orgName="Demo Theatre Program") => {
-    // Create the demo org in the in-memory store
-    const user = { id:"demo-user-id", email:"demo@theatre4u.org", created_at:new Date().toISOString() };
-    await store.from("orgs").upsert({
-      id: user.id, name: orgName, email: user.email,
-      type:"School", phone:"", location:"", bio:"",
-      temp_pro:true, onboarding_step:0,
-      plan:"pro", created_at:new Date().toISOString(),
-      label_prefix:"DEMO",
-    },{onConflict:"id",ignoreDuplicates:false});
-    store.seedItems();
-    setDemoUser(user);
-  };
-
-  useEffect(() => {
-    window.__demoStore = store;
-    window.__isDemo = true;
-    setStarted(true);
-    const t = setTimeout(() => setShowNudge(true), 3 * 60 * 1000);
-    return () => clearTimeout(t);
-  }, [store]);
-
-  if (!started) return null;
-
-  // Don't render AppRoot until the user has clicked Enter Demo
-  // Once demoUser is set, AppRoot mounts fresh with that user as the initial state
-  if (!demoUser) return (
-    <>
-      <style>{CSS}</style>
-      {/* Demo ribbon shown even on entry screen */}
-      <div style={{position:"fixed",top:0,left:0,right:0,zIndex:99999,
-        background:"linear-gradient(135deg,#1a0d2e,#0d1225)",
-        borderBottom:"2px solid #d4a843",
-        padding:"7px 20px",display:"flex",alignItems:"center",
-        justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:16}}>🎭</span>
-          <span style={{fontWeight:800,color:"#d4a843",fontSize:14}}>Demo Mode</span>
-          <span style={{color:"rgba(255,255,255,.55)",fontSize:12}}>
-            — Nothing is saved. Close the tab to reset.
-          </span>
-        </div>
-        <a href="https://theatre4u.org"
-          style={{padding:"5px 14px",borderRadius:6,fontSize:12,fontWeight:600,
-            color:"rgba(255,255,255,.7)",border:"1px solid rgba(255,255,255,.2)",
-            textDecoration:"none"}}>
-          Exit Demo
-        </a>
-      </div>
-      {/* Entry screen */}
-      <div style={{minHeight:"100vh",background:"#0d0b11",display:"flex",flexDirection:"column",
-        alignItems:"center",justifyContent:"center",padding:"80px 20px 40px",textAlign:"center",
-        fontFamily:"'DM Sans',sans-serif",color:"#ede8df"}}>
-        <div style={{fontSize:56,marginBottom:16}}>🎭</div>
-        <div style={{fontFamily:"'Playfair Display',serif",fontSize:32,color:"#d4a843",marginBottom:8}}>
-          Theatre4u™ Demo
-        </div>
-        <p style={{fontSize:16,color:"rgba(255,255,255,.55)",maxWidth:440,lineHeight:1.7,marginBottom:36}}>
-          Explore the full platform with sample data. Add items, browse the Backstage Exchange,
-          and see how Theatre4u works — no account needed.
-        </p>
-        <div style={{display:"flex",flexDirection:"column",gap:14,alignItems:"center",width:"100%",maxWidth:340}}>
-          <button
-            onClick={()=>enterDemo("Ocean View High School Drama")}
-            style={{width:"100%",padding:"16px 32px",borderRadius:10,border:"none",
-              background:"linear-gradient(135deg,#d4a843,#a37f2c)",color:"#1a0f00",
-              fontSize:17,fontWeight:800,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",
-              boxShadow:"0 4px 20px rgba(212,168,67,.3)"}}>
-            🎭 Enter Demo →
-          </button>
-          <div style={{fontSize:13,color:"rgba(255,255,255,.35)"}}>
-            — or personalize with your program name —
-          </div>
-          <div style={{display:"flex",gap:8,width:"100%"}}>
-            <input
-              id="demo-org-input"
-              placeholder="e.g. Lincoln High Drama"
-              style={{flex:1,padding:"11px 14px",borderRadius:8,
-                border:"1px solid rgba(255,255,255,.15)",
-                background:"rgba(255,255,255,.06)",color:"#fff",
-                fontSize:14,fontFamily:"'DM Sans',sans-serif",outline:"none"}}
-              onKeyDown={e=>{
-                if(e.key==="Enter"){
-                  const v=e.target.value.trim();
-                  enterDemo(v||"Ocean View High School Drama");
-                }
-              }}
-            />
-            <button
-              onClick={()=>{
-                const v=document.getElementById("demo-org-input")?.value?.trim();
-                enterDemo(v||"Ocean View High School Drama");
-              }}
-              style={{padding:"11px 18px",borderRadius:8,
-                border:"1px solid rgba(212,168,67,.4)",
-                background:"rgba(212,168,67,.12)",color:"#d4a843",
-                fontSize:14,fontWeight:700,cursor:"pointer",
-                fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"}}>
-              Go →
-            </button>
-          </div>
-          <a href="https://theatre4u.org?signup=1"
-            style={{fontSize:13,color:"rgba(255,255,255,.3)",textDecoration:"none",marginTop:4}}>
-            Ready to create a real account? →
-          </a>
-        </div>
-      </div>
-    </>
-  );
-
-  return (
-    <div style={{position:"relative"}}>
-      {/* Demo ribbon */}
-      <div style={{position:"fixed",top:0,left:0,right:0,zIndex:99999,
-        background:"linear-gradient(135deg,#1a0d2e,#0d1225)",
-        borderBottom:"2px solid var(--gold, #d4a843)",
-        padding:"7px 20px",display:"flex",alignItems:"center",
-        justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:16}}>🎭</span>
-          <span style={{fontWeight:800,color:"#d4a843",fontSize:14}}>Demo Mode</span>
-          <span style={{color:"rgba(255,255,255,.55)",fontSize:12}}>
-            — Experience Theatre4u as a new user. Nothing is saved. Close the tab to reset.
-          </span>
-        </div>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <a href="https://theatre4u.org" style={{padding:"5px 14px",borderRadius:6,
-            fontSize:12,fontWeight:600,color:"rgba(255,255,255,.7)",
-            border:"1px solid rgba(255,255,255,.2)",textDecoration:"none"}}>
-            Exit Demo
-          </a>
-          <button onClick={()=>{
-            // Carry over org name if user typed one during the demo
-            const demoOrg = store.getStore().orgs?.[0];
-            const orgName = demoOrg?.name || "";
-            const email   = demoOrg?.email || "";
-            // Store for pre-filling the real signup form
-            try {
-              if(orgName) sessionStorage.setItem("t4u_prefill_org",   orgName);
-              if(email)   sessionStorage.setItem("t4u_prefill_email", email);
-            } catch(e) {}
-            window.location.href = "https://theatre4u.org?signup=1";
-          }} style={{padding:"6px 16px",borderRadius:6,fontSize:13,fontWeight:700,
-            color:"#1a0f00",background:"#d4a843",border:"none",cursor:"pointer",
-            fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
-            ⭐ Create Real Account →
-          </button>
-        </div>
-      </div>
-      <div style={{paddingTop:40}}>
-        {/* Timed conversion nudge — appears after 3 minutes */}
-        {showNudge&&(
-          <div style={{margin:"12px 16px 0",padding:"14px 18px",borderRadius:10,
-            background:"linear-gradient(135deg,rgba(76,175,80,.15),rgba(76,175,80,.08))",
-            border:"1px solid rgba(76,175,80,.35)",display:"flex",gap:12,
-            alignItems:"center",flexWrap:"wrap"}}>
-            <span style={{fontSize:22}}>🎭</span>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:700,fontSize:14,color:"#4caf50",marginBottom:2}}>
-                Ready to save your work?
-              </div>
-              <div style={{fontSize:13,color:"rgba(255,255,255,.65)",lineHeight:1.5}}>
-                Everything you've done disappears when you close this tab.
-                Create a free account to keep it — it takes 30 seconds.
-              </div>
-            </div>
-            <div style={{display:"flex",gap:8,flexShrink:0}}>
-              <button onClick={()=>{
-                const demoOrg = store.getStore().orgs?.[0];
-                try {
-                  if(demoOrg?.name)  sessionStorage.setItem("t4u_prefill_org",   demoOrg.name);
-                  if(demoOrg?.email) sessionStorage.setItem("t4u_prefill_email", demoOrg.email);
-                } catch(e) {}
-                window.location.href = "https://theatre4u.org?signup=1";
-              }} style={{padding:"8px 18px",borderRadius:7,border:"none",fontFamily:"inherit",
-                fontSize:13,fontWeight:700,cursor:"pointer",
-                background:"#4caf50",color:"#fff"}}>
-                ⭐ Create Free Account
-              </button>
-              <button onClick={()=>setShowNudge(false)}
-                style={{background:"none",border:"1px solid rgba(255,255,255,.15)",
-                  borderRadius:7,padding:"8px 12px",color:"rgba(255,255,255,.5)",
-                  fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
-                Maybe later
-              </button>
-            </div>
-          </div>
-        )}
-        <ErrorBoundary><AppRoot demoStore={store} demoUser={demoUser} onEnterDemo={enterDemo}/></ErrorBoundary>
-      </div>
-    </div>
-  );
-}
-
-const isDemoMode = () => {
-  try { return new URLSearchParams(window.location.search).get("demo") === "1"; } catch { return false; }
-};
-
-const AppWithBoundary = () => isDemoMode()
-  ? <DemoApp/>
-  : <ErrorBoundary><AppRoot/></ErrorBoundary>;
-
-export default AppWithBoundary;
