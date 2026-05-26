@@ -1140,10 +1140,11 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical
   );
 }
 
-function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=true, canDelete=true}){
+function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=true, canDelete=true, plan="free", districtId=null, orgName=null}){
   const cat=CAT[item.category]||CAT.other;
   const[lb,setLb]=useState(false);
   const[qr,setQr]=useState(null);
+  const[showDistrictShare,setShowDistrictShare]=useState(false);
   const[showAddToProd,setShowAddToProd]=useState(false);
   const[showCal,setShowCal]=useState(false);
   const gfx=CAT_GFX[item.category]||CAT_GFX.other;
@@ -1248,6 +1249,9 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=t
         {canEdit&&onEdit&&<button className="btn btn-p btn-sm" onClick={onEdit}><span style={{width:14,height:14,display:"flex"}}>{Ic.edit}</span>Edit</button>}
         {canDelete&&onDelete&&<button className="btn btn-d btn-sm" onClick={()=>{if(window.confirm("Delete this item?"))onDelete(item.id)}}><span style={{width:14,height:14,display:"flex"}}>{Ic.trash}</span>Delete</button>}
         {userId && <button className="btn btn-o btn-sm" onClick={()=>setShowAddToProd(true)}>🎭 Add to Production</button>}
+        {plan==="district"&&districtId&&userId&&(
+          <button className="btn btn-o btn-sm" onClick={()=>setShowDistrictShare(true)}>🏫 Share with District</button>
+        )}
         {item.mkt!=="Not Listed"&&<FbShareBtn
           url={itemShareUrl(item)}
           text={itemShareText(item, schoolName)}
@@ -1257,6 +1261,9 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=t
       </div>
       {showAddToProd && userId && (
         <AddToProductionPicker item={item} userId={userId} onClose={()=>setShowAddToProd(false)}/>
+      )}
+      {showDistrictShare && districtId && (
+        <DistrictShareModal item={item} userId={userId} districtId={districtId} fromOrgName={orgName||""} onClose={()=>setShowDistrictShare(false)}/>
       )}
     </>
   );
@@ -1831,6 +1838,39 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
   const totalVal=items.reduce((s,i)=>s+((i.sale||0)*(i.qty||1)),0);
   const cc={};items.forEach(i=>{cc[i.category]=(cc[i.category]||0)+(i.qty||1)});
   const maxC=Math.max(1,...Object.values(cc));
+  const [highlights,      setHighlights]      = useState([]);
+  const [incomingLoans,   setIncomingLoans]   = useState([]);
+  const [outgoingLoans,   setOutgoingLoans]   = useState([]);
+  const [loanSaving,      setLoanSaving]      = useState(null);
+
+  // Load district loans if on district plan
+  useEffect(()=>{
+    if (plan!=="district"||!org?.id) return;
+    SB.from("district_loans").select("*")
+      .eq("to_org_id", org.id).eq("status","pending")
+      .order("created_at",{ascending:false})
+      .then(({data})=>setIncomingLoans(data||[]));
+    SB.from("district_loans").select("*")
+      .eq("from_org_id", org.id).in("status",["pending","active"])
+      .order("created_at",{ascending:false})
+      .then(({data})=>setOutgoingLoans(data||[]));
+  },[plan, org?.id]);
+
+  const respondLoan = async (loanId, accept) => {
+    setLoanSaving(loanId);
+    const status = accept ? "active" : "declined";
+    await SB.from("district_loans").update({status, updated_at:new Date().toISOString()}).eq("id",loanId);
+    setIncomingLoans(p=>p.filter(l=>l.id!==loanId));
+    setLoanSaving(null);
+  };
+
+  const returnLoan = async (loanId) => {
+    setLoanSaving(loanId);
+    await SB.from("district_loans").update({status:"returned",returned_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",loanId);
+    setOutgoingLoans(p=>p.filter(l=>l.id!==loanId));
+    setLoanSaving(null);
+  };
+
   const [highlights, setHighlights] = useState([]);
   useEffect(()=>{
     (async()=>{
@@ -1851,6 +1891,51 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
     <div style={{position:"relative",padding:"32px 36px 56px"}}>
       <img src={usp(BG.dashboard,1400,900)} alt="" className="page-bg-img"/>
       <div className="page-layer">
+
+        {/* ── District Loan Notifications ── */}
+        {incomingLoans.length > 0 && (
+          <div style={{marginBottom:16}}>
+            {incomingLoans.map(loan=>(
+              <div key={loan.id} style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.3)",borderRadius:10,padding:"12px 16px",marginBottom:8,display:"flex",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>📦 Incoming loan offer from {loan.from_org_name}</div>
+                  <div style={{fontSize:13,color:"var(--muted)",marginBottom:loan.notes?4:0}}>
+                    {loan.qty>1?loan.qty+"x ":""}{loan.item_name}
+                    {loan.return_date?" · Return by "+new Date(loan.return_date).toLocaleDateString():""}
+                  </div>
+                  {loan.notes&&<div style={{fontSize:12,color:"var(--muted)",fontStyle:"italic"}}>{loan.notes}</div>}
+                </div>
+                <div style={{display:"flex",gap:6,flexShrink:0}}>
+                  <button className="btn btn-g btn-sm" disabled={loanSaving===loan.id} onClick={()=>respondLoan(loan.id,true)}>
+                    {loanSaving===loan.id?"...":"Accept"}
+                  </button>
+                  <button className="btn btn-d btn-sm" disabled={loanSaving===loan.id} onClick={()=>respondLoan(loan.id,false)}>
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {outgoingLoans.length > 0 && (
+          <div style={{marginBottom:16}}>
+            {outgoingLoans.map(loan=>(
+              <div key={loan.id} style={{background:"rgba(76,175,80,.06)",border:"1px solid rgba(76,175,80,.25)",borderRadius:10,padding:"10px 14px",marginBottom:6,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:13}}>
+                    {loan.status==="pending"?"⏳ Awaiting response":"✅ Active loan"} — {loan.qty>1?loan.qty+"x ":""}{loan.item_name} → {loan.to_org_name}
+                  </div>
+                  {loan.return_date&&<div style={{fontSize:11,color:"var(--muted)"}}>Return by {new Date(loan.return_date).toLocaleDateString()}</div>}
+                </div>
+                {loan.status==="active"&&(
+                  <button className="btn btn-o btn-sm" disabled={loanSaving===loan.id} onClick={()=>returnLoan(loan.id)}>
+                    {loanSaving===loan.id?"...":"Mark Returned"}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Temp Pro beta notice */}
         {isTempPro&&(()=>{
@@ -2648,7 +2733,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
          >
           <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={org?.vertical||"theatre"}/>
         </Modal>)}
-      {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{onDelete(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete}/></Modal>}
+      {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{onDelete(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete} plan={plan} districtId={org?.district_id||null} orgName={org?.name||schoolName||""}/></Modal>}
       {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",user?.id).order("added",{ascending:false});if(data)setItems(data);}}/>}
     </div>
   </>
@@ -6232,6 +6317,117 @@ function AddToProductionPicker({ item, userId, onClose }) {
         <div style={{ padding:"10px 14px", borderTop:"1px solid var(--border)",
           textAlign:"center", fontSize:12, color:"var(--muted)" }}>
           {totalQty > 1 ? "Set quantity then click ○ to assign" : "Click a production to add or remove this item"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ── District Internal Loan ──────────────────────────────────────────────────
+function DistrictShareModal({ item, userId, districtId, fromOrgName, onClose }) {
+  const [schools,     setSchools]     = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [toOrgId,     setToOrgId]     = useState("");
+  const [qty,         setQty]         = useState(1);
+  const [returnDate,  setReturnDate]  = useState("");
+  const [notes,       setNotes]       = useState("");
+  const [saving,      setSaving]      = useState(false);
+  const [done,        setDone]        = useState(false);
+  const totalQty = item.qty || 1;
+  const today = new Date().toISOString().slice(0,10);
+
+  useEffect(()=>{
+    SB.from("orgs").select("id,name")
+      .eq("district_id", districtId)
+      .neq("id", userId)
+      .order("name")
+      .then(({data})=>{ setSchools(data||[]); setLoading(false); });
+  },[districtId, userId]);
+
+  const send = async () => {
+    if (!toOrgId) return;
+    setSaving(true);
+    const toSchool = schools.find(s=>s.id===toOrgId);
+    const { error } = await SB.from("district_loans").insert({
+      district_id:   districtId,
+      item_id:       item.id,
+      item_name:     item.name,
+      item_category: item.category,
+      from_org_id:   userId,
+      from_org_name: fromOrgName,
+      to_org_id:     toOrgId,
+      to_org_name:   toSchool?.name||"",
+      qty,
+      start_date:    today,
+      return_date:   returnDate||null,
+      notes:         notes.trim()||null,
+      status:        "pending",
+    });
+    setSaving(false);
+    if (!error) setDone(true);
+  };
+
+  const inp = {background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,padding:"8px 10px",color:"var(--text)",fontSize:13,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box"};
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.72)",zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:"var(--dark2)",borderRadius:14,width:"100%",maxWidth:400,border:"1px solid var(--border)",overflow:"hidden"}}>
+        <div style={{padding:"14px 18px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div>
+            <div style={{fontFamily:"var(--serif)",fontSize:16,fontWeight:700}}>Share with District School</div>
+            <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>{item.name}{totalQty>1?" · x"+totalQty+" in inventory":""}</div>
+          </div>
+          <button onClick={onClose} style={{background:"none",border:"1px solid var(--border)",color:"var(--muted)",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontFamily:"inherit"}}>x</button>
+        </div>
+        <div style={{padding:18,display:"flex",flexDirection:"column",gap:14}}>
+          {done ? (
+            <div style={{textAlign:"center",padding:"24px 0"}}>
+              <div style={{fontSize:40,marginBottom:12}}>📦</div>
+              <div style={{fontWeight:700,fontSize:15,marginBottom:6}}>Loan offer sent!</div>
+              <div style={{fontSize:13,color:"var(--muted)",marginBottom:16}}>The receiving school will see a notification and can accept or decline.</div>
+              <button className="btn btn-o" onClick={onClose}>Close</button>
+            </div>
+          ) : loading ? (
+            <div style={{textAlign:"center",padding:24,color:"var(--muted)"}}>Loading schools...</div>
+          ) : schools.length === 0 ? (
+            <div style={{textAlign:"center",padding:24,color:"var(--muted)"}}>No other schools in your district yet. Invite schools from the District page.</div>
+          ) : (
+            <React.Fragment>
+              <div>
+                <label style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:6}}>Send to school</label>
+                <select style={inp} value={toOrgId} onChange={e=>setToOrgId(e.target.value)}>
+                  <option value="">Select a school</option>
+                  {schools.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+              {totalQty > 1 && (
+                <div>
+                  <label style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:6}}>Quantity to loan</label>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <button onClick={()=>setQty(q=>Math.max(1,q-1))} style={{width:32,height:32,borderRadius:6,border:"1px solid var(--border)",background:"var(--parch)",cursor:"pointer",fontFamily:"inherit",fontSize:16}}>-</button>
+                    <span style={{fontSize:18,fontWeight:700,minWidth:32,textAlign:"center"}}>{qty}</span>
+                    <button onClick={()=>setQty(q=>Math.min(totalQty,q+1))} style={{width:32,height:32,borderRadius:6,border:"1px solid var(--border)",background:"var(--parch)",cursor:"pointer",fontFamily:"inherit",fontSize:16}}>+</button>
+                    <span style={{fontSize:12,color:"var(--muted)"}}>of {totalQty} available</span>
+                  </div>
+                </div>
+              )}
+              <div>
+                <label style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:6}}>Return by (optional)</label>
+                <input type="date" style={inp} value={returnDate} min={today} onChange={e=>setReturnDate(e.target.value)}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:6}}>Note (optional)</label>
+                <textarea style={{...inp,minHeight:64,resize:"vertical"}} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Available for pickup Monday, contact us for access code..."/>
+              </div>
+              <div style={{display:"flex",gap:8,paddingTop:4,borderTop:"1px solid var(--border)"}}>
+                <button className="btn btn-g" style={{flex:1}} onClick={send} disabled={!toOrgId||saving}>
+                  {saving?"Sending...":"Send Loan Offer"}
+                </button>
+                <button className="btn btn-o" onClick={onClose}>Cancel</button>
+              </div>
+            </React.Fragment>
+          )}
         </div>
       </div>
     </div>
