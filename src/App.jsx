@@ -5292,7 +5292,7 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
               ))}
             </div>
           )
-        ) : (
+        ) : tab === "invites" ? (
           /* Invites tab */
           <div className="card" style={{ overflow: "hidden" }}>
             {invites.length === 0 ? (
