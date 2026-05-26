@@ -1927,9 +1927,16 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
                   {loan.return_date&&<div style={{fontSize:11,color:"var(--muted)"}}>Return by {new Date(loan.return_date).toLocaleDateString()}</div>}
                 </div>
                 {loan.status==="active"&&(
-                  <button className="btn btn-o btn-sm" disabled={loanSaving===loan.id} onClick={()=>returnLoan(loan.id)}>
-                    {loanSaving===loan.id?"...":"Mark Returned"}
-                  </button>
+                  <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
+                    {loan.return_date&&new Date(loan.return_date)<new Date(Date.now()+3*24*60*60*1000)&&(
+                      <span style={{fontSize:11,color:"var(--red)",fontWeight:700}}>
+                        ⚠️ Due {new Date(loan.return_date).toLocaleDateString()}
+                      </span>
+                    )}
+                    <button className="btn btn-o btn-sm" disabled={loanSaving===loan.id} onClick={()=>returnLoan(loan.id)}>
+                      {loanSaving===loan.id?"...":"Mark Returned"}
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
@@ -2661,7 +2668,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
                       <div className="inv-cat" style={{color:cat.color}}>{cat.icon} {cat.label}</div>
                       <div className="inv-name">{item.name}</div>
                       {item.location&&<div style={{fontSize:12,color:"var(--muted)",marginBottom:4,display:"flex",alignItems:"center",gap:3}}>📍 {item.location}</div>}
-                      <div className="inv-meta">{item.display_id&&<span className="chip" style={{fontFamily:"monospace",fontWeight:800,color:"var(--amber)",letterSpacing:.5}}>{item.display_id}</span>}<span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span>{item.size!=="N/A"&&<span className="chip">{item.size}</span>}<span className="chip">{item.avail}</span></div>
+                      <div className="inv-meta">{item._is_loan&&<span className="chip" style={{background:"rgba(76,175,80,.15)",color:"#2e7d32",fontWeight:700}}>🔄 On loan from {item._from_org}</span>}{!item._is_loan&&item.display_id&&<span className="chip" style={{fontFamily:"monospace",fontWeight:800,color:"var(--amber)",letterSpacing:.5}}>{item.display_id}</span>}{!item._is_loan&&<span className="chip">{item.condition}</span>}<span className="chip">×{item.qty}</span>{!item._is_loan&&item.size!=="N/A"&&<span className="chip">{item.size}</span>}<span className="chip">{item.avail}</span></div>
                       <div className="inv-foot"><span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span>{item.mkt==="For Loan"?<span style={{fontSize:12,color:"#00838f",fontWeight:700}}>{item.loan_period||2}wk loan{item.deposit>0?" · "+fmt$(item.deposit)+" dep.":""}</span>:item.mkt!=="Not Listed"&&<span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>}</div>
                     </div>
                   </div>
@@ -5055,8 +5062,9 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
   const [invites,    setInvites]    = useState([]);
   const [itemCounts, setItemCounts] = useState({});
   const [loading,    setLoading]    = useState(true);
-  const [tab,        setTab]        = useState("schools"); // schools | invites
+  const [tab,        setTab]        = useState("schools"); // schools | invites | loans
   const [showInvite, setShowInvite] = useState(false);
+  const [distLoans,  setDistLoans]  = useState([]);
   const [invEmail,   setInvEmail]   = useState("");
   const [invSchool,  setInvSchool]  = useState("");
   const [sending,    setSending]    = useState(false);
@@ -5094,6 +5102,11 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
     const { data: invData } = await SB.from("district_invites")
       .select("*").eq("district_id", dist.id).order("created_at", { ascending: false });
     setInvites(invData || []);
+    // Load all loans across district
+    const { data: loanData } = await SB.from("district_loans")
+      .select("*").eq("district_id", dist.id)
+      .order("created_at", { ascending: false }).limit(50);
+    setDistLoans(loanData || []);
     setLoading(false);
   }, [user]);
 
@@ -5220,10 +5233,10 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
 
         {/* Tabs */}
         <div className="tabs" style={{ marginBottom: 16 }}>
-          {["schools", "invites"].map(t => (
+          {["schools", "invites", "loans"].map(t => (
             <button key={t} className={`tab ${tab === t ? "on" : ""}`} onClick={() => setTab(t)}
               style={{ textTransform: "capitalize" }}>
-              {t === "schools" ? `🏫 Schools (${slotsUsed})` : `📨 Invites (${invites.filter(i=>i.status==="pending").length})`}
+              {t === "schools" ? `🏫 Schools (${slotsUsed})` : t === "invites" ? `📨 Invites (${invites.filter(i=>i.status==="pending").length})` : `📦 Loans (${distLoans.filter(l=>l.status==="active"||l.status==="pending").length})`}
             </button>
           ))}
           <button className="btn btn-g btn-sm" style={{ marginLeft: "auto" }}
@@ -5329,6 +5342,40 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
                   })}
                 </tbody>
               </table>
+            )}
+          </div>
+        ) : (
+          /* Loans tab */
+          <div>
+            {distLoans.length === 0 ? (
+              <div style={{textAlign:"center",padding:32,color:"var(--muted)"}}>
+                <div style={{fontSize:36,marginBottom:10}}>📦</div>
+                <p>No loans yet. Open any item in inventory and click "Share with District" to loan items between schools.</p>
+              </div>
+            ) : (
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {distLoans.map(loan=>{
+                  const statusColor = loan.status==="active"?"rgba(76,175,80,.15)":loan.status==="pending"?"rgba(212,168,67,.15)":loan.status==="returned"?"rgba(255,255,255,.07)":"rgba(244,67,54,.15)";
+                  const statusText  = loan.status==="active"?"rgba(76,175,80,1)":loan.status==="pending"?"var(--gold)":loan.status==="returned"?"var(--muted)":"var(--red)";
+                  return (
+                    <div key={loan.id} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 16px",display:"flex",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>
+                          {loan.qty>1?loan.qty+"x ":""}{loan.item_name}
+                        </div>
+                        <div style={{fontSize:12,color:"var(--muted)"}}>
+                          {loan.from_org_name} → {loan.to_org_name}
+                          {loan.return_date?" · Return by "+new Date(loan.return_date).toLocaleDateString():""}
+                        </div>
+                        {loan.notes&&<div style={{fontSize:12,color:"var(--muted)",fontStyle:"italic",marginTop:2}}>{loan.notes}</div>}
+                      </div>
+                      <span style={{padding:"3px 10px",borderRadius:8,fontSize:11,fontWeight:700,background:statusColor,color:statusText,flexShrink:0}}>
+                        {loan.status}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         )}
@@ -17371,7 +17418,28 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
         setOnboardingStep(orgData.onboarding_step ?? 0);
       } else { setPlanState(effectivePlan); }
       const{data:itemData}=await SB.from("items").select("*").eq("org_id",targetOrgId).order("added",{ascending:false}).limit(2000);
-      if(itemData) setItems(itemData);
+      // Also load active district loans received by this org — show as virtual items
+      const{data:loanData}=await SB.from("district_loans").select("*")
+        .eq("to_org_id",targetOrgId).eq("status","active");
+      const loanItems = (loanData||[]).map(loan=>({
+        id:            "loan_"+loan.id,
+        _loan_id:      loan.id,
+        _is_loan:      true,
+        _from_org:     loan.from_org_name,
+        _return_date:  loan.return_date,
+        name:          loan.item_name,
+        category:      loan.item_category||"other",
+        qty:           loan.qty,
+        condition:     "On Loan",
+        avail:         "On Loan",
+        mkt:           "Not Listed",
+        location:      "On loan from "+loan.from_org_name,
+        notes:         loan.notes||"",
+        tags:          [],
+        org_id:        targetOrgId,
+        added:         loan.created_at,
+      }));
+      if(itemData) setItems([...itemData, ...loanItems]);
       setLoaded(true);
       // Load unread message count
       const { count: unread } = await SB.from("messages")
