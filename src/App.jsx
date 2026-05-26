@@ -1871,7 +1871,6 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
     setLoanSaving(null);
   };
 
-  const [highlights, setHighlights] = useState([]);
   useEffect(()=>{
     (async()=>{
       const{data}=await SB.from("items")
@@ -6393,7 +6392,7 @@ function DistrictShareModal({ item, userId, districtId, fromOrgName, onClose }) 
           ) : schools.length === 0 ? (
             <div style={{textAlign:"center",padding:24,color:"var(--muted)"}}>No other schools in your district yet. Invite schools from the District page.</div>
           ) : (
-            <React.Fragment>
+            <>
               <div>
                 <label style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:6}}>Send to school</label>
                 <select style={inp} value={toOrgId} onChange={e=>setToOrgId(e.target.value)}>
@@ -6426,7 +6425,7 @@ function DistrictShareModal({ item, userId, districtId, fromOrgName, onClose }) 
                 </button>
                 <button className="btn btn-o" onClick={onClose}>Cancel</button>
               </div>
-            </React.Fragment>
+            </>
           )}
         </div>
       </div>
