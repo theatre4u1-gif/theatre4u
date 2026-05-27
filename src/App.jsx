@@ -6414,19 +6414,20 @@ function DistrictShareModal({ item, userId, districtId, fromOrgName, onClose }) 
     if (!error) setDone(true);
   };
 
-  const inp = {background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,padding:"8px 10px",color:"var(--text)",fontSize:13,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box"};
+  const inp = {background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.2)",borderRadius:6,padding:"9px 12px",color:"#ede8df",fontSize:14,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box"};
+  const lbl = {fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"rgba(212,168,67,.8)",display:"block",marginBottom:6};
 
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.72)",zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-      <div style={{background:"var(--dark2)",borderRadius:14,width:"100%",maxWidth:400,border:"1px solid var(--border)",overflow:"hidden"}}>
-        <div style={{padding:"14px 18px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.88)",zIndex:9000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{background:"#1a1612",borderRadius:14,width:"100%",maxWidth:440,border:"1px solid rgba(212,168,67,.3)",overflow:"hidden",boxShadow:"0 24px 64px rgba(0,0,0,.8)"}}>
+        <div style={{padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,.1)",display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(212,168,67,.08)"}}>
           <div>
-            <div style={{fontFamily:"var(--serif)",fontSize:16,fontWeight:700}}>Share with District School</div>
-            <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>{item.name}{totalQty>1?" · x"+totalQty+" in inventory":""}</div>
+            <div style={{fontFamily:"var(--serif)",fontSize:17,fontWeight:700,color:"#ede8df"}}>🏫 Share with District School</div>
+            <div style={{fontSize:13,color:"rgba(212,168,67,.9)",marginTop:3,fontWeight:600}}>{item.name}{totalQty>1?" · "+totalQty+" in inventory":""}</div>
           </div>
-          <button onClick={onClose} style={{background:"none",border:"1px solid var(--border)",color:"var(--muted)",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontFamily:"inherit"}}>x</button>
+          <button onClick={onClose} style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.2)",color:"#ede8df",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontFamily:"inherit",fontSize:14}}>✕</button>
         </div>
-        <div style={{padding:18,display:"flex",flexDirection:"column",gap:14}}>
+        <div style={{padding:20,display:"flex",flexDirection:"column",gap:16}}>
           {done ? (
             <div style={{textAlign:"center",padding:"24px 0"}}>
               <div style={{fontSize:40,marginBottom:12}}>📦</div>
@@ -6435,38 +6436,38 @@ function DistrictShareModal({ item, userId, districtId, fromOrgName, onClose }) 
               <button className="btn btn-o" onClick={onClose}>Close</button>
             </div>
           ) : loading ? (
-            <div style={{textAlign:"center",padding:24,color:"var(--muted)"}}>Loading schools...</div>
+            <div style={{textAlign:"center",padding:24,color:"rgba(255,255,255,.5)"}}>Loading schools...</div>
           ) : schools.length === 0 ? (
-            <div style={{textAlign:"center",padding:24,color:"var(--muted)"}}>No other schools in your district yet. Invite schools from the District page.</div>
+            <div style={{textAlign:"center",padding:24,color:"rgba(255,255,255,.6)"}}>No other schools in your district yet. Invite schools from the District page.</div>
           ) : (
             <>
               <div>
-                <label style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:6}}>Send to school</label>
+                <label style={lbl}>Send to school</label>
                 <select style={inp} value={toOrgId} onChange={e=>setToOrgId(e.target.value)}>
                   <option value="">Select a school</option>
-                  {schools.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+                  {schools.map(s=><option key={s.id} value={s.id} style={{background:"#1a1612",color:"#ede8df"}}>{s.name}</option>)}
                 </select>
               </div>
               {totalQty > 1 && (
                 <div>
-                  <label style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:6}}>Quantity to loan</label>
+                  <label style={lbl}>Quantity to loan</label>
                   <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <button onClick={()=>setQty(q=>Math.max(1,q-1))} style={{width:32,height:32,borderRadius:6,border:"1px solid var(--border)",background:"var(--parch)",cursor:"pointer",fontFamily:"inherit",fontSize:16}}>-</button>
+                    <button onClick={()=>setQty(q=>Math.max(1,q-1))} style={{width:32,height:32,borderRadius:6,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"#ede8df",cursor:"pointer",fontFamily:"inherit",fontSize:18,lineHeight:1}}>−</button>
                     <span style={{fontSize:18,fontWeight:700,minWidth:32,textAlign:"center"}}>{qty}</span>
-                    <button onClick={()=>setQty(q=>Math.min(totalQty,q+1))} style={{width:32,height:32,borderRadius:6,border:"1px solid var(--border)",background:"var(--parch)",cursor:"pointer",fontFamily:"inherit",fontSize:16}}>+</button>
+                    <button onClick={()=>setQty(q=>Math.min(totalQty,q+1))} style={{width:32,height:32,borderRadius:6,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"#ede8df",cursor:"pointer",fontFamily:"inherit",fontSize:18,lineHeight:1}}>+</button>
                     <span style={{fontSize:12,color:"var(--muted)"}}>of {totalQty} available</span>
                   </div>
                 </div>
               )}
               <div>
-                <label style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:6}}>Return by (optional)</label>
+                <label style={lbl}>Return by (optional)</label>
                 <input type="date" style={inp} value={returnDate} min={today} onChange={e=>setReturnDate(e.target.value)}/>
               </div>
               <div>
-                <label style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:6}}>Note (optional)</label>
+                <label style={lbl}>Note (optional)</label>
                 <textarea style={{...inp,minHeight:64,resize:"vertical"}} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Available for pickup Monday, contact us for access code..."/>
               </div>
-              <div style={{display:"flex",gap:8,paddingTop:4,borderTop:"1px solid var(--border)"}}>
+              <div style={{display:"flex",gap:8,paddingTop:4,borderTop:"1px solid rgba(255,255,255,.1)"}}>
                 <button className="btn btn-g" style={{flex:1}} onClick={send} disabled={!toOrgId||saving}>
                   {saving?"Sending...":"Send Loan Offer"}
                 </button>
