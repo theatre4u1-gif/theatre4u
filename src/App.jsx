@@ -6453,7 +6453,7 @@ function DistrictShareModal({ item, userId, districtId, fromOrgName, onClose }) 
                   <label style={lbl}>Quantity to loan</label>
                   <div style={{display:"flex",alignItems:"center",gap:10}}>
                     <button onClick={()=>setQty(q=>Math.max(1,q-1))} style={{width:32,height:32,borderRadius:6,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"#ede8df",cursor:"pointer",fontFamily:"inherit",fontSize:18,lineHeight:1}}>−</button>
-                    <span style={{fontSize:18,fontWeight:700,minWidth:32,textAlign:"center"}}>{qty}</span>
+                    <span style={{fontSize:20,fontWeight:800,minWidth:40,textAlign:"center",color:"#ede8df",background:"rgba(255,255,255,.12)",borderRadius:6,padding:"4px 10px"}}>{qty}</span>
                     <button onClick={()=>setQty(q=>Math.min(totalQty,q+1))} style={{width:32,height:32,borderRadius:6,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"#ede8df",cursor:"pointer",fontFamily:"inherit",fontSize:18,lineHeight:1}}>+</button>
                     <span style={{fontSize:12,color:"var(--muted)"}}>of {totalQty} available</span>
                   </div>
@@ -6471,7 +6471,7 @@ function DistrictShareModal({ item, userId, districtId, fromOrgName, onClose }) 
                 <button className="btn btn-g" style={{flex:1}} onClick={send} disabled={!toOrgId||saving}>
                   {saving?"Sending...":"Send Loan Offer"}
                 </button>
-                <button className="btn btn-o" onClick={onClose}>Cancel</button>
+                <button style={{padding:"8px 20px",borderRadius:8,border:"1px solid rgba(255,255,255,.3)",background:"rgba(255,255,255,.08)",color:"#ede8df",cursor:"pointer",fontFamily:"inherit",fontSize:14,fontWeight:600}} onClick={onClose}>Cancel</button>
               </div>
             </>
           )}
