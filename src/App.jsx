@@ -1140,11 +1140,10 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical
   );
 }
 
-function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=true, canDelete=true, plan="free", districtId=null, orgName=null}){
+function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=true, canDelete=true}){
   const cat=CAT[item.category]||CAT.other;
   const[lb,setLb]=useState(false);
   const[qr,setQr]=useState(null);
-  const[showDistrictShare,setShowDistrictShare]=useState(false);
   const[showAddToProd,setShowAddToProd]=useState(false);
   const[showCal,setShowCal]=useState(false);
   const gfx=CAT_GFX[item.category]||CAT_GFX.other;
@@ -1249,9 +1248,6 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=t
         {canEdit&&onEdit&&<button className="btn btn-p btn-sm" onClick={onEdit}><span style={{width:14,height:14,display:"flex"}}>{Ic.edit}</span>Edit</button>}
         {canDelete&&onDelete&&<button className="btn btn-d btn-sm" onClick={()=>{if(window.confirm("Delete this item?"))onDelete(item.id)}}><span style={{width:14,height:14,display:"flex"}}>{Ic.trash}</span>Delete</button>}
         {userId && <button className="btn btn-o btn-sm" onClick={()=>setShowAddToProd(true)}>🎭 Add to Production</button>}
-        {plan==="district"&&districtId&&userId&&(
-          <button className="btn btn-o btn-sm" onClick={()=>setShowDistrictShare(true)}>🏫 Share with District</button>
-        )}
         {item.mkt!=="Not Listed"&&<FbShareBtn
           url={itemShareUrl(item)}
           text={itemShareText(item, schoolName)}
@@ -1261,9 +1257,6 @@ function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=t
       </div>
       {showAddToProd && userId && (
         <AddToProductionPicker item={item} userId={userId} onClose={()=>setShowAddToProd(false)}/>
-      )}
-      {showDistrictShare && districtId && (
-        <DistrictShareModal item={item} userId={userId} districtId={districtId} fromOrgName={orgName||""} onClose={()=>setShowDistrictShare(false)}/>
       )}
     </>
   );
@@ -1838,39 +1831,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
   const totalVal=items.reduce((s,i)=>s+((i.sale||0)*(i.qty||1)),0);
   const cc={};items.forEach(i=>{cc[i.category]=(cc[i.category]||0)+(i.qty||1)});
   const maxC=Math.max(1,...Object.values(cc));
-  const [highlights,      setHighlights]      = useState([]);
-  const [incomingLoans,   setIncomingLoans]   = useState([]);
-  const [outgoingLoans,   setOutgoingLoans]   = useState([]);
-  const [loanSaving,      setLoanSaving]      = useState(null);
-
-  // Load district loans if on district plan
-  useEffect(()=>{
-    if (plan!=="district"||!org?.id) return;
-    SB.from("district_loans").select("*")
-      .eq("to_org_id", org.id).eq("status","pending")
-      .order("created_at",{ascending:false})
-      .then(({data})=>setIncomingLoans(data||[]));
-    SB.from("district_loans").select("*")
-      .eq("from_org_id", org.id).in("status",["pending","active"])
-      .order("created_at",{ascending:false})
-      .then(({data})=>setOutgoingLoans(data||[]));
-  },[plan, org?.id]);
-
-  const respondLoan = async (loanId, accept) => {
-    setLoanSaving(loanId);
-    const status = accept ? "active" : "declined";
-    await SB.from("district_loans").update({status, updated_at:new Date().toISOString()}).eq("id",loanId);
-    setIncomingLoans(p=>p.filter(l=>l.id!==loanId));
-    setLoanSaving(null);
-  };
-
-  const returnLoan = async (loanId) => {
-    setLoanSaving(loanId);
-    await SB.from("district_loans").update({status:"returned",returned_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",loanId);
-    setOutgoingLoans(p=>p.filter(l=>l.id!==loanId));
-    setLoanSaving(null);
-  };
-
+  const [highlights, setHighlights] = useState([]);
   useEffect(()=>{
     (async()=>{
       const{data}=await SB.from("items")
@@ -1891,63 +1852,36 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
       <img src={usp(BG.dashboard,1400,900)} alt="" className="page-bg-img"/>
       <div className="page-layer">
 
-        {/* ── District Loan Notifications ── */}
-        {incomingLoans.length > 0 && (
-          <div style={{marginBottom:16}}>
-            {incomingLoans.map(loan=>(
-              <div key={loan.id} style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.3)",borderRadius:10,padding:"12px 16px",marginBottom:8,display:"flex",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>📦 Incoming loan offer from {loan.from_org_name}</div>
-                  <div style={{fontSize:13,color:"var(--muted)",marginBottom:loan.notes?4:0}}>
-                    {loan.qty>1?loan.qty+"x ":""}{loan.item_name}
-                    {loan.return_date?" · Return by "+new Date(loan.return_date).toLocaleDateString():""}
-                  </div>
-                  {loan.notes&&<div style={{fontSize:12,color:"var(--muted)",fontStyle:"italic"}}>{loan.notes}</div>}
-                </div>
-                <div style={{display:"flex",gap:6,flexShrink:0}}>
-                  <button className="btn btn-g btn-sm" disabled={loanSaving===loan.id} onClick={()=>respondLoan(loan.id,true)}>
-                    {loanSaving===loan.id?"...":"Accept"}
-                  </button>
-                  <button className="btn btn-d btn-sm" disabled={loanSaving===loan.id} onClick={()=>respondLoan(loan.id,false)}>
-                    Decline
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        {outgoingLoans.length > 0 && (
-          <div style={{marginBottom:16}}>
-            {outgoingLoans.map(loan=>(
-              <div key={loan.id} style={{background:"rgba(76,175,80,.06)",border:"1px solid rgba(76,175,80,.25)",borderRadius:10,padding:"10px 14px",marginBottom:6,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:700,fontSize:13}}>
-                    {loan.status==="pending"?"⏳ Awaiting response":"✅ Active loan"} — {loan.qty>1?loan.qty+"x ":""}{loan.item_name} → {loan.to_org_name}
-                  </div>
-                  {loan.return_date&&<div style={{fontSize:11,color:"var(--muted)"}}>Return by {new Date(loan.return_date).toLocaleDateString()}</div>}
-                </div>
-                {loan.status==="active"&&(
-                  <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
-                    {loan.return_date&&new Date(loan.return_date)<new Date(Date.now()+3*24*60*60*1000)&&(
-                      <span style={{fontSize:11,color:"var(--red)",fontWeight:700}}>
-                        ⚠️ Due {new Date(loan.return_date).toLocaleDateString()}
-                      </span>
-                    )}
-                    <button className="btn btn-o btn-sm" disabled={loanSaving===loan.id} onClick={()=>returnLoan(loan.id)}>
-                      {loanSaving===loan.id?"...":"Mark Returned"}
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* Temp Pro beta notice */}
         {isTempPro&&(()=>{
-          const itemCount = items.length;
+          const itemCount = items.filter(i=>!i._is_loan).length;
+          const hasFeedback = org?.founding_member_rate || false;
+          const isFoundingMember = org?.founding_member_rate || false;
           const itemsNeeded = Math.max(0, 25 - itemCount);
           const itemPct = Math.min(100, Math.round(itemCount / 25 * 100));
+
+          // Founding member — show celebration
+          if (isFoundingMember) return (
+            <div style={{background:"linear-gradient(135deg,rgba(76,175,80,.15),rgba(76,175,80,.05))",
+              border:"1px solid rgba(76,175,80,.4)",borderRadius:10,padding:"14px 16px",marginBottom:16}}>
+              <div style={{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+                <span style={{fontSize:24,flexShrink:0}}>🎉</span>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:14,color:"#4caf50",marginBottom:3}}>
+                    You've earned the Founding Member Rate — $9.99/month!
+                  </div>
+                  <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
+                    You added 25+ items and shared your feedback during beta. When Theatre4u launches,
+                    your rate is locked at <strong style={{color:"var(--text)"}}>$9.99/month</strong> for
+                    as long as you subscribe — 33% less than the standard $15 rate. Thank you for being
+                    a founding member of Theatre4u.
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+
+          // Still working toward founding member rate
           return(
             <div style={{background:"linear-gradient(135deg,rgba(212,168,67,.12),rgba(212,168,67,.04))",
               border:"1px solid rgba(212,168,67,.3)",borderRadius:10,padding:"14px 16px",
@@ -1959,17 +1893,17 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
                     Full Pro access — complimentary during Theatre4u beta
                   </div>
                   <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
-                    When Theatre4u launches fully you'll have the option to subscribe.
-                    {" "}<strong style={{color:"var(--text)"}}>Beta programs that add 25+ items and share feedback</strong>{" "}
-                    will receive a founding member discount — $9.99/month instead of $15 — locked in for life.
+                    When Theatre4u launches you'll have the option to subscribe.
+                    {" "}<strong style={{color:"var(--text)"}}>Add 25+ items and share feedback</strong>{" "}
+                    to lock in the founding member rate of <strong style={{color:"var(--gold)"}}>$9.99/month</strong> — 
+                    instead of the standard $15 — for life.
                   </div>
-                  {/* Progress toward first-year discount */}
                   <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
                     <div style={{flex:1,minWidth:140}}>
                       <div style={{display:"flex",justifyContent:"space-between",marginBottom:4,fontSize:11}}>
-                        <span style={{color:"var(--muted)"}}>📦 Inventory items</span>
+                        <span style={{color:"var(--muted)"}}>📦 Items added</span>
                         <span style={{fontWeight:700,color:itemCount>=25?"#4caf50":"var(--gold)"}}>
-                          {itemCount}/25
+                          {itemCount}/25 {itemCount>=25?"✓":""}
                         </span>
                       </div>
                       <div style={{height:5,background:"rgba(0,0,0,.2)",borderRadius:3,overflow:"hidden"}}>
@@ -1978,14 +1912,20 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
                           borderRadius:3,transition:"width .5s"}}/>
                       </div>
                       {itemsNeeded>0&&<div style={{fontSize:10,color:"var(--muted)",marginTop:3}}>
-                        {itemsNeeded} more to go
+                        {itemsNeeded} more item{itemsNeeded===1?"":"s"} to go
                       </div>}
                     </div>
-                    <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12}}>
-                      <span style={{fontSize:16}}>{org?.temp_pro?"💬":"💬"}</span>
-                      <span style={{color:"var(--muted)"}}>Submit feedback via the</span>
-                      <span style={{fontWeight:700,color:"var(--text)"}}>Leading Players</span>
-                      <span style={{color:"var(--muted)"}}>button</span>
+                    <div style={{flex:1,minWidth:140}}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:4,fontSize:11}}>
+                        <span style={{color:"var(--muted)"}}>💬 Feedback</span>
+                        <span style={{fontWeight:700,color:"var(--muted)"}}>via Leading Players button</span>
+                      </div>
+                      <div style={{height:5,background:"rgba(0,0,0,.2)",borderRadius:3,overflow:"hidden"}}>
+                        <div style={{height:"100%",width:"0%",background:"var(--gold)",borderRadius:3}}/>
+                      </div>
+                      <div style={{fontSize:10,color:"var(--muted)",marginTop:3}}>
+                        Click the ? button to submit
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2668,7 +2608,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
                       <div className="inv-cat" style={{color:cat.color}}>{cat.icon} {cat.label}</div>
                       <div className="inv-name">{item.name}</div>
                       {item.location&&<div style={{fontSize:12,color:"var(--muted)",marginBottom:4,display:"flex",alignItems:"center",gap:3}}>📍 {item.location}</div>}
-                      <div className="inv-meta">{item._is_loan&&<span className="chip" style={{background:"rgba(76,175,80,.15)",color:"#2e7d32",fontWeight:700}}>🔄 On loan from {item._from_org}</span>}{!item._is_loan&&item.display_id&&<span className="chip" style={{fontFamily:"monospace",fontWeight:800,color:"var(--amber)",letterSpacing:.5}}>{item.display_id}</span>}{!item._is_loan&&<span className="chip">{item.condition}</span>}<span className="chip">×{item.qty}</span>{!item._is_loan&&item.size!=="N/A"&&<span className="chip">{item.size}</span>}<span className="chip">{item.avail}</span></div>
+                      <div className="inv-meta">{item.display_id&&<span className="chip" style={{fontFamily:"monospace",fontWeight:800,color:"var(--amber)",letterSpacing:.5}}>{item.display_id}</span>}<span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span>{item.size!=="N/A"&&<span className="chip">{item.size}</span>}<span className="chip">{item.avail}</span></div>
                       <div className="inv-foot"><span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span>{item.mkt==="For Loan"?<span style={{fontSize:12,color:"#00838f",fontWeight:700}}>{item.loan_period||2}wk loan{item.deposit>0?" · "+fmt$(item.deposit)+" dep.":""}</span>:item.mkt!=="Not Listed"&&<span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>}</div>
                     </div>
                   </div>
@@ -2739,7 +2679,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
          >
           <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={org?.vertical||"theatre"}/>
         </Modal>)}
-      {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{onDelete(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete} plan={plan} districtId={org?.district_id||null} orgName={org?.name||schoolName||""}/></Modal>}
+      {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{onDelete(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete}/></Modal>}
       {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",user?.id).order("added",{ascending:false});if(data)setItems(data);}}/>}
     </div>
   </>
@@ -5062,9 +5002,8 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
   const [invites,    setInvites]    = useState([]);
   const [itemCounts, setItemCounts] = useState({});
   const [loading,    setLoading]    = useState(true);
-  const [tab,        setTab]        = useState("schools"); // schools | invites | loans
+  const [tab,        setTab]        = useState("schools"); // schools | invites
   const [showInvite, setShowInvite] = useState(false);
-  const [distLoans,  setDistLoans]  = useState([]);
   const [invEmail,   setInvEmail]   = useState("");
   const [invSchool,  setInvSchool]  = useState("");
   const [sending,    setSending]    = useState(false);
@@ -5102,11 +5041,6 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
     const { data: invData } = await SB.from("district_invites")
       .select("*").eq("district_id", dist.id).order("created_at", { ascending: false });
     setInvites(invData || []);
-    // Load all loans across district
-    const { data: loanData } = await SB.from("district_loans")
-      .select("*").eq("district_id", dist.id)
-      .order("created_at", { ascending: false }).limit(50);
-    setDistLoans(loanData || []);
     setLoading(false);
   }, [user]);
 
@@ -5233,10 +5167,10 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
 
         {/* Tabs */}
         <div className="tabs" style={{ marginBottom: 16 }}>
-          {["schools", "invites", "loans"].map(t => (
+          {["schools", "invites"].map(t => (
             <button key={t} className={`tab ${tab === t ? "on" : ""}`} onClick={() => setTab(t)}
               style={{ textTransform: "capitalize" }}>
-              {t === "schools" ? `🏫 Schools (${slotsUsed})` : t === "invites" ? `📨 Invites (${invites.filter(i=>i.status==="pending").length})` : `📦 Loans (${distLoans.filter(l=>l.status==="active"||l.status==="pending").length})`}
+              {t === "schools" ? `🏫 Schools (${slotsUsed})` : `📨 Invites (${invites.filter(i=>i.status==="pending").length})`}
             </button>
           ))}
           <button className="btn btn-g btn-sm" style={{ marginLeft: "auto" }}
@@ -5292,7 +5226,7 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
               ))}
             </div>
           )
-        ) : tab === "invites" ? (
+        ) : (
           /* Invites tab */
           <div className="card" style={{ overflow: "hidden" }}>
             {invites.length === 0 ? (
@@ -5344,41 +5278,7 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
               </table>
             )}
           </div>
-        ) : tab === "loans" ? (
-          /* Loans tab */
-          <div>
-            {distLoans.length === 0 ? (
-              <div style={{textAlign:"center",padding:32,color:"var(--muted)"}}>
-                <div style={{fontSize:36,marginBottom:10}}>📦</div>
-                <p>No loans yet. Open any item in inventory and click "Share with District" to loan items between schools.</p>
-              </div>
-            ) : (
-              <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                {distLoans.map(loan=>{
-                  const statusColor = loan.status==="active"?"rgba(76,175,80,.15)":loan.status==="pending"?"rgba(212,168,67,.15)":loan.status==="returned"?"rgba(255,255,255,.07)":"rgba(244,67,54,.15)";
-                  const statusText  = loan.status==="active"?"rgba(76,175,80,1)":loan.status==="pending"?"var(--gold)":loan.status==="returned"?"var(--muted)":"var(--red)";
-                  return (
-                    <div key={loan.id} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 16px",display:"flex",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>
-                          {loan.qty>1?loan.qty+"x ":""}{loan.item_name}
-                        </div>
-                        <div style={{fontSize:12,color:"var(--muted)"}}>
-                          {loan.from_org_name} → {loan.to_org_name}
-                          {loan.return_date?" · Return by "+new Date(loan.return_date).toLocaleDateString():""}
-                        </div>
-                        {loan.notes&&<div style={{fontSize:12,color:"var(--muted)",fontStyle:"italic",marginTop:2}}>{loan.notes}</div>}
-                      </div>
-                      <span style={{padding:"3px 10px",borderRadius:8,fontSize:11,fontWeight:700,background:statusColor,color:statusText,flexShrink:0}}>
-                        {loan.status}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        ) : null}
+        )}
       </div>
 
       {/* Invite Modal */}
@@ -6150,36 +6050,6 @@ function AdminEditItemModal({ item, onClose, onSaved }) {
 
 function autoMatch(header) {
   const h = header.toLowerCase().trim();
-  // Costume Inventory Resources (CIR) specific column names
-  const CIR_MAP = {
-    "tag id":           "name",        // CIR uses Tag ID as primary identifier
-    "item description": "name",        // Main item name field in CIR
-    "description":      "name",
-    "category":         "category",
-    "item type":        "category",
-    "period":           "tags",        // Era/period goes into tags
-    "color":            "tags",        // Color goes into tags
-    "size":             "size",
-    "condition":        "condition",
-    "quantity":         "qty",
-    "qty":              "qty",
-    "in stock":         "qty",
-    "location":         "location",
-    "storage location": "location",
-    "notes":            "notes",
-    "comments":         "notes",
-    "rental price":     "rent",
-    "rent":             "rent",
-    "rental":           "rent",
-    "purchase price":   "sale",
-    "sale price":       "sale",
-    "price":            "sale",
-    "image":            "img",
-    "photo":            "img",
-    "image url":        "img",
-    "availability":     "avail",
-  };
-  if (CIR_MAP[h]) return CIR_MAP[h];
   for (const f of CSV_FIELDS) {
     if (h === f.key) return f.key;
     if (f.hints.some(hint => h.includes(hint) || hint.includes(h))) return f.key;
@@ -6269,33 +6139,22 @@ function AddToProductionPicker({ item, userId, onClose }) {
   const [loading,     setLoading]     = useState(true);
   const [saving,      setSaving]      = useState(null);
   const [done,        setDone]        = useState({});
-  const [qtyMap,      setQtyMap]      = useState({}); // productionId -> qty to check out
 
   useEffect(() => {
     (async () => {
       const { data } = await SB.from("productions")
-        .select("*, production_items(item_id, qty_checked_out)")
+        .select("*, production_items(item_id)")
         .eq("org_id", userId)
         .neq("status","closed")
         .order("created_at", { ascending: false });
       setProductions(data || []);
-      // Init qty map from existing assignments
-      const init = {};
-      (data || []).forEach(prod => {
-        const existing = prod.production_items?.find(pi => pi.item_id === item.id);
-        init[prod.id] = existing?.qty_checked_out || 1;
-      });
-      setQtyMap(init);
       setLoading(false);
     })();
   }, [userId]);
 
-  const totalQty = item.qty || 1;
-
   const toggle = async (prod) => {
     const already = prod.production_items?.some(pi => pi.item_id === item.id);
     setSaving(prod.id);
-    const qty = qtyMap[prod.id] || 1;
     if (already) {
       await SB.from("production_items")
         .delete()
@@ -6304,11 +6163,12 @@ function AddToProductionPicker({ item, userId, onClose }) {
       setDone(p => ({ ...p, [prod.id]: false }));
     } else {
       await SB.from("production_items")
-        .insert({ production_id: prod.id, item_id: item.id, qty_needed: qty, qty_checked_out: qty });
+        .insert({ production_id: prod.id, item_id: item.id, qty_needed: 1 });
       setDone(p => ({ ...p, [prod.id]: true }));
     }
+    // Refresh
     const { data } = await SB.from("productions")
-      .select("*, production_items(item_id, qty_checked_out)")
+      .select("*, production_items(item_id)")
       .eq("org_id", userId)
       .neq("status","closed")
       .order("created_at", { ascending: false });
@@ -6327,15 +6187,12 @@ function AddToProductionPicker({ item, userId, onClose }) {
           display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div>
             <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700 }}>Add to Production</div>
-            <div style={{ fontSize:12, color:"var(--muted)", marginTop:2 }}>
-              {item.name}
-              {totalQty > 1 && <span style={{ marginLeft:6, color:"var(--amber)", fontWeight:700 }}>×{totalQty} in inventory</span>}
-            </div>
+            <div style={{ fontSize:12, color:"var(--muted)", marginTop:2 }}>{item.name}</div>
           </div>
           <button onClick={onClose} style={{ background:"none", border:"1px solid var(--border)",
             color:"var(--muted)", borderRadius:6, padding:"3px 9px", cursor:"pointer", fontFamily:"inherit" }}>✕</button>
         </div>
-        <div style={{ padding:14, maxHeight:400, overflowY:"auto" }}>
+        <div style={{ padding:14, maxHeight:360, overflowY:"auto" }}>
           {loading ? (
             <div style={{ textAlign:"center", padding:24, color:"var(--muted)" }}>Loading…</div>
           ) : productions.length === 0 ? (
@@ -6349,11 +6206,10 @@ function AddToProductionPicker({ item, userId, onClose }) {
             productions.map(prod => {
               const inProd = prod.production_items?.some(pi => pi.item_id === item.id);
               const isDone = done[prod.id] !== undefined ? done[prod.id] : inProd;
-              const qty    = qtyMap[prod.id] || 1;
               return (
-                <div key={prod.id}
-                  style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px",
-                    borderRadius:8, marginBottom:4,
+                <div key={prod.id} onClick={() => saving !== prod.id && toggle(prod)}
+                  style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 12px",
+                    borderRadius:8, cursor:"pointer", marginBottom:4,
                     background: isDone ? "rgba(76,175,80,.1)" : "rgba(255,255,255,.03)",
                     border:`1px solid ${isDone ? "rgba(76,175,80,.25)" : "var(--border)"}`,
                     transition:"all .15s" }}>
@@ -6367,22 +6223,7 @@ function AddToProductionPicker({ item, userId, onClose }) {
                       </div>
                     )}
                   </div>
-                  {/* Quantity spinner — only shown when item has qty > 1 */}
-                  {totalQty > 1 && (
-                    <div style={{ display:"flex", alignItems:"center", gap:4, flexShrink:0 }}
-                      onClick={e=>e.stopPropagation()}>
-                      <button onClick={()=>setQtyMap(p=>({...p,[prod.id]:Math.max(1,qty-1)}))}
-                        style={{ width:22, height:22, borderRadius:4, border:"1px solid var(--border)",
-                          background:"var(--parch)", cursor:"pointer", fontFamily:"inherit", fontSize:14, lineHeight:1 }}>−</button>
-                      <span style={{ fontSize:13, fontWeight:700, minWidth:16, textAlign:"center" }}>{qty}</span>
-                      <button onClick={()=>setQtyMap(p=>({...p,[prod.id]:Math.min(totalQty,qty+1)}))}
-                        style={{ width:22, height:22, borderRadius:4, border:"1px solid var(--border)",
-                          background:"var(--parch)", cursor:"pointer", fontFamily:"inherit", fontSize:14, lineHeight:1 }}>+</button>
-                      <span style={{ fontSize:11, color:"var(--muted)" }}>of {totalQty}</span>
-                    </div>
-                  )}
-                  <div style={{ fontSize:18, flexShrink:0, cursor:"pointer" }}
-                    onClick={() => saving !== prod.id && toggle(prod)}>
+                  <div style={{ fontSize:18, flexShrink:0 }}>
                     {saving === prod.id ? "⏳" : isDone ? "✅" : "○"}
                   </div>
                 </div>
@@ -6392,119 +6233,7 @@ function AddToProductionPicker({ item, userId, onClose }) {
         </div>
         <div style={{ padding:"10px 14px", borderTop:"1px solid var(--border)",
           textAlign:"center", fontSize:12, color:"var(--muted)" }}>
-          {totalQty > 1 ? "Set quantity then click ○ to assign" : "Click a production to add or remove this item"}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-// ── District Internal Loan ──────────────────────────────────────────────────
-function DistrictShareModal({ item, userId, districtId, fromOrgName, onClose }) {
-  const [schools,     setSchools]     = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [toOrgId,     setToOrgId]     = useState("");
-  const [qty,         setQty]         = useState(1);
-  const [returnDate,  setReturnDate]  = useState("");
-  const [notes,       setNotes]       = useState("");
-  const [saving,      setSaving]      = useState(false);
-  const [done,        setDone]        = useState(false);
-  const totalQty = item.qty || 1;
-  const today = new Date().toISOString().slice(0,10);
-
-  useEffect(()=>{
-    SB.from("orgs").select("id,name")
-      .eq("district_id", districtId)
-      .neq("id", userId)
-      .order("name")
-      .then(({data})=>{ setSchools(data||[]); setLoading(false); });
-  },[districtId, userId]);
-
-  const send = async () => {
-    if (!toOrgId) return;
-    setSaving(true);
-    const toSchool = schools.find(s=>s.id===toOrgId);
-    const { error } = await SB.from("district_loans").insert({
-      district_id:   districtId,
-      item_id:       item.id,
-      item_name:     item.name,
-      item_category: item.category,
-      from_org_id:   userId,
-      from_org_name: fromOrgName,
-      to_org_id:     toOrgId,
-      to_org_name:   toSchool?.name||"",
-      qty,
-      start_date:    today,
-      return_date:   returnDate||null,
-      notes:         notes.trim()||null,
-      status:        "pending",
-    });
-    setSaving(false);
-    if (!error) setDone(true);
-  };
-
-  const inp = {background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.2)",borderRadius:6,padding:"9px 12px",color:"#ede8df",fontSize:14,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box"};
-  const lbl = {fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"rgba(212,168,67,.8)",display:"block",marginBottom:6};
-
-  return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.88)",zIndex:9000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{background:"#1a1612",borderRadius:14,width:"100%",maxWidth:440,border:"1px solid rgba(212,168,67,.3)",overflow:"hidden",boxShadow:"0 24px 64px rgba(0,0,0,.8)"}}>
-        <div style={{padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,.1)",display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(212,168,67,.08)"}}>
-          <div>
-            <div style={{fontFamily:"var(--serif)",fontSize:17,fontWeight:700,color:"#ede8df"}}>🏫 Share with District School</div>
-            <div style={{fontSize:13,color:"rgba(212,168,67,.9)",marginTop:3,fontWeight:600}}>{item.name}{totalQty>1?" · "+totalQty+" in inventory":""}</div>
-          </div>
-          <button onClick={onClose} style={{background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.2)",color:"#ede8df",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontFamily:"inherit",fontSize:14}}>✕</button>
-        </div>
-        <div style={{padding:20,display:"flex",flexDirection:"column",gap:16}}>
-          {done ? (
-            <div style={{textAlign:"center",padding:"24px 0"}}>
-              <div style={{fontSize:40,marginBottom:12}}>📦</div>
-              <div style={{fontWeight:700,fontSize:15,marginBottom:6}}>Loan offer sent!</div>
-              <div style={{fontSize:13,color:"var(--muted)",marginBottom:16}}>The receiving school will see a notification and can accept or decline.</div>
-              <button className="btn btn-o" onClick={onClose}>Close</button>
-            </div>
-          ) : loading ? (
-            <div style={{textAlign:"center",padding:24,color:"rgba(255,255,255,.5)"}}>Loading schools...</div>
-          ) : schools.length === 0 ? (
-            <div style={{textAlign:"center",padding:24,color:"rgba(255,255,255,.6)"}}>No other schools in your district yet. Invite schools from the District page.</div>
-          ) : (
-            <>
-              <div>
-                <label style={lbl}>Send to school</label>
-                <select style={inp} value={toOrgId} onChange={e=>setToOrgId(e.target.value)}>
-                  <option value="">Select a school</option>
-                  {schools.map(s=><option key={s.id} value={s.id} style={{background:"#1a1612",color:"#ede8df"}}>{s.name}</option>)}
-                </select>
-              </div>
-              {totalQty > 1 && (
-                <div>
-                  <label style={lbl}>Quantity to loan</label>
-                  <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <button onClick={()=>setQty(q=>Math.max(1,q-1))} style={{width:32,height:32,borderRadius:6,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"#ede8df",cursor:"pointer",fontFamily:"inherit",fontSize:18,lineHeight:1}}>−</button>
-                    <span style={{fontSize:20,fontWeight:800,minWidth:40,textAlign:"center",color:"#ede8df",background:"rgba(255,255,255,.12)",borderRadius:6,padding:"4px 10px"}}>{qty}</span>
-                    <button onClick={()=>setQty(q=>Math.min(totalQty,q+1))} style={{width:32,height:32,borderRadius:6,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.08)",color:"#ede8df",cursor:"pointer",fontFamily:"inherit",fontSize:18,lineHeight:1}}>+</button>
-                    <span style={{fontSize:12,color:"var(--muted)"}}>of {totalQty} available</span>
-                  </div>
-                </div>
-              )}
-              <div>
-                <label style={lbl}>Return by (optional)</label>
-                <input type="date" style={inp} value={returnDate} min={today} onChange={e=>setReturnDate(e.target.value)}/>
-              </div>
-              <div>
-                <label style={lbl}>Note (optional)</label>
-                <textarea style={{...inp,minHeight:64,resize:"vertical"}} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Available for pickup Monday, contact us for access code..."/>
-              </div>
-              <div style={{display:"flex",gap:8,paddingTop:4,borderTop:"1px solid rgba(255,255,255,.1)"}}>
-                <button className="btn btn-g" style={{flex:1}} onClick={send} disabled={!toOrgId||saving}>
-                  {saving?"Sending...":"Send Loan Offer"}
-                </button>
-                <button style={{padding:"8px 20px",borderRadius:8,border:"1px solid rgba(255,255,255,.3)",background:"rgba(255,255,255,.08)",color:"#ede8df",cursor:"pointer",fontFamily:"inherit",fontSize:14,fontWeight:600}} onClick={onClose}>Cancel</button>
-              </div>
-            </>
-          )}
+          Click a production to add or remove this item
         </div>
       </div>
     </div>
@@ -7506,8 +7235,7 @@ function ProductionNeedsChecklist({ prod, allItems, userId, org, onNavigateToExc
                                 .filter(i=>i.category===need.category || need.category==="other")
                                 .slice(0,30)
                                 .map(i=>(
-                                  <option key={i.id} value={i.id}>
-                                    {i.name}{i.qty>1?` (×${i.qty} in stock)`:""}</option>
+                                  <option key={i.id} value={i.id}>{i.name}</option>
                                 ))}
                             </select>
                           )}
@@ -7728,9 +7456,7 @@ function ProductionDetail({ prod, allItems, userId, onEdit, onDelete, onClose, o
                         </div>
                         <div style={{ fontSize:11, color:"var(--muted)", marginTop:1 }}>
                           {pi.item?.location || pi.item?.condition || ""}
-                          {pi.qty_checked_out > 1
-                            ? ` · Using ${pi.qty_checked_out} of ${pi.item?.qty||1}`
-                            : pi.qty_needed > 1 ? " · Need "+pi.qty_needed : ""}
+                          {pi.qty_needed > 1 ? " · Need "+pi.qty_needed : ""}
                         </div>
                       </div>
                       {/* Status toggle */}
@@ -8635,11 +8361,10 @@ function CSVImport({ onImport, onClose, userId }) {
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
               <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",
                 borderRadius:10,padding:16}}>
-                <div style={{fontWeight:700,fontSize:13,marginBottom:6,color:"var(--gold)"}}>💡 Three ways to import</div>
+                <div style={{fontWeight:700,fontSize:13,marginBottom:6,color:"var(--gold)"}}>💡 Two ways to import</div>
                 <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
                   <strong style={{color:"var(--ink)"}}>Option A</strong> — Download our template, fill it in, upload it back.<br/>
-                  <strong style={{color:"var(--ink)"}}>Option B</strong> — Upload any spreadsheet you already have. We'll help you match your columns to ours.<br/>
-                  <strong style={{color:"var(--gold)"}}>Option C</strong> — Coming from Costume Inventory Resources? Export your data to Excel/CSV and upload it — we'll auto-map your columns.
+                  <strong style={{color:"var(--ink)"}}>Option B</strong> — Upload any spreadsheet you already have. We'll help you match your columns to ours.
                 </p>
                 <button onClick={downloadTemplate} style={{background:"none",border:"1px solid var(--border)",
                   color:"var(--ink)",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:12,
@@ -10843,8 +10568,6 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
   const[legal,setLegal]=useState(null);
   const[showPass,setShowPass]=useState(false);
   const[ageConfirmed,setAgeConfirmed]=useState(false);
-  const[couponCode,setCouponCode]=useState("");
-  const[couponMsg,setCouponMsg]=useState(null); // {ok:bool, text:str}
 
   useEffect(()=>{
     window.__t4u_show_auth=(m)=>{setMode(m||"login");setErr("");setVisible(true);};
@@ -10895,26 +10618,6 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
       if(mode==="signup"){
         if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
         // All signups during beta get temp_pro — no access code needed
-        // Validate partner coupon if entered
-        let validCoupon = null;
-        if (couponCode.trim()) {
-          const { data: cpn } = await SB.from("partner_coupons")
-            .select("*").eq("code", couponCode.trim()).eq("active", true).single();
-          if (!cpn) {
-            setErr("Partner code not recognized. Please check the code and try again.");
-            setLoading(false); return;
-          }
-          if (cpn.valid_until && new Date(cpn.valid_until) < new Date()) {
-            setErr("That partner code has expired.");
-            setLoading(false); return;
-          }
-          if (cpn.max_uses && cpn.uses_count >= cpn.max_uses) {
-            setErr("That partner code has reached its usage limit.");
-            setLoading(false); return;
-          }
-          validCoupon = cpn;
-          setCouponMsg({ok:true, text:`${cpn.discount_value}% off applied from ${cpn.partner_name}`});
-        }
         const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName},emailRedirectTo:"https://theatre4u.org"}});
         if(error){
           if(error.message?.toLowerCase().includes('already registered')||error.message?.toLowerCase().includes('already exists')){
@@ -10951,22 +10654,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             temp_pro: true,
             temp_pro_granted_at: new Date().toISOString(),
             temp_pro_note: "Beta signup — auto-granted",
-            // Store partner coupon for future Stripe connection
-            ...(validCoupon ? {
-              partner_coupon_code: validCoupon.code,
-              partner_coupon_id:   validCoupon.id,
-            } : {}),
           },{onConflict:"id",ignoreDuplicates:false});
-          // Record coupon use
-          if (validCoupon) {
-            await SB.from("partner_coupon_uses").insert({
-              coupon_id: validCoupon.id,
-              org_id:    data.user.id,
-            }).catch(()=>{});
-            await SB.from("partner_coupons").update({
-              uses_count: (validCoupon.uses_count||0) + 1
-            }).eq("id", validCoupon.id).catch(()=>{});
-          }
           // Look up referrer by ref code and link them
           const refCode = getRefCode();
           if (refCode) {
@@ -11130,17 +10818,6 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
           </div>
         </div>
         {err&&<div style={{marginTop:12,padding:"9px 12px",background:err.includes("sent")?"rgba(76,175,80,.1)":"rgba(194,24,91,.1)",border:`1px solid ${err.includes("sent")?"rgba(76,175,80,.3)":"rgba(194,24,91,.25)"}`,borderRadius:7,fontSize:13,color:err.includes("sent")?"#4caf50":"#e57373"}}>{err}</div>}
-        {mode==="signup"&&(
-          <div style={{marginTop:10}}>
-            <input className="fi" value={couponCode} onChange={e=>setCouponCode(e.target.value.toUpperCase().trim())}
-              placeholder="Partner/promo code (optional)" style={{fontSize:13,width:"100%",boxSizing:"border-box"}}/>
-            {couponMsg&&(
-              <div style={{fontSize:11,marginTop:4,color:couponMsg.ok?"#4caf50":"#e57373",fontWeight:600}}>
-                {couponMsg.ok?"✓":"✗"} {couponMsg.text}
-              </div>
-            )}
-          </div>
-        )}
         {mode==="signup"&&(
           <label style={{display:"flex",alignItems:"flex-start",gap:8,marginTop:14,cursor:"pointer"}}>
             <input type="checkbox" checked={ageConfirmed} onChange={e=>setAgeConfirmed(e.target.checked)}
@@ -17498,28 +17175,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
         setOnboardingStep(orgData.onboarding_step ?? 0);
       } else { setPlanState(effectivePlan); }
       const{data:itemData}=await SB.from("items").select("*").eq("org_id",targetOrgId).order("added",{ascending:false}).limit(2000);
-      // Also load active district loans received by this org — show as virtual items
-      const{data:loanData}=await SB.from("district_loans").select("*")
-        .eq("to_org_id",targetOrgId).eq("status","active");
-      const loanItems = (loanData||[]).map(loan=>({
-        id:            "loan_"+loan.id,
-        _loan_id:      loan.id,
-        _is_loan:      true,
-        _from_org:     loan.from_org_name,
-        _return_date:  loan.return_date,
-        name:          loan.item_name,
-        category:      loan.item_category||"other",
-        qty:           loan.qty,
-        condition:     "On Loan",
-        avail:         "On Loan",
-        mkt:           "Not Listed",
-        location:      "On loan from "+loan.from_org_name,
-        notes:         loan.notes||"",
-        tags:          [],
-        org_id:        targetOrgId,
-        added:         loan.created_at,
-      }));
-      if(itemData) setItems([...itemData, ...loanItems]);
+      if(itemData) setItems(itemData);
       setLoaded(true);
       // Load unread message count
       const { count: unread } = await SB.from("messages")
