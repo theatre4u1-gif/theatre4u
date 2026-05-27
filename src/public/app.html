@@ -505,10 +505,11 @@ function ItemDetail({item, onBack, onEdited, onDeleted, userId}) {
     h("div",{className:"screen",style:{paddingBottom:100}},
       h("div",{style:{padding:"16px 20px 0"}},
         h("div",{className:"detail-title"},item.name),
-        item.location && h("div",{style:{display:"flex",alignItems:"center",gap:5,color:"var(--muted)",fontSize:13,marginBottom:8}},Ic.loc(14)," ",
-          item.location_type==="room"?"🗺️":item.location_type==="rack"?"🏗️":"📦",
-          " ",item.location,
-          item.rack_slot && h("span",{style:{marginLeft:4,fontFamily:"monospace",fontSize:11,color:"var(--gold)",background:"rgba(212,168,67,.1)",padding:"1px 6px",borderRadius:4}},item.rack_slot),
+        item.location && h("div",{style:{display:"flex",alignItems:"center",gap:5,color:"var(--muted)",fontSize:13,marginBottom:8}},
+          item._is_loan ? "🔄" : Ic.loc(14),
+          " ",
+          item.location,
+          item._is_loan && item._return_date && h("span",{style:{marginLeft:6,fontSize:11,color:"var(--gold)",fontWeight:600}},"· Return by "+new Date(item._return_date).toLocaleDateString())
         ),
         h("div",{style:{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}},
           h("span",{className:`item-badge ${mktCls}`},item.mkt),
@@ -634,13 +635,11 @@ function LocationPicker({value, onChange, userId}) {
   const [saving,    setSaving]    = useState(false);
   const [loaded,    setLoaded]    = useState(false);
 
-  const typeIcon = (t) => t==="room"?"🗺️":t==="rack"?"🏗️":"📦";
-
   // Load saved locations for this org
   useEffect(() => {
     if(!userId) return;
     SB.from("storage_locations")
-      .select("id,name,description,location_type")
+      .select("id,name,description")
       .eq("org_id", userId)
       .order("name")
       .then(({data}) => { setLocations(data||[]); setLoaded(true); });
@@ -650,7 +649,7 @@ function LocationPicker({value, onChange, userId}) {
     if(!newName.trim()) return;
     setSaving(true);
     const {data, error} = await SB.from("storage_locations")
-      .insert({org_id: userId, name: newName.trim(), description: newDesc.trim()||null, location_type:"named"})
+      .insert({org_id: userId, name: newName.trim(), description: newDesc.trim()||null})
       .select().single();
     if(!error && data) {
       setLocations(prev => [...prev, data].sort((a,b)=>a.name.localeCompare(b.name)));
@@ -663,6 +662,7 @@ function LocationPicker({value, onChange, userId}) {
 
   return h("div",{className:"fg"},
     h("label",{className:"fl"},"Location"),
+    // Dropdown of saved locations
     h("div",{style:{position:"relative"}},
       h("select",{
         className:"fs",
@@ -673,7 +673,7 @@ function LocationPicker({value, onChange, userId}) {
         }
       },
         h("option",{value:""},"— Select location —"),
-        locations.map(l => h("option",{key:l.id, value:l.name}, `${typeIcon(l.location_type)} ${l.name}`)),
+        locations.map(l => h("option",{key:l.id, value:l.name}, l.name)),
         h("option",{value:"__add__"},"+ Add New Location…")
       )
     ),
