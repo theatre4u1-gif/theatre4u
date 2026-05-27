@@ -6150,6 +6150,36 @@ function AdminEditItemModal({ item, onClose, onSaved }) {
 
 function autoMatch(header) {
   const h = header.toLowerCase().trim();
+  // Costume Inventory Resources (CIR) specific column names
+  const CIR_MAP = {
+    "tag id":           "name",        // CIR uses Tag ID as primary identifier
+    "item description": "name",        // Main item name field in CIR
+    "description":      "name",
+    "category":         "category",
+    "item type":        "category",
+    "period":           "tags",        // Era/period goes into tags
+    "color":            "tags",        // Color goes into tags
+    "size":             "size",
+    "condition":        "condition",
+    "quantity":         "qty",
+    "qty":              "qty",
+    "in stock":         "qty",
+    "location":         "location",
+    "storage location": "location",
+    "notes":            "notes",
+    "comments":         "notes",
+    "rental price":     "rent",
+    "rent":             "rent",
+    "rental":           "rent",
+    "purchase price":   "sale",
+    "sale price":       "sale",
+    "price":            "sale",
+    "image":            "img",
+    "photo":            "img",
+    "image url":        "img",
+    "availability":     "avail",
+  };
+  if (CIR_MAP[h]) return CIR_MAP[h];
   for (const f of CSV_FIELDS) {
     if (h === f.key) return f.key;
     if (f.hints.some(hint => h.includes(hint) || hint.includes(h))) return f.key;
@@ -8605,10 +8635,11 @@ function CSVImport({ onImport, onClose, userId }) {
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
               <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",
                 borderRadius:10,padding:16}}>
-                <div style={{fontWeight:700,fontSize:13,marginBottom:6,color:"var(--gold)"}}>💡 Two ways to import</div>
+                <div style={{fontWeight:700,fontSize:13,marginBottom:6,color:"var(--gold)"}}>💡 Three ways to import</div>
                 <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
                   <strong style={{color:"var(--ink)"}}>Option A</strong> — Download our template, fill it in, upload it back.<br/>
-                  <strong style={{color:"var(--ink)"}}>Option B</strong> — Upload any spreadsheet you already have. We'll help you match your columns to ours.
+                  <strong style={{color:"var(--ink)"}}>Option B</strong> — Upload any spreadsheet you already have. We'll help you match your columns to ours.<br/>
+                  <strong style={{color:"var(--gold)"}}>Option C</strong> — Coming from Costume Inventory Resources? Export your data to Excel/CSV and upload it — we'll auto-map your columns.
                 </p>
                 <button onClick={downloadTemplate} style={{background:"none",border:"1px solid var(--border)",
                   color:"var(--ink)",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:12,
@@ -10812,6 +10843,8 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
   const[legal,setLegal]=useState(null);
   const[showPass,setShowPass]=useState(false);
   const[ageConfirmed,setAgeConfirmed]=useState(false);
+  const[couponCode,setCouponCode]=useState("");
+  const[couponMsg,setCouponMsg]=useState(null); // {ok:bool, text:str}
 
   useEffect(()=>{
     window.__t4u_show_auth=(m)=>{setMode(m||"login");setErr("");setVisible(true);};
@@ -10862,6 +10895,26 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
       if(mode==="signup"){
         if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
         // All signups during beta get temp_pro — no access code needed
+        // Validate partner coupon if entered
+        let validCoupon = null;
+        if (couponCode.trim()) {
+          const { data: cpn } = await SB.from("partner_coupons")
+            .select("*").eq("code", couponCode.trim()).eq("active", true).single();
+          if (!cpn) {
+            setErr("Partner code not recognized. Please check the code and try again.");
+            setLoading(false); return;
+          }
+          if (cpn.valid_until && new Date(cpn.valid_until) < new Date()) {
+            setErr("That partner code has expired.");
+            setLoading(false); return;
+          }
+          if (cpn.max_uses && cpn.uses_count >= cpn.max_uses) {
+            setErr("That partner code has reached its usage limit.");
+            setLoading(false); return;
+          }
+          validCoupon = cpn;
+          setCouponMsg({ok:true, text:`${cpn.discount_value}% off applied from ${cpn.partner_name}`});
+        }
         const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName},emailRedirectTo:"https://theatre4u.org"}});
         if(error){
           if(error.message?.toLowerCase().includes('already registered')||error.message?.toLowerCase().includes('already exists')){
@@ -10898,7 +10951,22 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             temp_pro: true,
             temp_pro_granted_at: new Date().toISOString(),
             temp_pro_note: "Beta signup — auto-granted",
+            // Store partner coupon for future Stripe connection
+            ...(validCoupon ? {
+              partner_coupon_code: validCoupon.code,
+              partner_coupon_id:   validCoupon.id,
+            } : {}),
           },{onConflict:"id",ignoreDuplicates:false});
+          // Record coupon use
+          if (validCoupon) {
+            await SB.from("partner_coupon_uses").insert({
+              coupon_id: validCoupon.id,
+              org_id:    data.user.id,
+            }).catch(()=>{});
+            await SB.from("partner_coupons").update({
+              uses_count: (validCoupon.uses_count||0) + 1
+            }).eq("id", validCoupon.id).catch(()=>{});
+          }
           // Look up referrer by ref code and link them
           const refCode = getRefCode();
           if (refCode) {
@@ -11062,6 +11130,17 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
           </div>
         </div>
         {err&&<div style={{marginTop:12,padding:"9px 12px",background:err.includes("sent")?"rgba(76,175,80,.1)":"rgba(194,24,91,.1)",border:`1px solid ${err.includes("sent")?"rgba(76,175,80,.3)":"rgba(194,24,91,.25)"}`,borderRadius:7,fontSize:13,color:err.includes("sent")?"#4caf50":"#e57373"}}>{err}</div>}
+        {mode==="signup"&&(
+          <div style={{marginTop:10}}>
+            <input className="fi" value={couponCode} onChange={e=>setCouponCode(e.target.value.toUpperCase().trim())}
+              placeholder="Partner/promo code (optional)" style={{fontSize:13,width:"100%",boxSizing:"border-box"}}/>
+            {couponMsg&&(
+              <div style={{fontSize:11,marginTop:4,color:couponMsg.ok?"#4caf50":"#e57373",fontWeight:600}}>
+                {couponMsg.ok?"✓":"✗"} {couponMsg.text}
+              </div>
+            )}
+          </div>
+        )}
         {mode==="signup"&&(
           <label style={{display:"flex",alignItems:"flex-start",gap:8,marginTop:14,cursor:"pointer"}}>
             <input type="checkbox" checked={ageConfirmed} onChange={e=>setAgeConfirmed(e.target.checked)}
