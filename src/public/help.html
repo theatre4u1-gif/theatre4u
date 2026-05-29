@@ -60,7 +60,7 @@ a:hover{text-decoration:underline}
 
 /* ── Content area ── */
 .content{display:flex;flex-direction:column;gap:0}
-.section{scroll-margin-top:80px;margin-bottom:48px}
+.section{scroll-margin-top:80px;margin-bottom:48px;color:var(--ink)}
 
 /* ── Section headers ── */
 .sec-hero{background:linear-gradient(135deg,var(--ink),#2a1a08);border-radius:14px;padding:28px 28px 24px;margin-bottom:20px;position:relative;overflow:hidden}
@@ -74,7 +74,7 @@ a:hover{text-decoration:underline}
 .card-hd{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--bg2)}
 .card-hd h3{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700}
 .card-hd .step-num{width:28px;height:28px;background:var(--gold);color:var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0}
-.card-bd{padding:22px}
+.card-bd{padding:22px;color:var(--ink)}
 
 /* ── Steps ── */
 .steps{display:flex;flex-direction:column;gap:0}
@@ -236,7 +236,6 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
       <div class="help-nav-section">Platform</div>
       <a href="#mobile"><span class="nav-icon">📱</span>Mobile App</a>
       <a href="#district"><span class="nav-icon">🏢</span>District</a>
-      <a href="#district-loans"><span class="nav-icon">📦</span>District Loans</a>
       <a href="#csv"><span class="nav-icon">📊</span>CSV Import</a>
       <a href="#plans"><span class="nav-icon">⭐</span>Plans & Pricing</a>
       <a href="#faq"><span class="nav-icon">❓</span>FAQ</a>
@@ -526,19 +525,24 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
       <section class="section" id="productions">
         <div class="sec-hero" data-emoji="🎭">
           <h2>Backstage Team</h2>
-      <p>You can invite other people to help manage your program's inventory — costume directors, student stage managers, parent volunteers, and more. Each person gets their own login with a role that controls what they can do.</p>
+          <p>Invite your costume directors, student stage managers, and parent volunteers. Each person gets their own login with a role that controls what they can see and do.</p>
+        </div>
 
-      <h3>Backstage Roles</h3>
-      <table style="width:100%;border-collapse:collapse;margin:12px 0 20px">
-        <tr style="background:#f5f0e8">
-          <th style="padding:8px 12px;text-align:left;border:1px solid #e0d8c8;font-size:13px">Role</th>
-          <th style="padding:8px 12px;text-align:left;border:1px solid #e0d8c8;font-size:13px">What They Can Do</th>
-        </tr>
-        <tr><td style="padding:8px 12px;border:1px solid #e0d8c8">🎬 <strong>Director</strong></td><td style="padding:8px 12px;border:1px solid #e0d8c8">Full access — the account owner</td></tr>
-        <tr><td style="padding:8px 12px;border:1px solid #e0d8c8">📋 <strong>Stage Manager</strong></td><td style="padding:8px 12px;border:1px solid #e0d8c8">Add, edit, delete items · Funding Tracker · Backstage Exchange · Community</td></tr>
-        <tr><td style="padding:8px 12px;border:1px solid #e0d8c8">🔧 <strong>Crew</strong></td><td style="padding:8px 12px;border:1px solid #e0d8c8">Add and edit items · Upload photos</td></tr>
-        <tr><td style="padding:8px 12px;border:1px solid #e0d8c8">🎟 <strong>House</strong></td><td style="padding:8px 12px;border:1px solid #e0d8c8">View and look up items only — read-only</td></tr>
-      </table>
+        <div class="card"><div class="card-bd">
+          <h3>Backstage Roles</h3>
+          <p style="margin-bottom:12px">You can invite other people to help manage your program's inventory — costume directors, student stage managers, parent volunteers, and more. Each person gets their own login with a role that controls what they can do.</p>
+          <table class="tbl" style="width:100%;border-collapse:collapse;margin:12px 0 20px">
+            <thead><tr>
+              <th style="padding:9px 12px;text-align:left;font-size:13px;background:var(--bg2);color:var(--muted)">Role</th>
+              <th style="padding:9px 12px;text-align:left;font-size:13px;background:var(--bg2);color:var(--muted)">What They Can Do</th>
+            </tr></thead>
+            <tbody>
+              <tr><td style="padding:9px 12px;border-bottom:1px solid var(--border);color:var(--ink)">🎬 <strong>Director</strong></td><td style="padding:9px 12px;border-bottom:1px solid var(--border);color:var(--ink)">Full access — the account owner</td></tr>
+              <tr><td style="padding:9px 12px;border-bottom:1px solid var(--border);color:var(--ink)">📋 <strong>Stage Manager</strong></td><td style="padding:9px 12px;border-bottom:1px solid var(--border);color:var(--ink)">Add, edit, delete items · Funding Tracker · Backstage Exchange · Community</td></tr>
+              <tr><td style="padding:9px 12px;border-bottom:1px solid var(--border);color:var(--ink)">🔧 <strong>Crew</strong></td><td style="padding:9px 12px;border-bottom:1px solid var(--border);color:var(--ink)">Add and edit items · Upload photos</td></tr>
+              <tr><td style="padding:9px 12px;color:var(--ink)">🎟 <strong>House</strong></td><td style="padding:9px 12px;color:var(--ink)">View and look up items only — read-only</td></tr>
+            </tbody>
+          </table>
 
       <h3>Inviting Someone by Email</h3>
       <ol>
@@ -636,19 +640,6 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
             <div class="callout tip"><div class="ci">💡</div><div>The progress bar on each source turns red when you've spent over 90% of the allocation — an early warning before you go over budget.</div></div>
           </div>
         </div>
-
-        <div class="card" style="margin-top:16px;">
-          <div class="card-hd"><h3>📦 Partial Quantity Checkout</h3></div>
-          <div class="card-bd">
-            <p>When you have multiple copies of an item (e.g. 10 Victorian dresses), you can assign a specific quantity to a production rather than all-or-nothing.</p>
-            <div class="steps">
-              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Open the item</h4><p>Click any item in your inventory that has a quantity greater than 1.</p></div></div>
-              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Click Add to Production</h4><p>The production picker opens. You'll see a <strong>− N +</strong> quantity spinner next to each production.</p></div></div>
-              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Set how many you need</h4><p>Use the spinner to set the exact quantity — for example, 3 of 10 dresses for the fall musical. The spinner is capped at the total quantity so you can't over-assign.</p></div></div>
-              <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Click the circle to assign</h4><p>The production now shows "Using 3 of 10" in the production detail view.</p></div></div>
-            </div>
-          </div>
-        </div>
       </section>
 
       <!-- ═══════════════ MOBILE APP ═══════════════ -->
@@ -711,37 +702,6 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
             <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Browse any school's inventory</h4><p>Click any school in the district list to view their full inventory. Use the "← Back to District" button to return.</p></div></div>
             <div class="step"><div class="step-n">5</div><div class="step-body"><h4>Shared Backstage Exchange</h4><p>All schools in the district can see and request items from each other — no extra setup required.</p></div></div>
           </div>
-        </div></div>
-      </section>
-
-      <!-- ═══════════════ DISTRICT LOANS ═══════════════ -->
-      <section class="section" id="district-loans">
-        <div class="sec-hero" data-emoji="📦">
-          <div class="sec-badge">District plan</div>
-          <h2>District Internal Loans</h2>
-          <p>Share items directly between schools in your district — no public listing, no waiting. One school offers, the other accepts.</p>
-        </div>
-
-        <div class="card"><div class="card-bd">
-          <h3>Sending a loan offer</h3>
-          <div class="steps">
-            <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Open any item in inventory</h4><p>Click an item you want to share with another school in your district.</p></div></div>
-            <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Click "Share with District"</h4><p>A panel opens showing all schools in your district. This button only appears on the District plan.</p></div></div>
-            <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Choose the school, quantity, and return date</h4><p>If the item has multiple copies, use the spinner to set how many you're loaning. Add an optional return date and note for the receiving school.</p></div></div>
-            <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Click Send Loan Offer</h4><p>The receiving school sees a notification on their Dashboard immediately.</p></div></div>
-          </div>
-
-          <h3 style="margin-top:24px;">Receiving a loan</h3>
-          <div class="steps">
-            <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Check your Dashboard</h4><p>Incoming loan offers appear as a gold notification card with the item name, quantity, return date, and any notes from the lending school.</p></div></div>
-            <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Accept or Decline</h4><p>Click Accept to confirm the loan. The item immediately appears in your inventory with a 🔄 "On loan from [school]" badge. Click Decline if you don't need it.</p></div></div>
-            <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Return the item</h4><p>When the item is physically returned, go to your Dashboard → outgoing loans section and click <strong>Mark Returned</strong> to close the loan. A ⚠️ warning appears if the return date is within 3 days.</p></div></div>
-          </div>
-
-          <h3 style="margin-top:24px;">Loan history</h3>
-          <p>Go to your District page and click the <strong>Loans</strong> tab to see all active, pending, and past loans across every school in the district — who loaned what, to whom, the status, and return dates.</p>
-
-          <div class="callout tip"><div class="ci">💡</div><div>District loans are completely private — they don't appear on Backstage Exchange and are only visible to schools within your district.</div></div>
         </div></div>
       </section>
 
