@@ -10655,6 +10655,19 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             temp_pro_granted_at: new Date().toISOString(),
             temp_pro_note: "Beta signup — auto-granted",
           },{onConflict:"id",ignoreDuplicates:false});
+          // Notify admin of new signup — called directly from app to avoid pg_net timeout
+          try {
+            fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/signup-notify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                org_id:       data.user.id,
+                org_email:    email,
+                is_team_member: false,
+              }),
+            }).catch(()=>{}); // fire and forget — never block signup
+          } catch(e) {}
+
           // Look up referrer by ref code and link them
           const refCode = getRefCode();
           if (refCode) {
