@@ -55,6 +55,24 @@ const APP_EMAIL      = IS_THEATRE4U ? "hello@theatre4u.org" : "hello@artstracker
 const APP_URL        = IS_THEATRE4U ? "https://theatre4u.org" : "https://artstracker.org";
 // ── End Domain Detection ──────────────────────────────────────────────────────
 
+// ── Brand Assets ── logo + favicon, switched by domain (files live in src/public/)
+// In-app square logo mark shown beside the wordmark in the sidebar and topbar.
+const LOGO_ICON  = IS_THEATRE4U ? "/favicon-theatre4u.svg"        : "/icon-192-artstracker.png";
+const FAVICON    = IS_THEATRE4U ? "/favicon-theatre4u.svg"        : "/favicon-artstracker.png";
+const TOUCH_ICON = IS_THEATRE4U ? "/apple-touch-icon-theatre4u.png" : "/apple-touch-icon-artstracker.png";
+// Set the browser tab icon + iOS home-screen icon at runtime, by hostname.
+// This is why we never need to edit the Vite-owned src/index.html.
+if (typeof document !== "undefined") {
+  const setIcon = (rel, href, type) => {
+    let l = document.querySelector("link[rel='" + rel + "']");
+    if (!l) { l = document.createElement("link"); l.rel = rel; document.head.appendChild(l); }
+    if (type) { l.type = type; }
+    l.href = href;
+  };
+  setIcon("icon", FAVICON, IS_THEATRE4U ? "image/svg+xml" : "image/png");
+  setIcon("apple-touch-icon", TOUCH_ICON, null);
+}
+
 const _SB_REAL = createClient(
   "https://ldmmphwivnnboyhlxipl.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA"
@@ -296,12 +314,15 @@ const MKT   = ["Not Listed","For Rent","For Sale","Rent or Sale","For Loan"];
 // ── Logo Components — simple emoji mark, always reliable ────────────────────
 // LogoMarkDark and LogoMarkLight render the theatre masks emoji in a styled box
 // These are intentionally simple until logo integration is ready
-const LogoMarkDark = ({size=40}) => (
-  <div style={{width:size,height:size,background:"linear-gradient(135deg,#2a1a0c,#1a0c06)",borderRadius:Math.round(size*0.22),display:"flex",alignItems:"center",justifyContent:"center",fontSize:Math.round(size*0.55),flexShrink:0,border:"1px solid rgba(232,184,93,.25)"}}>🎭</div>
+const LogoMarkDark = ({size=44}) => (
+  <div style={{width:size,height:size,borderRadius:Math.round(size*0.24),background:"linear-gradient(135deg,#f7f1e6,#ece0cf)",border:"1px solid rgba(232,184,93,.45)",boxShadow:"0 2px 6px rgba(0,0,0,.28)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+    <img src={LOGO_ICON} alt={APP_NAME} width={Math.round(size*0.8)} height={Math.round(size*0.8)} style={{objectFit:"contain",display:"block"}}/>
+  </div>
 );
 const LogoMarkLight = ({size=40}) => (
-  <div style={{width:size,height:size,background:"linear-gradient(135deg,#f5ede3,#ede0cf)",borderRadius:Math.round(size*0.22),display:"flex",alignItems:"center",justifyContent:"center",fontSize:Math.round(size*0.55),flexShrink:0,border:"1px solid rgba(59,42,31,.2)"}}>🎭</div>
+  <img src={LOGO_ICON} alt={APP_NAME} width={size} height={size} style={{flexShrink:0,objectFit:"contain",display:"block"}}/>
 );
+
 const LOGO_MARK_SVG_DARK = `<svg width="40" height="40" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#1a0c06" rx="10"/><text x="50" y="62" font-size="48" text-anchor="middle">🎭</text></svg>`;
 
 // ── QR Code Generator (pure canvas, no dependencies) ─────────────────────────
@@ -17580,7 +17601,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
             <div className="sb-inner">
               <div className="sb-logo">
                 <div style={{display:"flex",alignItems:"center",gap:12}}>
-                  <LogoMarkDark size={44}/>
+                  <LogoMarkDark size={54}/>
                   <div>
                     <div className="sb-name">{APP_NAME}</div>
                     <div style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"rgba(212,168,67,.5)",marginTop:2,fontFamily:"'Raleway',sans-serif",fontWeight:700}}>{APP_SUBTITLE}</div>
