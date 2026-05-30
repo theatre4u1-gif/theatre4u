@@ -60,6 +60,7 @@ const APP_URL        = IS_THEATRE4U ? "https://theatre4u.org" : "https://artstra
 const LOGO_ICON  = IS_THEATRE4U ? "/favicon-theatre4u.svg"        : "/icon-192-artstracker.png";
 const FAVICON    = IS_THEATRE4U ? "/favicon-theatre4u.svg"        : "/favicon-artstracker.png";
 const TOUCH_ICON = IS_THEATRE4U ? "/apple-touch-icon-theatre4u.png" : "/apple-touch-icon-artstracker.png";
+const LOGO_FULL       = IS_THEATRE4U ? "/logo-theatre4u.svg"           : "/logo-artstracker.png";        // full lockup, shown over a spotlight pool on the landing hero
 // Set the browser tab icon + iOS home-screen icon at runtime, by hostname.
 // This is why we never need to edit the Vite-owned src/index.html.
 if (typeof document !== "undefined") {
@@ -10355,7 +10356,7 @@ function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     {/* ── Sticky Nav ── */}
     <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:1000,padding:"0 32px",height:64,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?"rgba(13,10,8,.97)":"transparent",borderBottom:scrolled?"1px solid rgba(255,255,255,.08)":"none",backdropFilter:scrolled?"blur(12px)":"none",transition:"all .3s"}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <div style={{width:34,height:34,background:"linear-gradient(135deg,var(--gold),var(--goldd))",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🎭</div>
+        <img src={LOGO_ICON} alt={APP_NAME} style={{width:34,height:34,objectFit:"contain",display:"block",flexShrink:0}}/>
         <span style={{fontFamily:"'Playfair Display',serif",fontSize:20,color:"var(--gold)"}}>Theatre4u™</span>
       </div>
       <div style={{display:"flex",gap:10,alignItems:"center"}}>
@@ -10370,6 +10371,10 @@ function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
       <img src={usp("photo-1503095396549-807759245b35",1600,900)} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.2,pointerEvents:"none"}}/>
       <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,rgba(13,10,8,.7) 0%,rgba(13,10,8,.5) 50%,rgba(13,10,8,.95) 100%)",pointerEvents:"none"}}/>
       <div style={{position:"relative",zIndex:1,maxWidth:760}}>
+        <div style={{position:"relative",display:"flex",justifyContent:"center",alignItems:"center",margin:"0 auto 30px",minHeight:190}}>
+          <div aria-hidden="true" style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:"min(820px,100vw)",height:310,borderRadius:"50%",pointerEvents:"none",background:"radial-gradient(ellipse at 50% 50%, rgba(250,244,232,.98) 0%, rgba(249,242,227,.93) 46%, rgba(243,221,165,.5) 64%, rgba(234,193,108,.18) 76%, transparent 86%)",filter:"blur(3px)"}}/>
+          <img src={LOGO_FULL} alt={APP_NAME} style={{position:"relative",zIndex:1,width:"min(430px,80vw)",height:"auto",display:"block"}}/>
+        </div>
         <div style={{display:"inline-flex",alignItems:"center",gap:7,padding:"4px 14px",background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.3)",borderRadius:20,fontSize:12,fontWeight:700,color:"var(--gold)",textTransform:"uppercase",letterSpacing:1,marginBottom:20}}>
           🎭 The Platform for Theatre Programs
         </div>
