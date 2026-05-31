@@ -2807,7 +2807,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
     setLoadingAll(true);
     // Join items with org info in one query
     const{data,error}=await SB.from("items")
-      .select("*, orgs(name,location,state,zipcode,lat,lng,marketplace_enabled)")
+      .select("*, orgs(name,location,state,zipcode,lat,lng,marketplace_enabled,vertical)")
       .neq("mkt","Not Listed")
       .neq("mkt","Private")
       .eq("avail","In Stock")
@@ -2823,6 +2823,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
         org_zipcode: i.orgs?.zipcode  || "",
         org_lat:     i.orgs?.lat      || null,
         org_lng:     i.orgs?.lng      || null,
+        org_vertical:i.orgs?.vertical || "theatre",
       }));
       setAllListings(flat);
     }
@@ -2852,6 +2853,10 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
       : allListings;
 
     let f=source;
+
+    // Vertical: only show listings from programs of the same type
+    const myVertical = org?.vertical || "theatre";
+    f = f.filter(i => (i.vertical || i.org_vertical || "theatre") === myVertical);
 
     // Text search
     if(search){
@@ -2913,9 +2918,9 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
           <img src={usp(BG.marketplace,1100,340)} alt="Backstage Exchange" loading="eager"/>
           <div className="hero-fade"/>
           <div className="hero-body">
-            <div className="hero-eyebrow">🏪 Backstage Exchange</div>
-            <h1 className="hero-title" style={{fontSize:46}}>Backstage Exchange</h1>
-            <p className="hero-sub">Rent or buy costumes, props, lighting, sound and more from programs near you. Give assets a second life.</p>
+            <div className="hero-eyebrow">🏪 {getExchangeName(org?.vertical)}</div>
+            <h1 className="hero-title" style={{fontSize:46}}>{getExchangeName(org?.vertical)}</h1>
+            <p className="hero-sub">Rent, sell, or loan items with programs near you. Give your assets a second life.</p>
           </div>
           <div className="hero-bar"/>
         </div>
@@ -9117,8 +9122,8 @@ function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool, allSch
           <img src={usp(BG.marketplace,1100,340)} alt="Backstage Exchange" loading="eager"/>
           <div className="hero-fade"/>
           <div className="hero-body">
-            <div className="hero-eyebrow">🏪 Backstage Exchange</div>
-            <h1 className="hero-title" style={{fontSize:46}}>Backstage Exchange</h1>
+            <div className="hero-eyebrow">🏪 {getExchangeName(org?.vertical)}</div>
+            <h1 className="hero-title" style={{fontSize:46}}>{getExchangeName(org?.vertical)}</h1>
             <p className="hero-sub">Rent, buy, or loan theatre assets from programs near you.</p>
           </div>
           <div className="hero-bar"/>
