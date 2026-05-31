@@ -1,7 +1,7 @@
 // Theatre4u — built 2026-03-26 17:02
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getVertical } from "./lib/verticals.js";
+import { getVertical, getCats, getCatGfx } from "./lib/verticals.js";
 
 // ── Storage map constants (used by ItemForm and RoomMap/StorageRack) ──────────
 const PIN_COLORS = ["#D4A843","#5299E0","#52C784","#D85A30","#9B6EBF","#1D9E75","#E24B4A","#BA7517","#2B5BA8","#C2185B"];
@@ -235,8 +235,8 @@ const CAT_GFX = {
 };
 
 // CatCard — renders a category tile using gradient instead of photo
-function CatCard({catId,label,icon,width=300,height=160,children}){
-  const g=CAT_GFX[catId]||CAT_GFX.other;
+function CatCard({catId,label,icon,width=300,height=160,children,vertical="theatre"}){
+  const g=getCatGfx(vertical,catId);
   return(
     <div style={{width,height,background:g.grad,borderRadius:8,position:"relative",overflow:"hidden",display:"flex",alignItems:"flex-end"}}>
       <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:Math.round(height*0.38),opacity:.25,userSelect:"none"}}>{g.icon}</div>
@@ -246,8 +246,8 @@ function CatCard({catId,label,icon,width=300,height=160,children}){
 }
 
 // CatThumb — small square thumbnail for item cards/lists
-function CatThumb({catId,size=56}){
-  const g=CAT_GFX[catId]||CAT_GFX.other;
+function CatThumb({catId,size=56,vertical="theatre"}){
+  const g=getCatGfx(vertical,catId);
   return(
     <div style={{width:size,height:size,background:g.grad,borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:Math.round(size*0.44),flexShrink:0}}>
       {g.icon}
@@ -1853,6 +1853,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
   const totalVal=items.reduce((s,i)=>s+((i.sale||0)*(i.qty||1)),0);
   const cc={};items.forEach(i=>{cc[i.category]=(cc[i.category]||0)+(i.qty||1)});
   const maxC=Math.max(1,...Object.values(cc));
+  const vVertical=org?.vertical||"theatre"; const vCATS=getCats(vVertical);
   const [highlights, setHighlights] = useState([]);
   useEffect(()=>{
     (async()=>{
@@ -2119,7 +2120,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
                           ?<img src={item.img} alt={item.name} loading="lazy"
                               style={{width:"100%",height:"100%",objectFit:"cover"}}/>
                           :<div style={{width:"100%",height:"100%",
-                              background:CAT_GFX[item.category]?.grad||CAT_GFX.other.grad,
+                              background:getCatGfx(vVertical,item.category).grad,
                               display:"flex",alignItems:"center",justifyContent:"center",
                               fontSize:52,opacity:.85}}>
                               {cat.icon}
@@ -2167,11 +2168,11 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
         {/* Category gallery */}
         <div className="sh"><h2>Browse by Category</h2><p>Click any category to explore your inventory.</p></div>
         <div className="cat-gallery" style={{marginBottom:36}}>
-          {CATS.map(cat=>{
+          {vCATS.map(cat=>{
             const count=items.filter(it=>it.category===cat.id).length;
             return(
               <div key={cat.id} className="cat-tile" onClick={()=>goInventory&&goInventory(cat.id)}>
-                <CatCard catId={cat.id} label={cat.label} icon={cat.icon} width="100%" height={160}>
+                <CatCard catId={cat.id} label={cat.label} icon={cat.icon} width="100%" height={160} vertical={vVertical}>
                   <div className="cat-info"><span className="cat-emo">{cat.icon}</span><span className="cat-name">{cat.label}</span>{count>0&&<div className="cat-cnt">{count} item{count!==1?"s":""}</div>}</div>
                 </CatCard>
               </div>
@@ -2191,7 +2192,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
         {items.length>0?(
           <div className="card card-p">
             <div className="sh" style={{marginBottom:20}}><h2>Inventory at a Glance</h2></div>
-            {CATS.map(cat=>{const c=cc[cat.id]||0;if(!c)return null;return(
+            {vCATS.map(cat=>{const c=cc[cat.id]||0;if(!c)return null;return(
               <div key={cat.id} className="bar-row">
                 <span className="bar-ico">{cat.icon}</span>
                 <span className="bar-lbl">{cat.label}</span>
@@ -2210,6 +2211,11 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
 
 function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null}){
     const[upgradeReason,setUpgradeReason]=useState(null);
+  const vVertical=org?.vertical||"theatre";
+  const vCATS=getCats(vVertical);
+  const vCfg=getVertical(vVertical);
+  const vCONDS=vCfg.conditions, vAVAIL=vCfg.availability, vMKT=vCfg.marketOptions;
+  const vCAT=Object.fromEntries(vCATS.map(c=>[c.id,c]));
   // Role-based permissions
   const canEdit   = memberRole !== "house";
   const canAdd    = memberRole !== "house";
@@ -2550,7 +2556,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
                     style={{padding:"6px 10px",borderRadius:7,border:"1px solid var(--border)",
                       background:"var(--white)",color:"var(--text)",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
                     <option value="">— pick category —</option>
-                    {CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+                    {vCATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
                   </select>
                 )}
                 {bulkField==="location"&&(
@@ -2565,7 +2571,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
                     style={{padding:"6px 10px",borderRadius:7,border:"1px solid var(--border)",
                       background:"var(--white)",color:"var(--text)",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
                     <option value="">— pick condition —</option>
-                    {CONDS.map(c=><option key={c}>{c}</option>)}
+                    {vCONDS.map(c=><option key={c}>{c}</option>)}
                   </select>
                 )}
                 {bulkField==="avail"&&(
@@ -2573,7 +2579,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
                     style={{padding:"6px 10px",borderRadius:7,border:"1px solid var(--border)",
                       background:"var(--white)",color:"var(--text)",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
                     <option value="">— pick availability —</option>
-                    {AVAIL.map(a=><option key={a}>{a}</option>)}
+                    {vAVAIL.map(a=><option key={a}>{a}</option>)}
                   </select>
                 )}
                 {bulkField==="mkt"&&(
@@ -2581,7 +2587,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
                     style={{padding:"6px 10px",borderRadius:7,border:"1px solid var(--border)",
                       background:"var(--white)",color:"var(--text)",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
                     <option value="">— pick status —</option>
-                    {MKT.map(s=><option key={s}>{s}</option>)}
+                    {vMKT.map(s=><option key={s}>{s}</option>)}
                   </select>
                 )}
 
@@ -2606,10 +2612,10 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
         )}
         {showF&&(
           <div className="fbar fin">
-            <div><label>Category</label><select value={catF} onChange={e=>setCatF(e.target.value)}><option value="all">All</option>{CATS.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></div>
-            <div><label>Condition</label><select value={condF} onChange={e=>setCondF(e.target.value)}><option value="all">All</option>{CONDS.map(c=><option key={c}>{c}</option>)}</select></div>
-            <div><label>Availability</label><select value={availF} onChange={e=>setAvailF(e.target.value)}><option value="all">All</option>{AVAIL.map(a=><option key={a}>{a}</option>)}</select></div>
-            <div><label>Exchange Status</label><select value={mktF} onChange={e=>setMktF(e.target.value)}><option value="all">All</option>{MKT.map(s=><option key={s}>{s}</option>)}</select></div>
+            <div><label>Category</label><select value={catF} onChange={e=>setCatF(e.target.value)}><option value="all">All</option>{vCATS.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></div>
+            <div><label>Condition</label><select value={condF} onChange={e=>setCondF(e.target.value)}><option value="all">All</option>{vCONDS.map(c=><option key={c}>{c}</option>)}</select></div>
+            <div><label>Availability</label><select value={availF} onChange={e=>setAvailF(e.target.value)}><option value="all">All</option>{vAVAIL.map(a=><option key={a}>{a}</option>)}</select></div>
+            <div><label>Exchange Status</label><select value={mktF} onChange={e=>setMktF(e.target.value)}><option value="all">All</option>{vMKT.map(s=><option key={s}>{s}</option>)}</select></div>
             <button className="btn btn-o btn-sm" onClick={()=>{setCatF("all");setCondF("all");setAvailF("all");setMktF("all")}}>Clear</button>
           </div>
         )}
@@ -2618,13 +2624,13 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
           ?<div className="empty"><div className="empty-ico">🎭</div><h3>No Items Found</h3><p>{items.length===0?"Add your first item to build your catalog.":"Try adjusting search or filters."}</p>{items.length===0&&<button className="btn btn-g" onClick={()=>{setActive(null);setModal("a")}}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add First Item</button>}</div>
           :<div className="inv-grid">
               {paged.map(item=>{
-                const cat=CAT[item.category]||CAT.other;
+                const cat=vCAT[item.category]||vCAT.other||CAT.other;
                 return(
                   <div key={item.id} className="inv-card"
                     onClick={()=>selectMode ? toggleSelect(item.id) : openD(item)}
                     style={{position:"relative",...(selectMode?{cursor:"pointer",outline:selected.has(item.id)?"2px solid var(--gold)":"2px solid transparent",outlineOffset:2,background:selected.has(item.id)?"rgba(212,168,67,.06)":""}:{})}}>
                     {selectMode&&<div style={{position:"absolute",top:10,left:10,zIndex:10,width:24,height:24,borderRadius:6,border:"2px solid",borderColor:selected.has(item.id)?"var(--gold)":"rgba(255,255,255,.6)",background:selected.has(item.id)?"var(--gold)":"rgba(0,0,0,.35)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:900,color:"#1a0f00"}}>{selected.has(item.id)?"✓":""}</div>}
-                    <div className="inv-img">{item.img?<img src={item.img} alt={item.name} loading="lazy"/>:<CatCard catId={item.category} width="100%" height={220}><div style={{padding:"0 14px 12px",color:"#fff"}}></div></CatCard>}</div>
+                    <div className="inv-img">{item.img?<img src={item.img} alt={item.name} loading="lazy"/>:<CatCard catId={item.category} width="100%" height={220} vertical={vVertical}><div style={{padding:"0 14px 12px",color:"#fff"}}></div></CatCard>}</div>
                     <div className="inv-body">
                       {schoolName&&<div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:1.5,color:"#42a5f5",marginBottom:4,display:"flex",alignItems:"center",gap:4}}><span>🏫</span>{schoolName}</div>}
                       <div className="inv-cat" style={{color:cat.color}}>{cat.icon} {cat.label}</div>
@@ -2647,7 +2653,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
               </tr></thead>
               <tbody>
                 {paged.map(item=>{
-                  const cat=CAT[item.category]||CAT.other;
+                  const cat=vCAT[item.category]||vCAT.other||CAT.other;
                   const isSel = selectMode && selected.has(item.id);
                   return(
                     <tr key={item.id} style={isSel?{background:"rgba(212,168,67,.06)"}:{}}
@@ -2663,7 +2669,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
                         </div>
                       </td>}
                       <td style={{padding:"4px 10px",fontFamily:"monospace",fontSize:12,fontWeight:800,color:"var(--amber)",whiteSpace:"nowrap"}}>{item.display_id||""}</td>
-                      <td style={{width:40,padding:"4px 8px"}}>{item.img?<img src={item.img} alt="" style={{width:32,height:32,borderRadius:4,objectFit:"cover"}}/>:<CatThumb catId={item.category} size={32}/>}</td>
+                      <td style={{width:40,padding:"4px 8px"}}>{item.img?<img src={item.img} alt="" style={{width:32,height:32,borderRadius:4,objectFit:"cover"}}/>:<CatThumb catId={item.category} size={32} vertical={vVertical}/>}</td>
                       <td style={{fontFamily:"'Lora',serif",fontWeight:600,fontSize:15,cursor:"pointer",color:"var(--ink)"}} onClick={selectMode?undefined:()=>openD(item)}>{item.name}</td>
                       <td style={{fontWeight:700,color:"var(--muted)"}}>{cat.icon} {cat.label}</td>
                       <td>{item.condition}</td><td style={{fontWeight:800}}>{item.qty}</td>
