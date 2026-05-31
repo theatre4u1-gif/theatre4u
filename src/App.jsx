@@ -2273,9 +2273,10 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
 
     for (const item of toProcess) {
       try {
-        const prompt = "You are categorizing theatre inventory items. "
+        const vCatIds = vCATS.map(c=>c.id);
+        const prompt = "You are categorizing " + vCfg.label + " program inventory items. "
           + "Given the item name and notes, return ONLY the single best category ID from this list: "
-          + "costumes, props, sets, lighting, sound, scripts, makeup, furniture, fabrics, tools, effects, other. "
+          + vCatIds.join(", ") + ". "
           + "Return only the category ID, nothing else. "
           + "Item name: " + item.name + ". "
           + (item.notes ? "Notes: " + item.notes + "." : "");
@@ -2287,7 +2288,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
         });
         const json = await res.json();
         const raw  = (json.reply || json.response || json.content || "").trim().toLowerCase();
-        const VALID = ["costumes","props","sets","lighting","sound","scripts","makeup","furniture","fabrics","tools","effects","other"];
+        const VALID = vCATS.map(c=>c.id);
         const cat   = VALID.find(c => raw.includes(c));
         if (cat && cat !== item.category) {
           const { error } = await SB.from("items").update({ category: cat }).eq("id", item.id);
