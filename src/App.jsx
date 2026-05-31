@@ -8605,9 +8605,9 @@ function CSVImport({ onImport, onClose, userId }) {
 // COMMUNITY BOARD
 // ══════════════════════════════════════════════════════════════════════════════
 const POST_TYPES = [
-  { id:"show",         label:"Upcoming Show",    icon:"🎭", color:"#7b1fa2", desc:"Share your production dates and ticket info" },
-  { id:"audition",     label:"Audition Notice",  icon:"🎤", color:"#1565c0", desc:"Looking for cast or crew members" },
-  { id:"photo",        label:"Production Photos", icon:"📸", color:"#c2185b", desc:"Share photos from your recent shows" },
+  { id:"show",         label:"Upcoming Event",   icon:"🎟️", color:"#7b1fa2", desc:"Share your performance, concert, or exhibition dates" },
+  { id:"audition",     label:"Call / Tryout",    icon:"🎤", color:"#1565c0", desc:"Looking for performers, members, or crew" },
+  { id:"photo",        label:"Event Photos",      icon:"📸", color:"#c2185b", desc:"Share photos from your recent events" },
   { id:"wanted",       label:"Item Wanted",       icon:"🔍", color:"#d84315", desc:"Looking for a specific prop, costume, or equipment" },
   { id:"resource",     label:"Resource Share",    icon:"🤝", color:"#00838f", desc:"Offering props, costumes, or equipment to borrow or share" },
   { id:"announcement", label:"Announcement",      icon:"📢", color:"#2e7d32", desc:"News, updates, or anything else" },
@@ -8935,7 +8935,7 @@ function CommunityPage({userId, org, plan}) {
             <input className="fi" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search shows, auditions, wanted items…" style={{paddingLeft:34,width:"100%"}}/>
           </div>
           <div style={{display:"flex",gap:0,border:"1px solid var(--border)",borderRadius:6,overflow:"hidden"}}>
-            {[["all","All"],["show","🎭 Shows"],["audition","🎤 Auditions"],["photo","📸 Photos"],["wanted","🔍 Wanted"],["announcement","📢 News"]].map(([id,label])=>(
+            {[["all","All"],["show","🎟️ Events"],["audition","🎤 Calls"],["photo","📸 Photos"],["wanted","🔍 Wanted"],["announcement","📢 News"]].map(([id,label])=>(
               <button key={id} onClick={()=>setTypeF(id)} style={{background:typeF===id?"var(--gold)":"transparent",color:typeF===id?"#1a0f00":"var(--muted)",border:"none",padding:"7px 12px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>
                 {label}
               </button>
