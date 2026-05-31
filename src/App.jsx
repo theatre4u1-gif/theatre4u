@@ -2202,7 +2202,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
             );})}
           </div>
         ):(
-          <div className="empty"><div className="empty-ico">🎭</div><h3>Your Stage Awaits</h3><p>Load sample data from Settings, or add your first item to begin.</p></div>
+          <div className="empty"><div className="empty-ico">{getVertical(vVertical).icon}</div><h3>Welcome to Your Program</h3><p>Load sample data from Settings, or add your first item to begin.</p></div>
         )}
       </div>
     </div>
@@ -2622,7 +2622,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
         )}
         <div style={{fontSize:13,fontWeight:700,color:"var(--faint)",marginBottom:12}}>{filtered.length} item{filtered.length!==1?"s":""}</div>
         {view==="grid"&&(paged.length===0
-          ?<div className="empty"><div className="empty-ico">🎭</div><h3>No Items Found</h3><p>{items.length===0?"Add your first item to build your catalog.":"Try adjusting search or filters."}</p>{items.length===0&&<button className="btn btn-g" onClick={()=>{setActive(null);setModal("a")}}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add First Item</button>}</div>
+          ?<div className="empty"><div className="empty-ico">{vCfg.icon}</div><h3>No Items Found</h3><p>{items.length===0?"Add your first item to build your catalog.":"Try adjusting search or filters."}</p>{items.length===0&&<button className="btn btn-g" onClick={()=>{setActive(null);setModal("a")}}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add First Item</button>}</div>
           :<div className="inv-grid">
               {paged.map(item=>{
                 const cat=vCAT[item.category]||vCAT.other||CAT.other;
