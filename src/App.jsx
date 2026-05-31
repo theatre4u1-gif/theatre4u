@@ -17637,7 +17637,11 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
                   <span style={{padding:"2px 8px",background:plan==="free"?"rgba(255,255,255,.08)":plan==="pro"?"rgba(212,168,67,.2)":"rgba(66,165,245,.2)",color:plan==="free"?"rgba(255,255,255,.35)":plan==="pro"?"var(--gold)":"#42a5f5",borderRadius:9,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>
                     {plan==="free"?"Free Plan":plan==="pro"?"Pro":"District"}
                   </span>
-
+                  {IS_ARTSTRACKER && org?.vertical && (
+                    <span style={{padding:"2px 8px",background:"rgba(212,168,67,.15)",color:"var(--gold)",borderRadius:9,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1,display:"inline-flex",alignItems:"center",gap:4}}>
+                      {getVertical(org.vertical).icon} {getVertical(org.vertical).label}
+                    </span>
+                  )}
                 </div>
               </div>
 
