@@ -1,7 +1,7 @@
 // Theatre4u — built 2026-03-26 17:02
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getVertical, getCats, getCatGfx, VERTICALS_LIST } from "./lib/verticals.js";
+import { getVertical, getCats, getCatGfx, VERTICALS_LIST, getExchangeName } from "./lib/verticals.js";
 
 // ── Storage map constants (used by ItemForm and RoomMap/StorageRack) ──────────
 const PIN_COLORS = ["#D4A843","#5299E0","#52C784","#D85A30","#9B6EBF","#1D9E75","#E24B4A","#BA7517","#2B5BA8","#C2185B"];
@@ -17549,7 +17549,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
       ...(!isCrew  ? [{ id:"messages",    label:"Messages",    ico:"💬"       }] : []),
       ...(!isCrew  ? [{ id:"requests",    label:"Requests",    ico:"📋"       }] : []),
       { id:"inventory",   label:"Inventory",   ico:Ic.box     },
-      ...(!isCrew && org?.marketplace_enabled ? [{ id:"marketplace", label:"Backstage Exchange", ico:Ic.store   }] : []),
+      ...(!isCrew && org?.marketplace_enabled ? [{ id:"marketplace", label:getExchangeName(org?.vertical), ico:Ic.store   }] : []),
       ...(!isCrew && org?.community_enabled   ? [{ id:"community",   label:"Community",   ico:"🎪", community:true }] : []),
       { id:"productions", label:"Productions", ico:"🎭"       },
       ...(!isMember? [{ id:"reports",     label:"Reports",     ico:Ic.chart   }] : []),
@@ -17562,7 +17562,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
       ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
     ];
   })();
-  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:"Backstage Exchange", productions:"Productions", reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:"Stage Points", points:"Stage Points", community:"Community Board", labels:"QR Labels" };
+  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(org?.vertical), productions:"Productions", reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:"Stage Points", points:"Stage Points", community:"Community Board", labels:"QR Labels" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicOrgSlug) return <PublicOrgPage slug={publicOrgSlug} />;
