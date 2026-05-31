@@ -1,7 +1,7 @@
 // Theatre4u — built 2026-03-26 17:02
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getVertical, getCats, getCatGfx } from "./lib/verticals.js";
+import { getVertical, getCats, getCatGfx, VERTICALS_LIST } from "./lib/verticals.js";
 
 // ── Storage map constants (used by ItemForm and RoomMap/StorageRack) ──────────
 const PIN_COLORS = ["#D4A843","#5299E0","#52C784","#D85A30","#9B6EBF","#1D9E75","#E24B4A","#BA7517","#2B5BA8","#C2185B"];
@@ -10600,6 +10600,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
   const[legal,setLegal]=useState(null);
   const[showPass,setShowPass]=useState(false);
   const[ageConfirmed,setAgeConfirmed]=useState(false);
+  const[vertical,setVertical]=useState("theatre");
 
   useEffect(()=>{
     window.__t4u_show_auth=(m)=>{setMode(m||"login");setErr("");setVisible(true);};
@@ -10682,6 +10683,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
           await SB.from("orgs").upsert({
             id:data.user.id, name:orgName, email,
             type:"", phone:"", location:"", bio:"",
+            vertical: vertical, verticals_enabled: [vertical],
             // All beta signups get temp_pro — full Pro access during beta period
             temp_pro: true,
             temp_pro_granted_at: new Date().toISOString(),
@@ -10790,7 +10792,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:24}}>
           <div>
             <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:"#ede8df"}}>{mode==="login"?"Welcome back":"Get started free"}</div>
-            <div style={{fontSize:12,color:"#685f76",marginTop:3}}>{mode==="login"?"Sign in to your Theatre4u™ account":"Create your free Theatre4u™ account"}</div>
+            <div style={{fontSize:12,color:"#685f76",marginTop:3}}>{mode==="login"?("Sign in to your "+APP_NAME+" account"):("Create your free "+APP_NAME+" account")}</div>
           </div>
           <button onClick={close} style={{background:"none",border:"1px solid #282333",borderRadius:6,color:"#9b93a8",cursor:"pointer",padding:"4px 9px",fontSize:14,lineHeight:1}}>×</button>
         </div>
@@ -10822,6 +10824,13 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
           {mode==="signup"&&(<>
+            {IS_ARTSTRACKER&&(
+              <div><label style={labelStyle}>Program Type *</label>
+                <select value={vertical} onChange={e=>setVertical(e.target.value)} style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}>
+                  {VERTICALS_LIST.map(v=><option key={v.id} value={v.id}>{v.icon} {v.label}</option>)}
+                </select>
+              </div>
+            )}
             <div><label style={labelStyle}>Program / Organization Name *</label>
               <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High School Drama" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
             </div>
@@ -10832,8 +10841,8 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
                 ⭐ Free Pro Access During Beta
               </div>
               <div style={{fontSize:12,color:"rgba(255,255,255,.65)",lineHeight:1.7}}>
-                All programs that sign up during Theatre4u's beta phase get full Pro access at no charge.
-                When Theatre4u launches, beta programs that have added 25+ items and shared feedback
+                All programs that sign up during {APP_NAME}'s beta phase get full Pro access at no charge.
+                When {APP_NAME} launches, beta programs that have added 25+ items and shared feedback
                 will receive a{" "}
                 <strong style={{color:"rgba(255,255,255,.85)"}}>founding member rate of $9.99/month</strong>
                 {" "}— instead of the standard $15 — locked in for as long as you subscribe.
