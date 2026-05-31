@@ -16,6 +16,7 @@ export const VERTICALS = {
     icon: "🎭",
     color: "#b5174f",
     appName: "Theatre4u™",
+    exchangeName: "Backstage Exchange",
     categories: [
       { id:"costumes",  label:"Costumes",        icon:"👗", color:"#b5174f", grad:"linear-gradient(135deg,#7b1560,#c2185b,#e91e8c)" },
       { id:"props",     label:"Props",            icon:"🎭", color:"#6a1b8a", grad:"linear-gradient(135deg,#4a148c,#7b1fa2,#9c27b0)" },
@@ -43,6 +44,7 @@ export const VERTICALS = {
     icon: "🎵",
     color: "#1554a0",
     appName: "ArtsTracker",
+    exchangeName: "Instrument Exchange",
     categories: [
       { id:"strings",       label:"Strings",        icon:"🎻", color:"#6a1b8a", grad:"linear-gradient(135deg,#4a148c,#7b1fa2,#9c27b0)" },
       { id:"woodwinds",     label:"Woodwinds",       icon:"🎶", color:"#0d5e2a", grad:"linear-gradient(135deg,#1b5e20,#2e7d32,#43a047)" },
@@ -67,6 +69,7 @@ export const VERTICALS = {
     icon: "💃",
     color: "#c2185b",
     appName: "ArtsTracker",
+    exchangeName: "Dance Exchange",
     categories: [
       { id:"costumes", label:"Costumes",        icon:"👗", color:"#b5174f", grad:"linear-gradient(135deg,#7b1560,#c2185b,#e91e8c)" },
       { id:"footwear", label:"Footwear",         icon:"👠", color:"#a0144e", grad:"linear-gradient(135deg,#880e4f,#ad1457,#e91e63)" },
@@ -89,6 +92,7 @@ export const VERTICALS = {
     icon: "🎨",
     color: "#1554a0",
     appName: "ArtsTracker",
+    exchangeName: "Materials Exchange",
     categories: [
       { id:"painting",    label:"Painting Supplies", icon:"🖌️", color:"#b5174f", grad:"linear-gradient(135deg,#7b1560,#c2185b,#e91e8c)" },
       { id:"drawing",     label:"Drawing",           icon:"✏️", color:"#374549", grad:"linear-gradient(135deg,#263238,#37474f,#546e7a)" },
@@ -113,6 +117,7 @@ export const VERTICALS = {
     icon: "🏆",
     color: "#7b1fa2",
     appName: "ArtsTracker",
+    exchangeName: "Resource Exchange",
     categories: [
       { id:"uniforms",      label:"Uniforms",              icon:"👕", color:"#1554a0", grad:"linear-gradient(135deg,#0d2b6e,#1565c0,#1976d2)" },
       { id:"equipment",     label:"Equipment",             icon:"🎒", color:"#374549", grad:"linear-gradient(135deg,#263238,#37474f,#546e7a)" },
@@ -157,6 +162,8 @@ export const getCats = (verticalId) => getVertical(verticalId).categories;
 // Returns a {grad, icon} object for a category, matching the CAT_GFX shape
 // already used by CatCard and CatThumb in App.jsx.
 // Pass vertical="theatre" (or omit) for full Theatre4u backwards-compatibility.
+export const getExchangeName = (verticalId) => getVertical(verticalId).exchangeName || "Resource Exchange";
+
 export const getCatGfx = (verticalId, catId) => {
   const cat = getCat(verticalId, catId);
   return { grad: cat.grad, icon: cat.icon };
