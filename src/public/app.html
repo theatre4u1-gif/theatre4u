@@ -258,6 +258,12 @@ const SB = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA"
 );
 
+// ── Domain-aware branding (ArtsTracker vs Theatre4u) ──────────────────────────
+const IS_ARTSTRACKER = location.hostname.includes("artstracker");
+const APP_NAME = IS_ARTSTRACKER ? "ArtsTracker" : "Theatre4u™";
+const APP_TAGLINE = IS_ARTSTRACKER ? "Inventory · Exchange · Community for Arts Programs" : "Inventory · Backstage Exchange · Community";
+const APP_ICON = IS_ARTSTRACKER ? "🎨" : "🎭";
+
 // ── QR Code generator ─────────────────────────────────────────────────────────
 let _qrMod = null;
 async function genQR(text, size=180) {
@@ -450,8 +456,8 @@ function AuthScreen({onAuth}) {
   return h("div",{className:"auth-screen fin"},
     h("div",{className:"auth-logo"},
       h("img",{src:"/favicon-theatre4u.svg",alt:"",style:{width:72,height:72,display:"block",margin:"0 auto 12px",objectFit:"contain"}}),
-      h("h1",null,"Theatre4u™"),
-      h("p",null,"Inventory · Backstage Exchange · Community")
+      h("h1",null,APP_NAME),
+      h("p",null,APP_TAGLINE)
     ),
     h("div",{className:"auth-form"},
       h("div",{className:"fg"},
@@ -1021,7 +1027,7 @@ function HomeTab({items, org, pointBalance=0, onAddItem, onViewItem}) {
     h("div",{className:"ph"},
       h("div",{className:"logo"},
         h("img",{className:"logo-mark",src:"/favicon-theatre4u.svg",alt:"",style:{background:"none",objectFit:"contain"}}),
-        h("span",{className:"logo-text"},"Theatre4u™")
+        h("span",{className:"logo-text"},APP_NAME)
       ),
       h("div",{style:{fontSize:12,color:"var(--muted)",textAlign:"right",lineHeight:1.4}},
         h("div",{style:{fontWeight:700,color:"var(--text)",fontSize:14}},org?.name||"My Inventory"),
@@ -1096,9 +1102,9 @@ function HomeTab({items, org, pointBalance=0, onAddItem, onViewItem}) {
       )
     ),
     items.length===0 && h("div",{className:"empty"},
-      h("div",{className:"ei"},"🎭"),
+      h("div",{className:"ei"},APP_ICON),
       h("h3",null,"Ready to catalog?"),
-      h("p",null,"Tap the button above to add your first item. To look up an item by QR code, use your iPhone Camera app — it reads Theatre4u™ labels instantly."),
+      h("p",null,"Tap the button above to add your first item. To look up an item by QR code, use your iPhone Camera app — it reads "+APP_NAME+" labels instantly."),
     )
   );
 }
