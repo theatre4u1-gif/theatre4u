@@ -1876,10 +1876,11 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
         .neq("mkt","Not Listed")
         .eq("avail","In Stock")
         .order("added",{ascending:false})
-        .limit(6);
-      setHighlights(data||[]);
+        .limit(40);
+      const mine=(data||[]).filter(i=>(i.vertical||"theatre")===vVertical).slice(0,6);
+      setHighlights(mine);
     })();
-  },[]);
+  },[vVertical]);
 
   const profileIncomplete = !org?.director_name;
   const isTempPro = org?.temp_pro;
