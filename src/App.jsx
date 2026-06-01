@@ -211,12 +211,23 @@ const itemNum = n  => n != null ? "#" + String(n).padStart(4, "0") : "";
 // Page background images — 5 confirmed-working Unsplash IDs only
 const usp=(id,w=900,h=500)=>`https://images.unsplash.com/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=82`;
 const BG = {
-  dashboard:   "photo-1503095396549-807759245b35", // red curtain + silhouettes — main brand image
-  inventory:   "photo-1489987707025-afc232f7ea0f", // rows of hanging garments on racks
-  marketplace: "photo-1503095396549-807759245b35", // red curtain + silhouettes
-  reports:     "photo-1503095396549-807759245b35", // red curtain + silhouettes
-  settings:    "photo-1497366216548-37526070297c", // organized office / workspace
+  dashboard:   "photo-1503095396549-807759245b35",
+  inventory:   "photo-1489987707025-afc232f7ea0f",
+  marketplace: "photo-1503095396549-807759245b35",
+  reports:     "photo-1503095396549-807759245b35",
+  settings:    "photo-1497366216548-37526070297c",
 };
+const VERTICAL_BG_GRAD = {
+  music:   "linear-gradient(135deg,#0d2b6e 0%,#1554a0 55%,#3949ab 100%)",
+  dance:   "linear-gradient(135deg,#7b1560 0%,#c2185b 55%,#e91e8c 100%)",
+  art:     "linear-gradient(135deg,#0d2b6e 0%,#1565c0 50%,#00838f 100%)",
+  booster: "linear-gradient(135deg,#4a148c 0%,#7b1fa2 55%,#9c27b0 100%)",
+};
+function HeroImg({ vertical, photoId, w, h, alt="", className, loading="lazy" }){
+  const grad = VERTICAL_BG_GRAD[vertical];
+  if (grad) return <div aria-hidden="true" className={className} style={{width:"100%",height:"100%",background:grad}}/>;
+  return <img src={usp(photoId,w,h)} alt={alt} className={className} loading={loading}/>;
+}
 
 // Category visual identity — CSS gradients, always works, never breaks
 const CAT_GFX = {
@@ -1875,7 +1886,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
 
   return(
     <div style={{position:"relative",padding:"32px 36px 56px"}}>
-      <img src={usp(BG.dashboard,1400,900)} alt="" className="page-bg-img"/>
+      <HeroImg vertical={vVertical!=="theatre"?vVertical:null} photoId={BG.dashboard} w={1400} h={900} className="page-bg-img"/>
       <div className="page-layer">
 
         {/* Temp Pro beta notice */}
@@ -1982,7 +1993,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
         )}
 
         <div className="hero-wrap" style={{height:380,marginBottom:32}}>
-          <img src={usp(BG.dashboard,1200,480)} alt="Grand Theatre" loading="eager"/>
+          <HeroImg vertical={vVertical!=="theatre"?vVertical:null} photoId={BG.dashboard} w={1200} h={480} alt="" loading="eager"/>
           <div className="hero-fade"/>
           <div className="hero-body">
             <div className="hero-eyebrow">📦 Inventory · Productions · Community</div>
@@ -2067,25 +2078,25 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
         )}
 
         {/* ── Community Spotlight ── */}
-        <div className="sh"><h2>🎪 Community Board</h2><p>Upcoming shows, auditions, and announcements from your theatre network.</p></div>
+        <div className="sh"><h2>🎪 Community Board</h2><p>Upcoming events, opportunities, and announcements from your arts network.</p></div>
         <CommunitySpotlight onViewAll={goCommunity}/>
         {/* Divider 1 */}
         <div className="img-div" style={{marginBottom:32}}>
-          <img src={usp("photo-1503095396549-807759245b35",1000,240)} alt="Stage" loading="lazy"/>
+          <HeroImg vertical={vVertical!=="theatre"?vVertical:null} photoId="photo-1503095396549-807759245b35" w={1000} h={240} alt="" loading="lazy"/>
           <div className="img-div-fade"/>
           <div className="img-div-text">
-            <h3>Backstage Exchange</h3>
+            <h3>{getExchangeName(vVertical)}</h3>
             <p>Browse items posted by other programs — rent, borrow, or purchase. Share your own when you're ready.</p>
           </div>
         </div>
         {/* Marketplace Highlights — auto-scrolling carousel */}
-        <div className="sh"><h2>Backstage Exchange — Highlights</h2><p>Items posted for rent, sale, or loan by theatre programs in your community.</p></div>
+        <div className="sh"><h2>{getExchangeName(vVertical)} — Highlights</h2><p>Items posted for rent, sale, or loan by programs in your community.</p></div>
         {highlights.length===0?(
           <div style={{background:"var(--parch)",border:"2px dashed var(--border)",borderRadius:"var(--rl)",padding:"40px 32px",textAlign:"center",marginBottom:36}}>
             <div style={{fontSize:44,marginBottom:12}}>🏪</div>
             <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:8}}>No Listings Yet</h3>
-            <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 18px"}}>When you or other programs post items to Backstage Exchange, they'll be showcased here for the whole community to discover.</p>
-            <button className="btn btn-g" onClick={()=>goMarketplace&&goMarketplace()}>Browse Backstage Exchange</button>
+            <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 18px"}}>When you or other programs post items to the {getExchangeName(vVertical)}, they'll be showcased here for the whole community to discover.</p>
+            <button className="btn btn-g" onClick={()=>goMarketplace&&goMarketplace()}>Browse {getExchangeName(vVertical)}</button>
           </div>
         ):(
           <div style={{marginBottom:36}}>
@@ -2460,10 +2471,10 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
       </div>
     )}
     <div style={{position:"relative"}}>
-      <img src={usp(BG.inventory,1400,900)} alt="" className="page-bg-img"/>
+      <HeroImg vertical={vVertical!=="theatre"?vVertical:null} photoId={BG.inventory} w={1400} h={900} className="page-bg-img"/>
       <div style={{padding:"32px 36px 0"}}>
         <div className="hero-wrap" style={{height:240}}>
-          <img src={usp(BG.inventory,1100,300)} alt="Stage" loading="lazy"/>
+          <HeroImg vertical={vVertical!=="theatre"?vVertical:null} photoId={BG.inventory} w={1100} h={300} alt="" loading="lazy"/>
           <div className="hero-fade"/>
           <div className="hero-body">
             <div className="hero-eyebrow">📦 Your Collection</div>
@@ -2915,10 +2926,10 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
 
   return(
     <div style={{position:"relative"}}>
-      <img src={usp(BG.marketplace,1400,900)} alt="" className="page-bg-img"/>
+      <HeroImg vertical={(org?.vertical&&org.vertical!=="theatre")?org.vertical:null} photoId={BG.marketplace} w={1400} h={900} className="page-bg-img"/>
       <div style={{padding:"32px 36px 0"}}>
         <div className="hero-wrap" style={{height:280}}>
-          <img src={usp(BG.marketplace,1100,340)} alt="Backstage Exchange" loading="eager"/>
+          <HeroImg vertical={(org?.vertical&&org.vertical!=="theatre")?org.vertical:null} photoId={BG.marketplace} w={1100} h={340} alt="" loading="eager"/>
           <div className="hero-fade"/>
           <div className="hero-body">
             <div className="hero-eyebrow">🏪 {getExchangeName(org?.vertical)}</div>
@@ -9120,10 +9131,10 @@ function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool, allSch
 
   return (
     <div style={{position:"relative",minHeight:"70vh"}}>
-      <img src={usp(BG.marketplace,1400,900)} alt="" className="page-bg-img"/>
+      <HeroImg vertical={(org?.vertical&&org.vertical!=="theatre")?org.vertical:null} photoId={BG.marketplace} w={1400} h={900} className="page-bg-img"/>
       <div style={{padding:"32px 36px 0"}}>
         <div className="hero-wrap" style={{height:280}}>
-          <img src={usp(BG.marketplace,1100,340)} alt="Backstage Exchange" loading="eager"/>
+          <HeroImg vertical={(org?.vertical&&org.vertical!=="theatre")?org.vertical:null} photoId={BG.marketplace} w={1100} h={340} alt="" loading="eager"/>
           <div className="hero-fade"/>
           <div className="hero-body">
             <div className="hero-eyebrow">🏪 {getExchangeName(org?.vertical)}</div>
