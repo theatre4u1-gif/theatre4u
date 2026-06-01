@@ -883,7 +883,7 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical
   const vAVAIL  = vConfig.availability;
   const vMKT    = vConfig.marketOptions;
   const defaultCat = vCATS[0]?.id || "costumes";
-  const blank={name:"",category:defaultCat,condition:vCONDS[2]||"Good",size:vSIZES.includes("N/A")?"N/A":vSIZES[0],qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,loan_period:2,deposit:0,avail:"In Stock",img:null,tags:[],purchase_cost:"",purchase_date:"",purchase_vendor:"",funding_source_id:""};
+  const blank={name:"",category:defaultCat,condition:vCONDS[2]||"Good",size:vSIZES.includes("N/A")?"N/A":vSIZES[0],qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,loan_period:2,deposit:0,avail:"In Stock",img:null,tags:[],purchase_cost:"",purchase_date:"",purchase_vendor:"",funding_source_id:"",low_stock_threshold:0};
   const[f,setF]=useState(item||blank);
   const[ti,setTi]=useState("");
   const[upl,setUpl]=useState(false);
@@ -963,6 +963,9 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical
       <div className="fg"><label className="fl">Condition</label><select className="fs" value={f.condition} onChange={e=>upd("condition",e.target.value)}>{vCONDS.map(c=><option key={c}>{c}</option>)}</select></div>
       <div className="fg"><label className="fl">Size</label><select className="fs" value={f.size} onChange={e=>upd("size",e.target.value)}>{vSIZES.map(s=><option key={s}>{s}</option>)}</select></div>
       <div className="fg"><label className="fl">Quantity</label><input className="fi" type="number" min="0" step="1" placeholder="1" value={f.qty||""} onChange={e=>upd("qty",parseInt(e.target.value)||0)}/></div>
+      {(vertical==="art"||vertical==="booster") && (
+        <div className="fg"><label className="fl">Low-stock alert at <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:10,color:"var(--muted)"}}>(0 = off)</span></label><input className="fi" type="number" min="0" step="1" placeholder="0" value={f.low_stock_threshold||""} onChange={e=>upd("low_stock_threshold",parseInt(e.target.value)||0)}/></div>
+      )}
       <div className="fg"><label className="fl">Availability</label><select className="fs" value={f.avail} onChange={e=>upd("avail",e.target.value)}>{vAVAIL.map(a=><option key={a}>{a}</option>)}</select></div>
       <div className="fg"><label className="fl">Location</label><input className="fi" value={f.location} onChange={e=>upd("location",e.target.value)} placeholder="e.g. Costume Closet A"/></div>
       <div className="fg fu">
@@ -2637,7 +2640,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
                       <div className="inv-cat" style={{color:cat.color}}>{cat.icon} {cat.label}</div>
                       <div className="inv-name">{item.name}</div>
                       {item.location&&<div style={{fontSize:12,color:"var(--muted)",marginBottom:4,display:"flex",alignItems:"center",gap:3}}>📍 {item.location}</div>}
-                      <div className="inv-meta">{item.display_id&&<span className="chip" style={{fontFamily:"monospace",fontWeight:800,color:"var(--amber)",letterSpacing:.5}}>{item.display_id}</span>}<span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span>{item.size!=="N/A"&&<span className="chip">{item.size}</span>}<span className="chip">{item.avail}</span></div>
+                      <div className="inv-meta">{item.display_id&&<span className="chip" style={{fontFamily:"monospace",fontWeight:800,color:"var(--amber)",letterSpacing:.5}}>{item.display_id}</span>}<span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span>{item.low_stock_threshold>0&&item.qty<=item.low_stock_threshold&&<span className="chip" style={{background:"rgba(230,74,25,.18)",color:"#ff7043",fontWeight:800}}>⚠ Low Stock</span>}{item.size!=="N/A"&&<span className="chip">{item.size}</span>}<span className="chip">{item.avail}</span></div>
                       <div className="inv-foot"><span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span>{item.mkt==="For Loan"?<span style={{fontSize:12,color:"#00838f",fontWeight:700}}>{item.loan_period||2}wk loan{item.deposit>0?" · "+fmt$(item.deposit)+" dep.":""}</span>:item.mkt!=="Not Listed"&&<span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>}</div>
                     </div>
                   </div>
@@ -5984,6 +5987,7 @@ function AdminEditItemModal({ item, onClose, onSaved }) {
       notes:     f.notes,
       avail:     f.avail,
       mkt:       f.mkt,
+      low_stock_threshold: parseInt(f.low_stock_threshold) || 0,
     }).eq("id", item.id);
     if (error) { setErr("Save failed: " + error.message); setSaving(false); return; }
     onSaved({ ...item, ...f });
@@ -10690,6 +10694,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             id:data.user.id, name:orgName, email,
             type:"", phone:"", location:"", bio:"",
             vertical: vertical, verticals_enabled: [vertical],
+            signup_domain: (typeof window!=="undefined" && window.location && window.location.hostname.includes("artstracker")) ? "artstracker.org" : "theatre4u.org",
             // All beta signups get temp_pro — full Pro access during beta period
             temp_pro: true,
             temp_pro_granted_at: new Date().toISOString(),
@@ -15262,7 +15267,7 @@ function AdminHub({ currentUser, org }) {
         else {
           // Fallback to basic query if RPC not available
           const { data } = await SB.from("orgs")
-            .select("id,name,email,plan,temp_pro,is_leading_player,director_name,label_prefix,created_at,last_seen,stripe_subscription_id,account_status,city,location,referral_code")
+            .select("id,name,email,plan,temp_pro,is_leading_player,director_name,label_prefix,created_at,last_seen,stripe_subscription_id,account_status,city,location,referral_code,vertical,signup_domain")
             .is("deleted_at", null)
             .order("created_at", { ascending: false }).limit(200);
           setOrgs(data || []);
@@ -15650,6 +15655,7 @@ function AdminHub({ currentUser, org }) {
                     <td style={{padding:"9px 12px"}}>
                       <div style={{fontWeight:700}}>{o.name}</div>
                       <div style={{fontSize:11,color:"var(--muted)"}}>{o.city||o.location||""}</div>
+                      <span style={{display:"inline-block",marginTop:3,padding:"1px 7px",borderRadius:8,fontSize:10,fontWeight:700,background:(o.vertical&&o.vertical!=="theatre")?"rgba(66,165,245,.18)":"rgba(181,23,79,.18)",color:(o.vertical&&o.vertical!=="theatre")?"#42a5f5":"#e91e8c"}}>{getVertical(o.vertical||"theatre").icon} {getVertical(o.vertical||"theatre").label}</span>{o.signup_domain&&<span style={{display:"inline-block",marginTop:3,marginLeft:5,padding:"1px 7px",borderRadius:8,fontSize:10,fontWeight:700,background:"rgba(255,255,255,.08)",color:"var(--muted)"}}>{o.signup_domain==="artstracker.org"?"🎨 ArtsTracker":"🎭 Theatre4u"}</span>}
                     </td>
                     <td style={{padding:"9px 12px",fontSize:12}}>
                       <div>{o.director_name||"—"}</div>
