@@ -75,8 +75,8 @@ if (typeof document !== "undefined") {
 }
 
 const _SB_REAL = createClient(
-  "https://ldmmphwivnnboyhlxipl.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA"
+  "https://lnraafxxmfzvwwzhcqrq.supabase.co",  // SANDBOX — do not merge to main
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxucmFhZnh4bWZ6dnd3emhjcXJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNjY0MjgsImV4cCI6MjA5NTk0MjQyOH0.bSl2tAYNc8FG5JyEv0drXg4G3vkRT_GSkUrbXHQPXQ0"  // SANDBOX
 );
 
 // SB_ACTIVE is the mutable backend — swapped to demoStore in demo mode.
@@ -92,7 +92,7 @@ const SB = new Proxy({}, {
 
 // Edge function caller helper
 const callEdgeFn = async (name, body, token) => {
-  const res = await fetch(`https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/${name}`, {
+  const res = await fetch(`https://lnraafxxmfzvwwzhcqrq.supabase.co/functions/v1/${name}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -2296,7 +2296,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
           + "Item name: " + item.name + ". "
           + (item.notes ? "Notes: " + item.notes + "." : "");
 
-        const res = await fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/ai-help", {
+        const res = await fetch("https://lnraafxxmfzvwwzhcqrq.supabase.co/functions/v1/ai-help", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: prompt, context: "categorize" }),
@@ -3137,7 +3137,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
 // RENTAL REQUEST FLOW
 // ══════════════════════════════════════════════════════════════════════════════
 
-const NOTIFY_URL = "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/request-notify";
+const NOTIFY_URL = "https://lnraafxxmfzvwwzhcqrq.supabase.co/functions/v1/request-notify";
 
 async function notifyRequest(type, requestId) {
   try {
@@ -4850,7 +4850,7 @@ function InvoiceRequestForm({ orgName, userEmail }) {
     if(!form.name.trim()||!form.email.trim()||!form.contact.trim()) { setErr("Please fill in Organization, Email, and Contact Name."); return; }
     setSending(true); setErr("");
     try {
-      const res = await fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/invoice-request", {
+      const res = await fetch("https://lnraafxxmfzvwwzhcqrq.supabase.co/functions/v1/invoice-request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form)
@@ -5103,7 +5103,7 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15000);
       const res = await fetch(
-        "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/district-invite",
+        "https://lnraafxxmfzvwwzhcqrq.supabase.co/functions/v1/district-invite",
         { method: "POST",
           signal: controller.signal,
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
@@ -7798,7 +7798,7 @@ function NewConversationModal({ item, itemOrgId, itemOrgName, currentUserId, cur
 
       // Email notification (non-blocking)
       const { data: { session } } = await SB.auth.getSession();
-      fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/message-notify", {
+      fetch("https://lnraafxxmfzvwwzhcqrq.supabase.co/functions/v1/message-notify", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
         body: JSON.stringify({
@@ -7933,7 +7933,7 @@ function ChatWindow({ convId, currentUserId, orgNames, onClose, onUnreadChange }
     const otherId = conv?.org_a === currentUserId ? conv?.org_b : conv?.org_a;
     if (otherId) {
       const { data: { session } } = await SB.auth.getSession();
-      fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/message-notify", {
+      fetch("https://lnraafxxmfzvwwzhcqrq.supabase.co/functions/v1/message-notify", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
         body: JSON.stringify({
@@ -9675,7 +9675,7 @@ function TeamSettings({ userId, orgName, plan }) {
     try {
       const { data: { session } } = await SB.auth.getSession();
       const res = await fetch(
-        "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/team-invite",
+        "https://lnraafxxmfzvwwzhcqrq.supabase.co/functions/v1/team-invite",
         {
           method: "POST",
           headers: {
@@ -10714,7 +10714,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
           },{onConflict:"id",ignoreDuplicates:false});
           // Notify admin of new signup — called directly from app to avoid pg_net timeout
           try {
-            fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/signup-notify", {
+            fetch("https://lnraafxxmfzvwwzhcqrq.supabase.co/functions/v1/signup-notify", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -11464,7 +11464,7 @@ function PublicItemPage({ itemId }) {
         const token = session?.access_token;
         const headers = token ? { "x-t4u-token": token } : {};
         const res  = await fetch(
-          "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/public-item?id=" + encodeURIComponent(cleanId),
+          "https://lnraafxxmfzvwwzhcqrq.supabase.co/functions/v1/public-item?id=" + encodeURIComponent(cleanId),
           { headers }
         );
         const json = await res.json();
@@ -12910,7 +12910,7 @@ function AIHelpBubble({ user }) {
   const bottomRef = useRef(null);
   const inputRef  = useRef(null);
 
-  const EDGE_URL = "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/ai-help";
+  const EDGE_URL = "https://lnraafxxmfzvwwzhcqrq.supabase.co/functions/v1/ai-help";
 
   useEffect(() => {
     if (open) {
@@ -17010,7 +17010,7 @@ function PoolHealthWidget() {
 }
 
 // ── Visit tracking helper ────────────────────────────────────────────────────
-const TRACK_URL = "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/track-visit";
+const TRACK_URL = "https://lnraafxxmfzvwwzhcqrq.supabase.co/functions/v1/track-visit";
 function getSessionId() {
   let sid = sessionStorage.getItem("t4u_sid");
   if (!sid) { sid = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem("t4u_sid", sid); }
