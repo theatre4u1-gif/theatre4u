@@ -5051,7 +5051,12 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
   const [invites,    setInvites]    = useState([]);
   const [itemCounts, setItemCounts] = useState({});
   const [loading,    setLoading]    = useState(true);
-  const [tab,        setTab]        = useState("schools"); // schools | invites
+  const [tab,        setTab]        = useState("schools"); // schools | invites | inventory
+  const [distItems,  setDistItems]  = useState([]);
+  const [distView,   setDistView]   = useState("grid");
+  const [distSchoolF,setDistSchoolF]= useState("all");
+  const [distProgF,  setDistProgF]  = useState("all");
+  const [distLoading,setDistLoading]= useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [invEmail,   setInvEmail]   = useState("");
   const [invSchool,  setInvSchool]  = useState("");
@@ -5093,7 +5098,19 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
     setLoading(false);
   }, [user]);
 
+  const loadDistInventory = useCallback(async () => {
+    if (!district || !schools.length) return;
+    setDistLoading(true);
+    const ids = schools.map(sc => sc.id);
+    const { data } = await SB.from("items")
+      .select("id,name,category,condition,qty,avail,location,img,vertical,low_stock_threshold,org_id,orgs(name,vertical)")
+      .in("org_id", ids).order("added",{ascending:false}).limit(500);
+    setDistItems(data || []);
+    setDistLoading(false);
+  }, [district, schools]);
+
   useEffect(() => { if (plan === "district") load(); }, [load, plan]);
+  useEffect(() => { if (tab === "inventory") loadDistInventory(); }, [tab, loadDistInventory]);
 
   const sendInvite = async () => {
     if (!invEmail.trim()) return;
@@ -5216,10 +5233,10 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
 
         {/* Tabs */}
         <div className="tabs" style={{ marginBottom: 16 }}>
-          {["schools", "invites"].map(t => (
+          {["schools", "invites", "inventory"].map(t => (
             <button key={t} className={`tab ${tab === t ? "on" : ""}`} onClick={() => setTab(t)}
               style={{ textTransform: "capitalize" }}>
-              {t === "schools" ? `🏫 Schools (${slotsUsed})` : `📨 Invites (${invites.filter(i=>i.status==="pending").length})`}
+              {t==="schools" ? `🏫 Schools (${slotsUsed})` : t==="invites" ? `📨 Invites (${invites.filter(i=>i.status==="pending").length})` : `📦 Inventory (${distItems.length})`}
             </button>
           ))}
           <button className="btn btn-g btn-sm" style={{ marginLeft: "auto" }}
@@ -5275,7 +5292,7 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
               ))}
             </div>
           )
-        ) : (
+        ) : tab === "invites" ? (
           /* Invites tab */
           <div className="card" style={{ overflow: "hidden" }}>
             {invites.length === 0 ? (
@@ -5326,6 +5343,75 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
                 </tbody>
               </table>
             )}
+          </div>
+        ) : (
+          /* Inventory tab */
+          <div>
+            <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16,alignItems:"center"}}>
+              <select value={distSchoolF} onChange={e=>setDistSchoolF(e.target.value)} style={{padding:"6px 10px",borderRadius:7,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--linen)",fontSize:13}}>
+                <option value="all">All Schools</option>
+                {schools.map(sc=><option key={sc.id} value={sc.id}>{sc.name}</option>)}
+              </select>
+              <select value={distProgF} onChange={e=>setDistProgF(e.target.value)} style={{padding:"6px 10px",borderRadius:7,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--linen)",fontSize:13}}>
+                <option value="all">All Programs</option>
+                {[...new Set(schools.map(sc=>sc.vertical||"theatre"))].map(v=><option key={v} value={v}>{getVertical(v).icon} {getVertical(v).label}</option>)}
+              </select>
+              <div style={{marginLeft:"auto",display:"flex",gap:8}}>
+                <button onClick={()=>setDistView("grid")} className={`btn btn-sm ${distView==="grid"?"btn-g":"btn-o"}`}>⊞ Grid</button>
+                <button onClick={()=>setDistView("table")} className={`btn btn-sm ${distView==="table"?"btn-g":"btn-o"}`}>≡ Table</button>
+              </div>
+            </div>
+            {distLoading ? (
+              <div style={{textAlign:"center",padding:32,color:"var(--muted)"}}>Loading inventory…</div>
+            ) : (()=>{
+              let fi=distItems;
+              if(distSchoolF!=="all") fi=fi.filter(i=>i.org_id===distSchoolF);
+              if(distProgF!=="all") fi=fi.filter(i=>(i.orgs?.vertical||i.vertical||"theatre")===distProgF);
+              if(!fi.length) return(<div className="empty" style={{padding:40}}><div className="empty-ico">📦</div><h3>No items found</h3><p>Adjust your filters or invite more schools.</p></div>);
+              if(distView==="table") return(
+                <div style={{overflowX:"auto"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                    <thead><tr style={{borderBottom:"2px solid var(--border)"}}>
+                      {["School","Program","Item","Category","Condition","Qty","Availability","Location"].map(h=>(
+                        <th key={h} style={{padding:"8px 10px",textAlign:"left",color:"var(--muted)",fontWeight:700,fontSize:11,textTransform:"uppercase",letterSpacing:.5,whiteSpace:"nowrap"}}>{h}</th>
+                      ))}
+                    </tr></thead>
+                    <tbody>{fi.map(item=>(
+                      <tr key={item.id} style={{borderBottom:"1px solid var(--border)"}}>
+                        <td style={{padding:"8px 10px",whiteSpace:"nowrap",fontSize:12}}>{item.orgs?.name||"—"}</td>
+                        <td style={{padding:"8px 10px"}}>{getVertical(item.orgs?.vertical||item.vertical||"theatre").icon}</td>
+                        <td style={{padding:"8px 10px",fontWeight:600}}>{item.name}</td>
+                        <td style={{padding:"8px 10px",fontSize:12}}>{item.category}</td>
+                        <td style={{padding:"8px 10px",fontSize:12}}>{item.condition}</td>
+                        <td style={{padding:"8px 10px",textAlign:"center"}}>{item.qty}</td>
+                        <td style={{padding:"8px 10px",fontSize:12}}>{item.avail}</td>
+                        <td style={{padding:"8px 10px",color:"var(--muted)",fontSize:12}}>{item.location||"—"}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              );
+              return(
+                <div className="inv-grid">{fi.map(item=>(
+                  <div key={item.id} className="inv-card">
+                    <div className="inv-img">
+                      {item.img?<img src={item.img} alt={item.name} loading="lazy"/>
+                        :<CatCard catId={item.category} vertical={item.orgs?.vertical||item.vertical||"theatre"} width="100%" height={220}><div style={{padding:"0 14px 12px",color:"#fff"}}></div></CatCard>}
+                    </div>
+                    <div className="inv-info">
+                      <div style={{fontSize:10,color:"var(--muted)",fontWeight:600,marginBottom:2}}>{item.orgs?.name||""} · {getVertical(item.orgs?.vertical||item.vertical||"theatre").label}</div>
+                      <div className="inv-name">{item.name}</div>
+                      <div className="inv-meta">
+                        <span className="chip">{item.condition}</span>
+                        <span className="chip">×{item.qty}</span>
+                        {item.low_stock_threshold>0&&item.qty<=item.low_stock_threshold&&<span className="chip" style={{background:"rgba(230,74,25,.18)",color:"#ff7043",fontWeight:800}}>⚠ Low Stock</span>}
+                        <span className="chip">{item.avail}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}</div>
+              );
+            })()}
           </div>
         )}
       </div>
