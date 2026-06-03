@@ -5062,6 +5062,40 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
   const [invSchool,  setInvSchool]  = useState("");
   const [sending,    setSending]    = useState(false);
   const [msg,        setMsg]        = useState("");
+  const [dirSchool,  setDirSchool]  = useState(null); // school whose directors modal is open
+  const [dirList,    setDirList]    = useState([]);
+  const [dirEmail,   setDirEmail]   = useState("");
+  const [dirBusy,    setDirBusy]    = useState(false);
+
+  const openDirectors = async (school) => {
+    setDirSchool(school); setDirEmail(""); setDirList([]);
+    const { data } = await SB.from("org_members")
+      .select("id,email,role,joined_at").eq("org_id", school.id).eq("role","program_director");
+    setDirList(data || []);
+  };
+  const addDirector = async () => {
+    const email = dirEmail.trim().toLowerCase();
+    if (!email || !dirSchool) return;
+    setDirBusy(true);
+    // The director must already have an account (their org.id = their auth user id)
+    const { data: acct } = await SB.from("orgs").select("id").eq("email", email).single();
+    if (!acct) { setMsg("❌ No account found for "+email+". Ask them to sign up first, then assign."); setDirBusy(false); return; }
+    const { error } = await SB.from("org_members").upsert({
+      org_id: dirSchool.id, user_id: acct.id, email, role: "program_director",
+      invited_by: user.id, joined_at: new Date().toISOString()
+    }, { onConflict: "org_id,user_id" });
+    setDirBusy(false);
+    if (error) { setMsg("❌ "+error.message); return; }
+    setDirList(p => [...p.filter(d=>d.email!==email), { email, role:"program_director", joined_at:new Date().toISOString() }]);
+    setDirEmail("");
+    setMsg("✅ "+email+" assigned as program director");
+  };
+  const removeDirector = async (email) => {
+    if (!dirSchool) return;
+    await SB.from("org_members").delete().eq("org_id", dirSchool.id).eq("email", email).eq("role","program_director");
+    setDirList(p => p.filter(d=>d.email!==email));
+    setMsg("✅ Director removed");
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -5283,6 +5317,9 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
                       onClick={() => onSwitchSchool(school)}>
                       Enter School →
                     </button>
+                    <button className="btn btn-o btn-sm" onClick={() => openDirectors(school)}>
+                      👤 Directors
+                    </button>
                     <button className="btn btn-o btn-sm" style={{ color: "rgba(255,100,100,.7)", borderColor: "rgba(255,100,100,.2)" }}
                       onClick={() => removeSchool(school.id)}>
                       Remove
@@ -5415,6 +5452,41 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
           </div>
         )}
       </div>
+
+      {/* Directors Modal */}
+      {dirSchool && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}
+          onClick={()=>setDirSchool(null)}>
+          <div className="card card-p" style={{ maxWidth:460, width:"100%" }} onClick={e=>e.stopPropagation()}>
+            <h3 style={{ fontFamily:"var(--serif)", marginBottom:4 }}>Program Directors</h3>
+            <p style={{ fontSize:13, color:"var(--muted)", marginBottom:16 }}>
+              {dirSchool.name} — directors see only this program's inventory. Assign the same person to several schools to make them a multi-program coordinator.
+            </p>
+            {dirList.length>0 ? (
+              <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:16 }}>
+                {dirList.map(d=>(
+                  <div key={d.email} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:"var(--parch)", borderRadius:8, border:"1px solid var(--border)" }}>
+                    <div style={{ flex:1, fontSize:13, fontWeight:600 }}>{d.email}</div>
+                    <button onClick={()=>removeDirector(d.email)} style={{ padding:"3px 10px", borderRadius:6, border:"1px solid rgba(194,24,91,.3)", background:"transparent", color:"var(--red)", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>Remove</button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ color:"var(--muted)", fontSize:13, marginBottom:16 }}>No directors assigned yet.</div>
+            )}
+            <div style={{ fontWeight:700, fontSize:13, marginBottom:6 }}>Assign a director</div>
+            <div style={{ display:"flex", gap:8 }}>
+              <input className="fi" type="email" placeholder="director@email.com" value={dirEmail}
+                onChange={e=>setDirEmail(e.target.value)} style={{ flex:1 }}/>
+              <button className="btn btn-g btn-sm" disabled={dirBusy} onClick={addDirector}>{dirBusy?"…":"Assign"}</button>
+            </div>
+            <p style={{ fontSize:11, color:"var(--muted)", marginTop:8 }}>
+              They must have an ArtsTracker account first. They'll see this program's inventory next time they log in.
+            </p>
+            <button className="btn btn-o btn-sm" style={{ marginTop:16, width:"100%" }} onClick={()=>setDirSchool(null)}>Done</button>
+          </div>
+        </div>
+      )}
 
       {/* Invite Modal */}
       {showInvite && (
@@ -17182,7 +17254,8 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
   );
   // District: activeSchool = null means "own account", otherwise = school org object
   const [activeSchool,setActiveSchool]   = useState(null);
-  const [memberRole,  setMemberRole]    = useState(null); // null=owner/director, or stage_manager/crew/house
+  const [memberRole,  setMemberRole]    = useState(null); // null=owner/director, or stage_manager/crew/house/program_director
+  const [memberships, setMemberships]   = useState([]); // all program memberships (for multi-program directors)
   const [unreadCount,   setUnreadCount]   = useState(0);
   const [openConvId,    setOpenConvId]    = useState(null);
   const [pendingReqCount, setPendingReqCount] = useState(0);
@@ -17315,15 +17388,24 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
   useEffect(()=>{
     if(!user||loaded) return;
     (async()=>{
-      // Check if user is a team member of another org first
-      const { data: memberData } = await SB.from("org_members")
+      // Check if user is a member of one or more orgs (team member or program director)
+      const { data: memberRows } = await SB.from("org_members")
         .select("org_id, role, orgs(*)")
-        .eq("user_id", user.id)
-        .single();
+        .eq("user_id", user.id);
+      const memberList = memberRows || [];
+      setMemberships(memberList);
 
-      // Use member's org if they're a team member, otherwise use own org
-      const targetOrgId = memberData ? memberData.org_id : user.id;
-      const memberRole  = memberData ? memberData.role : null;
+      // Pick the active membership: a saved preference if still valid, else the first.
+      // Users with 0 memberships use their own org (unchanged behavior).
+      // Users with exactly 1 membership use it (unchanged behavior).
+      // Users with 2+ (multi-program directors) default to first; switcher can change it.
+      let activeMembership = null;
+      if (memberList.length > 0) {
+        const savedId = (()=>{ try { return localStorage.getItem("t4u_active_program"); } catch(e){ return null; } })();
+        activeMembership = memberList.find(m => m.org_id === savedId) || memberList[0];
+      }
+      const targetOrgId = activeMembership ? activeMembership.org_id : user.id;
+      const memberRole  = activeMembership ? activeMembership.role : null;
 
       const{data:orgData}=await SB.from("orgs").select("*").eq("id",targetOrgId).single();
       // Admin emails always get District plan regardless of what is stored
@@ -17332,7 +17414,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
         : orgData?.temp_pro ? "pro"
         : (orgData?.plan || "free");
       if(orgData){
-        setOrg({...orgData, _memberRole: memberRole, _isMember: !!memberData});
+        setOrg({...orgData, _memberRole: memberRole, _isMember: !!activeMembership});
         setMemberRole(memberRole);
         setPlanState(effectivePlan);
         // Load onboarding step — 0 = brand new user
@@ -17747,6 +17829,18 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
                     </span>
                   )}
                 </div>
+                {/* Program switcher — only for directors assigned to 2+ programs */}
+                {memberships.length >= 2 && (
+                  <select
+                    value={org?.id || ""}
+                    onChange={e=>{ try{ localStorage.setItem("t4u_active_program", e.target.value);}catch(err){} window.location.reload(); }}
+                    style={{marginTop:8,width:"100%",padding:"6px 8px",borderRadius:7,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--linen)",fontSize:12,fontFamily:"inherit",cursor:"pointer"}}
+                    title="Switch between the programs you direct">
+                    {memberships.map(m=>(
+                      <option key={m.org_id} value={m.org_id}>{m.orgs?.name || "Program"}</option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               {/* Member banner — shown when logged in as a team member */}
@@ -17763,7 +17857,8 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
                   <div style={{color:"var(--gold)",fontWeight:700,marginBottom:2}}>
                     {memberRole==="stage_manager"?"📋 Stage Manager":
                      memberRole==="crew"?"🔧 Crew":
-                     memberRole==="house"?"🎟 House":"Team Member"}
+                     memberRole==="house"?"🎟 House":
+                     memberRole==="program_director"?"🎯 Program Director":"Team Member"}
                   </div>
                   <div style={{color:"rgba(255,255,255,.5)"}}>
                     Viewing <strong style={{color:"rgba(255,255,255,.75)"}}>{org.name}</strong>
