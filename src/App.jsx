@@ -421,7 +421,7 @@ const CSS = `
 :root{
   --ink:#1a0c06;--deep:#2a0f09;--cog:#8b5a0f;--amber:#c49a30;--gold:#e8b85d;--gilt:#f5cc70;
   --cream:#f5ede3;--parch:#ede0cf;--linen:#ddd0ba;--sand:#c8b895;
-  --text:#3b2a1f;--muted:#7a5538;--faint:#b09060;--border:#d4c09a;
+  --text:#3b2a1f;--muted:#7a5538;--faint:#8a6a2e;--border:#d4c09a;
   --white:#ffffff;--red:#8b1a2a;--green:#265e2a;--blue:#1a3570;
   --sh1:0 2px 14px rgba(18,6,0,.1);--sh2:0 6px 28px rgba(18,6,0,.17);--sh3:0 14px 52px rgba(18,6,0,.25);
   --r:5px;--rm:12px;--rl:18px;
@@ -16284,7 +16284,7 @@ function AdminHub({ currentUser, org }) {
               the analytics can't tell if they came from your ad or just typed the address.
               To fix this, change your ad's destination link to:
             </p>
-            <code style={{display:"block",background:"var(--parch)",border:"1px solid var(--border)",padding:"8px 12px",borderRadius:6,fontSize:12,wordBreak:"break-all",color:"var(--gold)"}}>
+            <code style={{display:"block",background:"var(--parch)",border:"1px solid var(--border)",padding:"8px 12px",borderRadius:6,fontSize:12,wordBreak:"break-all",color:"var(--cog)",fontWeight:700}}>
               theatre4u.org/join.html?utm_source=facebook&utm_medium=paid&utm_campaign=beta-spring26
             </code>
             <p style={{color:"var(--muted)",margin:"10px 0 0",fontSize:12}}>
