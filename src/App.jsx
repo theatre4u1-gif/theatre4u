@@ -7,6 +7,8 @@ import { getVertical, getCats, getCatGfx, VERTICALS_LIST, getExchangeName } from
 const PIN_COLORS = ["#D4A843","#5299E0","#52C784","#D85A30","#9B6EBF","#1D9E75","#E24B4A","#BA7517","#2B5BA8","#C2185B"];
 const ROW_LABELS = { alpha:["A","B","C","D","E","F","G","H"], num:["1","2","3","4","5","6","7","8"], shelf:["Shelf 1","Shelf 2","Shelf 3","Shelf 4","Shelf 5","Shelf 6","Shelf 7","Shelf 8"], custom:["Top","Upper","Middle","Lower","Bottom"] };
 const COL_LABELS = { num:["1","2","3","4","5","6"], alpha:["A","B","C","D","E","F"], none:["","","","","",""] };
+// Rewards program name by vertical: theatre = "Stage Points", others = "Encore Points".
+const getPointsName = (vertical) => (!vertical || vertical === "theatre") ? "Stage Points" : "Encore Points";
 
 // ── Supabase ──────────────────────────────────────────────────────────────────
 
@@ -2054,7 +2056,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
             <div style={{fontSize:36,flexShrink:0}}>🪙</div>
             <div style={{flex:1,minWidth:0}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:6}}>
-                <div style={{fontWeight:800,fontSize:15,color:"var(--gold)"}}>Stage Points</div>
+                <div style={{fontWeight:800,fontSize:15,color:"var(--gold)"}}>{getPointsName(vVertical)}</div>
                 <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--gold)",fontWeight:700}}>
                   {(pointBalance||0).toLocaleString()}
                   <span style={{fontSize:12,color:"var(--muted)",fontWeight:400}}> pts</span>
@@ -9415,7 +9417,7 @@ function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
           <div className="hero-fade" />
           <div className="hero-body">
             <div className="hero-eyebrow">🪙 Stage Economy</div>
-            <h1 className="hero-title" style={{ fontSize: 44 }}>Stage Points</h1>
+            <h1 className="hero-title" style={{ fontSize: 44 }}>{getPointsName(org?.vertical)}</h1>
             <p className="hero-sub">Earn points by sharing inventory and completing Exchange deals. Spend them for discounts — or save up for a free month.</p>
           </div>
           <div className="hero-bar" />
@@ -10936,8 +10938,6 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             referrer:   document.referrer || null,
             utm_source: window.__t4u_utm?.source || null,
           });
-          // Record last activity so the admin dashboard reflects real usage
-          await SB.from("orgs").update({ last_seen: new Date().toISOString() }).eq("id", data.user.id);
         } catch(_) {}
         onAuth(data.user);
         close();
@@ -14356,7 +14356,7 @@ function AdminDailyDigest() {
       SB.from("beta_leads").select("id,name,email,org,created_at").gte("created_at",since).order("created_at",{ascending:false}),
       SB.from("email_sequence").select("id,org_id,email_num,sent_at").gte("sent_at",since).order("sent_at",{ascending:false}),
       SB.from("page_views").select("page,session_id,created_at,utm_source,utm_medium,utm_campaign,referrer").gte("created_at",since),
-      SB.from("login_events").select("id,org_id,org_name,email,plan,session_id,user_agent,referrer,utm_source,created_at").gte("created_at",since).neq("email","theatre4u1@gmail.com").order("created_at",{ascending:false}).limit(200),
+      SB.from("login_events").select("id,org_id,org_name,email,plan,session_id,user_agent,referrer,utm_source,created_at").gte("created_at",since).order("created_at",{ascending:false}).limit(200),
       SB.from("messages").select("id,created_at").gte("created_at",since),
       SB.from("beta_feedback").select("id,category,org_name,message,created_at").gte("created_at",since).order("created_at",{ascending:false}),
     ]);
@@ -15472,7 +15472,6 @@ function AdminHub({ currentUser, org }) {
            SB.from("login_events")
              .select("org_id,org_name,created_at")
              .gte("created_at", since90)
-             .neq("email","theatre4u1@gmail.com")
              .order("created_at", { ascending: false }),
          ]);
          const byPage={}, bySess={}, byDay={}, bySrc={}, byLoginDay={};
@@ -15527,7 +15526,7 @@ function AdminHub({ currentUser, org }) {
           SB.from("page_views").select("page,session_id,created_at").gte("created_at",since),
           SB.from("messages").select("id,created_at").gte("created_at",since),
           SB.from("beta_feedback").select("id,category,org_name,message,created_at").gte("created_at",since),
-          SB.from("login_events").select("org_id,org_name,email,plan,created_at").gte("created_at",since).neq("email","theatre4u1@gmail.com").order("created_at",{ascending:false}),
+          SB.from("login_events").select("org_id,org_name,email,plan,created_at").gte("created_at",since).order("created_at",{ascending:false}),
           SB.from("signup_notifications").select("org_name,org_email,plan,notified,notified_at").eq("notified",false).order("notified_at",{ascending:false}).limit(20),
         ]);
         const orgNames = {};
@@ -17751,12 +17750,12 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
       // Prop 28 nav hidden — legacy data accessible via Funding Tracker migration banner
       { id:"profile",     label:"My Profile",  ico:"👤"       },
       ...(!isMember ? [{ id:"labels",  label:"QR Labels",    ico:"🏷" }] : []),
-      ...(!isMember ? [{ id:"points", label:"Stage Points", ico:"🪙" }] : []),
+      ...(!isMember ? [{ id:"points", label:getPointsName(org?.vertical), ico:"🪙" }] : []),
       ...(!isMember && plan === "district" ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
       ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
     ];
   })();
-  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(org?.vertical), productions:"Productions", reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:"Stage Points", points:"Stage Points", community:"Community Board", labels:"QR Labels" };
+  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(org?.vertical), productions:"Productions", reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:getPointsName(org?.vertical), points:getPointsName(org?.vertical), community:"Community Board", labels:"QR Labels" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicOrgSlug) return <PublicOrgPage slug={publicOrgSlug} />;
@@ -18022,7 +18021,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
                   {page==="community"   && <CommunityGate userId={user?.id} org={org} setOrg={setOrg} plan={plan}/>}
                   {page==="labels"     && <LabelsPage org={org} userId={user?.id} items={items} isAdmin={isAdmin}/>}
                   {page==="points"     && (plan!=="free"||isAdmin) && <CreditsPage userId={user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
-                  {page==="points"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>Stage Points is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true} userId={user?.id} userEmail={user?.email}/></div>}
+                  {page==="points"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>{getPointsName(org?.vertical)} is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true} userId={user?.id} userEmail={user?.email}/></div>}
 
 
                   {page==="admin"       && isAdmin && <AdminHub currentUser={user} org={org}/>}
