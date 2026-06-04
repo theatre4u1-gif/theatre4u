@@ -10936,6 +10936,8 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             referrer:   document.referrer || null,
             utm_source: window.__t4u_utm?.source || null,
           });
+          // Record last activity so the admin dashboard reflects real usage
+          await SB.from("orgs").update({ last_seen: new Date().toISOString() }).eq("id", data.user.id);
         } catch(_) {}
         onAuth(data.user);
         close();
@@ -14354,7 +14356,7 @@ function AdminDailyDigest() {
       SB.from("beta_leads").select("id,name,email,org,created_at").gte("created_at",since).order("created_at",{ascending:false}),
       SB.from("email_sequence").select("id,org_id,email_num,sent_at").gte("sent_at",since).order("sent_at",{ascending:false}),
       SB.from("page_views").select("page,session_id,created_at,utm_source,utm_medium,utm_campaign,referrer").gte("created_at",since),
-      SB.from("login_events").select("id,org_id,org_name,email,plan,session_id,user_agent,referrer,utm_source,created_at").gte("created_at",since).order("created_at",{ascending:false}).limit(200),
+      SB.from("login_events").select("id,org_id,org_name,email,plan,session_id,user_agent,referrer,utm_source,created_at").gte("created_at",since).neq("email","theatre4u1@gmail.com").order("created_at",{ascending:false}).limit(200),
       SB.from("messages").select("id,created_at").gte("created_at",since),
       SB.from("beta_feedback").select("id,category,org_name,message,created_at").gte("created_at",since).order("created_at",{ascending:false}),
     ]);
@@ -15470,6 +15472,7 @@ function AdminHub({ currentUser, org }) {
            SB.from("login_events")
              .select("org_id,org_name,created_at")
              .gte("created_at", since90)
+             .neq("email","theatre4u1@gmail.com")
              .order("created_at", { ascending: false }),
          ]);
          const byPage={}, bySess={}, byDay={}, bySrc={}, byLoginDay={};
@@ -15524,7 +15527,7 @@ function AdminHub({ currentUser, org }) {
           SB.from("page_views").select("page,session_id,created_at").gte("created_at",since),
           SB.from("messages").select("id,created_at").gte("created_at",since),
           SB.from("beta_feedback").select("id,category,org_name,message,created_at").gte("created_at",since),
-          SB.from("login_events").select("org_id,org_name,email,plan,created_at").gte("created_at",since).order("created_at",{ascending:false}),
+          SB.from("login_events").select("org_id,org_name,email,plan,created_at").gte("created_at",since).neq("email","theatre4u1@gmail.com").order("created_at",{ascending:false}),
           SB.from("signup_notifications").select("org_name,org_email,plan,notified,notified_at").eq("notified",false).order("notified_at",{ascending:false}).limit(20),
         ]);
         const orgNames = {};
