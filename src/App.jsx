@@ -10545,7 +10545,7 @@ function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:1000,padding:"0 32px",height:64,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?"rgba(13,10,8,.97)":"transparent",borderBottom:scrolled?"1px solid rgba(255,255,255,.08)":"none",backdropFilter:scrolled?"blur(12px)":"none",transition:"all .3s"}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <img src={LOGO_ICON} alt={APP_NAME} style={{width:34,height:34,objectFit:"contain",display:"block",flexShrink:0}}/>
-        <span style={{fontFamily:"'Playfair Display',serif",fontSize:20,color:"var(--gold)"}}>Theatre4u™</span>
+        <span style={{fontFamily:"'Playfair Display',serif",fontSize:20,color:"var(--gold)"}}>{APP_NAME}</span>
       </div>
       <div style={{display:"flex",gap:10,alignItems:"center"}}>
         <button onClick={onSignIn} style={{background:"none",border:"1px solid rgba(255,255,255,.25)",color:"rgba(255,255,255,.8)",padding:"7px 16px",borderRadius:7,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:600}}>Sign In</button>
@@ -10755,7 +10755,7 @@ function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     <div style={{borderTop:"1px solid rgba(255,255,255,.06)",padding:"24px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
         <div style={{width:26,height:26,background:"linear-gradient(135deg,var(--gold),var(--goldd))",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🎭</div>
-        <span style={{fontFamily:"'Playfair Display',serif",fontSize:15,color:"var(--gold)"}}>Theatre4u™</span>
+        <span style={{fontFamily:"'Playfair Display',serif",fontSize:15,color:"var(--gold)"}}>{APP_NAME}</span>
         <span style={{fontSize:12,color:"rgba(255,255,255,.3)"}}>© 2026 Artstracker LLC</span>
       </div>
       <div style={{display:"flex",gap:18,fontSize:12,color:"rgba(255,255,255,.35)"}}>
@@ -11194,7 +11194,7 @@ function AuthScreen({onAuth}){
         {/* Logo */}
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{fontSize:52,marginBottom:6}}>🎭</div>
-          <div style={{fontFamily:"'Playfair Display',serif",fontSize:36,color:"var(--gold)",letterSpacing:1}}>Theatre4u™</div>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:36,color:"var(--gold)",letterSpacing:1}}>{APP_NAME}</div>
           <div style={{fontFamily:"'Lora',serif",fontStyle:"italic",fontSize:15,color:"rgba(255,255,255,.5)",marginTop:2}}>Inventory · Backstage Exchange · Community</div>
         </div>
         {/* Card */}
@@ -11285,7 +11285,7 @@ function PublicOrgPage({ slug }) {
     <div style={{background:"linear-gradient(135deg,#1a0d2e,#0d1829)",borderBottom:"1px solid rgba(255,255,255,.08)",padding:"14px 20px",display:"flex",alignItems:"center",gap:10}}>
       <span style={{fontSize:26}}>🎭</span>
       <div>
-        <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"var(--gold)",lineHeight:1}}>Theatre4u™</div>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"var(--gold)",lineHeight:1}}>{APP_NAME}</div>
         <div style={{fontSize:10,color:"rgba(255,255,255,.4)",letterSpacing:2,textTransform:"uppercase"}}>Inventory · Backstage Exchange · Community</div>
       </div>
       <a href="https://theatre4u.org" style={{marginLeft:"auto",fontSize:12,color:"var(--gold)",textDecoration:"none",border:"1px solid rgba(212,168,67,.3)",borderRadius:6,padding:"5px 12px"}}>Visit Site →</a>
@@ -11676,7 +11676,7 @@ function PublicItemPage({ itemId }) {
     <div style={{background:"linear-gradient(135deg,#1a0d2e,#0d1829)",borderBottom:"1px solid rgba(255,255,255,.08)",padding:"14px 20px",display:"flex",alignItems:"center",gap:10}}>
       <span style={{fontSize:26}}>🎭</span>
       <div>
-        <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"var(--gold)",lineHeight:1}}>Theatre4u™</div>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"var(--gold)",lineHeight:1}}>{APP_NAME}</div>
         <div style={{fontSize:10,color:"rgba(255,255,255,.4)",letterSpacing:2,textTransform:"uppercase"}}>Inventory · Backstage Exchange · Community</div>
       </div>
       <a href="https://theatre4u.org" style={{marginLeft:"auto",fontSize:12,color:"var(--gold)",textDecoration:"none",border:"1px solid rgba(212,168,67,.3)",borderRadius:6,padding:"5px 12px"}}>Visit Site →</a>
@@ -13324,7 +13324,7 @@ function PreviewMode({ onSignUp }) {
             display:"flex", alignItems:"center", justifyContent:"center" }}>🎭</div>
           <div>
             <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16,
-              fontWeight:700, color:gold }}>Theatre4u™</div>
+              fontWeight:700, color:gold }}>{APP_NAME}</div>
             <div style={{ fontSize:9, color:t3, textTransform:"uppercase", letterSpacing:2 }}>
               Ocean View Drama
             </div>
