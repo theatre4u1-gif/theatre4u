@@ -10235,6 +10235,8 @@ function SelfServiceDeleteAccount({ user, org }) {
 
 function CustomCategoriesManager({ org, userId, memberRole=null }){
   const vertical = org?.vertical || "theatre";
+  const CAT_EXAMPLE = { theatre:"Concessions", music:"Sheet Music", dance:"Recital Props", art:"Canvases", booster:"Spirit Wear" };
+  const catExample = CAT_EXAMPLE[vertical] || "Concessions";
   const canManage = !memberRole || memberRole==="director" || memberRole==="program_director";
   const [list,setList] = useState([]);
   const [label,setLabel] = useState("");
@@ -10266,7 +10268,7 @@ function CustomCategoriesManager({ org, userId, memberRole=null }){
   return(
     <div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
-        <input className="fs" style={{flex:1,minWidth:200}} placeholder="New category name (e.g. Marching Uniforms)" value={label}
+        <input className="fs" style={{flex:1,minWidth:200}} placeholder={`New category name (e.g. ${catExample})`} value={label}
           onChange={e=>setLabel(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")add();}} maxLength={40}/>
         <button className="btn btn-p" disabled={busy||!label.trim()} onClick={add}>Add</button>
       </div>
@@ -17331,6 +17333,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
   const [onboardingStep, setOnboardingStep] = useState(null); // null=loading, 0-4
   const [schoolItems,setSchoolItems]     = useState([]);
   const [schoolLoading,setSchoolLoading] = useState(false);
+  const [custCatVer,setCustCatVer] = useState(0); // bumped when custom categories reload, forces re-render
   // Invite token from URL — persisted in localStorage so it survives
   // Supabase's email confirmation redirect (which strips query params)
   const [pendingInvite,setPendingInvite] = useState(() => {
@@ -17490,9 +17493,6 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
       } else { setPlanState(effectivePlan); }
       const{data:itemData}=await SB.from("items").select("*").eq("org_id",targetOrgId).order("added",{ascending:false}).limit(2000);
       if(itemData) setItems(itemData);
-      // Load this org's custom inventory categories (ADD-TO the built-in vertical categories)
-      const{data:catData}=await SB.from("org_categories").select("id,vertical,label").eq("org_id",targetOrgId);
-      setCustomCats(catData||[]);
       setLoaded(true);
       // Load unread message count
       const { count: unread } = await SB.from("messages")
@@ -17691,6 +17691,20 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
     setPage("inventory");
     setMob(false);
   }, []);
+
+  // Keep custom inventory categories in sync with whichever org is currently active
+  // (own account OR a district school being viewed) — so switching never needs a page refresh.
+  useEffect(()=>{
+    const oid = activeSchool?.id || org?.id;
+    if(!oid){ setCustomCats([]); return; }
+    let cancelled=false;
+    SB.from("org_categories").select("id,vertical,label").eq("org_id", oid).then(({data})=>{
+      if(cancelled) return;
+      setCustomCats(data||[]);
+      setCustCatVer(v=>v+1);
+    });
+    return ()=>{ cancelled=true; };
+  },[activeSchool, org?.id]);
 
   // Handle invite token — after login, accept the invite
   useEffect(() => {
@@ -18074,7 +18088,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
                           onAdd={async(item)=>{ const row={...item,org_id:activeSchool.id}; const{data}=await SB.from("items").insert(row).select().single(); if(data) setSchoolItems(p=>[data,...p]); }}
                           onEdit={async(item)=>{ const pl={...item}; delete pl.id; delete pl.org_id; delete pl.added; const{data,error}=await SB.from("items").update(pl).eq("id",item.id).select().single(); if(error){alert("Could not update item: "+error.message);console.error(error);}else if(data) setSchoolItems(p=>p.map(x=>x.id===item.id?data:x)); }}
                           onDelete={async(id)=>{ await SB.from("items").delete().eq("id",id); setSchoolItems(p=>p.filter(x=>x.id!==id)); }}
-                          userId={activeSchool.id} plan={plan}
+                          userId={activeSchool.id} plan={plan} org={activeSchool}
                           schoolName={activeSchool.name}
                           headerNote={<div style={{padding:"8px 12px",background:"rgba(66,165,245,.1)",border:"1px solid rgba(66,165,245,.2)",borderRadius:7,marginBottom:12,fontSize:12,color:"#42a5f5"}}>🏫 Editing inventory for <strong>{activeSchool.name}</strong></div>}
                         />
