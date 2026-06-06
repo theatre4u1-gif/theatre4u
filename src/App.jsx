@@ -294,6 +294,12 @@ const CATS = [
 ];
 const CAT   = Object.fromEntries(CATS.map(c=>[c.id,c]));
 const CAT_MAP = CAT; // alias used by PublicItemPage
+// ── Custom inventory categories (ADD-TO model) ──────────────────────────────
+// Loaded per-org at runtime; these SUPPLEMENT the built-in vertical categories.
+let CUSTOM_CATS = [];
+function setCustomCats(rows){ CUSTOM_CATS = Array.isArray(rows) ? rows.map(r=>({id:r.id,vertical:r.vertical,label:r.label})) : []; }
+function customCatsFor(vertical){ return CUSTOM_CATS.filter(c=>c.vertical===(vertical||"theatre")).map(c=>({id:c.id,label:c.label,icon:"📦",color:"#4a2e1a",custom:true})); }
+function getCatsMerged(vertical){ return [...getCats(vertical), ...customCatsFor(vertical)]; }
 const CONDS = ["New","Excellent","Good","Fair","Poor","For Parts"];
 
 // ── Point earn rates by category (mirrors point_earn_rates DB table) ──────────
@@ -890,7 +896,7 @@ function LocationDropdown({ userId, value, onChange }) {
 
 function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical="theatre"}){
   const vConfig = getVertical(vertical);
-  const vCATS   = vConfig.categories;
+  const vCATS   = [...vConfig.categories, ...customCatsFor(vertical)];
   const vCONDS  = vConfig.conditions;
   const vSIZES  = vConfig.sizes;
   const vAVAIL  = vConfig.availability;
@@ -1869,7 +1875,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
   const totalVal=items.reduce((s,i)=>s+((i.sale||0)*(i.qty||1)),0);
   const cc={};items.forEach(i=>{cc[i.category]=(cc[i.category]||0)+(i.qty||1)});
   const maxC=Math.max(1,...Object.values(cc));
-  const vVertical=org?.vertical||"theatre"; const vCATS=getCats(vVertical);
+  const vVertical=org?.vertical||"theatre"; const vCATS=getCatsMerged(vVertical);
   const [highlights, setHighlights] = useState([]);
   useEffect(()=>{
     (async()=>{
@@ -2229,7 +2235,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
 function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null}){
     const[upgradeReason,setUpgradeReason]=useState(null);
   const vVertical=org?.vertical||"theatre";
-  const vCATS=getCats(vVertical);
+  const vCATS=getCatsMerged(vVertical);
   const vCfg=getVertical(vVertical);
   const vCONDS=vCfg.conditions, vAVAIL=vCfg.availability, vMKT=vCfg.marketOptions;
   const vCAT=Object.fromEntries(vCATS.map(c=>[c.id,c]));
@@ -2290,7 +2296,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
 
     for (const item of toProcess) {
       try {
-        const vCatIds = vCATS.map(c=>c.id);
+        const vCatIds = getCats(vVertical).map(c=>c.id);
         const prompt = "You are categorizing " + vCfg.label + " program inventory items. "
           + "Given the item name and notes, return ONLY the single best category ID from this list: "
           + vCatIds.join(", ") + ". "
@@ -2305,7 +2311,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
         });
         const json = await res.json();
         const raw  = (json.reply || json.response || json.content || "").trim().toLowerCase();
-        const VALID = vCATS.map(c=>c.id);
+        const VALID = getCats(vVertical).map(c=>c.id);
         const cat   = VALID.find(c => raw.includes(c));
         if (cat && cat !== item.category) {
           const { error } = await SB.from("items").update({ category: cat }).eq("id", item.id);
@@ -10227,6 +10233,58 @@ function SelfServiceDeleteAccount({ user, org }) {
   );
 }
 
+function CustomCategoriesManager({ org, userId, memberRole=null }){
+  const vertical = org?.vertical || "theatre";
+  const canManage = !memberRole || memberRole==="director" || memberRole==="program_director";
+  const [list,setList] = useState([]);
+  const [label,setLabel] = useState("");
+  const [busy,setBusy] = useState(false);
+  const [err,setErr] = useState("");
+  const refresh = async()=>{
+    if(!org?.id) return;
+    const { data } = await SB.from("org_categories").select("id,vertical,label").eq("org_id", org.id);
+    const all = data||[];
+    setCustomCats(all);
+    setList(all.filter(c=>c.vertical===vertical));
+  };
+  useEffect(()=>{ refresh(); },[org?.id, vertical]);
+  const add = async()=>{
+    const name = label.trim();
+    if(!name) return;
+    setBusy(true); setErr("");
+    const { error } = await SB.from("org_categories").insert({ org_id:org.id, vertical, label:name, created_by:userId });
+    setBusy(false);
+    if(error){ setErr((error.code==="23505"||(error.message||"").includes("duplicate")) ? "That category already exists." : "Couldn't add category. Please try again."); return; }
+    setLabel(""); refresh();
+  };
+  const del = async(id,nm)=>{
+    if(!window.confirm("Delete the category \""+nm+"\"? Items already in it will show as \"Other\" until you re-categorize them.")) return;
+    const { error } = await SB.from("org_categories").delete().eq("id", id);
+    if(!error) refresh();
+  };
+  if(!canManage) return <p style={{fontSize:13,color:"var(--muted)"}}>Only the account owner or a director can manage custom categories.</p>;
+  return(
+    <div>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+        <input className="fs" style={{flex:1,minWidth:200}} placeholder="New category name (e.g. Marching Uniforms)" value={label}
+          onChange={e=>setLabel(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")add();}} maxLength={40}/>
+        <button className="btn btn-p" disabled={busy||!label.trim()} onClick={add}>Add</button>
+      </div>
+      {err&&<p style={{fontSize:12,color:"var(--red)",marginBottom:8}}>{err}</p>}
+      {list.length===0
+        ? <p style={{fontSize:13,color:"var(--muted)"}}>No custom categories yet. Add one above — it'll appear alongside the built-in categories when you add or edit items.</p>
+        : <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {list.map(c=>(
+              <div key={c.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",background:"rgba(255,255,255,.04)",borderRadius:6}}>
+                <span style={{fontSize:14}}>📦 {c.label}</span>
+                <button className="btn btn-d btn-sm" onClick={()=>del(c.id,c.label)}>Remove</button>
+              </div>
+            ))}
+          </div>}
+      <p style={{fontSize:11,color:"var(--muted)",marginTop:12,fontStyle:"italic"}}>Custom categories use a default 📦 icon and apply to this program's {vertical} inventory.</p>
+    </div>
+  );
+}
 function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="free", userEmail="", setPlan, memberRole=null }) {
   const [f,setF]       = useState(org);
   const [saved,setSaved] = useState(false);
@@ -10411,6 +10469,11 @@ function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="fr
         <div className="card card-p">
           <div className="sh"><h2>🔒 QR Code Privacy</h2><p>Control what others see when they scan your item QR labels.</p></div>
           <QRPrivacySettings org={org} setOrg={setOrg} userId={userId}/>
+        </div>
+
+        <div className="card card-p">
+          <div className="sh"><h2>🗂️ Custom Categories</h2><p>Add your own inventory categories alongside the built-in ones.</p></div>
+          <CustomCategoriesManager org={org} userId={userId} memberRole={memberRole}/>
         </div>
 
         <div className="sc">
@@ -17427,6 +17490,9 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
       } else { setPlanState(effectivePlan); }
       const{data:itemData}=await SB.from("items").select("*").eq("org_id",targetOrgId).order("added",{ascending:false}).limit(2000);
       if(itemData) setItems(itemData);
+      // Load this org's custom inventory categories (ADD-TO the built-in vertical categories)
+      const{data:catData}=await SB.from("org_categories").select("id,vertical,label").eq("org_id",targetOrgId);
+      setCustomCats(catData||[]);
       setLoaded(true);
       // Load unread message count
       const { count: unread } = await SB.from("messages")
