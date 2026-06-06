@@ -5074,11 +5074,12 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
   const [dirList,    setDirList]    = useState([]);
   const [dirEmail,   setDirEmail]   = useState("");
   const [dirBusy,    setDirBusy]    = useState(false);
+  const [dirVertical,setDirVertical]= useState(""); // "" = all programs (whole account)
 
   const openDirectors = async (school) => {
-    setDirSchool(school); setDirEmail(""); setDirList([]);
+    setDirSchool(school); setDirEmail(""); setDirList([]); setDirVertical("");
     const { data } = await SB.from("org_members")
-      .select("id,email,role,joined_at").eq("org_id", school.id).eq("role","program_director");
+      .select("id,email,role,joined_at,vertical").eq("org_id", school.id).eq("role","program_director");
     setDirList(data || []);
   };
   const addDirector = async () => {
@@ -5089,13 +5090,13 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
     const { data: acct } = await SB.from("orgs").select("id").eq("email", email).single();
     if (!acct) { setMsg("❌ No account found for "+email+". Ask them to sign up first, then assign."); setDirBusy(false); return; }
     const { error } = await SB.from("org_members").upsert({
-      org_id: dirSchool.id, user_id: acct.id, email, role: "program_director",
+      org_id: dirSchool.id, user_id: acct.id, email, role: "program_director", vertical: dirVertical || null,
       invited_by: user.id, joined_at: new Date().toISOString()
     }, { onConflict: "org_id,user_id" });
     setDirBusy(false);
     if (error) { setMsg("❌ "+error.message); return; }
-    setDirList(p => [...p.filter(d=>d.email!==email), { email, role:"program_director", joined_at:new Date().toISOString() }]);
-    setDirEmail("");
+    setDirList(p => [...p.filter(d=>d.email!==email), { email, role:"program_director", vertical: dirVertical || null, joined_at:new Date().toISOString() }]);
+    setDirEmail(""); setDirVertical("");
     setMsg("✅ "+email+" assigned as program director");
   };
   const removeDirector = async (email) => {
@@ -5474,7 +5475,7 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
               <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:16 }}>
                 {dirList.map(d=>(
                   <div key={d.email} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:"var(--parch)", borderRadius:8, border:"1px solid var(--border)" }}>
-                    <div style={{ flex:1, fontSize:13, fontWeight:600 }}>{d.email}</div>
+                    <div style={{ flex:1, fontSize:13, fontWeight:600 }}>{d.email}<span style={{ display:"block", fontSize:11, fontWeight:500, color:"var(--muted)" }}>{d.vertical ? (getVertical(d.vertical).icon+" "+getVertical(d.vertical).label) : "All programs"}</span></div>
                     <button onClick={()=>removeDirector(d.email)} style={{ padding:"3px 10px", borderRadius:6, border:"1px solid rgba(194,24,91,.3)", background:"transparent", color:"var(--red)", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>Remove</button>
                   </div>
                 ))}
@@ -5483,9 +5484,18 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
               <div style={{ color:"var(--muted)", fontSize:13, marginBottom:16 }}>No directors assigned yet.</div>
             )}
             <div style={{ fontWeight:700, fontSize:13, marginBottom:6 }}>Assign a director</div>
-            <div style={{ display:"flex", gap:8 }}>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
               <input className="fi" type="email" placeholder="director@email.com" value={dirEmail}
-                onChange={e=>setDirEmail(e.target.value)} style={{ flex:1 }}/>
+                onChange={e=>setDirEmail(e.target.value)} style={{ flex:1, minWidth:160 }}/>
+              {(() => {
+                const dv = (dirSchool.verticals_enabled && dirSchool.verticals_enabled.length) ? dirSchool.verticals_enabled : [dirSchool.vertical||"theatre"];
+                return dv.length>1 ? (
+                  <select className="fs" value={dirVertical} onChange={e=>setDirVertical(e.target.value)} style={{ flex:"0 0 auto" }}>
+                    <option value="">All programs</option>
+                    {dv.map(v=><option key={v} value={v}>{getVertical(v).icon} {getVertical(v).label}</option>)}
+                  </select>
+                ) : null;
+              })()}
               <button className="btn btn-g btn-sm" disabled={dirBusy} onClick={addDirector}>{dirBusy?"…":"Assign"}</button>
             </div>
             <p style={{ fontSize:11, color:"var(--muted)", marginTop:8 }}>
@@ -10235,7 +10245,7 @@ function SelfServiceDeleteAccount({ user, org }) {
 
 function CustomCategoriesManager({ org, userId, memberRole=null }){
   const vertical = org?.vertical || "theatre";
-  const CAT_EXAMPLE = { theatre:"Concessions", music:"Sheet Music", dance:"Recital Props", art:"Canvases", booster:"Spirit Wear" };
+  const CAT_EXAMPLE = { theatre:"Concessions", music:"Sheet Music", dance:"Recital Props", art:"Canvases", booster:"Banners" };
   const catExample = CAT_EXAMPLE[vertical] || "Concessions";
   const canManage = !memberRole || memberRole==="director" || memberRole==="program_director";
   const [list,setList] = useState([]);
