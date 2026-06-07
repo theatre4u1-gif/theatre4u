@@ -2232,7 +2232,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
   );
 }
 
-function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null}){
+function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null, enableLoans=false}){
     const[upgradeReason,setUpgradeReason]=useState(null);
   const vVertical=org?.vertical||"theatre";
   const vCATS=getCatsMerged(vVertical);
@@ -2274,6 +2274,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
   const[showF,setShowF]=useState(false);const[pg,setPg]=useState(1);
   const[modal,setModal]=useState(null);const[active,setActive]=useState(null);
   const[showImport,setShowImport]=useState(false);
+  const[invView,setInvView]=useState("items"); // items | loans (Borrowed & Lent tab)
 
   // ── Bulk / mass edit state ───────────────────────────────────────────────
   const[selectMode, setSelectMode] = useState(false);
@@ -2458,6 +2459,15 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
   const atLimit   = plan==="free" && items.length >= 25;
 
   return(<>
+    {enableLoans&&(
+      <div className="vtog" style={{margin:"0 0 14px"}}>
+        <button className={invView==="items"?"on":""} onClick={()=>setInvView("items")}>📦 Inventory</button>
+        <button className={invView==="loans"?"on":""} onClick={()=>setInvView("loans")}>🔄 Borrowed & Lent</button>
+      </div>
+    )}
+    {enableLoans&&invView==="loans" ? (
+      <div style={{padding:"8px 0 56px"}}><ExternalLoans userId={userId} org={org} items={items}/></div>
+    ) : (<>
     {upgradeReason&&<UpgradePrompt reason={upgradeReason} onClose={()=>setUpgradeReason(null)} userId={user?.id} userEmail={user?.email}/>}
     {locFilter!=="all"&&locFilterName&&(
       <div style={{display:"flex",alignItems:"center",gap:10,background:"rgba(232,184,93,.1)",border:"1px solid rgba(232,184,93,.3)",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
@@ -2734,6 +2744,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
       {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{onDelete(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete}/></Modal>}
       {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",user?.id).order("added",{ascending:false});if(data)setItems(data);}}/>}
     </div>
+    </>)}
   </>
   );
 }
@@ -3015,7 +3026,9 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
             <button className={mktTab==="browse"?"on":""} onClick={()=>setMktTab("browse")}>🌐 Browse All</button>
             <button className={mktTab==="mine"?"on":""} onClick={()=>setMktTab("mine")}>🏫 My Listings</button>
             {allSchoolsMode&&<button className={mktTab==="district"?"on":""} onClick={()=>setMktTab("district")}>🏢 District</button>}
+            <button className={mktTab==="external"?"on":""} onClick={()=>setMktTab("external")}>🔄 Borrowed & Lent</button>
           </div>
+          {mktTab!=="external"&&(<>
           <select style={{background:"rgba(253,246,236,.9)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"7px 10px",fontSize:13,fontWeight:700,color:"var(--ink)",fontFamily:"'Raleway',sans-serif",outline:"none"}}
             value={catF} onChange={e=>setCatF(e.target.value)}>
             <option value="all">All Categories</option>
@@ -3027,8 +3040,10 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
             <button className={typeF==="sale"?"on":""} onClick={()=>setTypeF("sale")}>Sale</button>
             <button className={typeF==="loan"?"on":""} onClick={()=>setTypeF("loan")}>Loan</button>
           </div>
+          </>)}
         </div>
 
+        {mktTab!=="external" ? (<>
         <div style={{fontSize:13,fontWeight:700,color:"var(--faint)",marginBottom:12}}>
           {loadingAll?"Loading listings…":(filtered.length+" listing"+(filtered.length!==1?"s":""))}
           {userCoords&&radius!=="all"&&!loadingAll&&(" within "+(radius==="state"?STATE_NAMES[userCoords.state]||userCoords.state:radius+" miles"))}
@@ -3100,6 +3115,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
           </div>
         }
         <Pager total={filtered.length} page={pg} per={PP} onPage={setPg}/>
+        </>) : <div style={{marginTop:4}}><ExternalLoans userId={org?.id} org={org} items={items}/></div>}
       </div>
       {viewing&&<Modal title="Listing Details" onClose={()=>setViewing(null)}>
         <ItemDetail item={viewing}
@@ -17925,7 +17941,6 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
       ...(!isCrew && org?.marketplace_enabled ? [{ id:"marketplace", label:getExchangeName(org?.vertical), ico:Ic.store   }] : []),
       ...(!isCrew && org?.community_enabled   ? [{ id:"community",   label:"Community",   ico:"🎪", community:true }] : []),
       { id:"productions", label:"Productions", ico:"🎭"       },
-      ...(!isMember? [{ id:"loans",       label:"Borrowed & Lent", ico:"🔄"  }] : []),
       ...(!isMember? [{ id:"reports",     label:"Reports",     ico:Ic.chart   }] : []),
       ...(!isMember? [{ id:"funding",     label:"Funding Tracker", ico:"💰"  }] : []),
       // Prop 28 nav hidden — legacy data accessible via Funding Tracker migration banner
@@ -17937,7 +17952,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
       ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
     ];
   })();
-  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(org?.vertical), productions:"Productions", loans:"Borrowed & Lent", reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:getPointsName(org?.vertical), points:getPointsName(org?.vertical), community:"Community Board", labels:"QR Labels", facschools:"District Schools" };
+  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(org?.vertical), productions:"Productions", reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:getPointsName(org?.vertical), points:getPointsName(org?.vertical), community:"Community Board", labels:"QR Labels", facschools:"District Schools" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicOrgSlug) return <PublicOrgPage slug={publicOrgSlug} />;
@@ -18179,7 +18194,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
                     }}/>}
                   {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
                   {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} pointBalance={creditBalance} goInventory={(cat)=>{ if(cat) setDeepLinkCategory(cat); nav("inventory"); }} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
-                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} deepLinkCategory={deepLinkCategory} onDeepLinkCategoryConsumed={()=>setDeepLinkCategory(null)}/>}
+                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org} enableLoans={!memberRole} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} deepLinkCategory={deepLinkCategory} onDeepLinkCategoryConsumed={()=>setDeepLinkCategory(null)}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
                       ? <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading {activeSchool.name}…</div>
@@ -18194,7 +18209,6 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
                   )}
                   {page==="marketplace" && <MarketplaceGate items={items} org={org} setOrg={setOrg} plan={plan} userId={user?.id} activeSchool={activeSchool} allSchoolsMode={plan==="district"} onEdit={edit} onDelete={del}/>}
                   {page==="productions" && <Productions userId={user?.id} allItems={items} org={org} onNavigateTo={nav}/>}
-                  {page==="loans"       && <ExternalLoans userId={user?.id} org={org} items={items}/>}
                   {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan} org={org} userId={user?.id} userEmail={user?.email}/>}
                   {page==="funding"     && <FundingPage userId={user?.id} org={org} plan={plan}/>}
                   {page==="prop28"      && <Prop28Page  userId={user?.id} org={org} onNav={nav}/>}
