@@ -100,9 +100,11 @@ async function load() {
     return;
   }
 
-  // Fetch org by slug
-  const orgRes = await fetch(`${SB_URL}/rest/v1/orgs?slug=eq.${encodeURIComponent(slug)}&profile_public=eq.true&select=*`, {
-    headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` }
+  // Fetch org by slug via secure function (returns only public-profile orgs, curated fields incl email)
+  const orgRes = await fetch(`${SB_URL}/rest/v1/rpc/get_public_org`, {
+    method: 'POST',
+    headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_slug: slug })
   });
   const orgs = await orgRes.json();
   if (!orgs || orgs.length === 0) { render404("This profile is private or doesn't exist."); return; }
