@@ -5075,6 +5075,11 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
   const [dirEmail,   setDirEmail]   = useState("");
   const [dirBusy,    setDirBusy]    = useState(false);
   const [dirVertical,setDirVertical]= useState(""); // "" = all programs (whole account)
+  const [showFac,    setShowFac]    = useState(false);
+  const [facList,    setFacList]    = useState([]);
+  const [facEmail,   setFacEmail]   = useState("");
+  const [facBusy,    setFacBusy]    = useState(false);
+  const [facMsg,     setFacMsg]     = useState("");
 
   const openDirectors = async (school) => {
     setDirSchool(school); setDirEmail(""); setDirList([]); setDirVertical("");
@@ -5104,6 +5109,36 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
     await SB.from("org_members").delete().eq("org_id", dirSchool.id).eq("email", email).eq("role","program_director");
     setDirList(p => p.filter(d=>d.email!==email));
     setMsg("✅ Director removed");
+  };
+
+  // ── District-wide Arts Facilitators (full edit across all schools) ──────────
+  const openFacilitators = async () => {
+    setShowFac(true); setFacEmail(""); setFacMsg("");
+    if (!district) return;
+    const { data } = await SB.from("district_members")
+      .select("id,email,role,joined_at").eq("district_id", district.id).eq("role","facilitator");
+    setFacList(data || []);
+  };
+  const addFacilitator = async () => {
+    const email = facEmail.trim().toLowerCase();
+    if (!email || !district) return;
+    setFacBusy(true);
+    const { data: acct } = await SB.from("orgs").select("id").eq("email", email).single();
+    if (!acct) { setFacMsg("❌ No account found for "+email+". Ask them to sign up first, then add them."); setFacBusy(false); return; }
+    const { error } = await SB.from("district_members").upsert({
+      district_id: district.id, user_id: acct.id, email, role: "facilitator", invited_by: user.id
+    }, { onConflict: "district_id,email" });
+    setFacBusy(false);
+    if (error) { setFacMsg("❌ "+error.message); return; }
+    setFacList(p => [...p.filter(f=>f.email!==email), { email, role:"facilitator", joined_at:new Date().toISOString() }]);
+    setFacEmail("");
+    setFacMsg("✅ "+email+" added as a facilitator");
+  };
+  const removeFacilitator = async (email) => {
+    if (!district) return;
+    await SB.from("district_members").delete().eq("district_id", district.id).eq("email", email).eq("role","facilitator");
+    setFacList(p => p.filter(f=>f.email!==email));
+    setFacMsg("✅ Facilitator removed");
   };
 
   const load = useCallback(async () => {
@@ -5282,7 +5317,11 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
               {t==="schools" ? `🏫 Schools (${slotsUsed})` : t==="invites" ? `📨 Invites (${invites.filter(i=>i.status==="pending").length})` : `📦 Inventory (${distItems.length})`}
             </button>
           ))}
-          <button className="btn btn-g btn-sm" style={{ marginLeft: "auto" }}
+          <button className="btn btn-o btn-sm" style={{ marginLeft: "auto" }}
+            onClick={openFacilitators}>
+            👥 Facilitators
+          </button>
+          <button className="btn btn-g btn-sm"
             onClick={() => setShowInvite(true)}
             disabled={slotsUsed >= slotsTotal}>
             + Add School
@@ -5502,6 +5541,42 @@ function DistrictDashboard({ user, plan, onSwitchSchool }) {
               They must have an ArtsTracker account first. They'll see this program's inventory next time they log in.
             </p>
             <button className="btn btn-o btn-sm" style={{ marginTop:16, width:"100%" }} onClick={()=>setDirSchool(null)}>Done</button>
+          </div>
+        </div>
+      )}
+
+      {/* Arts Facilitators Modal (district-wide) */}
+      {showFac && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}
+          onClick={()=>setShowFac(false)}>
+          <div className="card card-p" style={{ maxWidth:460, width:"100%" }} onClick={e=>e.stopPropagation()}>
+            <h3 style={{ fontFamily:"var(--serif)", marginBottom:4 }}>Arts Facilitators</h3>
+            <p style={{ fontSize:13, color:"var(--muted)", marginBottom:16 }}>
+              Facilitators can view and edit inventory across every school in your district. Use this for district arts coordinators who support all programs.
+            </p>
+            {facList.length>0 ? (
+              <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:16 }}>
+                {facList.map(f=>(
+                  <div key={f.email} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:"var(--parch)", borderRadius:8, border:"1px solid var(--border)" }}>
+                    <div style={{ flex:1, fontSize:13, fontWeight:600 }}>{f.email}<span style={{ display:"block", fontSize:11, fontWeight:500, color:"var(--muted)" }}>All schools · full edit</span></div>
+                    <button onClick={()=>removeFacilitator(f.email)} style={{ padding:"3px 10px", borderRadius:6, border:"1px solid rgba(194,24,91,.3)", background:"transparent", color:"var(--red)", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>Remove</button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ color:"var(--muted)", fontSize:13, marginBottom:16 }}>No facilitators yet.</div>
+            )}
+            <div style={{ fontWeight:700, fontSize:13, marginBottom:6 }}>Add a facilitator</div>
+            <div style={{ display:"flex", gap:8 }}>
+              <input className="fi" type="email" placeholder="facilitator@email.com" value={facEmail}
+                onChange={e=>setFacEmail(e.target.value)} style={{ flex:1 }}/>
+              <button className="btn btn-g btn-sm" disabled={facBusy} onClick={addFacilitator}>{facBusy?"…":"Add"}</button>
+            </div>
+            {facMsg && <p style={{ fontSize:12, color: facMsg.startsWith("✅")?"var(--green)":"var(--red)", marginTop:8 }}>{facMsg}</p>}
+            <p style={{ fontSize:11, color:"var(--muted)", marginTop:8 }}>
+              They must have an ArtsTracker account first. They'll get district access next time they log in.
+            </p>
+            <button className="btn btn-o btn-sm" style={{ marginTop:16, width:"100%" }} onClick={()=>setShowFac(false)}>Done</button>
           </div>
         </div>
       )}
@@ -17344,6 +17419,8 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
   const [schoolItems,setSchoolItems]     = useState([]);
   const [schoolLoading,setSchoolLoading] = useState(false);
   const [custCatVer,setCustCatVer] = useState(0); // bumped when custom categories reload, forces re-render
+  const [facDistrict,setFacDistrict]= useState(null); // district this user facilitates (full-edit browse), or null
+  const [facSchools, setFacSchools] = useState([]);   // schools in the facilitated district
   // Invite token from URL — persisted in localStorage so it survives
   // Supabase's email confirmation redirect (which strips query params)
   const [pendingInvite,setPendingInvite] = useState(() => {
@@ -17503,6 +17580,16 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
       } else { setPlanState(effectivePlan); }
       const{data:itemData}=await SB.from("items").select("*").eq("org_id",targetOrgId).order("added",{ascending:false}).limit(2000);
       if(itemData) setItems(itemData);
+      // Facilitator detection — if this user facilitates a district, load it + its schools (full-edit browse)
+      const { data: facRows } = await SB.from("district_members")
+        .select("district_id").eq("user_id", user.id).eq("role","facilitator").limit(1);
+      if (facRows && facRows.length) {
+        const fdId = facRows[0].district_id;
+        const { data: fDist } = await SB.from("districts").select("*").eq("id", fdId).single();
+        setFacDistrict(fDist || null);
+        const { data: fSch } = await SB.from("orgs").select("*").eq("district_id", fdId).order("name");
+        setFacSchools(fSch || []);
+      } else { setFacDistrict(null); setFacSchools([]); }
       setLoaded(true);
       // Load unread message count
       const { count: unread } = await SB.from("messages")
@@ -17845,10 +17932,11 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
       ...(!isMember ? [{ id:"labels",  label:"QR Labels",    ico:"🏷" }] : []),
       ...(!isMember ? [{ id:"points", label:getPointsName(org?.vertical), ico:"🪙" }] : []),
       ...(!isMember && plan === "district" ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
+      ...(!isMember && facDistrict ? [{ id:"facschools", label:"District Schools", ico:"🏫" }] : []),
       ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
     ];
   })();
-  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(org?.vertical), productions:"Productions", reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:getPointsName(org?.vertical), points:getPointsName(org?.vertical), community:"Community Board", labels:"QR Labels" };
+  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(org?.vertical), productions:"Productions", reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:getPointsName(org?.vertical), points:getPointsName(org?.vertical), community:"Community Board", labels:"QR Labels", facschools:"District Schools" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicOrgSlug) return <PublicOrgPage slug={publicOrgSlug} />;
@@ -17967,9 +18055,9 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
                   <div style={{ padding: "8px 10px", marginBottom: 6, background: "rgba(66,165,245,.12)", border: "1px solid rgba(66,165,245,.25)", borderRadius: 8, fontSize: 12 }}>
                     <div style={{ color: "#42a5f5", fontWeight: 700, marginBottom: 3 }}>📋 Viewing School</div>
                     <div style={{ color: "rgba(255,255,255,.75)", lineHeight: 1.3, marginBottom: 6 }}>{activeSchool.name}</div>
-                    <button onClick={() => { setActiveSchool(null); setPage("district"); }}
+                    <button onClick={() => { setActiveSchool(null); setPage(plan==="district" ? "district" : "facschools"); }}
                       style={{ fontSize: 11, color: "rgba(255,255,255,.6)", background: "none", border: "1px solid rgba(255,255,255,.2)", borderRadius: 5, padding: "3px 8px", cursor: "pointer", fontFamily: "inherit" }}>
-                      ← Back to District
+                      {plan==="district" ? "← Back to District" : "← Back to Schools"}
                     </button>
                   </div>
                 )}
@@ -18111,6 +18199,25 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
                   {page==="profile"     && <OrgProfilePage userId={user?.id} org={org} setOrg={saveOrg} plan={plan} items={items}/>}
               {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} userId={user?.id} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
                   {page==="district"    && plan==="district" && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool}/>}
+                  {page==="facschools"  && facDistrict && (
+                    <div style={{padding:"32px 36px 56px"}}>
+                      <h1 style={{fontFamily:"var(--serif)",fontSize:32,marginBottom:4}}>District Schools</h1>
+                      <p style={{color:"var(--muted)",fontSize:14,marginBottom:24}}>{facDistrict.name} — you can view and edit inventory for any school below.</p>
+                      {facSchools.length===0 ? (
+                        <div style={{color:"var(--muted)",fontSize:14}}>No schools in this district yet.</div>
+                      ) : (
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:14}}>
+                          {facSchools.map(sc=>(
+                            <div key={sc.id} className="card card-p" style={{display:"flex",flexDirection:"column",gap:8}}>
+                              <div style={{fontWeight:700,fontSize:15}}>{sc.name||"(unnamed school)"}</div>
+                              <div style={{fontSize:12,color:"var(--muted)"}}>{getVertical(sc.vertical).icon} {getVertical(sc.vertical).label}{sc.location?" · "+sc.location:""}</div>
+                              <button className="btn btn-g btn-sm" style={{marginTop:4}} onClick={()=>switchSchool(sc)}>Open inventory →</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {page==="community"   && <CommunityGate userId={user?.id} org={org} setOrg={setOrg} plan={plan}/>}
                   {page==="labels"     && <LabelsPage org={org} userId={user?.id} items={items} isAdmin={isAdmin}/>}
                   {page==="points"     && (plan!=="free"||isAdmin) && <CreditsPage userId={user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
