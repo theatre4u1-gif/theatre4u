@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getVertical, getCats, getCatGfx, VERTICALS_LIST, getExchangeName } from "./lib/verticals.js";
+import { US_STATES, STATE_NAMES, zipToCoords, milesBetween } from "./lib/geo.js";
 
 // ── Storage map constants (used by ItemForm and RoomMap/StorageRack) ──────────
 const PIN_COLORS = ["#D4A843","#5299E0","#52C784","#D85A30","#9B6EBF","#1D9E75","#E24B4A","#BA7517","#2B5BA8","#C2185B"];
@@ -2748,72 +2749,6 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
   </>
   );
 }
-const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY","DC"];
-const STATE_NAMES = {AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",DE:"Delaware",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming",DC:"Washington DC"};
-
-// Free zip code lookup — no API key needed
-async function zipToCoords(zip) {
-  // Try zippopotam.us first (fast, reliable for most zips)
-  try {
-    const zc1 = new AbortController();
-    setTimeout(()=>zc1.abort(),5000);
-    const res = await fetch(`https://api.zippopotam.us/us/${zip}`,{signal:zc1.signal});
-    if (res.ok) {
-      const d = await res.json();
-      const place = d.places?.[0];
-      if (place) return {
-        lat: parseFloat(place.latitude),
-        lng: parseFloat(place.longitude),
-        city: place["place name"],
-        state: place["state abbreviation"],
-      };
-    }
-  } catch { /* fall through */ }
-
-  // Fallback 1: Nominatim postal code search
-  try {
-    const r = await fetch(
-      `https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=US&format=json&limit=1`,
-      { headers: { "User-Agent": "Theatre4u/1.0 (hello@theatre4u.org)" } }
-    );
-    const data = await r.json();
-    if (data?.[0]) return {
-      lat: parseFloat(data[0].lat),
-      lng: parseFloat(data[0].lon),
-      city: data[0].display_name?.split(",")[0] || zip,
-      state: "CA",
-    };
-  } catch { /* fall through */ }
-
-  // Fallback 2: US Census Bureau geocoder (no key, authoritative)
-  try {
-    const r = await fetch(
-      `https://geocoding.geo.census.gov/geocoder/locations/address?street=&city=&state=&zip=${zip}&benchmark=Public_AR_Current&format=json`
-    );
-    const d = await r.json();
-    const match = d?.result?.addressMatches?.[0];
-    if (match) return {
-      lat: match.coordinates.y,
-      lng: match.coordinates.x,
-      city: match.addressComponents?.city || zip,
-      state: match.addressComponents?.state || "",
-    };
-  } catch { /* fall through */ }
-
-  return null;
-}
-
-// Haversine distance in miles (client-side for instant filtering)
-function milesBetween(lat1, lng1, lat2, lng2) {
-  const R = 3958.8;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 +
-    Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
-    Math.sin(dLng/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
-
 function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=false,onEdit=null,onDelete=null}){
   const[search,   setSrch]    = useState("");
   const[catF,     setCatF]    = useState("all");
