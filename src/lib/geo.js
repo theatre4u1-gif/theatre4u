@@ -68,3 +68,36 @@ export function milesBetween(lat1, lng1, lat2, lng2) {
     Math.sin(dLng/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
+
+// ── Geocoding (OpenStreetMap Nominatim — free, no key needed) ─────────────────
+export async function geocodeLocation(locationText) {
+  if (!locationText || locationText.trim().length < 3) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000); // 5 second hard timeout
+  try {
+    const q = encodeURIComponent(locationText.trim() + ", USA");
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`, {
+      headers: { "User-Agent": "Theatre4u/1.0 (hello@theatre4u.org)" },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    const data = await r.json();
+    if (data && data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+  } catch {
+    clearTimeout(timeout);
+    // Timeout or network error — return null so caller continues without coordinates
+  }
+  return null;
+}
+
+// Get browser geolocation as a Promise
+export function getBrowserLocation() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      ()  => resolve(null),
+      { timeout: 5000, maximumAge: 300000 }
+    );
+  });
+}

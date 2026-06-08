@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getVertical, getCats, getCatGfx, VERTICALS_LIST, getExchangeName } from "./lib/verticals.js";
-import { US_STATES, STATE_NAMES, zipToCoords, milesBetween } from "./lib/geo.js";
+import { US_STATES, STATE_NAMES, zipToCoords, milesBetween, geocodeLocation } from "./lib/geo.js";
+import { BG, VERTICAL_BG_GRAD } from "./lib/backgrounds.js";
 
 // ── Storage map constants (used by ItemForm and RoomMap/StorageRack) ──────────
 const PIN_COLORS = ["#D4A843","#5299E0","#52C784","#D85A30","#9B6EBF","#1D9E75","#E24B4A","#BA7517","#2B5BA8","#C2185B"];
@@ -12,39 +13,6 @@ const COL_LABELS = { num:["1","2","3","4","5","6"], alpha:["A","B","C","D","E","
 const getPointsName = (vertical) => (!vertical || vertical === "theatre") ? "Stage Points" : "Encore Points";
 
 // ── Supabase ──────────────────────────────────────────────────────────────────
-
-// ── Geocoding (OpenStreetMap Nominatim — free, no key needed) ─────────────────
-async function geocodeLocation(locationText) {
-  if (!locationText || locationText.trim().length < 3) return null;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5000); // 5 second hard timeout
-  try {
-    const q = encodeURIComponent(locationText.trim() + ", USA");
-    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`, {
-      headers: { "User-Agent": "Theatre4u/1.0 (hello@theatre4u.org)" },
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-    const data = await r.json();
-    if (data && data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-  } catch {
-    clearTimeout(timeout);
-    // Timeout or network error — return null so caller continues without coordinates
-  }
-  return null;
-}
-
-// Get browser geolocation as a Promise
-function getBrowserLocation() {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) { resolve(null); return; }
-    navigator.geolocation.getCurrentPosition(
-      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      ()  => resolve(null),
-      { timeout: 5000, maximumAge: 300000 }
-    );
-  });
-}
 
 // ── Domain Detection ──────────────────────────────────────────────────────────
 // Detects which site the user came from so we can show the right branding.
@@ -213,19 +181,6 @@ const CAT_FALLBACK = {
 const itemNum = n  => n != null ? "#" + String(n).padStart(4, "0") : "";
 // Page background images — 5 confirmed-working Unsplash IDs only
 const usp=(id,w=900,h=500)=>`https://images.unsplash.com/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=82`;
-const BG = {
-  dashboard:   "photo-1503095396549-807759245b35",
-  inventory:   "photo-1489987707025-afc232f7ea0f",
-  marketplace: "photo-1503095396549-807759245b35",
-  reports:     "photo-1503095396549-807759245b35",
-  settings:    "photo-1497366216548-37526070297c",
-};
-const VERTICAL_BG_GRAD = {
-  music:   "linear-gradient(135deg,#0d2b6e 0%,#1554a0 55%,#3949ab 100%)",
-  dance:   "linear-gradient(135deg,#7b1560 0%,#c2185b 55%,#e91e8c 100%)",
-  art:     "linear-gradient(135deg,#0d2b6e 0%,#1565c0 50%,#00838f 100%)",
-  booster: "linear-gradient(135deg,#4a148c 0%,#7b1fa2 55%,#9c27b0 100%)",
-};
 function HeroImg({ vertical, photoId, w, h, alt="", className, loading="lazy" }){
   const grad = VERTICAL_BG_GRAD[vertical];
   if (grad) return <div aria-hidden="true" className={className} style={{width:"100%",height:"100%",background:grad}}/>;
