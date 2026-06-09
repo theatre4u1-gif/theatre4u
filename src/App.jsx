@@ -6,6 +6,7 @@ import { US_STATES, STATE_NAMES, zipToCoords, milesBetween, geocodeLocation } fr
 import { BG, usp } from "./lib/backgrounds.js";
 import { CSS } from "./core/styles.js";
 import { EM } from "./core/messages.js";
+import { HOSTNAME, IS_THEATRE4U, IS_ARTSTRACKER, APP_NAME, APP_SUBTITLE, APP_EMAIL, APP_URL } from "./core/config.js";
 import { Ic } from "./core/icons.jsx";
 import { Pager, Modal, FbShareBtn, HeroImg, CatCard, CatThumb } from "./core/ui.jsx";
 
@@ -21,13 +22,6 @@ const getPointsName = (vertical) => (!vertical || vertical === "theatre") ? "Sta
 // ── Domain Detection ──────────────────────────────────────────────────────────
 // Detects which site the user came from so we can show the right branding.
 // localhost is treated as Theatre4u so local development works unchanged.
-const HOSTNAME       = typeof window !== "undefined" ? window.location.hostname : "";
-const IS_THEATRE4U   = HOSTNAME.includes("theatre4u.org") || HOSTNAME === "localhost";
-const IS_ARTSTRACKER = HOSTNAME.includes("artstracker.org");
-const APP_NAME       = IS_THEATRE4U ? "Theatre4u\u2122" : "ArtsTracker";
-const APP_SUBTITLE   = IS_THEATRE4U ? "Inventory \u00B7 Exchange" : "Theatre \u00B7 Music \u00B7 Dance \u00B7 Art \u00B7 Boosters";
-const APP_EMAIL      = IS_THEATRE4U ? "hello@theatre4u.org" : "hello@artstracker.org";
-const APP_URL        = IS_THEATRE4U ? "https://theatre4u.org" : "https://artstracker.org";
 // ── End Domain Detection ──────────────────────────────────────────────────────
 
 // ── Brand Assets ── logo + favicon, switched by domain (files live in src/public/)
