@@ -1,5 +1,6 @@
-import React, { useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Ic } from "./icons.jsx";
+import { fbShare } from "./helpers.js";
 import { getCatGfx } from "../lib/verticals.js";
 import { VERTICAL_BG_GRAD, usp } from "../lib/backgrounds.js";
 
