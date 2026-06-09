@@ -2,6 +2,25 @@ import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { CAT } from "./inventory.js";
 
+const LABEL_PACKS = [
+  { qty:25,  type:"standard",    label:"25 Standard",     retail:1000, desc:"Indoor use · polyester matte · water-resistant" },
+  { qty:50,  type:"standard",    label:"50 Standard",     retail:1500, desc:"Indoor use · polyester matte · water-resistant" },
+  { qty:100, type:"standard",    label:"100 Standard",    retail:2300, desc:"Indoor use · polyester matte · water-resistant" },
+  { qty:200, type:"standard",    label:"200 Standard",    retail:3900, desc:"Indoor use · polyester matte · water-resistant" },
+  { qty:25,  type:"weatherproof",label:"25 Weatherproof", retail:1400, desc:"Scene shop · outdoor storage · heavy-duty vinyl" },
+  { qty:50,  type:"weatherproof",label:"50 Weatherproof", retail:2100, desc:"Scene shop · outdoor storage · heavy-duty vinyl" },
+  { qty:100, type:"weatherproof",label:"100 Weatherproof",retail:3600, desc:"Scene shop · outdoor storage · heavy-duty vinyl" },
+  { qty:200, type:"weatherproof",label:"200 Weatherproof",retail:6500, desc:"Scene shop · outdoor storage · heavy-duty vinyl" },
+];
+const LOGO_ADDON_CENTS = 500; // $5 to include program logo on labels
+
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ADMIN DAILY DIGEST — standalone component used as first tab in AdminHub
+// Time windows: 24h | 7d | 30d
+// Sources: orgs, items, beta_leads, email_sequence, page_views (UTM),
+
 // QR label printing page — extracted from App.jsx.
 
 export function LabelsPage({ org, userId, items=[], isAdmin=false }) {

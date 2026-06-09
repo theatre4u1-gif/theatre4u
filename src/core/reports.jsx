@@ -4,6 +4,7 @@ import { CAT, CATS, CONDS, AVAIL, MKT } from "./inventory.js";
 import { BG, usp } from "../lib/backgrounds.js";
 import { Ic } from "./icons.jsx";
 import { UpgradePlans } from "./billing.jsx";
+import { fmt$ } from "./helpers.js";
 
 // Reports page (+ platform-usage + production-report tabs) — extracted from App.jsx.
 

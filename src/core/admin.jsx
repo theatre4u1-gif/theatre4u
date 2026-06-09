@@ -6,6 +6,7 @@ import { CAT, CATS, CONDS } from "./inventory.js";
 import { stripeLink } from "./plans.js";
 import { usp } from "../lib/backgrounds.js";
 import { getVertical } from "../lib/verticals.js";
+import { fmt$ } from "./helpers.js";
 
 // Admin module — building-block forms/widgets. The big admin cluster (AdminHub, etc.) will join this file.
 

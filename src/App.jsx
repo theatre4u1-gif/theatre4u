@@ -7,7 +7,7 @@ import { BG, usp } from "./lib/backgrounds.js";
 import { CSS } from "./core/styles.js";
 import { EM } from "./core/messages.js";
 import { TERMS_CONTENT, PRIVACY_CONTENT } from "./core/legal.js";
-import { authErrKey, getRefCode, isDemoMode } from "./core/helpers.js";
+import { authErrKey, getRefCode, isDemoMode, fmt$, parseCSV, autoMatch, postShareText, resizeImg, fbShare, getPointsName, itemShareUrl, itemShareText } from "./core/helpers.js";
 import { AuthOverlay } from "./core/auth.jsx";
 import { STRIPE_LINKS, stripeLink, PLANS_DEF, UPGRADE_PLANS } from "./core/plans.js";
 import { UpgradePrompt, UpgradePlans } from "./core/billing.jsx";
@@ -42,7 +42,6 @@ const PIN_COLORS = ["#D4A843","#5299E0","#52C784","#D85A30","#9B6EBF","#1D9E75",
 const ROW_LABELS = { alpha:["A","B","C","D","E","F","G","H"], num:["1","2","3","4","5","6","7","8"], shelf:["Shelf 1","Shelf 2","Shelf 3","Shelf 4","Shelf 5","Shelf 6","Shelf 7","Shelf 8"], custom:["Top","Upper","Middle","Lower","Bottom"] };
 const COL_LABELS = { num:["1","2","3","4","5","6"], alpha:["A","B","C","D","E","F"], none:["","","","","",""] };
 // Rewards program name by vertical: theatre = "Stage Points", others = "Encore Points".
-const getPointsName = (vertical) => (!vertical || vertical === "theatre") ? "Stage Points" : "Encore Points";
 
 // ── Supabase ──────────────────────────────────────────────────────────────────
 
@@ -86,39 +85,12 @@ function errAlert(key) {
 
 
 const uid  = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
-const fmt$ = n  => "$" + Number(n || 0).toFixed(2);
 
 // ── Social sharing ─────────────────────────────────────────────────────────
 // Uses Facebook's native share dialog — no API key, no approval, works for everyone.
 // The user shares to their own timeline, page, or any group they're in.
-function fbShare(url, quote="") {
-  const params = new URLSearchParams({ u: url, ...(quote ? { quote } : {}) });
-  window.open("https://www.facebook.com/sharer/sharer.php?" + params, "fb-share", "width=600,height=500,scrollbars=yes");
-}
-function itemShareUrl(item) {
-  return "https://theatre4u.org/#/item/" + (item.display_id || item.id);
-}
-function itemShareText(item, orgName) {
-  const cat = CAT_FALLBACK[item.category] || { icon:"🎭" };
-  const price = item.mkt==="For Loan" ? "Free loan"
-    : item.rent>0&&item.sale>0 ? "$"+item.rent+"/wk or $"+item.sale+" to buy"
-    : item.rent>0 ? "$"+item.rent+"/wk to rent"
-    : item.sale>0 ? "$"+item.sale+" to buy" : "";
-  return cat.icon+" "+item.name+(orgName?" — from "+orgName:"")+(price?" · "+price:"")+
-    "\n\nAvailable on the Backstage Exchange — free resource sharing for theatre programs everywhere."+
-    "\n\ntheatre4u.org #Theatre #TheatreEducation #BackstageExchange #TheatreTeacher";
-}
-function postShareText(post, orgName) {
-  const body = post.body ? "\n\n"+post.body.slice(0,200)+(post.body.length>200?"…":"") : "";
-  return "🎭 "+post.title+(orgName?" — "+orgName:"")+body+
-    "\n\nPosted on Theatre4u Community.\n\ntheatre4u.org #Theatre #TheatreEducation";
-}
 // Small reusable Facebook share button
 // Fallback category map for use before CATS const is available
-const CAT_FALLBACK = {
-  costumes:"🥻",props:"🎭",sets:"🏗️",lighting:"💡",sound:"🔊",
-  scripts:"📜",makeup:"💄",furniture:"🪑",fabrics:"🧵",tools:"🔧",effects:"✨",other:"📦"
-};
 const itemNum = n  => n != null ? "#" + String(n).padStart(4, "0") : "";
 // Page background images — 5 confirmed-working Unsplash IDs only
 
@@ -215,24 +187,6 @@ function makeSamples(){
   ].map(i=>({...i,id:uid(),added:new Date().toISOString()}));
 }
 
-function resizeImg(file,maxW=560,q=0.78){
-  return new Promise(res=>{
-    const r=new FileReader();
-    r.onload=e=>{
-      const img=new Image();
-      img.onload=()=>{
-        const c=document.createElement("canvas");
-        let w=img.width,h=img.height;
-        if(w>maxW){h=Math.round((maxW/w)*h);w=maxW;}
-        c.width=w;c.height=h;
-        c.getContext("2d").drawImage(img,0,0,w,h);
-        res(c.toDataURL("image/jpeg",q));
-      };
-      img.src=e.target.result;
-    };
-    r.readAsDataURL(file);
-  });
-}
 
 // Upload a file to Supabase Storage and return the public URL
 async function uploadPhoto(file, userId) {
@@ -3799,34 +3753,8 @@ const ADMIN_EMAIL  = ADMIN_EMAILS[0]; // legacy alias
 // ADMIN: EDIT ITEM MODAL
 // ══════════════════════════════════════════════════════════════════════════════
 
-function autoMatch(header) {
-  const h = header.toLowerCase().trim();
-  for (const f of CSV_FIELDS) {
-    if (h === f.key) return f.key;
-    if (f.hints.some(hint => h.includes(hint) || hint.includes(h))) return f.key;
-  }
-  return null;
-}
 
 // Parse a raw CSV string into rows
-function parseCSV(text) {
-  const lines = text.replace(/\r\n/g,"\n").replace(/\r/g,"\n").split("\n").filter(l=>l.trim());
-  const rows = [];
-  for (const line of lines) {
-    const cols = [];
-    let cur = "", inQ = false;
-    for (let i=0; i<line.length; i++) {
-      const c = line[i];
-      if (c==="\"" && inQ && line[i+1]==="\"") { cur+="\""; i++; }
-      else if (c==="\"") { inQ=!inQ; }
-      else if (c==="," && !inQ) { cols.push(cur); cur=""; }
-      else { cur+=c; }
-    }
-    cols.push(cur);
-    rows.push(cols.map(c=>c.trim()));
-  }
-  return rows;
-}
 
 // Coerce a raw string value into the right type/valid value for a field
 function coerce(key, raw) {
@@ -10053,24 +9981,6 @@ function LabelStoreBanner({ onGoLabels }) {
 //  50 WP         $16.00     $21      $5.00    24%
 //  100 WP        $27.00     $36      $9.00    25%
 //  200 WP        $49.00     $65      $16.00   25%
-const LABEL_PACKS = [
-  { qty:25,  type:"standard",    label:"25 Standard",     retail:1000, desc:"Indoor use · polyester matte · water-resistant" },
-  { qty:50,  type:"standard",    label:"50 Standard",     retail:1500, desc:"Indoor use · polyester matte · water-resistant" },
-  { qty:100, type:"standard",    label:"100 Standard",    retail:2300, desc:"Indoor use · polyester matte · water-resistant" },
-  { qty:200, type:"standard",    label:"200 Standard",    retail:3900, desc:"Indoor use · polyester matte · water-resistant" },
-  { qty:25,  type:"weatherproof",label:"25 Weatherproof", retail:1400, desc:"Scene shop · outdoor storage · heavy-duty vinyl" },
-  { qty:50,  type:"weatherproof",label:"50 Weatherproof", retail:2100, desc:"Scene shop · outdoor storage · heavy-duty vinyl" },
-  { qty:100, type:"weatherproof",label:"100 Weatherproof",retail:3600, desc:"Scene shop · outdoor storage · heavy-duty vinyl" },
-  { qty:200, type:"weatherproof",label:"200 Weatherproof",retail:6500, desc:"Scene shop · outdoor storage · heavy-duty vinyl" },
-];
-const LOGO_ADDON_CENTS = 500; // $5 to include program logo on labels
-
-
-
-// ══════════════════════════════════════════════════════════════════════════════
-// ADMIN DAILY DIGEST — standalone component used as first tab in AdminHub
-// Time windows: 24h | 7d | 30d
-// Sources: orgs, items, beta_leads, email_sequence, page_views (UTM),
 //          login_events, messages, beta_feedback
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -11288,15 +11198,6 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
   );
 }
 // ═══ FUNDING PAGE ════════════════════════════════════════════════════════════
-const FUND_TYPES = [
-  {id:"grant",      label:"Grant",           icon:"🏛️"},
-  {id:"allocation", label:"District Allocation", icon:"🏫"},
-  {id:"earned",     label:"Earned Income",   icon:"🎟️"},
-  {id:"donation",   label:"Donation",        icon:"🤝"},
-  {id:"booster",    label:"Booster/PTA",     icon:"⭐"},
-  {id:"other",      label:"Other",           icon:"📋"},
-];
-const FUND_CATS = ["Equipment","Instruments","Supplies","Instruction","Personnel","Travel","Production","Technology","Other"];
 
 // ══════════════════════════════════════════════════════════════════════════════
 // PROP 28 PAGE — view legacy data + one-click migration to Funding Tracker

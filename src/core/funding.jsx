@@ -2,6 +2,17 @@ import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { EM } from "./messages.js";
 import { Modal } from "./ui.jsx";
+import { fmt$ } from "./helpers.js";
+
+const FUND_TYPES = [
+  {id:"grant",      label:"Grant",           icon:"🏛️"},
+  {id:"allocation", label:"District Allocation", icon:"🏫"},
+  {id:"earned",     label:"Earned Income",   icon:"🎟️"},
+  {id:"donation",   label:"Donation",        icon:"🤝"},
+  {id:"booster",    label:"Booster/PTA",     icon:"⭐"},
+  {id:"other",      label:"Other",           icon:"📋"},
+];
+const FUND_CATS = ["Equipment","Instruments","Supplies","Instruction","Personnel","Travel","Production","Technology","Other"];
 
 // Funding tracker page (+ source/expenditure modals + impact report) — extracted from App.jsx.
 
