@@ -6,7 +6,7 @@ import { US_STATES, STATE_NAMES, zipToCoords, milesBetween, geocodeLocation } fr
 import { BG, VERTICAL_BG_GRAD } from "./lib/backgrounds.js";
 import { CSS } from "./core/styles.js";
 import { Ic } from "./core/icons.jsx";
-import { Pager } from "./core/ui.jsx";
+import { Pager, Modal } from "./core/ui.jsx";
 
 // ── Storage map constants (used by ItemForm and RoomMap/StorageRack) ──────────
 const PIN_COLORS = ["#D4A843","#5299E0","#52C784","#D85A30","#9B6EBF","#1D9E75","#E24B4A","#BA7517","#2B5BA8","#C2185B"];
@@ -385,18 +385,6 @@ async function uploadPhoto(file, userId) {
 
 
 
-function Modal({title,onClose,children,footer}){
-  useEffect(()=>{const h=e=>e.key==="Escape"&&onClose();window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h)},[onClose]);
-  return(
-    <div className="overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div className="modal" onClick={e=>e.stopPropagation()}>
-        <div className="modal-hd"><h2>{title}</h2><button className="ico-btn" onClick={onClose}>{Ic.x}</button></div>
-        <div className="modal-bd">{children}</div>
-        {footer&&<div className="modal-ft">{footer}</div>}
-      </div>
-    </div>
-  );
-}
 
 // Inline location picker — loads storage_locations for the org
 function LocationDropdown({ userId, value, onChange }) {
