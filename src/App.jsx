@@ -1,6 +1,6 @@
 // Theatre4u — built 2026-03-26 17:02
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SB, activateDemoStore, callEdgeFn } from "./core/supabase.js";
 import { getVertical, getCats, getCatGfx, VERTICALS_LIST, getExchangeName } from "./lib/verticals.js";
 import { US_STATES, STATE_NAMES, zipToCoords, milesBetween, geocodeLocation } from "./lib/geo.js";
 import { BG, usp } from "./lib/backgrounds.js";
@@ -49,34 +49,6 @@ if (typeof document !== "undefined") {
   setIcon("apple-touch-icon", TOUCH_ICON, null);
 }
 
-const _SB_REAL = createClient(
-  "https://ldmmphwivnnboyhlxipl.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA"
-);
-
-// SB_ACTIVE is the mutable backend — swapped to demoStore in demo mode.
-// All 274 SB.xxx() calls throughout the app use this transparently.
-let SB_ACTIVE = _SB_REAL;
-const SB = new Proxy({}, {
-  get(_, prop) {
-    const target = SB_ACTIVE;
-    const val = target[prop];
-    return typeof val === "function" ? val.bind(target) : val;
-  }
-});
-
-// Edge function caller helper
-const callEdgeFn = async (name, body, token) => {
-  const res = await fetch(`https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/${name}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
-    body: JSON.stringify(body),
-  });
-  return res.json();
-};
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ERROR MESSAGE LIBRARY — friendly user-facing messages, no raw DB errors
@@ -16740,7 +16712,7 @@ function trackVisit(page, extra = {}) {
 
 function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
   const isDemo = !!demoStore;
-  if (demoStore && SB_ACTIVE !== demoStore) SB_ACTIVE = demoStore;
+  activateDemoStore(demoStore);
   // In demo mode, use the pre-built demo user if provided
   const [user,setUser] = useState(demoUser);
   // ── Hash routing: #/item/:id and #/location/:id (storage location QR codes) ──
