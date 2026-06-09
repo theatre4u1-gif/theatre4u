@@ -28,13 +28,8 @@ function setCustomCats(rows){ CUSTOM_CATS = Array.isArray(rows) ? rows.map(r=>({
 function customCatsFor(vertical){ return CUSTOM_CATS.filter(c=>c.vertical===(vertical||"theatre")).map(c=>({id:c.id,label:c.label,icon:"📦",color:"#4a2e1a",custom:true})); }
 function getCatsMerged(vertical){ return [...getCats(vertical), ...customCatsFor(vertical)]; }
 
-// ── Point earn rates by category (mirrors point_earn_rates DB table) ──────────
-const POINT_EARN_RATES = {
-  lighting: 50, sound: 50, sets: 40, costumes: 25, props: 20,
-  furniture: 20, effects: 20, fabrics: 15, makeup: 15,
-  scripts: 10, tools: 10, other: 15,
-};
-import { HOSTNAME, IS_THEATRE4U, IS_ARTSTRACKER, APP_NAME, APP_SUBTITLE, APP_EMAIL, APP_URL } from "./core/config.js";
+import { HOSTNAME, IS_THEATRE4U, IS_ARTSTRACKER, APP_NAME, APP_SUBTITLE, APP_EMAIL, APP_URL, ADMIN_EMAILS, isAdminEmail, ADMIN_EMAIL } from "./core/config.js";
+import { POINT_EARN_RATES, POINTS_PER_DOLLAR, POINTS_FREE_MONTH, POINTS_MAX_BALANCE, POINTS_EXPIRE_DAYS, PLATFORM_FEE_PCT, POINTS_MIN_REDEEM, MILESTONE_POINTS } from "./core/points-config.js";
 import { Ic } from "./core/icons.jsx";
 import { Pager, Modal, FbShareBtn, HeroImg, CatCard, CatThumb, LegalModal } from "./core/ui.jsx";
 
@@ -110,26 +105,6 @@ const SHOWCASE = [
   {cat:"lighting", name:"LED Par Can Array",     price:"$12/wk", badge:"Rent or Sale"},
   {cat:"sound",    name:"Shure Wireless Mic",    price:"$18/wk", badge:"For Rent"},
 ];
-
-// Points: 1 point = $0.01 · 1,500 points = free Pro month · max balance 5,000
-const POINTS_PER_DOLLAR   = 1;       // rental earn rate
-const POINTS_FREE_MONTH   = 1500;    // points needed for a free month
-const POINTS_MAX_BALANCE  = 5000;    // cap per org
-const POINTS_EXPIRE_DAYS  = 365;     // points expire after 12 months
-const PLATFORM_FEE_PCT    = 0.08;    // 8% platform fee on Exchange transactions
-const POINTS_MIN_REDEEM   = 500;     // minimum points to redeem in one go
-
-// Onboarding milestone points (one-time, idempotent via DB function)
-const MILESTONE_POINTS = {
-  welcome_bonus:    { pts: 25,  label: "Welcome Bonus" },
-  profile_complete: { pts: 25,  label: "Profile Completed" },
-  items_10:         { pts: 25,  label: "10 Items Added" },
-  items_25_photos:  { pts: 50,  label: "25 Items with Photos" },
-  first_listing:    { pts: 15,  label: "First Exchange Listing" },
-  first_request:    { pts: 10,  label: "First Exchange Request" },
-  team_invite:      { pts: 15,  label: "Team Member Invited" },
-  referral_earn:    { pts: 50,  label: "Referral Bonus" },
-};
 
 // ── Logo Components — simple emoji mark, always reliable ────────────────────
 // LogoMarkDark and LogoMarkLight render the theatre masks emoji in a styled box
@@ -3681,13 +3656,6 @@ function Requests({ userId, orgName, orgEmail }) {
 // ── Shared upgrade/pricing component — used in Settings + any upsell modal ────
 // ── Plan definitions ─────────────────────────────────────────────────────────
 // ── Admin accounts — add emails here for free District access + admin dashboard
-const ADMIN_EMAILS = [
-  "theatre4u1@gmail.com",
-  // Add tester emails here:
-  // "tester1@example.com",
-];
-const isAdminEmail = (e) => ADMIN_EMAILS.includes((e||"").toLowerCase().trim());
-const ADMIN_EMAIL  = ADMIN_EMAILS[0]; // legacy alias
 
 // ══════════════════════════════════════════════════════════════════════════════
 // PRICING MODEL — DO NOT CHANGE WITHOUT REVIEWING THIS RATIONALE

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { SB } from "./supabase.js";
 import { BG, usp } from "../lib/backgrounds.js";
 import { fbShare, getPointsName } from "./helpers.js";
+import { ADMIN_EMAILS } from "./config.js";
+import { POINTS_FREE_MONTH } from "./points-config.js";
 
 // Points / credits page — extracted from App.jsx.
 
