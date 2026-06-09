@@ -15,3 +15,6 @@ export const VERTICAL_BG_GRAD = {
   art:     "linear-gradient(135deg,#0d2b6e 0%,#1565c0 50%,#00838f 100%)",
   booster: "linear-gradient(135deg,#4a148c 0%,#7b1fa2 55%,#9c27b0 100%)",
 };
+
+// Unsplash photo URL builder
+export const usp=(id,w=900,h=500)=>`https://images.unsplash.com/${id}?w=${w}&h=${h}&fit=crop&auto=format&q=82`;
