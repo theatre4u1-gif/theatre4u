@@ -7,6 +7,7 @@ import { BG, usp } from "./lib/backgrounds.js";
 import { CSS } from "./core/styles.js";
 import { EM } from "./core/messages.js";
 import { TERMS_CONTENT, PRIVACY_CONTENT } from "./core/legal.js";
+import { authErrKey, getRefCode, isDemoMode } from "./core/helpers.js";
 import { HOSTNAME, IS_THEATRE4U, IS_ARTSTRACKER, APP_NAME, APP_SUBTITLE, APP_EMAIL, APP_URL } from "./core/config.js";
 import { Ic } from "./core/icons.jsx";
 import { Pager, Modal, FbShareBtn, HeroImg, CatCard, CatThumb, LegalModal } from "./core/ui.jsx";
@@ -51,13 +52,6 @@ if (typeof document !== "undefined") {
 // ══════════════════════════════════════════════════════════════════════════════
 
 // Map Supabase auth error text to friendly EM keys
-function authErrKey(msg) {
-  const m = (msg || "").toLowerCase();
-  if (m.includes("invalid login") || m.includes("invalid credentials") || m.includes("email not confirmed") || m.includes("wrong password") || m.includes("incorrect password")) return "loginBadPassword";
-  if (m.includes("user not found") || m.includes("no user") || m.includes("email not found") || m.includes("no account")) return "loginNoEmail";
-  if (m.includes("expired") || m.includes("jwt") || m.includes("refresh_token")) return "sessionExpired";
-  return null;
-}
 
 // Show a simple friendly error alert using the EM library
 function errAlert(key) {
@@ -12501,9 +12495,6 @@ function DemoApp() {
   );
 }
 
-const isDemoMode = () => {
-  try { return new URLSearchParams(window.location.search).get("demo") === "1"; } catch { return false; }
-};
 
 const AppWithBoundary = () => isDemoMode()
   ? <DemoApp/>
@@ -16638,9 +16629,6 @@ function getSessionId() {
     if (ref) sessionStorage.setItem("t4u_ref", ref.toUpperCase().trim());
   } catch(e) {}
 })();
-function getRefCode() {
-  try { return sessionStorage.getItem("t4u_ref") || null; } catch(e) { return null; }
-}
 function trackVisit(page, extra = {}) {
   try {
     const params = new URLSearchParams(window.location.search);
