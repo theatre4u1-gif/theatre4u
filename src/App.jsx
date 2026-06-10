@@ -7,7 +7,7 @@ import { BG, usp } from "./lib/backgrounds.js";
 import { CSS } from "./core/styles.js";
 import { EM } from "./core/messages.js";
 import { TERMS_CONTENT, PRIVACY_CONTENT } from "./core/legal.js";
-import { authErrKey, getRefCode, isDemoMode, fmt$, parseCSV, autoMatch, postShareText, resizeImg, fbShare, getPointsName, itemShareUrl, itemShareText } from "./core/helpers.js";
+import { authErrKey, getRefCode, isDemoMode, fmt$, parseCSV, autoMatch, postShareText, resizeImg, fbShare, getPointsName, itemShareUrl, itemShareText, CSV_FIELDS } from "./core/helpers.js";
 import { AuthOverlay } from "./core/auth.jsx";
 import { STRIPE_LINKS, stripeLink, PLANS_DEF, UPGRADE_PLANS } from "./core/plans.js";
 import { UpgradePrompt, UpgradePlans } from "./core/billing.jsx";
@@ -780,7 +780,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
   );
 }
 
-function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null, enableLoans=false}){
+function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null, enableLoans=false, onImported=null}){
     const[upgradeReason,setUpgradeReason]=useState(null);
   const vVertical=org?.vertical||"theatre";
   const vCATS=getCatsMerged(vVertical);
@@ -1016,7 +1016,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
     {enableLoans&&invView==="loans" ? (
       <div style={{padding:"8px 0 56px"}}><ExternalLoans userId={userId} org={org} items={items}/></div>
     ) : (<>
-    {upgradeReason&&<UpgradePrompt reason={upgradeReason} onClose={()=>setUpgradeReason(null)} userId={user?.id} userEmail={user?.email}/>}
+    {upgradeReason&&<UpgradePrompt reason={upgradeReason} onClose={()=>setUpgradeReason(null)} userId={userId} userEmail={org?.email}/>}
     {locFilter!=="all"&&locFilterName&&(
       <div style={{display:"flex",alignItems:"center",gap:10,background:"rgba(232,184,93,.1)",border:"1px solid rgba(232,184,93,.3)",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
         <span style={{fontSize:20}}>📦</span>
@@ -1290,7 +1290,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
           <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={org?.vertical||"theatre"}/>
         </Modal>)}
       {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{onDelete(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete}/></Modal>}
-      {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",user?.id).order("added",{ascending:false});if(data)setItems(data);}}/>}
+      {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",userId).order("added",{ascending:false});if(data&&onImported)onImported(data);}}/>}
     </div>
     </>)}
   </>
@@ -1422,7 +1422,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
       <div style={{fontSize:44,marginBottom:14}}>🏪</div>
       <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:22,marginBottom:10}}>Backstage Exchange is a Pro Feature</h2>
       <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Share selected items with other programs — rent, sell, or loan. Upgrade to Pro to join Backstage Exchange.</p>
-      <UpgradePlans compact={true} userId={userId} userEmail={userEmail}/>
+      <UpgradePlans compact={true} userId={org?.id} userEmail={org?.email}/>
     </div>
   );
 
@@ -1623,7 +1623,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
         itemOrgName={contactItem.org_name}
         currentUserId={org?.id}
         currentOrgName={org?.name}
-        onOpen={convId=>{setOpenConvId(convId); window.__t4u_nav_messages&&window.__t4u_nav_messages(convId);}}
+        onOpen={convId=>{window.__t4u_nav_messages&&window.__t4u_nav_messages(convId);}}
         onClose={()=>setContactItem(null)}
       />}
       {requestItem&&<RequestItemModal
@@ -5854,7 +5854,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
                     }}/>}
                   {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
                   {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} pointBalance={creditBalance} goInventory={(cat)=>{ if(cat) setDeepLinkCategory(cat); nav("inventory"); }} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
-                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org} enableLoans={!memberRole} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} deepLinkCategory={deepLinkCategory} onDeepLinkCategoryConsumed={()=>setDeepLinkCategory(null)}/>}
+                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org} enableLoans={!memberRole} onImported={(data)=>setItems(data)} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} deepLinkCategory={deepLinkCategory} onDeepLinkCategoryConsumed={()=>setDeepLinkCategory(null)}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
                       ? <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading {activeSchool.name}…</div>

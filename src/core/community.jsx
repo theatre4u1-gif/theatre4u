@@ -6,7 +6,7 @@ import { SB } from "./supabase.js";
 import { Ic } from "./icons.jsx";
 import { resizeImg, postShareText } from "./helpers.js";
 import { EM } from "./messages.js";
-import { FbShareBtn } from "./ui.jsx";
+import { FbShareBtn, Modal } from "./ui.jsx";
 import { usp } from "../lib/backgrounds.js";
 
 // ══════════════════════════════════════════════════════════════════════════════

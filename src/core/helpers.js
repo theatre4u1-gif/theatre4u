@@ -34,6 +34,27 @@ export function parseCSV(text) {
   return rows;
 }
 
+// CSV import field schema (used by autoMatch + CSVImport's column mapper).
+// Restored from git history — was accidentally deleted in an earlier commit.
+export const CSV_FIELDS = [
+  { key:"name",       label:"Item Name",    required:true,  hints:["name","item","title","item name"] },
+  { key:"category",   label:"Category",     required:false, hints:["category","cat","type","kind"] },
+  { key:"condition",  label:"Condition",    required:false, hints:["condition","cond","quality","state"] },
+  { key:"size",       label:"Size",         required:false, hints:["size","sz"] },
+  { key:"qty",        label:"Quantity",     required:false, hints:["qty","quantity","count","amount","num","number"] },
+  { key:"location",   label:"Location",     required:false, hints:["location","loc","storage","bin","room","where","place"] },
+  { key:"avail",      label:"Availability", required:false, hints:["availability","avail","available","status"] },
+  { key:"mkt",        label:"Market Status",required:false, hints:["market","mkt","listing","listed","for rent","for sale"] },
+  { key:"rent",       label:"Rental Price", required:false, hints:["rent","rental","rate","per week","weekly"] },
+  { key:"loan_period",label:"Loan Period",  required:false, hints:["loan period","loan weeks","borrow period","lending period","weeks"] },
+  { key:"deposit",    label:"Deposit",      required:false, hints:["deposit","security","refundable"] },
+  { key:"sale",       label:"Sale Price",   required:false, hints:["sale","sell","price","cost","value"] },
+  { key:"tags",       label:"Tags",         required:false, hints:["tags","tag","keywords","labels"] },
+  { key:"description",label:"Description",  required:false, hints:["description","desc","item description","about","overview"] },
+  { key:"img",        label:"Image URL",    required:false, hints:["image","image url","photo","photo url","img","picture","url","photo link","image link"] },
+  { key:"notes",      label:"Notes",        required:false, hints:["notes","note","comments","comment","remarks","details"] },
+];
+
 export function autoMatch(header) {
   const h = header.toLowerCase().trim();
   for (const f of CSV_FIELDS) {

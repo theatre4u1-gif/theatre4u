@@ -49,6 +49,10 @@ export function RequestItemModal({ item, currentUserId, currentOrgName, currentO
   const [creditAmt, setCreditAmt] = useState(0);
   const needsDates = type !== "buy";
 
+  // Pricing (component scope — used by both the summary render and submit())
+  const basePrice   = type==="rent" ? item.rent : type==="loan" ? (item.deposit||0) : item.sale;
+  const platformFee = (type==="loan") ? 0 : Math.max(0, parseFloat((((basePrice||0)) * PLATFORM_FEE_PCT).toFixed(2)));
+
   // Load availability blocks + my point balance
   useEffect(()=>{
     SB.from("availability_blocks").select("*").eq("item_id", item.id)
@@ -80,10 +84,8 @@ export function RequestItemModal({ item, currentUserId, currentOrgName, currentO
     if (needsDates && (!start || !end)) { setErr("Please select start and end dates."); return; }
     if (needsDates && end < start) { setErr("End date must be after start date."); return; }
     setSending(true); setErr("");
-    const basePrice = type==="rent" ? item.rent : type==="loan" ? (item.deposit||0) : item.sale;
-    const finalPrice = Math.max(0, basePrice - creditAmt);
-    // Platform fee: 8% on rental and sale only (not loans)
-    const platformFee = (type==="loan") ? 0 : Math.max(0, parseFloat((basePrice * PLATFORM_FEE_PCT).toFixed(2)));
+    const finalPrice = Math.max(0, (basePrice||0) - creditAmt);
+    // Platform fee (basePrice/platformFee derived at component scope above)
     const platformFeeCents = Math.round(platformFee * 100);
 
     // Spend credits atomically if using them
