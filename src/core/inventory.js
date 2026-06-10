@@ -1,4 +1,5 @@
 // Built-in (theatre) inventory vocabulary: categories, conditions, sizes, availability, market — extracted from App.jsx.
+import { getCats } from "../lib/verticals.js";
 
 export const CAT_GFX = {
   costumes:  {grad:"linear-gradient(135deg,#7b1560,#c2185b,#e91e8c)",    icon:"👗"},
@@ -41,3 +42,12 @@ export const SIZES = ["XS","S","M","L","XL","XXL","One Size","N/A"];
 export const AVAIL = ["In Stock","In Use","Checked Out","Being Repaired","Lost","Retired"];
 
 export const MKT   = ["Not Listed","For Rent","For Sale","Rent or Sale","For Loan"];
+
+// ── Custom inventory categories (ADD-TO model) ──────────────────────────────
+// Stateful per-org registry, loaded at runtime; SUPPLEMENTS the built-in
+// vertical categories. setCustomCats() swaps the active list (called after the
+// org's custom_categories rows load). customCatsFor()/getCatsMerged() read it.
+let CUSTOM_CATS = [];
+export function setCustomCats(rows){ CUSTOM_CATS = Array.isArray(rows) ? rows.map(r=>({id:r.id,vertical:r.vertical,label:r.label})) : []; }
+export function customCatsFor(vertical){ return CUSTOM_CATS.filter(c=>c.vertical===(vertical||"theatre")).map(c=>({id:c.id,label:c.label,icon:"📦",color:"#4a2e1a",custom:true})); }
+export function getCatsMerged(vertical){ return [...getCats(vertical), ...customCatsFor(vertical)]; }
