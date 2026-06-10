@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { CAT } from "./inventory.js";
+import { QR } from "./qr.js";
 
 const LABEL_PACKS = [
   { qty:25,  type:"standard",    label:"25 Standard",     retail:1000, desc:"Indoor use · polyester matte · water-resistant" },

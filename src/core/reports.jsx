@@ -5,6 +5,7 @@ import { BG, usp } from "../lib/backgrounds.js";
 import { Ic } from "./icons.jsx";
 import { UpgradePlans } from "./billing.jsx";
 import { fmt$ } from "./helpers.js";
+import { QR } from "./qr.js";
 
 // Reports page (+ platform-usage + production-report tabs) — extracted from App.jsx.
 
