@@ -4,7 +4,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { SB } from "./supabase.js";
 import { Ic } from "./icons.jsx";
-import { resizeImg } from "./helpers.js";
+import { resizeImg, postShareText } from "./helpers.js";
+import { EM } from "./messages.js";
 import { FbShareBtn } from "./ui.jsx";
 import { usp } from "../lib/backgrounds.js";
 

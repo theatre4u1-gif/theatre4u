@@ -78,7 +78,7 @@ const uid  = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(
 // The user shares to their own timeline, page, or any group they're in.
 // Small reusable Facebook share button
 // Fallback category map for use before CATS const is available
-const itemNum = n  => n != null ? "#" + String(n).padStart(4, "0") : "";
+// itemNum moved to core/items.jsx (its only caller is ItemDetail)
 // Page background images — 5 confirmed-working Unsplash IDs only
 
 // Category visual identity — CSS gradients, always works, never breaks

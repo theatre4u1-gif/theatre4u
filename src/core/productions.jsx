@@ -7,6 +7,7 @@ import { SB } from "./supabase.js";
 import { Modal } from "./ui.jsx";
 import { CATS, CAT } from "./inventory.js";
 import { Ic } from "./icons.jsx";
+import { parseCSV } from "./helpers.js";
 import { usp } from "../lib/backgrounds.js";
 
 // ══════════════════════════════════════════════════════════════════════════════

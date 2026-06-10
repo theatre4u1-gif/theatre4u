@@ -8,6 +8,7 @@ import { Modal } from "./ui.jsx";
 import { EM } from "./messages.js";
 import { fmt$ } from "./helpers.js";
 import { BG, usp } from "../lib/backgrounds.js";
+import { PLATFORM_FEE_PCT, MILESTONE_POINTS, POINT_EARN_RATES } from "./points-config.js";
 
 // ══════════════════════════════════════════════════════════════════════════════
 // RENTAL REQUEST FLOW

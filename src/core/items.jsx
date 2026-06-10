@@ -14,6 +14,9 @@ import { ROW_LABELS, COL_LABELS } from "./storage-map.js";
 import { AddToProductionPicker } from "./productions.jsx";
 import { getVertical } from "../lib/verticals.js";
 
+// Format an item number as "#0001" (moved from App.jsx — only ItemDetail uses it)
+const itemNum = n => n != null ? "#" + String(n).padStart(4, "0") : "";
+
 // Upload a file to Supabase Storage and return the public URL
 async function uploadPhoto(file, userId) {
   try {
