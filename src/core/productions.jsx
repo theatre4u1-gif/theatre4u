@@ -201,7 +201,8 @@ function ProductionForm({ prod, onSave, onCancel }) {
 }
 
 // ── Shared: Print Production Report ──────────────────────────────────────────
-async function printProductionReport(prod, needs, prodItems, allItems, org) {
+// Exported — used by ProductionDetail (here) and ProductionReportTab (reports.jsx).
+export async function printProductionReport(prod, needs, prodItems, allItems, org) {
   const today = new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
   const orgName = org?.name || "Theatre Program";
 

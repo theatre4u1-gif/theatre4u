@@ -6,6 +6,7 @@ import { Ic } from "./icons.jsx";
 import { UpgradePlans } from "./billing.jsx";
 import { fmt$ } from "./helpers.js";
 import { QR } from "./qr.js";
+import { printProductionReport } from "./productions.jsx";
 
 // Reports page (+ platform-usage + production-report tabs) — extracted from App.jsx.
 
