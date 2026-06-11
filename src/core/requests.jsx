@@ -84,6 +84,7 @@ export function RequestItemModal({ item, currentUserId, currentOrgName, currentO
     if (needsDates && (!start || !end)) { setErr("Please select start and end dates."); return; }
     if (needsDates && end < start) { setErr("End date must be after start date."); return; }
     setSending(true); setErr("");
+    try {
     const finalPrice = Math.max(0, (basePrice||0) - creditAmt);
     // Platform fee (basePrice/platformFee derived at component scope above)
     const platformFeeCents = Math.round(platformFee * 100);
@@ -96,7 +97,7 @@ export function RequestItemModal({ item, currentUserId, currentOrgName, currentO
         p_description: `Applied ${creditAmt} credits to ${item.name} ${type}`,
         p_item_id: item.id
       });
-      if(!spendResult?.success){ setErr(spendResult?.error||"Could not apply credits."); setSending(false); return; }
+      if(!spendResult?.success){ setErr(spendResult?.error||"Could not apply credits."); return; }
     }
 
     const { data, error } = await SB.from("rental_requests").insert({
@@ -119,17 +120,24 @@ export function RequestItemModal({ item, currentUserId, currentOrgName, currentO
       platform_fee_cents:  platformFeeCents,
       status:              "pending",
     }).select().single();
-    if (error) { setErr(EM.requestSend.body); setSending(false); return; }
-    // Award first_request milestone points (one-time, idempotent)
-    SB.rpc("award_milestone_points", {
-      p_org_id: currentUserId, p_type: "first_request",
-      p_amount: MILESTONE_POINTS.first_request.pts,
-      p_desc: "First Exchange request sent"
-    }).catch(()=>{});
-    notifyRequest("new_request", data.id);
+    if (error) { setErr(EM.requestSend.body); return; }
+    // Award first_request milestone points (one-time, idempotent) — best-effort
+    try {
+      SB.rpc("award_milestone_points", {
+        p_org_id: currentUserId, p_type: "first_request",
+        p_amount: MILESTONE_POINTS?.first_request?.pts ?? 10,
+        p_desc: "First Exchange request sent"
+      }).catch(()=>{});
+    } catch {}
+    try { notifyRequest("new_request", data?.id); } catch {}
     onSuccess?.();
     onClose();
-    setSending(false);
+    } catch (e) {
+      console.error("request submit failed:", e);
+      setErr((EM.requestSend && EM.requestSend.body) || "Could not send your request. Please try again.");
+    } finally {
+      setSending(false);
+    }
   };
 
   const paymentNote = type === "loan"
