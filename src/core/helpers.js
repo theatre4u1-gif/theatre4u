@@ -1,4 +1,8 @@
 // Small shared helpers — extracted from App.jsx.
+
+// Short unique-ish id generator (used for local item ids before DB insert).
+export const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
+
 export function authErrKey(msg) {
   const m = (msg || "").toLowerCase();
   if (m.includes("invalid login") || m.includes("invalid credentials") || m.includes("email not confirmed") || m.includes("wrong password") || m.includes("incorrect password")) return "loginBadPassword";
