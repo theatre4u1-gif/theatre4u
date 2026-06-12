@@ -17566,20 +17566,26 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
       const { data: memberRows } = await SB.from("org_members")
         .select("org_id, role, orgs(*)")
         .eq("user_id", user.id);
-      const memberList = memberRows || [];
+      let memberList = memberRows || [];
+      // Always make the user's OWN org (id === user.id) selectable as owner, so a
+      // multi-program owner who is also a member elsewhere can still reach their
+      // own org. Appended (not prepended) to preserve the default-landing behavior.
+      if (!memberList.some(m => m.org_id === user.id)) {
+        const { data: ownOrg } = await SB.from("orgs").select("*").eq("id", user.id).single();
+        if (ownOrg) memberList = [...memberList, { org_id: user.id, role: null, orgs: ownOrg, _own: true }];
+      }
       setMemberships(memberList);
 
-      // Pick the active membership: a saved preference if still valid, else the first.
-      // Users with 0 memberships use their own org (unchanged behavior).
-      // Users with exactly 1 membership use it (unchanged behavior).
-      // Users with 2+ (multi-program directors) default to first; switcher can change it.
-      let activeMembership = null;
-      if (memberList.length > 0) {
-        const savedId = (()=>{ try { return localStorage.getItem("t4u_active_program"); } catch(e){ return null; } })();
-        activeMembership = memberList.find(m => m.org_id === savedId) || memberList[0];
-      }
-      const targetOrgId = activeMembership ? activeMembership.org_id : user.id;
-      const memberRole  = activeMembership ? activeMembership.role : null;
+      // Pick the active program: a saved preference if still valid, else the first
+      // REAL membership (preserves prior default), else the user's own org.
+      const savedId = (()=>{ try { return localStorage.getItem("t4u_active_program"); } catch(e){ return null; } })();
+      const firstReal = (memberRows && memberRows.length) ? memberRows[0] : (memberList[0] || null);
+      let activeMembership = memberList.find(m => m.org_id === savedId) || firstReal;
+      // The user's own org is owner access, NOT a membership — treat it like the
+      // old "0 memberships" path (memberRole=null, not a member).
+      const realMembership = (activeMembership && activeMembership.org_id !== user.id) ? activeMembership : null;
+      const targetOrgId = realMembership ? realMembership.org_id : user.id;
+      const memberRole  = realMembership ? realMembership.role : null;
 
       const{data:orgData}=await SB.from("orgs").select("*").eq("id",targetOrgId).single();
       // Admin emails always get District plan regardless of what is stored
@@ -17588,7 +17594,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
         : orgData?.temp_pro ? "pro"
         : (orgData?.plan || "free");
       if(orgData){
-        setOrg({...orgData, _memberRole: memberRole, _isMember: !!activeMembership});
+        setOrg({...orgData, _memberRole: memberRole, _isMember: !!realMembership});
         setMemberRole(memberRole);
         setPlanState(effectivePlan);
         // Load onboarding step — 0 = brand new user
