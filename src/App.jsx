@@ -10030,7 +10030,7 @@ function TeamSettings({ userId, orgName, plan }) {
                 <select value={m.role} onChange={e => changeRole(m.id, e.target.value)}
                   style={{ background: "var(--parch)", border: "1px solid var(--bd)", borderRadius: 6,
                     padding: "4px 8px", color: "var(--text)", fontSize: 12, fontFamily: "inherit" }}>
-                  {ROLES.map(ro => <option key={ro.id} value={ro.id}>{ro.icon} {ro.label}</option>)}
+                  {[{ id: "director", label: "Co-Director", icon: "🎬" }, ...ROLES].map(ro => <option key={ro.id} value={ro.id}>{ro.icon} {ro.label}</option>)}
                 </select>
                 <button onClick={() => removeMember(m.id, m.email)}
                   style={{ background: "none", border: "none", color: "var(--faint)", cursor: "pointer",
@@ -10089,7 +10089,7 @@ function TeamSettings({ userId, orgName, plan }) {
             style={{ flex: "1 1 200px", minWidth: 0 }}/>
           <select value={inviteRole} onChange={e => setInviteRole(e.target.value)}
             className="fs" style={{ flex: "0 0 auto", minWidth: 130 }}>
-            {ROLES.map(r => <option key={r.id} value={r.id}>{r.icon} {r.label}</option>)}
+            {[{ id: "director", label: "Co-Director", icon: "🎬" }, ...ROLES].map(r => <option key={r.id} value={r.id}>{r.icon} {r.label}</option>)}
           </select>
           <button className="btn bp" onClick={sendInvite} disabled={sending || !inviteEmail.trim()}
             style={{ whiteSpace: "nowrap" }}>
@@ -10098,7 +10098,7 @@ function TeamSettings({ userId, orgName, plan }) {
         </div>
         {inviteEmail && (
           <div style={{ fontSize: 11, color: "var(--faint)", marginTop: 6 }}>
-            They'll get a link to join your team at <strong>{orgName}</strong> as <strong>{ROLE_MAP[inviteRole]?.label}</strong>.
+            They'll get a link to join your team at <strong>{orgName}</strong> as <strong>{ROLE_MAP[inviteRole]?.label || (inviteRole === "director" ? "Co-Director" : inviteRole)}</strong>.
           </div>
         )}
       </div>
