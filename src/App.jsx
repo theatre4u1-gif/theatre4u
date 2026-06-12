@@ -4212,6 +4212,17 @@ function Requests({ userId, orgName, orgEmail }) {
     setActing(null);
   };
 
+  // Permanently delete a request (owner/requester only — RLS enforces). For
+  // clearing out requests once they've been handled.
+  const delRequest = async (req) => {
+    if (!window.confirm("Delete this request permanently? This can't be undone.")) return;
+    setActing(req.id);
+    const { error } = await SB.from("rental_requests").delete().eq("id", req.id);
+    if (error) { setActing(null); alert("Couldn't delete this request. Please try again."); return; }
+    setRequests(p => p.filter(r => r.id !== req.id));
+    setActing(null);
+  };
+
   const statusColor = { pending:"#d35400", accepted:"#27723a", declined:"#c2185b", returned:"#546e7a", cancelled:"#9e9e9e" };
   const statusIcon  = { pending:"⏳", accepted:"✅", declined:"❌", returned:"📦", cancelled:"🚫" };
   const typeLabel   = { rent:"Rental", loan:"Loan", buy:"Purchase" };
@@ -4391,6 +4402,15 @@ function Requests({ userId, orgName, orgEmail }) {
                       {req.conversation_id&&(
                         <button className="btn btn-o btn-sm" onClick={()=>window.__t4u_nav_messages&&window.__t4u_nav_messages(req.conversation_id)}>
                           💬 Open Chat
+                        </button>
+                      )}
+
+                      {/* Delete — clear out a request once it's been dealt with */}
+                      {declineId!==req.id&&(
+                        <button className="btn btn-o btn-sm" title="Delete this request"
+                          onClick={()=>delRequest(req)} disabled={isActive}
+                          style={{color:"#c2185b",borderColor:"rgba(194,24,91,.35)"}}>
+                          🗑 Delete
                         </button>
                       )}
 
@@ -8133,7 +8153,7 @@ function NewConversationModal({ item, itemOrgId, itemOrgName, currentUserId, cur
 }
 
 // ── Chat Window ────────────────────────────────────────────────────────────────
-function ChatWindow({ convId, currentUserId, orgNames, onClose, onUnreadChange }) {
+function ChatWindow({ convId, currentUserId, orgNames, onClose, onUnreadChange, onDeleted }) {
   const [messages,  setMessages]  = useState([]);
   const [conv,      setConv]      = useState(null);
   const [body,      setBody]      = useState("");
@@ -8238,6 +8258,9 @@ function ChatWindow({ convId, currentUserId, orgNames, onClose, onUnreadChange }
             <div style={{fontWeight:700,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{otherName}</div>
             {conv?.item_name && <div style={{fontSize:11,color:"var(--muted)"}}>Re: {conv.item_name}</div>}
           </div>
+          <button onClick={async()=>{ if(!window.confirm("Delete this conversation and all its messages? This can't be undone."))return; const{error}=await SB.from("conversations").delete().eq("id",convId); if(error){alert("Couldn't delete this conversation. Please try again.");return;} (onDeleted||onClose)(); }}
+            title="Delete conversation" style={{background:"none",border:"none",color:"#c2185b",
+            cursor:"pointer",fontSize:16,padding:"0 4px",lineHeight:1}}>🗑</button>
           <button onClick={onClose} style={{background:"none",border:"none",color:"var(--muted)",
             cursor:"pointer",fontSize:20,padding:"0 4px",lineHeight:1}}>✕</button>
         </div>
@@ -8502,6 +8525,7 @@ function Messages({ userId, orgName, openConvId, onClearOpenConv }) {
             orgNames={{...orgNames, [userId]: orgName||"You"}}
             onClose={()=>setActiveConv(null)}
             onUnreadChange={loadConvs}
+            onDeleted={async()=>{ setActiveConv(null); await loadConvs(); }}
           />
         ) : (
           <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
