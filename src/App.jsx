@@ -3149,6 +3149,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
         currentUserId={org?.id}
         currentOrgName={org?.name}
         currentOrgEmail={org?.email}
+        plan={plan}
         onClose={()=>setRequestItem(null)}
         onSuccess={()=>{ window.__t4u_nav_requests&&window.__t4u_nav_requests(); }}
       />}
