@@ -9893,8 +9893,49 @@ function TeamSettings({ userId, orgName, plan }) {
   const [sending,  setSending]  = useState(false);
   const [msg,      setMsg]      = useState("");
   const [showCode, setShowCode] = useState(false);
+  const [qrUrl,    setQrUrl]    = useState(null);
 
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(""), 3500); };
+
+  const inviteUrl = joinCode ? `https://theatre4u.org/invite.html?code=${joinCode}` : null;
+
+  // Generate a QR image for the join link whenever the code is available.
+  // Retries a few times — the QR generator loads from a CDN and can fail the
+  // first time; if it never succeeds we just fall back to the code + link.
+  useEffect(() => {
+    if (!joinCode) { setQrUrl(null); return; }
+    let cancelled = false;
+    (async () => {
+      for (let attempt = 0; attempt < 4 && !cancelled; attempt++) {
+        const url = await QR.toDataURL(inviteUrl, 240);
+        if (cancelled) return;
+        if (url) { setQrUrl(url); return; }
+        await new Promise(r => setTimeout(r, 700)); // brief backoff, then retry
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [joinCode]); // eslint-disable-line
+
+  // Open a print-ready sheet for posting in the costume room. Includes the QR if
+  // it generated; otherwise prints the code + link so the sheet is still usable.
+  const printQR = () => {
+    const w = window.open("", "_blank");
+    if (!w) return;
+    const qrBlock = qrUrl
+      ? `<p style="font-size:15px;color:#555;margin:0 0 24px">Scan with your phone camera to sign up as crew.</p>
+         <img src="${qrUrl}" width="300" height="300" style="display:block;margin:0 auto"/>`
+      : `<p style="font-size:15px;color:#555;margin:0 0 24px">Enter this code at theatre4u.org to sign up as crew.</p>`;
+    w.document.write(`<!DOCTYPE html><html><head><title>Join ${orgName} on Theatre4u</title></head>
+      <body style="font-family:Arial,sans-serif;text-align:center;padding:48px 24px;color:#1a1200">
+        <div style="font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#d4a843">🎭 Theatre4u</div>
+        <h1 style="font-size:26px;margin:10px 0 4px">Join the ${orgName} team</h1>
+        ${qrBlock}
+        <p style="font-size:22px;font-weight:800;letter-spacing:4px;margin:18px 0 2px">${joinCode}</p>
+        <p style="font-size:13px;color:#888;margin:0">Or visit theatre4u.org/invite.html?code=${joinCode}</p>
+      </body></html>`);
+    w.document.close();
+    setTimeout(() => w.print(), 300);
+  };
 
   // Load team
   const load = useCallback(async () => {
@@ -10139,6 +10180,13 @@ function TeamSettings({ userId, orgName, plan }) {
           <div style={{ background: "var(--parch)", border: "1px solid var(--bd)", borderRadius: 12,
             padding: "16px 20px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+              {qrUrl && (
+                <div style={{ textAlign: "center" }}>
+                  <img src={qrUrl} alt="Join QR code" width={108} height={108}
+                    style={{ display: "block", borderRadius: 8, background: "#fff", padding: 4 }}/>
+                  <div style={{ fontSize: 10, color: "var(--faint)", marginTop: 3 }}>Scan to join</div>
+                </div>
+              )}
               <div>
                 <div style={{ fontSize: 11, color: "var(--faint)", marginBottom: 4 }}>Share this code</div>
                 <div style={{ fontFamily: "monospace", fontSize: 28, fontWeight: 900,
@@ -10150,12 +10198,15 @@ function TeamSettings({ userId, orgName, plan }) {
                   theatre4u.org/invite.html?code={joinCode}
                 </div>
               </div>
-              <button className="btn bs bsm" onClick={() => {
-                navigator.clipboard?.writeText(`https://theatre4u.org/invite.html?code=${joinCode}`)
-                  .then(() => flash("✓ Link copied to clipboard!"))
-                  .catch(() => flash("✓ Link: https://theatre4u.org/invite.html?code=" + joinCode));
-                flash("✓ Link copied!");
-              }}>Copy Link</button>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <button className="btn bs bsm" onClick={() => {
+                  navigator.clipboard?.writeText(inviteUrl)
+                    .then(() => flash("✓ Link copied to clipboard!"))
+                    .catch(() => flash("✓ Link: " + inviteUrl));
+                  flash("✓ Link copied!");
+                }}>Copy Link</button>
+                <button className="btn bs bsm" onClick={printQR}>🖨 Print {qrUrl ? "QR" : "Code"}</button>
+              </div>
             </div>
             <div style={{ fontSize: 11, color: "var(--faint)", marginTop: 12, lineHeight: 1.5 }}>
               Anyone with this code joins as <strong>Crew</strong> — they can add and edit items.
