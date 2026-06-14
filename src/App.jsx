@@ -2232,7 +2232,7 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
   );
 }
 
-function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null, enableLoans=false}){
+function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null, enableLoans=false, onImported=null}){
     const[upgradeReason,setUpgradeReason]=useState(null);
   const vVertical=org?.vertical||"theatre";
   const vCATS=getCatsMerged(vVertical);
@@ -2468,7 +2468,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
     {enableLoans&&invView==="loans" ? (
       <div style={{padding:"8px 0 56px"}}><ExternalLoans userId={userId} org={org} items={items}/></div>
     ) : (<>
-    {upgradeReason&&<UpgradePrompt reason={upgradeReason} onClose={()=>setUpgradeReason(null)} userId={user?.id} userEmail={user?.email}/>}
+    {upgradeReason&&<UpgradePrompt reason={upgradeReason} onClose={()=>setUpgradeReason(null)} userId={userId} userEmail={org?.email}/>}
     {locFilter!=="all"&&locFilterName&&(
       <div style={{display:"flex",alignItems:"center",gap:10,background:"rgba(232,184,93,.1)",border:"1px solid rgba(232,184,93,.3)",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
         <span style={{fontSize:20}}>📦</span>
@@ -2742,7 +2742,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
           <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={org?.vertical||"theatre"}/>
         </Modal>)}
       {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{onDelete(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete}/></Modal>}
-      {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",user?.id).order("added",{ascending:false});if(data)setItems(data);}}/>}
+      {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",userId).order("added",{ascending:false});if(data&&onImported)onImported(data);}}/>}
     </div>
     </>)}
   </>
@@ -2940,7 +2940,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
       <div style={{fontSize:44,marginBottom:14}}>🏪</div>
       <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:22,marginBottom:10}}>Backstage Exchange is a Pro Feature</h2>
       <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Share selected items with other programs — rent, sell, or loan. Upgrade to Pro to join Backstage Exchange.</p>
-      <UpgradePlans compact={true} userId={userId} userEmail={userEmail}/>
+      <UpgradePlans compact={true} userId={org?.id} userEmail={org?.email}/>
     </div>
   );
 
@@ -3141,7 +3141,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
         itemOrgName={contactItem.org_name}
         currentUserId={org?.id}
         currentOrgName={org?.name}
-        onOpen={convId=>{setOpenConvId(convId); window.__t4u_nav_messages&&window.__t4u_nav_messages(convId);}}
+        onOpen={convId=>{window.__t4u_nav_messages&&window.__t4u_nav_messages(convId);}}
         onClose={()=>setContactItem(null)}
       />}
       {requestItem&&<RequestItemModal
@@ -3196,6 +3196,10 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
   const [creditAmt, setCreditAmt] = useState(0);
   const needsDates = type !== "buy";
 
+  // Pricing (component scope — used by both the summary render and submit())
+  const basePrice   = type==="rent" ? item.rent : type==="loan" ? (item.deposit||0) : item.sale;
+  const platformFee = (type==="loan") ? 0 : Math.max(0, parseFloat((((basePrice||0)) * PLATFORM_FEE_PCT).toFixed(2)));
+
   // Load availability blocks + my point balance
   useEffect(()=>{
     SB.from("availability_blocks").select("*").eq("item_id", item.id)
@@ -3227,10 +3231,8 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
     if (needsDates && (!start || !end)) { setErr("Please select start and end dates."); return; }
     if (needsDates && end < start) { setErr("End date must be after start date."); return; }
     setSending(true); setErr("");
-    const basePrice = type==="rent" ? item.rent : type==="loan" ? (item.deposit||0) : item.sale;
-    const finalPrice = Math.max(0, basePrice - creditAmt);
-    // Platform fee: 8% on rental and sale only (not loans)
-    const platformFee = (type==="loan") ? 0 : Math.max(0, parseFloat((basePrice * PLATFORM_FEE_PCT).toFixed(2)));
+    const finalPrice = Math.max(0, (basePrice||0) - creditAmt);
+    // Platform fee (basePrice/platformFee derived at component scope above)
     const platformFeeCents = Math.round(platformFee * 100);
 
     // Spend credits atomically if using them
@@ -6384,6 +6386,27 @@ function AdminEditItemModal({ item, onClose, onSaved }) {
     </div>
   );
 }
+
+// CSV import field schema (used by autoMatch + CSVImport's column mapper).
+// Restored — it had been accidentally deleted in an earlier commit, which broke CSV import.
+const CSV_FIELDS = [
+  { key:"name",       label:"Item Name",    required:true,  hints:["name","item","title","item name"] },
+  { key:"category",   label:"Category",     required:false, hints:["category","cat","type","kind"] },
+  { key:"condition",  label:"Condition",    required:false, hints:["condition","cond","quality","state"] },
+  { key:"size",       label:"Size",         required:false, hints:["size","sz"] },
+  { key:"qty",        label:"Quantity",     required:false, hints:["qty","quantity","count","amount","num","number"] },
+  { key:"location",   label:"Location",     required:false, hints:["location","loc","storage","bin","room","where","place"] },
+  { key:"avail",      label:"Availability", required:false, hints:["availability","avail","available","status"] },
+  { key:"mkt",        label:"Market Status",required:false, hints:["market","mkt","listing","listed","for rent","for sale"] },
+  { key:"rent",       label:"Rental Price", required:false, hints:["rent","rental","rate","per week","weekly"] },
+  { key:"loan_period",label:"Loan Period",  required:false, hints:["loan period","loan weeks","borrow period","lending period","weeks"] },
+  { key:"deposit",    label:"Deposit",      required:false, hints:["deposit","security","refundable"] },
+  { key:"sale",       label:"Sale Price",   required:false, hints:["sale","sell","price","cost","value"] },
+  { key:"tags",       label:"Tags",         required:false, hints:["tags","tag","keywords","labels"] },
+  { key:"description",label:"Description",  required:false, hints:["description","desc","item description","about","overview"] },
+  { key:"img",        label:"Image URL",    required:false, hints:["image","image url","photo","photo url","img","picture","url","photo link","image link"] },
+  { key:"notes",      label:"Notes",        required:false, hints:["notes","note","comments","comment","remarks","details"] },
+];
 
 function autoMatch(header) {
   const h = header.toLowerCase().trim();
@@ -18275,7 +18298,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
                     }}/>}
                   {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
                   {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} pointBalance={creditBalance} goInventory={(cat)=>{ if(cat) setDeepLinkCategory(cat); nav("inventory"); }} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
-                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org} enableLoans={!memberRole} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} deepLinkCategory={deepLinkCategory} onDeepLinkCategoryConsumed={()=>setDeepLinkCategory(null)}/>}
+                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org} enableLoans={!memberRole} onImported={(data)=>setItems(data)} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} deepLinkCategory={deepLinkCategory} onDeepLinkCategoryConsumed={()=>setDeepLinkCategory(null)}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
                       ? <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading {activeSchool.name}…</div>
