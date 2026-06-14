@@ -1075,6 +1075,17 @@ export function Requests({ userId, orgName, orgEmail }) {
     setActing(null);
   };
 
+  // Permanently delete a request (owner/requester only — RLS enforces). For
+  // clearing out requests once they've been handled.
+  const delRequest = async (req) => {
+    if (!window.confirm("Delete this request permanently? This can't be undone.")) return;
+    setActing(req.id);
+    const { error } = await SB.from("rental_requests").delete().eq("id", req.id);
+    if (error) { setActing(null); alert("Couldn't delete this request. Please try again."); return; }
+    setRequests(p => p.filter(r => r.id !== req.id));
+    setActing(null);
+  };
+
   const statusColor = { pending:"#d35400", accepted:"#27723a", declined:"#c2185b", returned:"#546e7a", cancelled:"#9e9e9e" };
   const statusIcon  = { pending:"⏳", accepted:"✅", declined:"❌", returned:"📦", cancelled:"🚫" };
   const typeLabel   = { rent:"Rental", loan:"Loan", buy:"Purchase" };
@@ -1254,6 +1265,15 @@ export function Requests({ userId, orgName, orgEmail }) {
                       {req.conversation_id&&(
                         <button className="btn btn-o btn-sm" onClick={()=>window.__t4u_nav_messages&&window.__t4u_nav_messages(req.conversation_id)}>
                           💬 Open Chat
+                        </button>
+                      )}
+
+                      {/* Delete — clear out a request once it's been dealt with */}
+                      {declineId!==req.id&&(
+                        <button className="btn btn-o btn-sm" title="Delete this request"
+                          onClick={()=>delRequest(req)} disabled={isActive}
+                          style={{color:"#c2185b",borderColor:"rgba(194,24,91,.35)"}}>
+                          🗑 Delete
                         </button>
                       )}
 

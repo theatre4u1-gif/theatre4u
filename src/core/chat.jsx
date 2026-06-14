@@ -202,6 +202,7 @@ export function Messages({ userId, orgName, openConvId, onClearOpenConv }) {
             orgNames={{...orgNames, [userId]: orgName||"You"}}
             onClose={()=>setActiveConv(null)}
             onUnreadChange={loadConvs}
+            onDeleted={async()=>{ setActiveConv(null); await loadConvs(); }}
           />
         ) : (
           <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
@@ -218,7 +219,7 @@ export function Messages({ userId, orgName, openConvId, onClearOpenConv }) {
   );
 }
 
-export function ChatWindow({ convId, currentUserId, orgNames, onClose, onUnreadChange }) {
+export function ChatWindow({ convId, currentUserId, orgNames, onClose, onUnreadChange, onDeleted }) {
   const [messages,  setMessages]  = useState([]);
   const [conv,      setConv]      = useState(null);
   const [body,      setBody]      = useState("");
@@ -323,6 +324,9 @@ export function ChatWindow({ convId, currentUserId, orgNames, onClose, onUnreadC
             <div style={{fontWeight:700,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{otherName}</div>
             {conv?.item_name && <div style={{fontSize:11,color:"var(--muted)"}}>Re: {conv.item_name}</div>}
           </div>
+          <button onClick={async()=>{ if(!window.confirm("Delete this conversation and all its messages? This can't be undone."))return; const{error}=await SB.from("conversations").delete().eq("id",convId); if(error){alert("Couldn't delete this conversation. Please try again.");return;} (onDeleted||onClose)(); }}
+            title="Delete conversation" style={{background:"none",border:"none",color:"#c2185b",
+            cursor:"pointer",fontSize:16,padding:"0 4px",lineHeight:1}}>🗑</button>
           <button onClick={onClose} style={{background:"none",border:"none",color:"var(--muted)",
             cursor:"pointer",fontSize:20,padding:"0 4px",lineHeight:1}}>✕</button>
         </div>
