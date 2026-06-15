@@ -101,3 +101,33 @@ export function LegalModal({title, onClose, children}){
     </div>
   );
 }
+
+// App-wide error boundary (fallback screen on a render crash). Moved from App.jsx.
+export class ErrorBoundary extends React.Component {
+  constructor(p){super(p);this.state={err:null,info:null};}
+  static getDerivedStateFromError(e){return{err:e};}
+  componentDidCatch(e,info){console.error("App crashed:",e,info);}
+  render(){
+    if(this.state.err)return(
+      <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+        height:"100vh",gap:20,padding:40,textAlign:"center",background:"var(--bg,#0d0b11)",color:"var(--t1,#ede8df)"}}>
+        <div style={{fontSize:52}}>🎭</div>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--gold,#d4a843)"}}>
+          Something went wrong
+        </div>
+        <div style={{fontSize:13,color:"var(--t3,#9b93a8)",maxWidth:360,lineHeight:1.7}}>
+          {this.state.err?.message||"An unexpected error occurred. This has been noted."}
+        </div>
+        <button onClick={()=>window.location.reload()}
+          style={{background:"linear-gradient(135deg,#d4a843,#a37f2c)",border:"none",color:"#1a1200",
+            padding:"10px 24px",borderRadius:8,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
+          Reload App
+        </button>
+        <a href="mailto:hello@theatre4u.org" style={{fontSize:12,color:"var(--t3,#9b93a8)"}}>
+          Contact support
+        </a>
+      </div>
+    );
+    return this.props.children;
+  }
+}
