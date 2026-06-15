@@ -17734,8 +17734,12 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
   },[user]);
 
   // ── CRUD ─────────────────────────────────────────────────────────────────
+  // Active org to write to: the org currently being viewed (own org for owners,
+  // or the org a team member belongs to). NEVER user.id directly — a crew member's
+  // uid is not an orgs row, which violates items_org_id_fkey. (Coppell fix 2026-06-15)
+  const activeOrgId = org?.id || user?.id;
   const add = useCallback(async(item)=>{
-    const row={...item,org_id:user.id};
+    const row={...item,org_id:activeOrgId};
     // Sanitize optional numeric/date/uuid fields — empty string → null
     if(!row.purchase_cost || row.purchase_cost==="")    row.purchase_cost    = null;
     else row.purchase_cost = parseFloat(row.purchase_cost) || null;
@@ -17752,7 +17756,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
       // Auto-create funding expenditure if a funding source and cost were provided
       if(item.funding_source_id && item.purchase_cost && parseFloat(item.purchase_cost)>0){
         await SB.from("funding_expenditures").insert({
-          org_id:           user.id,
+          org_id:           activeOrgId,
           funding_source_id: item.funding_source_id,
           item_id:          data.id,
           amount:           parseFloat(item.purchase_cost),
@@ -17763,7 +17767,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
         });
       }
     }
-  },[user]);
+  },[user,activeOrgId]);
 
   const edit = useCallback(async(item)=>{
     const payload={...item};
@@ -17790,7 +17794,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
         const{data:existing}=await SB.from("funding_expenditures").select("id").eq("item_id",item.id).maybeSingle();
         if(!existing){
           await SB.from("funding_expenditures").insert({
-            org_id:           user.id,
+            org_id:           activeOrgId,
             funding_source_id: item.funding_source_id,
             item_id:          item.id,
             amount:           parseFloat(item.purchase_cost),
@@ -17810,7 +17814,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
         }
       }
     }
-  },[user]);
+  },[user,activeOrgId]);
 
   const del = useCallback(async(id)=>{
     await SB.from("items").delete().eq("id",id);
@@ -17821,11 +17825,11 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
     if(items.length>0){
       if(!window.confirm("You already have "+items.length+" item(s). Add sample data anyway?")) return;
     }
-    const samples=makeSamples().map(i=>({...i,org_id:user.id}));
+    const samples=makeSamples().map(i=>({...i,org_id:activeOrgId}));
     const{data,error}=await SB.from("items").insert(samples).select();
     if(error){alert(EM.sampleLoad.title+"\n\n"+EM.sampleLoad.body);return;}
     if(data) setItems(p=>[...data,...p]);
-  },[user,items]);
+  },[user,items,activeOrgId]);
 
   // setPlan — used by admin test panel to override plan
   const setPlan = useCallback(async(newPlan)=>{
@@ -18301,7 +18305,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
                     }}/>}
                   {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
                   {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} pointBalance={creditBalance} goInventory={(cat)=>{ if(cat) setDeepLinkCategory(cat); nav("inventory"); }} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
-                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={user?.id} plan={plan} memberRole={memberRole} org={org} enableLoans={!memberRole} onImported={(data)=>setItems(data)} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} deepLinkCategory={deepLinkCategory} onDeepLinkCategoryConsumed={()=>setDeepLinkCategory(null)}/>}
+                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={org?.id || user?.id} plan={plan} memberRole={memberRole} org={org} enableLoans={!memberRole} onImported={(data)=>setItems(data)} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} deepLinkCategory={deepLinkCategory} onDeepLinkCategoryConsumed={()=>setDeepLinkCategory(null)}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
                       ? <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading {activeSchool.name}…</div>
