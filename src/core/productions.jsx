@@ -9,6 +9,7 @@ import { CATS, CAT } from "./inventory.js";
 import { Ic } from "./icons.jsx";
 import { parseCSV } from "./helpers.js";
 import { usp } from "../lib/backgrounds.js";
+import { getTerm } from "../lib/verticals.js";
 
 // ══════════════════════════════════════════════════════════════════════════════
 // PRODUCTIONS  (Show Folders)
@@ -135,7 +136,7 @@ export function AddToProductionPicker({ item, userId, onClose }) {
 }
 
 // ── Production Form ────────────────────────────────────────────────────────
-function ProductionForm({ prod, onSave, onCancel }) {
+function ProductionForm({ prod, onSave, onCancel, vertical="theatre" }) {
   const [f, setF] = useState(prod || {
     name:"", show_title:"", opening_date:"", closing_date:"",
     notes:"", color:PROD_COLORS[0], status:"planning"
@@ -194,7 +195,7 @@ function ProductionForm({ prod, onSave, onCancel }) {
         <button className="btn btn-o" onClick={onCancel}>Cancel</button>
         <button className="btn btn-g" disabled={!f.name.trim()} onClick={()=>onSave(f)}
           style={!f.name.trim()?{opacity:.4}:{}}>
-          {prod ? "Save Changes" : "Create Production"}
+          {prod ? "Save Changes" : ("Create "+getTerm(vertical,"production"))}
         </button>
       </div>
     </div>
@@ -1323,7 +1324,7 @@ function ProductionDetail({ prod, allItems, userId, onEdit, onDelete, onClose, o
           <div style={{ fontSize:36, marginBottom:10 }}>📦</div>
           <h3 style={{ fontFamily:"var(--serif)", marginBottom:6 }}>No Items Yet</h3>
           <p style={{ color:"var(--muted)", fontSize:13, lineHeight:1.6 }}>
-            Open any item in Inventory and click "Add to Production" to start building your list.
+            Open any item in Inventory and click "{getTerm(org?.vertical,"addToProduction")}" to start building your list.
           </p>
         </div>
       ) : enriched.length === 0 ? (
@@ -1482,7 +1483,7 @@ export function Productions({ userId, allItems, org, onNavigateTo }) {
           <div style={{ textAlign:"center", padding:56 }}>
             <div style={{ fontSize:48, marginBottom:14 }}>🎭</div>
             <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:8 }}>
-              {filter==="all" ? "No Productions Yet" : ("No "+filter+" productions")}
+              {filter==="all" ? ("No "+getTerm(org?.vertical,"productions")+" Yet") : ("No "+filter+" "+getTerm(org?.vertical,"productions").toLowerCase())}
             </h3>
             <p style={{ color:"var(--muted)", fontSize:13, maxWidth:380, margin:"0 auto 20px", lineHeight:1.6 }}>
               {filter==="all"
@@ -1565,15 +1566,15 @@ export function Productions({ userId, allItems, org, onNavigateTo }) {
 
       {/* Modals */}
       {(modal==="new"||modal==="edit") && (
-        <Modal title={modal==="new"?"New Production":"Edit Production"}
+        <Modal title={modal==="new"?("New "+getTerm(org?.vertical,"production")):("Edit "+getTerm(org?.vertical,"production"))}
           onClose={()=>{ setModal(null); setActive(null); }}>
-          <ProductionForm prod={modal==="edit"?active:null}
+          <ProductionForm prod={modal==="edit"?active:null} vertical={org?.vertical}
             onSave={saveProd}
             onCancel={()=>{ setModal(null); setActive(null); }}/>
         </Modal>
       )}
       {modal==="detail" && active && (
-        <Modal title="Production Details"
+        <Modal title={getTerm(org?.vertical,"production")+" Details"}
           onClose={()=>{ setModal(null); setActive(null); load(); }}>
           <ProductionDetail
             prod={active}

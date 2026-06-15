@@ -8,7 +8,7 @@ import { fmt$, getPointsName } from "./helpers.js";
 import { CAT, CATS, getCatsMerged } from "./inventory.js";
 import { POINTS_FREE_MONTH } from "./points-config.js";
 import { BG, usp } from "../lib/backgrounds.js";
-import { getVertical, getExchangeName, getCatGfx } from "../lib/verticals.js";
+import { getVertical, getExchangeName, getCatGfx, getTerm } from "../lib/verticals.js";
 
 function CommunitySpotlight({onViewAll}){
   const [posts,   setPosts]   = useState([]);
@@ -304,9 +304,9 @@ export function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMa
           <HeroImg vertical={vVertical!=="theatre"?vVertical:null} photoId={BG.dashboard} w={1200} h={480} alt="" loading="eager"/>
           <div className="hero-fade"/>
           <div className="hero-body">
-            <div className="hero-eyebrow">📦 Inventory · Productions · Community</div>
+            <div className="hero-eyebrow">📦 Inventory · {getTerm(vVertical,"productions")} · Community</div>
             <h1 className="hero-title">{org.name?`Welcome,\n${org.name}`:"Welcome to\nTheatre4u"}</h1>
-            <p className="hero-sub">Everything your program owns — cataloged, photographed, and organized. Your theatre's complete inventory, always at your fingertips.</p>
+            <p className="hero-sub">Everything your program owns — cataloged, photographed, and organized. Your program's complete inventory, always at your fingertips.</p>
           </div>
           <div className="hero-bar"/>
         </div>
@@ -334,7 +334,7 @@ export function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMa
           {[
             {ico:"📦",val:totalQty,   lbl:"Total Items",     col:"#c4761a", bg:"photo-1558618666-fcd25c85cd64"}, // organized prop storage
             {ico:"📂",val:items.length,lbl:"Entries",         col:"#1554a0", bg:"photo-1489987707025-afc232f7ea0f"}, // costume racks
-            {ico:"🏪",val:listed,     lbl:"On Backstage Exchange",  col:"#27723a", bg:"photo-1460723237483-7a6dc9d0b212"}, // stage lit up
+            {ico:"🏪",val:listed,     lbl:"On "+getExchangeName(vVertical),  col:"#27723a", bg:"photo-1460723237483-7a6dc9d0b212"}, // stage lit up
             {ico:"📷",val:withImg,    lbl:"With Photos",     col:"#a0144e", bg:"photo-1516450360452-9312f5e86fc7"}, // stage lighting rigs
             {ico:"💰",val:totalVal>0?fmt$(totalVal):"—",lbl:"Est. Value",col:"#8b3a0f",bg:"photo-1503095396549-807759245b35"}, // grand theatre
           ].map(s=>(

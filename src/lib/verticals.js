@@ -17,6 +17,8 @@ export const VERTICALS = {
     color: "#b5174f",
     appName: "Theatre4u™",
     exchangeName: "Backstage Exchange",
+    terms: { productions:"Productions", production:"Production", addToProduction:"Add to Production", productionPhotos:"Production Photos", upcomingShow:"Upcoming Show", auditionNotice:"Audition Notice", showAnnouncement:"Show Announcement", crewRole:"Crew" },
+    fundingCats: ["Equipment","Costumes","Sets & Scenery","Lighting & Sound","Props","Scripts & Royalties","Supplies","Travel","Personnel","Other"],
     categories: [
       { id:"costumes",  label:"Costumes",        icon:"👗", color:"#b5174f", grad:"linear-gradient(135deg,#7b1560,#c2185b,#e91e8c)" },
       { id:"props",     label:"Props",            icon:"🎭", color:"#6a1b8a", grad:"linear-gradient(135deg,#4a148c,#7b1fa2,#9c27b0)" },
@@ -45,6 +47,8 @@ export const VERTICALS = {
     color: "#1554a0",
     appName: "ArtsTracker",
     exchangeName: "Instrument Exchange",
+    terms: { productions:"Concerts", production:"Concert", addToProduction:"Add to Concert", productionPhotos:"Concert Photos", upcomingShow:"Upcoming Concert", auditionNotice:"Audition Notice", showAnnouncement:"Concert Announcement", crewRole:"Aide" },
+    fundingCats: ["Instruments","Sheet Music","Equipment","Uniforms","Instruction","Travel","Personnel","Technology","Other"],
     categories: [
       { id:"strings",       label:"Strings",        icon:"🎻", color:"#6a1b8a", grad:"linear-gradient(135deg,#4a148c,#7b1fa2,#9c27b0)" },
       { id:"woodwinds",     label:"Woodwinds",       icon:"🎶", color:"#0d5e2a", grad:"linear-gradient(135deg,#1b5e20,#2e7d32,#43a047)" },
@@ -70,6 +74,8 @@ export const VERTICALS = {
     color: "#c2185b",
     appName: "ArtsTracker",
     exchangeName: "Dance Exchange",
+    terms: { productions:"Performances", production:"Performance", addToProduction:"Add to Performance", productionPhotos:"Performance Photos", upcomingShow:"Upcoming Performance", auditionNotice:"Audition Notice", showAnnouncement:"Performance Announcement", crewRole:"Aide" },
+    fundingCats: ["Costumes","Footwear","Equipment","Sound & Music","Studio Supplies","Travel","Personnel","Other"],
     categories: [
       { id:"costumes", label:"Costumes",        icon:"👗", color:"#b5174f", grad:"linear-gradient(135deg,#7b1560,#c2185b,#e91e8c)" },
       { id:"footwear", label:"Footwear",         icon:"👠", color:"#a0144e", grad:"linear-gradient(135deg,#880e4f,#ad1457,#e91e63)" },
@@ -93,6 +99,8 @@ export const VERTICALS = {
     color: "#1554a0",
     appName: "ArtsTracker",
     exchangeName: "Materials Exchange",
+    terms: { productions:"Exhibitions", production:"Exhibition", addToProduction:"Add to Exhibition", productionPhotos:"Exhibition Photos", upcomingShow:"Upcoming Exhibition", auditionNotice:"Call for Artists", showAnnouncement:"Exhibition Announcement", crewRole:"Aide" },
+    fundingCats: ["Art Supplies","Equipment","Kiln & Tools","Framing & Display","Instruction","Travel","Personnel","Other"],
     categories: [
       { id:"painting",    label:"Painting Supplies", icon:"🖌️", color:"#b5174f", grad:"linear-gradient(135deg,#7b1560,#c2185b,#e91e8c)" },
       { id:"drawing",     label:"Drawing",           icon:"✏️", color:"#374549", grad:"linear-gradient(135deg,#263238,#37474f,#546e7a)" },
@@ -118,6 +126,8 @@ export const VERTICALS = {
     color: "#7b1fa2",
     appName: "ArtsTracker",
     exchangeName: "Resource Exchange",
+    terms: { productions:"Events", production:"Event", addToProduction:"Add to Event", productionPhotos:"Event Photos", upcomingShow:"Upcoming Event", auditionNotice:"Volunteer Call", showAnnouncement:"Event Announcement", crewRole:"Volunteer" },
+    fundingCats: ["Fundraising","Equipment","Uniforms","Event Supplies","Concessions","Travel","Awards","Other"],
     categories: [
       { id:"uniforms",      label:"Uniforms",              icon:"👕", color:"#1554a0", grad:"linear-gradient(135deg,#0d2b6e,#1565c0,#1976d2)" },
       { id:"equipment",     label:"Equipment",             icon:"🎒", color:"#374549", grad:"linear-gradient(135deg,#263238,#37474f,#546e7a)" },
@@ -163,6 +173,19 @@ export const getCats = (verticalId) => getVertical(verticalId).categories;
 // already used by CatCard and CatThumb in App.jsx.
 // Pass vertical="theatre" (or omit) for full Theatre4u backwards-compatibility.
 export const getExchangeName = (verticalId) => getVertical(verticalId).exchangeName || "Resource Exchange";
+
+// Per-vertical UI terminology. Falls back to the theatre wording, then the raw key.
+// e.g. getTerm("music","productions") === "Concerts"
+export const getTerm = (verticalId, key) => {
+  const t = getVertical(verticalId).terms || {};
+  if (t[key] != null) return t[key];
+  const th = VERTICALS.theatre.terms || {};
+  return th[key] != null ? th[key] : key;
+};
+
+// Per-vertical funding categories (falls back to theatre's list).
+export const getFundingCats = (verticalId) =>
+  getVertical(verticalId).fundingCats || VERTICALS.theatre.fundingCats || [];
 
 export const getCatGfx = (verticalId, catId) => {
   const cat = getCat(verticalId, catId);

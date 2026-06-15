@@ -3,6 +3,7 @@ import { SB } from "./supabase.js";
 import { EM } from "./messages.js";
 import { Modal } from "./ui.jsx";
 import { fmt$ } from "./helpers.js";
+import { getFundingCats } from "../lib/verticals.js";
 
 const FUND_TYPES = [
   {id:"grant",      label:"Grant",           icon:"🏛️"},
@@ -360,6 +361,7 @@ export function FundingPage({userId, org, plan}){
         <ExpModal
           initial={modal==="edit-exp"?active:null}
           sources={sources}
+          cats={getFundingCats(org?.vertical)}
           saving={saving}
           onSave={saveExp}
           onCancel={()=>{setModal(null);setActive(null);}}
@@ -429,7 +431,7 @@ export function SourceModal({initial, saving, onSave, onCancel}){
   );
 }
 
-export function ExpModal({initial, sources, saving, onSave, onCancel}){
+export function ExpModal({initial, sources, saving, onSave, onCancel, cats=FUND_CATS}){
   const activeSources = sources.filter(s=>s.is_active);
   const blank = {funding_source_id:activeSources[0]?.id||"",amount:"",category:"",description:"",vendor:"",purchase_date:new Date().toISOString().slice(0,10)};
   const[f,setF] = useState(initial||blank);
@@ -465,7 +467,7 @@ export function ExpModal({initial, sources, saving, onSave, onCancel}){
               <label style={{fontSize:10,fontWeight:700,color:"var(--faint)",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4}}>Category</label>
               <select style={inp} value={f.category||""} onChange={e=>upd("category",e.target.value)}>
                 <option value="">Select…</option>
-                {FUND_CATS.map(c=><option key={c}>{c}</option>)}
+                {cats.map(c=><option key={c}>{c}</option>)}
               </select>
             </div>
             <div>

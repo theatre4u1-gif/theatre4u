@@ -7,6 +7,7 @@ import { UpgradePlans } from "./billing.jsx";
 import { fmt$ } from "./helpers.js";
 import { QR } from "./qr.js";
 import { printProductionReport } from "./productions.jsx";
+import { getExchangeName, getTerm } from "../lib/verticals.js";
 
 // Reports page (+ platform-usage + production-report tabs) — extracted from App.jsx.
 
@@ -79,7 +80,7 @@ export function Reports({ items, plan="free", org=null, userId=null, userEmail=n
 
       <div style={{padding:"24px 36px 48px",position:"relative",zIndex:1}}>
         <div className="tabs">
-          {[["overview","Overview"],["condition","Condition"],["availability","Availability"],["market","Backstage Exchange"],["location","Locations"],["productions","🎭 Productions"],["usage","📊 Platform Usage"]].map(([t,l])=>(
+          {[["overview","Overview"],["condition","Condition"],["availability","Availability"],["market",getExchangeName(org?.vertical)],["location","Locations"],["productions","🎭 "+getTerm(org?.vertical,"productions")],["usage","📊 Platform Usage"]].map(([t,l])=>(
             <button key={t} className={`tab ${tab===t?"on":""}`} onClick={()=>setTab(t)}>{l}</button>
           ))}
         </div>

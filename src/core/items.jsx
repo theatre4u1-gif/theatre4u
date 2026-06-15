@@ -12,7 +12,7 @@ import { CAT, CAT_GFX, MKT, customCatsFor } from "./inventory.js";
 import { QR } from "./qr.js";
 import { ROW_LABELS, COL_LABELS } from "./storage-map.js";
 import { AddToProductionPicker } from "./productions.jsx";
-import { getVertical } from "../lib/verticals.js";
+import { getVertical, getExchangeName, getTerm } from "../lib/verticals.js";
 
 // Format an item number as "#0001" (moved from App.jsx — only ItemDetail uses it)
 const itemNum = n => n != null ? "#" + String(n).padStart(4, "0") : "";
@@ -220,8 +220,8 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
         <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>{(f.tags||[]).map(t=><span key={t} className="tc" onClick={()=>upd("tags",f.tags.filter(x=>x!==t))}>#{t} ×</span>)}</div>
         <div style={{display:"flex",gap:7}}><input className="fi" style={{flex:1}} value={ti} onChange={e=>setTi(e.target.value)} placeholder="Add tag…" onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addTag()}}}/><button className="btn btn-o btn-sm" onClick={addTag}>Add</button></div>
       </div>
-      <div className="fg fu"><label className="fl">Notes</label><textarea className="ft" value={f.notes} onChange={e=>upd("notes",e.target.value)} placeholder="Production history, care instructions…"/></div>
-      <div className="fg fu sdiv"><div className="slbl">🏪 Backstage Exchange</div></div>
+      <div className="fg fu"><label className="fl">Notes</label><textarea className="ft" value={f.notes} onChange={e=>upd("notes",e.target.value)} placeholder="Usage history, care instructions…"/></div>
+      <div className="fg fu sdiv"><div className="slbl">🏪 {getExchangeName(vertical)}</div></div>
       <div className="fg"><label className="fl">Listing Status</label><select className="fs" value={f.mkt} onChange={e=>upd("mkt",e.target.value)}>{MKT.map(s=><option key={s}>{s}</option>)}</select></div>
       {f.mkt!=="Not Listed"&&f.mkt!=="Private"&&!marketplaceEnabled&&(
         <div className="fg fu" style={{marginTop:-4}}>
@@ -428,7 +428,7 @@ export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, ca
       <div style={{display:"flex",gap:8,marginTop:16,flexWrap:"wrap"}}>
         {canEdit&&onEdit&&<button className="btn btn-p btn-sm" onClick={onEdit}><span style={{width:14,height:14,display:"flex"}}>{Ic.edit}</span>Edit</button>}
         {canDelete&&onDelete&&<button className="btn btn-d btn-sm" onClick={()=>{if(window.confirm("Delete this item?"))onDelete(item.id)}}><span style={{width:14,height:14,display:"flex"}}>{Ic.trash}</span>Delete</button>}
-        {userId && <button className="btn btn-o btn-sm" onClick={()=>setShowAddToProd(true)}>🎭 Add to Production</button>}
+        {userId && <button className="btn btn-o btn-sm" onClick={()=>setShowAddToProd(true)}>🎭 {getTerm(item.vertical,"addToProduction")}</button>}
         {item.mkt!=="Not Listed"&&<FbShareBtn
           url={itemShareUrl(item)}
           text={itemShareText(item, schoolName)}
