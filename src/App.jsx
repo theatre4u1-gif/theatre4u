@@ -15272,7 +15272,7 @@ function AdminProgramsTab({ orgs, currentUser, flash }) {
     showMsg("✅ Ownership transfer initiated. Note: full transfer may require manual DB steps for auth.users.");
   };
 
-  const planColor = p => p==="district"?"#42a5f5":p==="pro"?"var(--gold)":p==="free"?"var(--muted)":"var(--muted)";
+  const planColor = p => p==="district"?"#42a5f5":p==="pro"?"#91592c":p==="free"?"var(--muted)":"var(--muted)";
   const catIcon = c => ({costumes:"👗",props:"🎭",sets:"🏗️",lighting:"💡",sound:"🔊",scripts:"📜",makeup:"💄",furniture:"🪑",fabrics:"🧵",tools:"🔧",effects:"✨"}[c]||"📦");
 
   return (
@@ -15984,7 +15984,7 @@ function AdminHub({ currentUser, org }) {
                   {orgs.map((o,idx)=>{
                     const items = Number(o.item_count)||0;
                     const team  = Number(o.team_count)||0;
-                    const planColor = o.plan==="district"?"#42a5f5":o.plan==="pro"?"var(--gold)":"var(--muted)";
+                    const planColor = o.plan==="district"?"#42a5f5":o.plan==="pro"?"#91592c":"var(--muted)";
                     const statusBadge = o.stripe_subscription_id
                       ? {label:"💳 Paying",bg:"rgba(76,175,80,.12)",color:"#4caf50"}
                       : o.founding_member
@@ -18126,7 +18126,7 @@ function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){
                   </div>
                 </div>
                 <div style={{marginTop:8,display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{padding:"2px 8px",background:plan==="free"?"rgba(255,255,255,.08)":plan==="pro"?"rgba(212,168,67,.2)":"rgba(66,165,245,.2)",color:plan==="free"?"rgba(255,255,255,.35)":plan==="pro"?"var(--gold)":"#42a5f5",borderRadius:9,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>
+                  <span style={{padding:"2px 8px",background:plan==="free"?"rgba(255,255,255,.08)":plan==="pro"?"rgba(212,168,67,.2)":"rgba(66,165,245,.2)",color:plan==="free"?"rgba(255,255,255,.35)":plan==="pro"?"#91592c":"#42a5f5",borderRadius:9,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>
                     {plan==="free"?"Free Plan":plan==="pro"?"Pro":"District"}
                   </span>
                   {IS_ARTSTRACKER && org?.vertical && (
