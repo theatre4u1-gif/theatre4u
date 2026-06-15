@@ -3,6 +3,17 @@ import { Ic } from "./icons.jsx";
 import { fbShare } from "./helpers.js";
 import { getCatGfx } from "../lib/verticals.js";
 import { VERTICAL_BG_GRAD, usp } from "../lib/backgrounds.js";
+import { LOGO_ICON, APP_NAME } from "./config.js";
+
+// ── Logo Components — simple, reliable image mark ────────────────────────────
+export const LogoMarkDark = ({size=44}) => (
+  <div style={{width:size,height:size,borderRadius:Math.round(size*0.24),background:"linear-gradient(135deg,#f7f1e6,#ece0cf)",border:"1px solid rgba(232,184,93,.45)",boxShadow:"0 2px 6px rgba(0,0,0,.28)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+    <img src={LOGO_ICON} alt={APP_NAME} width={Math.round(size*0.8)} height={Math.round(size*0.8)} style={{objectFit:"contain",display:"block"}}/>
+  </div>
+);
+export const LogoMarkLight = ({size=40}) => (
+  <img src={LOGO_ICON} alt={APP_NAME} width={size} height={size} style={{flexShrink:0,objectFit:"contain",display:"block"}}/>
+);
 
 // Shared UI primitives — extracted from App.jsx
 export function Pager({total,page,per,onPage}){
