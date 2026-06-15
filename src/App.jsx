@@ -430,6 +430,8 @@ const CSS = `
   --ink:#1a0c06;--deep:#2a0f09;--cog:#8b5a0f;--amber:#c49a30;--gold:#e8b85d;--gilt:#f5cc70;
   --cream:#f5ede3;--parch:#ede0cf;--linen:#ddd0ba;--sand:#c8b895;
   --text:#3b2a1f;--muted:#7a5538;--faint:#8a6a2e;--border:#d4c09a;
+  /* Official brand palette (from the finalized logo kit) — leads: burgundy + gold */
+  --brand-burgundy:#5b1e4e;--brand-magenta:#a0226f;--brand-mint:#7cc6a3;--brand-gold:#c79a4a;--brand-black:#222222;
   --white:#ffffff;--red:#8b1a2a;--green:#265e2a;--blue:#1a3570;
   --sh1:0 2px 14px rgba(18,6,0,.1);--sh2:0 6px 28px rgba(18,6,0,.17);--sh3:0 14px 52px rgba(18,6,0,.25);
   --r:5px;--rm:12px;--rl:18px;
@@ -3292,13 +3294,13 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
       onClick={e=>e.target===e.currentTarget&&onClose()}>
 
       {plan==="free" ? (
-        <div style={{background:"var(--bg2,#15121b)",border:"1px solid rgba(212,168,67,.3)",
-          borderRadius:14,padding:32,maxWidth:420,width:"100%",textAlign:"center"}}>
+        <div style={{background:"var(--cream)",border:"1px solid var(--border)",
+          borderRadius:14,padding:32,maxWidth:420,width:"100%",textAlign:"center",boxShadow:"0 12px 48px rgba(0,0,0,.4)"}}>
           <div style={{fontSize:36,marginBottom:12}}>🔒</div>
-          <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,marginBottom:8,color:"var(--gold)"}}>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,marginBottom:8,color:"var(--brand-burgundy)"}}>
             Pro Required for Exchange
           </div>
-          <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.7,marginBottom:20}}>
+          <p style={{fontSize:14,color:"var(--text)",lineHeight:1.7,marginBottom:20}}>
             Sending and receiving Exchange requests requires a Pro or District plan.
             Upgrade to connect with nearby programs and start sharing resources.
           </p>
@@ -3308,7 +3310,7 @@ function RequestItemModal({ item, currentUserId, currentOrgName, currentOrgEmail
             </button>
             <button className="btn btn-o" onClick={onClose}>Maybe Later</button>
           </div>
-          <p style={{fontSize:11,color:"var(--faint)",marginTop:12}}>
+          <p style={{fontSize:11,color:"var(--muted)",marginTop:12}}>
             Pro: $15/mo · Unlimited inventory · Full Exchange access · Stage Points
           </p>
         </div>
@@ -10729,12 +10731,12 @@ function LegalModal({title, onClose, children}){
   useEffect(()=>{const h=e=>e.key==="Escape"&&onClose();window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h)},[onClose]);
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{background:"var(--bg2,#15121b)",border:"1px solid rgba(212,168,67,.2)",borderRadius:14,width:"100%",maxWidth:680,maxHeight:"88vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 48px rgba(0,0,0,.6)"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,.08)"}}>
-          <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:18,color:"#ede8df"}}>{title}</h2>
-          <button onClick={onClose} style={{background:"none",border:"1px solid rgba(255,255,255,.15)",borderRadius:6,color:"#9b93a8",cursor:"pointer",padding:"4px 8px",fontSize:13}}>✕ Close</button>
+      <div style={{background:"var(--cream)",border:"1px solid var(--border)",borderRadius:14,width:"100%",maxWidth:680,maxHeight:"88vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 48px rgba(0,0,0,.6)"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:"1px solid var(--border)",background:"var(--parch)"}}>
+          <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:18,color:"var(--brand-burgundy)"}}>{title}</h2>
+          <button onClick={onClose} style={{background:"none",border:"1px solid var(--border)",borderRadius:6,color:"var(--muted)",cursor:"pointer",padding:"4px 8px",fontSize:13}}>✕ Close</button>
         </div>
-        <div style={{padding:"20px 24px",overflowY:"auto",flex:1,color:"#c8c0d4",fontSize:13.5,lineHeight:1.75}}>
+        <div style={{padding:"20px 24px",overflowY:"auto",flex:1,color:"var(--text)",fontSize:13.5,lineHeight:1.75}}>
           {children}
         </div>
       </div>
