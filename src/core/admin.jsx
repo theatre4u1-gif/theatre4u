@@ -3227,6 +3227,7 @@ export function AdminProgramsTab({ orgs, currentUser, flash }) {
   const [editOrg,     setEditOrg]     = useState(null);
   const [saving,      setSaving]      = useState(false);
   const [msg,         setMsg]         = useState("");
+  const [closeTarget, setCloseTarget] = useState(null); // org to close/delete
   const showMsg = m => { setMsg(m); setTimeout(()=>setMsg(""),3000); };
 
   const filtered = orgs.filter(o =>
@@ -3707,10 +3708,34 @@ export function AdminProgramsTab({ orgs, currentUser, flash }) {
                 </div>
                 <TransferOwnershipForm orgName={selected.name} onTransfer={transferOwnership} saving={saving}/>
               </div>
+
+              {/* Close / Delete account */}
+              <div style={{background:"rgba(194,24,91,.06)",border:"1px solid rgba(194,24,91,.2)",
+                borderRadius:10,padding:16,marginTop:12}}>
+                <div style={{fontWeight:700,fontSize:14,color:"var(--red)",marginBottom:6}}>
+                  🚫 Close or Delete Account
+                </div>
+                <div style={{fontSize:13,color:"var(--muted)",marginBottom:10,lineHeight:1.6}}>
+                  Soft-close (30-day window, recoverable) or permanently hard-delete this program.
+                  Use hard delete for test accounts you want gone for good.
+                </div>
+                <button className="btn btn-d" onClick={()=>setCloseTarget(selected)}>
+                  Close / Delete {selected.name}
+                </button>
+              </div>
             </div>
           )}
         </>)}
       </div>
+      {closeTarget && (
+        <AdminCloseOrgModal
+          org={closeTarget}
+          currentUser={currentUser}
+          onClose={()=>setCloseTarget(null)}
+          onClosed={(id)=>{ setSelected(s=>s&&s.id===id?{...s,account_status:"closed"}:s); setEditOrg(e=>e&&e.id===id?{...e,account_status:"closed"}:e); setCloseTarget(null); showMsg("✓ Account closed (30-day window)"); }}
+          onHardDeleted={(id)=>{ setCloseTarget(null); setSelected(null); setEditOrg(null); showMsg("✓ Account permanently deleted"); }}
+        />
+      )}
     </div>
   );
 }
