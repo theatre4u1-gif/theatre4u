@@ -5706,7 +5706,7 @@ function AdminEditOrgModal({ org, onClose, onSaved }) {
     <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:4000,
       display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}
       onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{ background:"var(--bg2,#15121b)",border:"1px solid var(--border)",
+      <div style={{ background:"var(--cream)",border:"1px solid var(--border)",
         borderRadius:14,width:"100%",maxWidth:560,maxHeight:"88vh",
         display:"flex",flexDirection:"column",boxShadow:"0 8px 48px rgba(0,0,0,.5)" }}>
 
@@ -5826,7 +5826,7 @@ function AdminCloseOrgModal({ org, currentUser, onClose, onClosed, onHardDeleted
     <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:4000,
       display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}
       onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{ background:"var(--bg2,#15121b)",border:"1.5px solid rgba(194,24,91,.4)",
+      <div style={{ background:"var(--cream)",border:"1.5px solid rgba(194,24,91,.4)",
         borderRadius:14,width:"100%",maxWidth:520,maxHeight:"88vh",
         display:"flex",flexDirection:"column",boxShadow:"0 8px 48px rgba(0,0,0,.6)" }}>
 
@@ -6309,7 +6309,7 @@ function AdminEditItemModal({ item, onClose, onSaved }) {
     <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:5000,
       display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}
       onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{ background:"var(--bg2,#15121b)",border:"1px solid var(--border)",
+      <div style={{ background:"var(--cream)",border:"1px solid var(--border)",
         borderRadius:14,width:"100%",maxWidth:520,maxHeight:"88vh",
         display:"flex",flexDirection:"column",boxShadow:"0 8px 48px rgba(0,0,0,.5)" }}>
 
