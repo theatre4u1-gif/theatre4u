@@ -120,6 +120,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   const [custCatVer,setCustCatVer] = useState(0); // bumped when custom categories reload, forces re-render
   const [facDistrict,setFacDistrict]= useState(null); // district this user facilitates (full-edit browse), or null
   const [facSchools, setFacSchools] = useState([]);   // schools in the facilitated district
+  const [ownsDistrict,setOwnsDistrict] = useState(false); // true if this user owns a district — show District tab from any of their orgs
   // Invite token from URL — persisted in localStorage so it survives
   // Supabase's email confirmation redirect (which strips query params)
   const [pendingInvite,setPendingInvite] = useState(() => {
@@ -299,6 +300,10 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
         const { data: fSch } = await SB.from("orgs").select("*").eq("district_id", fdId).order("name");
         setFacSchools(fSch || []);
       } else { setFacDistrict(null); setFacSchools([]); }
+      // District-owner detection — lets the District tab show from ANY of the owner's orgs
+      // (e.g. while viewing a school they direct), not only from their own-org context.
+      const { data: ownDist } = await SB.from("districts").select("id").eq("owner_id", user.id).maybeSingle();
+      setOwnsDistrict(!!ownDist);
       setLoaded(true);
       // Load unread message count
       const { count: unread } = await SB.from("messages")
@@ -652,7 +657,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       { id:"profile",     label:"My Profile",  ico:"👤"       },
       ...(!isMember ? [{ id:"labels",  label:"QR Labels",    ico:"🏷" }] : []),
       ...(!isMember ? [{ id:"points", label:getPointsName(org?.vertical), ico:"🪙" }] : []),
-      ...(!isMember && plan === "district" ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
+      ...((!isMember && plan === "district") || ownsDistrict ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
       ...(!isMember && facDistrict ? [{ id:"facschools", label:"District Schools", ico:"🏫" }] : []),
       ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
     ];
@@ -931,7 +936,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                   {page==="prop28"      && <Prop28Page  userId={org?.id || user?.id} org={org} onNav={nav}/>}
                   {page==="profile"     && <OrgProfilePage userId={org?.id || user?.id} org={org} setOrg={saveOrg} plan={plan} items={items}/>}
               {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} userId={org?.id || user?.id} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
-                  {page==="district"    && plan==="district" && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool}/>}
+                  {page==="district"    && (plan==="district" || ownsDistrict) && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool}/>}
                   {page==="facschools"  && facDistrict && (
                     <div style={{padding:"32px 36px 56px"}}>
                       <h1 style={{fontFamily:"var(--serif)",fontSize:32,marginBottom:4}}>District Schools</h1>
