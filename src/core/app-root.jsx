@@ -109,6 +109,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   const [activeSchool,setActiveSchool]   = useState(null);
   const [memberRole,  setMemberRole]    = useState(null); // null=owner/director, or stage_manager/crew/house/program_director
   const [memberships, setMemberships]   = useState([]); // all program memberships (for multi-program directors)
+  const [activeVertical, setActiveVertical] = useState(null); // active department for multi-vertical accounts; null until org loads
   const [unreadCount,   setUnreadCount]   = useState(0);
   const [openConvId,    setOpenConvId]    = useState(null);
   const [pendingReqCount, setPendingReqCount] = useState(0);
@@ -281,6 +282,10 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
         setPlanState(effectivePlan);
         // Load onboarding step — 0 = brand new user
         setOnboardingStep(orgData.onboarding_step ?? 0);
+        // Multi-vertical: choose the active department — saved pref if still enabled, else the org's primary
+        const _enabled = (orgData.verticals_enabled?.length ? orgData.verticals_enabled : [orgData.vertical || "theatre"]);
+        const _savedV = (()=>{ try { return localStorage.getItem("t4u_active_vertical_"+targetOrgId); } catch(e){ return null; } })();
+        setActiveVertical(_enabled.includes(_savedV) ? _savedV : (orgData.vertical || _enabled[0] || "theatre"));
       } else { setPlanState(effectivePlan); }
       const{data:itemData}=await SB.from("items").select("*").eq("org_id",targetOrgId).order("added",{ascending:false}).limit(2000);
       if(itemData) setItems(itemData);
@@ -319,8 +324,16 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   // or the org a team member belongs to). NEVER user.id directly — a crew member's
   // uid is not an orgs row, which violates items_org_id_fkey. (Coppell fix 2026-06-15)
   const activeOrgId = org?.id || user?.id;
+  // Multi-vertical view state: the enabled departments, the active one, and a view-org +
+  // filtered items for working-context pages. Single-vertical accounts are unaffected
+  // (multiVertical=false → viewOrg=org, vItems=items, no switcher shown).
+  const enabledVerticals = (org?.verticals_enabled?.length ? org.verticals_enabled : [org?.vertical || "theatre"]);
+  const curVertical = activeVertical || org?.vertical || "theatre";
+  const multiVertical = enabledVerticals.length > 1;
+  const viewOrg = multiVertical ? { ...org, vertical: curVertical } : org;
+  const vItems = multiVertical ? items.filter(i => (i.vertical||"theatre") === curVertical) : items;
   const add = useCallback(async(item)=>{
-    const row={...item,org_id:activeOrgId};
+    const row={...item,org_id:activeOrgId, vertical: item.vertical || activeVertical || org?.vertical || "theatre"};
     // Sanitize optional numeric/date/uuid fields — empty string → null
     if(!row.purchase_cost || row.purchase_cost==="")    row.purchase_cost    = null;
     else row.purchase_cost = parseFloat(row.purchase_cost) || null;
@@ -348,7 +361,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
         });
       }
     }
-  },[user,activeOrgId]);
+  },[user,activeOrgId,activeVertical,org]);
 
   const edit = useCallback(async(item)=>{
     const payload={...item};
@@ -679,7 +692,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
         onTakeTour={()=>{ window.location.href = window.location.href.split("?")[0] + "?preview=1"; }}
       />
       <AuthOverlay onAuth={u=>{setUser(u);}} pendingInvite={pendingInvite} inviteInfo={inviteInfo}/>
-      {user && <FeedbackWidget userId={user.id} orgName={org?.name||""} isLeadingPlayer={org?.is_leading_player||false}/>}
+      {user && <FeedbackWidget userId={org?.id || user.id} orgName={org?.name||""} isLeadingPlayer={org?.is_leading_player||false}/>}
       {user && !isDemo && <AIHelpBubble user={user} />}
     </>
   );
@@ -729,6 +742,18 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                     title="Switch between the programs you direct">
                     {memberships.map(m=>(
                       <option key={m.org_id} value={m.org_id}>{m.orgs?.name || "Program"}</option>
+                    ))}
+                  </select>
+                )}
+                {/* Department switcher — only when the account has 2+ verticals enabled */}
+                {multiVertical && (
+                  <select
+                    value={curVertical}
+                    onChange={e=>{ setActiveVertical(e.target.value); try{ localStorage.setItem("t4u_active_vertical_"+(org?.id||""), e.target.value); }catch(err){} }}
+                    style={{marginTop:8,width:"100%",padding:"6px 8px",borderRadius:7,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--linen)",fontSize:12,fontFamily:"inherit",cursor:"pointer"}}
+                    title="Switch between departments">
+                    {enabledVerticals.map(v=>(
+                      <option key={v} value={v}>{getVertical(v).icon} {getVertical(v).label}</option>
                     ))}
                   </select>
                 )}
@@ -879,14 +904,14 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                   <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
                 </div>
               : <div className="fin">
-                  {page==="requests"    && <Requests userId={user?.id} orgName={org?.name} orgEmail={org?.email}
+                  {page==="requests"    && <Requests userId={org?.id || user?.id} orgName={org?.name} orgEmail={org?.email}
                     onUnreadChange={async()=>{
                       const{count}=await SB.from("rental_requests").select("id",{count:"exact",head:true}).eq("owner_id",user?.id).eq("status","pending");
                       setPendingReqCount(count||0);
                     }}/>}
                   {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
-                  {page==="dashboard"   && <Dashboard   items={items} org={org} plan={plan} pointBalance={creditBalance} goInventory={(cat)=>{ if(cat) setDeepLinkCategory(cat); nav("inventory"); }} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
-                  {page==="inventory"   && !activeSchool && <Inventory   items={items} onAdd={add} onEdit={edit} onDelete={del} userId={org?.id || user?.id} plan={plan} memberRole={memberRole} org={org} enableLoans={!memberRole} onImported={(data)=>setItems(data)} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} deepLinkCategory={deepLinkCategory} onDeepLinkCategoryConsumed={()=>setDeepLinkCategory(null)}/>}
+                  {page==="dashboard"   && <Dashboard   items={vItems} org={viewOrg} plan={plan} pointBalance={creditBalance} goInventory={(cat)=>{ if(cat) setDeepLinkCategory(cat); nav("inventory"); }} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
+                  {page==="inventory"   && !activeSchool && <Inventory   items={vItems} onAdd={add} onEdit={edit} onDelete={del} userId={org?.id || user?.id} plan={plan} memberRole={memberRole} org={viewOrg} enableLoans={!memberRole} onImported={(data)=>setItems(data)} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} deepLinkCategory={deepLinkCategory} onDeepLinkCategoryConsumed={()=>setDeepLinkCategory(null)}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
                       ? <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading {activeSchool.name}…</div>
@@ -899,13 +924,13 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                           headerNote={<div style={{padding:"8px 12px",background:"rgba(66,165,245,.1)",border:"1px solid rgba(66,165,245,.2)",borderRadius:7,marginBottom:12,fontSize:12,color:"#42a5f5"}}>🏫 Editing inventory for <strong>{activeSchool.name}</strong></div>}
                         />
                   )}
-                  {page==="marketplace" && <MarketplaceGate items={items} org={org} setOrg={setOrg} plan={plan} userId={user?.id} activeSchool={activeSchool} allSchoolsMode={plan==="district"} onEdit={edit} onDelete={del}/>}
-                  {page==="productions" && <Productions userId={user?.id} allItems={items} org={org} onNavigateTo={nav}/>}
-                  {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan} org={org} userId={user?.id} userEmail={user?.email}/>}
-                  {page==="funding"     && <FundingPage userId={user?.id} org={org} plan={plan}/>}
-                  {page==="prop28"      && <Prop28Page  userId={user?.id} org={org} onNav={nav}/>}
-                  {page==="profile"     && <OrgProfilePage userId={user?.id} org={org} setOrg={saveOrg} plan={plan} items={items}/>}
-              {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} userId={user?.id} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
+                  {page==="marketplace" && <MarketplaceGate items={items} org={org} setOrg={setOrg} plan={plan} userId={org?.id || user?.id} activeSchool={activeSchool} allSchoolsMode={plan==="district"} onEdit={edit} onDelete={del}/>}
+                  {page==="productions" && <Productions userId={org?.id || user?.id} allItems={items} org={org} onNavigateTo={nav}/>}
+                  {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan} org={org} userId={org?.id || user?.id} userEmail={user?.email}/>}
+                  {page==="funding"     && <FundingPage userId={org?.id || user?.id} org={org} plan={plan}/>}
+                  {page==="prop28"      && <Prop28Page  userId={org?.id || user?.id} org={org} onNav={nav}/>}
+                  {page==="profile"     && <OrgProfilePage userId={org?.id || user?.id} org={org} setOrg={saveOrg} plan={plan} items={items}/>}
+              {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} userId={org?.id || user?.id} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
                   {page==="district"    && plan==="district" && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool}/>}
                   {page==="facschools"  && facDistrict && (
                     <div style={{padding:"32px 36px 56px"}}>
@@ -926,10 +951,10 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                       )}
                     </div>
                   )}
-                  {page==="community"   && <CommunityGate userId={user?.id} org={org} setOrg={setOrg} plan={plan}/>}
-                  {page==="labels"     && <LabelsPage org={org} userId={user?.id} items={items} isAdmin={isAdmin}/>}
-                  {page==="points"     && (plan!=="free"||isAdmin) && <CreditsPage userId={user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
-                  {page==="points"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>{getPointsName(org?.vertical)} is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true} userId={user?.id} userEmail={user?.email}/></div>}
+                  {page==="community"   && <CommunityGate userId={org?.id || user?.id} org={org} setOrg={setOrg} plan={plan}/>}
+                  {page==="labels"     && <LabelsPage org={org} userId={org?.id || user?.id} items={items} isAdmin={isAdmin}/>}
+                  {page==="points"     && (plan!=="free"||isAdmin) && <CreditsPage userId={org?.id || user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
+                  {page==="points"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>{getPointsName(org?.vertical)} is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true} userId={org?.id || user?.id} userEmail={user?.email}/></div>}
 
 
                   {page==="admin"       && isAdmin && <AdminHub currentUser={user} org={org}/>}
@@ -942,7 +967,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       {/* ── Legal Modals ── */}
       {legalPage==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegalPage(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
       {legalPage==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegalPage(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
-      {user && <FeedbackWidget userId={user.id} orgName={org?.name||""} isLeadingPlayer={org?.is_leading_player||false}/>}
+      {user && <FeedbackWidget userId={org?.id || user.id} orgName={org?.name||""} isLeadingPlayer={org?.is_leading_player||false}/>}
       {user && !isDemo && <AIHelpBubble user={user} />}
       {/* ── Onboarding overlay ─ shown once to new users ── */}
       {user && onboardingStep !== null && onboardingStep < 4 && (
@@ -954,7 +979,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
           <OnboardingOverlay
             step={onboardingStep}
             org={org}
-            userId={user?.id}
+            userId={org?.id || user?.id}
             items={items}
             onUpdate={(updated) => { setOrg(p=>({...p,...updated})); setOnboardingStep(updated.onboarding_step ?? 4); }}
             onNav={nav}

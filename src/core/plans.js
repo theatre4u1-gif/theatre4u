@@ -6,6 +6,11 @@ export const STRIPE_LINKS = {
   district:   { monthly:"https://buy.stripe.com/aFa4gydAZ2X1cpZ6UHgA800", annual:"https://buy.stripe.com/eVqdR88gF1SX9dN0wjgA802" },
   district_m: { monthly:"https://buy.stripe.com/5kQ00ieF3aptahRbaXgA806", annual:"https://buy.stripe.com/6oU7sK68x41575F5QDgA807" },
   district_l: { monthly:"https://buy.stripe.com/6oU28q2Wl8hlgGfdj5gA804", annual:"https://buy.stripe.com/eVq00ieF37dhahR2ErgA805" },
+  // ArtsTracker (all-verticals) track — created 2026-06-07, livemode. See ArtsTracker-Stripe-IDs.
+  at_pro:        { monthly:"https://buy.stripe.com/fZucN42WlfJN2Pp1AngA80a", annual:"https://buy.stripe.com/bJe14m40p69dblVa6TgA80b" },
+  at_district_s: { monthly:"https://buy.stripe.com/aFaaEW7cBdBF75F7YLgA80c", annual:"https://buy.stripe.com/fZuaEW54t1SX75FgvhgA80d" },
+  at_district_m: { monthly:"https://buy.stripe.com/aFa3cugNb2X175Fen9gA80e", annual:"https://buy.stripe.com/fZueVc9kJbtxfCbdj5gA80f" },
+  at_district_l: { monthly:"https://buy.stripe.com/3cIdR8gNb7dhahRen9gA80g", annual:"https://buy.stripe.com/00waEW7cBcxB2Pp6UHgA80h" },
 };
 
 export function stripeLink(baseUrl, userId, userEmail) {
@@ -19,9 +24,14 @@ export function stripeLink(baseUrl, userId, userEmail) {
 }
 
 export const PLANS_DEF = {
-  free:     { label:"Free",     maxItems:25,  marketplace:false, reports:false, monthlyPrice:0,  annualPrice:0   },
-  pro:      { label:"Pro",      maxItems:Infinity, marketplace:true,  reports:true,  monthlyPrice:15, annualPrice:150 },
-  district: { label:"District", maxItems:Infinity, marketplace:true,  reports:true,  monthlyPrice:49, annualPrice:500 },
+  free:     { label:"Free",     maxItems:25,  marketplace:false, reports:false, allVerticals:false, monthlyPrice:0,  annualPrice:0   },
+  pro:      { label:"Pro",      maxItems:Infinity, marketplace:true,  reports:true,  allVerticals:false, monthlyPrice:15, annualPrice:150 },
+  district: { label:"District", maxItems:Infinity, marketplace:true,  reports:true,  allVerticals:false, monthlyPrice:49, annualPrice:500 },
+  // ArtsTracker (all-verticals) track — allVerticals:true unlocks all 5 departments. Not yet enforced (needs vertical-switcher UX + webhook mapping).
+  at_pro:        { label:"ArtsTracker Pro",        maxItems:Infinity, marketplace:true, reports:true, allVerticals:true, monthlyPrice:59,  annualPrice:590  },
+  at_district_s: { label:"ArtsTracker District S", maxItems:Infinity, marketplace:true, reports:true, allVerticals:true, monthlyPrice:199, annualPrice:1990 },
+  at_district_m: { label:"ArtsTracker District M", maxItems:Infinity, marketplace:true, reports:true, allVerticals:true, monthlyPrice:399, annualPrice:3990 },
+  at_district_l: { label:"ArtsTracker District L", maxItems:Infinity, marketplace:true, reports:true, allVerticals:true, monthlyPrice:699, annualPrice:6990 },
 };
 
 export const UPGRADE_PLANS = [
