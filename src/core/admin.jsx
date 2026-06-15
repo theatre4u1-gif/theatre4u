@@ -3677,8 +3677,8 @@ export function AdminProgramsTab({ orgs, currentUser, flash }) {
                     style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",background:"var(--white)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
                     <option value="">Not yet offered</option>
                     <option value="pro">Pro — $9.99/mo founding rate</option>
-                    <option value="district_s">District S — $29/mo founding rate</option>
-                    <option value="district_m">District M — $49/mo founding rate</option>
+                    <option value="district_s">District S — $39/mo founding rate</option>
+                    <option value="district_m">District M — $89/mo founding rate</option>
                   </select>
                 </div>
                 <div>
