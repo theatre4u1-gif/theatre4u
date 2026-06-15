@@ -242,6 +242,7 @@ function CommunityPage({userId, org, plan}) {
       viewer_lng:   vLng   || null,
       radius_miles: 150,
       row_limit:    80,
+      p_vertical:   org?.vertical || null,   // per-vertical community: only this department's posts
     });
     // Strip computed RPC columns (distance_miles) before storing
     setPosts((data || []).map(({distance_miles, ...p}) => p));
@@ -253,7 +254,7 @@ function CommunityPage({userId, org, plan}) {
       setOrgs(map);
     }
     setLoading(false);
-  }, [org?.lat, org?.lng, org?.location]);
+  }, [org?.lat, org?.lng, org?.location, org?.vertical]);
 
   useEffect(()=>{load();},[load]);
 
@@ -283,6 +284,7 @@ function CommunityPage({userId, org, plan}) {
         tags:           f.tags         || [],
         images:         f.images       || [],
         org_id:         userId,
+        vertical:       org?.vertical || "theatre",
         status:         "active",
         ...geoFields,
       };

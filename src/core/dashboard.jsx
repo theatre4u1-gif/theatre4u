@@ -503,11 +503,11 @@ export function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMa
         </div>
         {/* Divider 2 */}
         <div className="img-div" style={{marginBottom:32}}>
-          <img src={usp("photo-1504196606672-aef5c9cefc92",1000,240)} alt="Theatre seats" loading="lazy"/>
+          <img src={usp("photo-1504196606672-aef5c9cefc92",1000,240)} alt="" loading="lazy"/>
           <div className="img-div-fade"/>
           <div className="img-div-text">
-            <h3>Every Costume Found. Every Prop Accounted For.</h3>
-            <p>Theatre4u™ keeps your complete inventory organized — from the costume closet to the lighting rig.</p>
+            <h3>{getTerm(vVertical,"tagline")}</h3>
+            <p>{getTerm(vVertical,"taglineSub")}</p>
           </div>
         </div>
         {/* Bar chart */}

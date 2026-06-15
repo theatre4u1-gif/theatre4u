@@ -648,7 +648,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       ...(!isCrew  ? [{ id:"messages",    label:"Messages",    ico:"💬"       }] : []),
       ...(!isCrew  ? [{ id:"requests",    label:"Requests",    ico:"📋"       }] : []),
       { id:"inventory",   label:"Inventory",   ico:Ic.box     },
-      ...(!isCrew && org?.marketplace_enabled ? [{ id:"marketplace", label:getExchangeName(org?.vertical), ico:Ic.store   }] : []),
+      ...(!isCrew && org?.marketplace_enabled ? [{ id:"marketplace", label:getExchangeName(curVertical), ico:Ic.store   }] : []),
       ...(!isCrew && org?.community_enabled   ? [{ id:"community",   label:"Community",   ico:"🎪", community:true }] : []),
       { id:"productions", label:getTerm(curVertical,"productions"), ico:"🎭"       },
       ...(!isMember? [{ id:"reports",     label:"Reports",     ico:Ic.chart   }] : []),
@@ -656,13 +656,13 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       // Prop 28 nav hidden — legacy data accessible via Funding Tracker migration banner
       { id:"profile",     label:"My Profile",  ico:"👤"       },
       ...(!isMember ? [{ id:"labels",  label:"QR Labels",    ico:"🏷" }] : []),
-      ...(!isMember ? [{ id:"points", label:getPointsName(org?.vertical), ico:"🪙" }] : []),
+      ...(!isMember ? [{ id:"points", label:getPointsName(curVertical), ico:"🪙" }] : []),
       ...((!isMember && plan === "district") || ownsDistrict ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
       ...(!isMember && facDistrict ? [{ id:"facschools", label:"District Schools", ico:"🏫" }] : []),
       ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
     ];
   })();
-  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(curVertical), productions:getTerm(curVertical,"productions"), reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:getPointsName(org?.vertical), points:getPointsName(org?.vertical), community:"Community Board", labels:"QR Labels", facschools:"District Schools" };
+  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(curVertical), productions:getTerm(curVertical,"productions"), reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:getPointsName(curVertical), points:getPointsName(curVertical), community:"Community Board", labels:"QR Labels", facschools:"District Schools" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicOrgSlug) return <PublicOrgPage slug={publicOrgSlug} />;
@@ -956,7 +956,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                       )}
                     </div>
                   )}
-                  {page==="community"   && <CommunityGate userId={org?.id || user?.id} org={org} setOrg={setOrg} plan={plan}/>}
+                  {page==="community"   && <CommunityGate userId={org?.id || user?.id} org={viewOrg} setOrg={setOrg} plan={plan}/>}
                   {page==="labels"     && <LabelsPage org={org} userId={org?.id || user?.id} items={items} isAdmin={isAdmin}/>}
                   {page==="points"     && (plan!=="free"||isAdmin) && <CreditsPage userId={org?.id || user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
                   {page==="points"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>{getPointsName(org?.vertical)} is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true} userId={org?.id || user?.id} userEmail={user?.email}/></div>}
