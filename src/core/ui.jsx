@@ -89,12 +89,12 @@ export function LegalModal({title, onClose, children}){
   useEffect(()=>{const h=e=>e.key==="Escape"&&onClose();window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h)},[onClose]);
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{background:"var(--bg2,#15121b)",border:"1px solid rgba(212,168,67,.2)",borderRadius:14,width:"100%",maxWidth:680,maxHeight:"88vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 48px rgba(0,0,0,.6)"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,.08)"}}>
-          <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:18,color:"#ede8df"}}>{title}</h2>
-          <button onClick={onClose} style={{background:"none",border:"1px solid rgba(255,255,255,.15)",borderRadius:6,color:"#9b93a8",cursor:"pointer",padding:"4px 8px",fontSize:13}}>✕ Close</button>
+      <div style={{background:"var(--cream)",border:"1px solid var(--border)",borderRadius:14,width:"100%",maxWidth:680,maxHeight:"88vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 48px rgba(0,0,0,.6)"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:"1px solid var(--border)",background:"var(--parch)"}}>
+          <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:18,color:"var(--brand-burgundy)"}}>{title}</h2>
+          <button onClick={onClose} style={{background:"none",border:"1px solid var(--border)",borderRadius:6,color:"var(--muted)",cursor:"pointer",padding:"4px 8px",fontSize:13}}>✕ Close</button>
         </div>
-        <div style={{padding:"20px 24px",overflowY:"auto",flex:1,color:"#c8c0d4",fontSize:13.5,lineHeight:1.75}}>
+        <div style={{padding:"20px 24px",overflowY:"auto",flex:1,color:"var(--text)",fontSize:13.5,lineHeight:1.75}}>
           {children}
         </div>
       </div>

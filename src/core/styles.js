@@ -5,6 +5,8 @@ export const CSS = `
   --ink:#1a0c06;--deep:#2a0f09;--cog:#8b5a0f;--amber:#c49a30;--gold:#e8b85d;--gilt:#f5cc70;
   --cream:#f5ede3;--parch:#ede0cf;--linen:#ddd0ba;--sand:#c8b895;
   --text:#3b2a1f;--muted:#7a5538;--faint:#8a6a2e;--border:#d4c09a;
+  /* Official brand palette (from the finalized logo kit) — leads: burgundy + gold */
+  --brand-burgundy:#5b1e4e;--brand-magenta:#a0226f;--brand-mint:#7cc6a3;--brand-gold:#c79a4a;--brand-black:#222222;
   --white:#ffffff;--red:#8b1a2a;--green:#265e2a;--blue:#1a3570;
   --sh1:0 2px 14px rgba(18,6,0,.1);--sh2:0 6px 28px rgba(18,6,0,.17);--sh3:0 14px 52px rgba(18,6,0,.25);
   --r:5px;--rm:12px;--rl:18px;

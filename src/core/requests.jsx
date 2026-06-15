@@ -152,13 +152,13 @@ export function RequestItemModal({ item, currentUserId, currentOrgName, currentO
       onClick={e=>e.target===e.currentTarget&&onClose()}>
 
       {plan==="free" ? (
-        <div style={{background:"var(--bg2,#15121b)",border:"1px solid rgba(212,168,67,.3)",
-          borderRadius:14,padding:32,maxWidth:420,width:"100%",textAlign:"center"}}>
+        <div style={{background:"var(--cream)",border:"1px solid var(--border)",
+          borderRadius:14,padding:32,maxWidth:420,width:"100%",textAlign:"center",boxShadow:"0 12px 48px rgba(0,0,0,.4)"}}>
           <div style={{fontSize:36,marginBottom:12}}>🔒</div>
-          <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,marginBottom:8,color:"var(--gold)"}}>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,marginBottom:8,color:"var(--brand-burgundy)"}}>
             Pro Required for Exchange
           </div>
-          <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.7,marginBottom:20}}>
+          <p style={{fontSize:14,color:"var(--text)",lineHeight:1.7,marginBottom:20}}>
             Sending and receiving Exchange requests requires a Pro or District plan.
             Upgrade to connect with nearby programs and start sharing resources.
           </p>
@@ -168,7 +168,7 @@ export function RequestItemModal({ item, currentUserId, currentOrgName, currentO
             </button>
             <button className="btn btn-o" onClick={onClose}>Maybe Later</button>
           </div>
-          <p style={{fontSize:11,color:"var(--faint)",marginTop:12}}>
+          <p style={{fontSize:11,color:"var(--muted)",marginTop:12}}>
             Pro: $15/mo · Unlimited inventory · Full Exchange access · Stage Points
           </p>
         </div>

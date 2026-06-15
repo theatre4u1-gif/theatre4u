@@ -18,11 +18,11 @@ export function AddMemberForm({ onAdd, saving }) {
       <input value={email} onChange={e=>setEmail(e.target.value)}
         placeholder="their@email.com"
         style={{flex:1,minWidth:180,padding:"8px 12px",borderRadius:8,
-          border:"1px solid var(--border)",background:"var(--ink)",
+          border:"1px solid var(--border)",background:"var(--white)",
           color:"var(--text)",fontSize:13,fontFamily:"inherit",outline:"none"}}/>
       <select value={role} onChange={e=>setRole(e.target.value)}
         style={{padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",
-          background:"var(--ink)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
+          background:"var(--white)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
         <option value="co_director">Co-Director</option>
         <option value="stage_manager">Stage Manager</option>
         <option value="crew">Crew</option>
@@ -45,7 +45,7 @@ export function TransferOwnershipForm({ orgName, onTransfer, saving }) {
       <input value={email} onChange={e=>setEmail(e.target.value)}
         placeholder="newdirector@school.edu"
         style={{flex:1,minWidth:200,padding:"8px 12px",borderRadius:8,
-          border:"1px solid rgba(194,24,91,.3)",background:"var(--ink)",
+          border:"1px solid rgba(194,24,91,.3)",background:"var(--white)",
           color:"var(--text)",fontSize:13,fontFamily:"inherit",outline:"none"}}/>
       <button onClick={()=>{if(email.trim())onTransfer(email.trim());setEmail("");}} disabled={saving||!email.trim()}
         style={{padding:"8px 16px",borderRadius:8,border:"none",
@@ -404,7 +404,7 @@ export function AdminHub({ currentUser, org }) {
                   {orgs.map((o,idx)=>{
                     const items = Number(o.item_count)||0;
                     const team  = Number(o.team_count)||0;
-                    const planColor = o.plan==="district"?"#42a5f5":o.plan==="pro"?"var(--gold)":"var(--muted)";
+                    const planColor = o.plan==="district"?"#42a5f5":o.plan==="pro"?"#91592c":"var(--muted)";
                     const statusBadge = o.stripe_subscription_id
                       ? {label:"💳 Paying",bg:"rgba(76,175,80,.12)",color:"#4caf50"}
                       : o.founding_member
@@ -2014,7 +2014,7 @@ export function AdminEditOrgModal({ org, onClose, onSaved }) {
     <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:4000,
       display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}
       onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{ background:"var(--bg2,#15121b)",border:"1px solid var(--border)",
+      <div style={{ background:"var(--cream)",border:"1px solid var(--border)",
         borderRadius:14,width:"100%",maxWidth:560,maxHeight:"88vh",
         display:"flex",flexDirection:"column",boxShadow:"0 8px 48px rgba(0,0,0,.5)" }}>
 
@@ -2131,7 +2131,7 @@ export function AdminCloseOrgModal({ org, currentUser, onClose, onClosed, onHard
     <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:4000,
       display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}
       onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{ background:"var(--bg2,#15121b)",border:"1.5px solid rgba(194,24,91,.4)",
+      <div style={{ background:"var(--cream)",border:"1.5px solid rgba(194,24,91,.4)",
         borderRadius:14,width:"100%",maxWidth:520,maxHeight:"88vh",
         display:"flex",flexDirection:"column",boxShadow:"0 8px 48px rgba(0,0,0,.6)" }}>
 
@@ -2601,7 +2601,7 @@ export function AdminEditItemModal({ item, onClose, onSaved }) {
     <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:5000,
       display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}
       onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{ background:"var(--bg2,#15121b)",border:"1px solid var(--border)",
+      <div style={{ background:"var(--cream)",border:"1px solid var(--border)",
         borderRadius:14,width:"100%",maxWidth:520,maxHeight:"88vh",
         display:"flex",flexDirection:"column",boxShadow:"0 8px 48px rgba(0,0,0,.5)" }}>
 
@@ -3351,7 +3351,7 @@ export function AdminProgramsTab({ orgs, currentUser, flash }) {
     showMsg("✅ Ownership transfer initiated. Note: full transfer may require manual DB steps for auth.users.");
   };
 
-  const planColor = p => p==="district"?"#42a5f5":p==="pro"?"var(--gold)":p==="free"?"var(--muted)":"var(--muted)";
+  const planColor = p => p==="district"?"#42a5f5":p==="pro"?"#91592c":p==="free"?"var(--muted)":"var(--muted)";
   const catIcon = c => ({costumes:"👗",props:"🎭",sets:"🏗️",lighting:"💡",sound:"🔊",scripts:"📜",makeup:"💄",furniture:"🪑",fabrics:"🧵",tools:"🔧",effects:"✨"}[c]||"📦");
 
   return (
@@ -3485,7 +3485,7 @@ export function AdminProgramsTab({ orgs, currentUser, flash }) {
                           textTransform:"uppercase",letterSpacing:1}}>{lbl}</div>
                         <input value={editItem[k]||""} onChange={e=>setEditItem(p=>({...p,[k]:e.target.value}))}
                           style={{width:"100%",padding:"7px 10px",borderRadius:7,
-                            border:"1px solid var(--border)",background:"var(--ink)",
+                            border:"1px solid var(--border)",background:"var(--white)",
                             color:"var(--text)",fontSize:13,fontFamily:"inherit",outline:"none"}}/>
                       </div>
                     ))}
@@ -3608,7 +3608,7 @@ export function AdminProgramsTab({ orgs, currentUser, flash }) {
                       textTransform:"uppercase",letterSpacing:1}}>{lbl}</div>
                     <input value={editOrg[k]||""} onChange={e=>setEditOrg(p=>({...p,[k]:e.target.value}))}
                       style={{width:"100%",padding:"8px 12px",borderRadius:8,
-                        border:"1px solid var(--border)",background:"var(--ink)",
+                        border:"1px solid var(--border)",background:"var(--white)",
                         color:"var(--text)",fontSize:13,fontFamily:"inherit",outline:"none"}}/>
                   </div>
                 ))}
@@ -3621,7 +3621,7 @@ export function AdminProgramsTab({ orgs, currentUser, flash }) {
                   <div style={{fontSize:11,color:"var(--muted)",marginBottom:3,textTransform:"uppercase",letterSpacing:1}}>Plan</div>
                   <select value={editOrg.plan||"free"} onChange={e=>setEditOrg(p=>({...p,plan:e.target.value}))}
                     style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",
-                      background:"var(--ink)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
+                      background:"var(--white)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
                     <option value="free">Free</option>
                     <option value="pro">Pro</option>
                     <option value="district">District</option>
@@ -3631,7 +3631,7 @@ export function AdminProgramsTab({ orgs, currentUser, flash }) {
                   <div style={{fontSize:11,color:"var(--muted)",marginBottom:3,textTransform:"uppercase",letterSpacing:1}}>Beta Pro Access</div>
                   <select value={editOrg.temp_pro?"yes":"no"} onChange={e=>setEditOrg(p=>({...p,temp_pro:e.target.value==="yes"}))}
                     style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",
-                      background:"var(--ink)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
+                      background:"var(--white)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
                     <option value="yes">Yes — Full beta access</option>
                     <option value="no">No — Plan only</option>
                   </select>
@@ -3640,7 +3640,7 @@ export function AdminProgramsTab({ orgs, currentUser, flash }) {
                   <div style={{fontSize:11,color:"var(--muted)",marginBottom:3,textTransform:"uppercase",letterSpacing:1}}>Account Status</div>
                   <select value={editOrg.account_status||"active"} onChange={e=>setEditOrg(p=>({...p,account_status:e.target.value}))}
                     style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",
-                      background:"var(--ink)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
+                      background:"var(--white)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
                     <option value="active">Active</option>
                     <option value="suspended">Suspended</option>
                     <option value="closed">Closed</option>
@@ -3661,7 +3661,7 @@ export function AdminProgramsTab({ orgs, currentUser, flash }) {
                 <div>
                   <div style={{fontSize:11,color:"var(--muted)",marginBottom:3,textTransform:"uppercase",letterSpacing:1}}>Founding Member</div>
                   <select value={editOrg.founding_member?"yes":"no"} onChange={e=>setEditOrg(p=>({...p,founding_member:e.target.value==="yes"}))}
-                    style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",background:"var(--ink)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
+                    style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",background:"var(--white)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
                     <option value="no">No — standard beta access</option>
                     <option value="yes">Yes — 25+ items + feedback ✅</option>
                   </select>
@@ -3669,12 +3669,12 @@ export function AdminProgramsTab({ orgs, currentUser, flash }) {
                 <div>
                   <div style={{fontSize:11,color:"var(--muted)",marginBottom:3,textTransform:"uppercase",letterSpacing:1}}>Beta End Date</div>
                   <input type="date" value={editOrg.beta_end_date||"2026-09-01"} onChange={e=>setEditOrg(p=>({...p,beta_end_date:e.target.value}))}
-                    style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",background:"var(--ink)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}/>
+                    style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",background:"var(--white)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}/>
                 </div>
                 <div>
                   <div style={{fontSize:11,color:"var(--muted)",marginBottom:3,textTransform:"uppercase",letterSpacing:1}}>Founding Rate Offered</div>
                   <select value={editOrg.founding_rate_plan||""} onChange={e=>setEditOrg(p=>({...p,founding_rate_plan:e.target.value}))}
-                    style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",background:"var(--ink)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
+                    style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",background:"var(--white)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
                     <option value="">Not yet offered</option>
                     <option value="pro">Pro — $9.99/mo founding rate</option>
                     <option value="district_s">District S — $29/mo founding rate</option>
@@ -3684,7 +3684,7 @@ export function AdminProgramsTab({ orgs, currentUser, flash }) {
                 <div>
                   <div style={{fontSize:11,color:"var(--muted)",marginBottom:3,textTransform:"uppercase",letterSpacing:1}}>Founding Rate Accepted</div>
                   <select value={editOrg.founding_rate_accepted_at?"yes":"no"} onChange={e=>setEditOrg(p=>({...p,founding_rate_accepted_at:e.target.value==="yes"?new Date().toISOString():null}))}
-                    style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",background:"var(--ink)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
+                    style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",background:"var(--white)",color:"var(--text)",fontSize:13,fontFamily:"inherit"}}>
                     <option value="no">Not yet accepted</option>
                     <option value="yes">✅ Accepted</option>
                   </select>
@@ -3693,7 +3693,7 @@ export function AdminProgramsTab({ orgs, currentUser, flash }) {
                   <div style={{fontSize:11,color:"var(--muted)",marginBottom:3,textTransform:"uppercase",letterSpacing:1}}>Admin Notes</div>
                   <textarea value={editOrg.beta_notes||""} onChange={e=>setEditOrg(p=>({...p,beta_notes:e.target.value}))}
                     placeholder="Internal notes on this account's beta status, special arrangements, etc."
-                    style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",background:"var(--ink)",color:"var(--text)",fontSize:13,fontFamily:"inherit",resize:"vertical",minHeight:60}}/>
+                    style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border)",background:"var(--white)",color:"var(--text)",fontSize:13,fontFamily:"inherit",resize:"vertical",minHeight:60}}/>
                 </div>
               </div>
               <div style={{background:"rgba(194,24,91,.06)",border:"1px solid rgba(194,24,91,.2)",
