@@ -141,8 +141,8 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
   if(plan==="free") return(
     <div style={{padding:"40px 20px",textAlign:"center"}}>
       <div style={{fontSize:44,marginBottom:14}}>🏪</div>
-      <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:22,marginBottom:10}}>Backstage Exchange is a Pro Feature</h2>
-      <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Share selected items with other programs — rent, sell, or loan. Upgrade to Pro to join Backstage Exchange.</p>
+      <h2 style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:22,marginBottom:10}}>{getExchangeName(org?.vertical)} is a Pro Feature</h2>
+      <p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Share selected items with other programs — rent, sell, or loan. Upgrade to Pro to join the {getExchangeName(org?.vertical)}.</p>
       <UpgradePlans compact={true} userId={org?.id} userEmail={org?.email}/>
     </div>
   );
@@ -913,9 +913,9 @@ export function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool,
       <div style={{padding:"40px 36px 64px",position:"relative",zIndex:1,maxWidth:720}}>
         <div className="card card-p" style={{borderColor:"rgba(212,168,67,.3)",background:"linear-gradient(135deg,rgba(212,168,67,.06),rgba(212,168,67,.02))"}}>
           <div style={{fontSize:44,marginBottom:16,textAlign:"center"}}>🏪</div>
-          <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:26,marginBottom:12,textAlign:"center"}}>Join Backstage Exchange</h2>
+          <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:26,marginBottom:12,textAlign:"center"}}>Join the {getExchangeName(org?.vertical)}</h2>
           <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.7,marginBottom:24,textAlign:"center",maxWidth:520,margin:"0 auto 24px"}}>
-            Backstage Exchange is Theatre4u™'s optional resource-sharing network. You choose exactly which items to share — your full inventory stays completely private. Browse what other programs near you have available.
+            The {getExchangeName(org?.vertical)} is an optional resource-sharing network. You choose exactly which items to share — your full inventory stays completely private. Browse what other programs near you have available.
           </p>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:24}}>
             {[
@@ -931,12 +931,12 @@ export function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool,
             ))}
           </div>
           <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,padding:"10px 14px",marginBottom:20,fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
-            🏷️ <strong>What becomes visible:</strong> your organization name, city, and any items you've marked "For Rent", "For Sale", or "For Loan" in Inventory. Your full item list and private notes are never shared. You can leave Backstage Exchange at any time from <strong>Settings</strong>.
+            🏷️ <strong>What becomes visible:</strong> your organization name, city, and any items you've marked "For Rent", "For Sale", or "For Loan" in Inventory. Your full item list and private notes are never shared. You can leave the {getExchangeName(org?.vertical)} at any time from <strong>Settings</strong>.
           </div>
           <div style={{textAlign:"center"}}>
             <button className="btn btn-g" style={{fontSize:15,padding:"11px 32px"}}
               disabled={joining} onClick={join}>
-              {joining ? "Joining…" : "Join Backstage Exchange →"}
+              {joining ? "Joining…" : "Join the "+getExchangeName(org?.vertical)+" →"}
             </button>
           </div>
         </div>

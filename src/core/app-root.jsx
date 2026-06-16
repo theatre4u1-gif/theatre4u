@@ -929,11 +929,11 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                           headerNote={<div style={{padding:"8px 12px",background:"rgba(66,165,245,.1)",border:"1px solid rgba(66,165,245,.2)",borderRadius:7,marginBottom:12,fontSize:12,color:"#42a5f5"}}>🏫 Editing inventory for <strong>{activeSchool.name}</strong></div>}
                         />
                   )}
-                  {page==="marketplace" && <MarketplaceGate items={items} org={org} setOrg={setOrg} plan={plan} userId={org?.id || user?.id} activeSchool={activeSchool} allSchoolsMode={plan==="district"} onEdit={edit} onDelete={del}/>}
-                  {page==="productions" && <Productions userId={org?.id || user?.id} allItems={items} org={org} onNavigateTo={nav}/>}
-                  {page==="reports"     && <Reports     items={activeSchool ? schoolItems : items} plan={plan} org={org} userId={org?.id || user?.id} userEmail={user?.email}/>}
-                  {page==="funding"     && <FundingPage userId={org?.id || user?.id} org={org} plan={plan}/>}
-                  {page==="prop28"      && <Prop28Page  userId={org?.id || user?.id} org={org} onNav={nav}/>}
+                  {page==="marketplace" && <MarketplaceGate items={vItems} org={viewOrg} setOrg={setOrg} plan={plan} userId={org?.id || user?.id} activeSchool={activeSchool} allSchoolsMode={plan==="district"} onEdit={edit} onDelete={del}/>}
+                  {page==="productions" && <Productions userId={org?.id || user?.id} allItems={vItems} org={viewOrg} onNavigateTo={nav}/>}
+                  {page==="reports"     && <Reports     items={activeSchool ? schoolItems : vItems} plan={plan} org={viewOrg} userId={org?.id || user?.id} userEmail={user?.email}/>}
+                  {page==="funding"     && <FundingPage userId={org?.id || user?.id} org={viewOrg} plan={plan}/>}
+                  {page==="prop28"      && <Prop28Page  userId={org?.id || user?.id} org={viewOrg} onNav={nav}/>}
                   {page==="profile"     && <OrgProfilePage userId={org?.id || user?.id} org={org} setOrg={saveOrg} plan={plan} items={items}/>}
               {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} userId={org?.id || user?.id} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
                   {page==="district"    && (plan==="district" || ownsDistrict) && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool}/>}
@@ -957,9 +957,9 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                     </div>
                   )}
                   {page==="community"   && <CommunityGate userId={org?.id || user?.id} org={viewOrg} setOrg={setOrg} plan={plan}/>}
-                  {page==="labels"     && <LabelsPage org={org} userId={org?.id || user?.id} items={items} isAdmin={isAdmin}/>}
-                  {page==="points"     && (plan!=="free"||isAdmin) && <CreditsPage userId={org?.id || user?.id} org={org} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
-                  {page==="points"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>{getPointsName(org?.vertical)} is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true} userId={org?.id || user?.id} userEmail={user?.email}/></div>}
+                  {page==="labels"     && <LabelsPage org={viewOrg} userId={org?.id || user?.id} items={vItems} isAdmin={isAdmin}/>}
+                  {page==="points"     && (plan!=="free"||isAdmin) && <CreditsPage userId={org?.id || user?.id} org={viewOrg} plan={plan} balance={creditBalance} onBalanceChange={setCreditBalance}/>}
+                  {page==="points"     && plan==="free"&&!isAdmin && <div style={{padding:40,textAlign:"center"}}><div style={{fontSize:44,marginBottom:14}}>🪙</div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>{getPointsName(curVertical)} is a Pro Feature</h2><p style={{color:"var(--muted)",fontSize:14,maxWidth:420,margin:"0 auto 24px",lineHeight:1.6}}>Earn credits by lending and renting your items. Spend them when you borrow. Upgrade to unlock.</p><UpgradePlans compact={true} userId={org?.id || user?.id} userEmail={user?.email}/></div>}
 
 
                   {page==="admin"       && isAdmin && <AdminHub currentUser={user} org={org}/>}
