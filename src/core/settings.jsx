@@ -9,6 +9,8 @@ import { Ic } from "./icons.jsx";
 import { UpgradePlans } from "./billing.jsx";
 import { isAdminEmail } from "./config.js";
 import { setCustomCats } from "./inventory.js";
+import { VERTICALS_LIST } from "../lib/verticals.js";
+import { PLANS_DEF } from "./plans.js";
 import { QR } from "./qr.js";
 import { BG, usp } from "../lib/backgrounds.js";
 import { US_STATES, STATE_NAMES, geocodeLocation } from "../lib/geo.js";
@@ -603,6 +605,50 @@ function CustomCategoriesManager({ org, userId, memberRole=null }){
     </div>
   );
 }
+function DepartmentsManager({ org, setOrg, userId, plan="free", memberRole=null }){
+  const canManage = !memberRole || memberRole==="director" || memberRole==="program_director";
+  const primary = org?.vertical || "theatre";
+  const enabled = (org?.verticals_enabled?.length ? org.verticals_enabled : [primary]);
+  const multiAllowed = !!PLANS_DEF[plan]?.allVerticals || enabled.length > 1; // ArtsTracker plan, or already multi (e.g. comped)
+  const [saving,setSaving] = useState(null);
+  const toggle = async(vid)=>{
+    if(vid===primary || !multiAllowed) return;            // home department always on; locked on single plans
+    const next = enabled.includes(vid) ? enabled.filter(v=>v!==vid) : [...enabled, vid];
+    if(next.length===0) return;                            // never empty
+    setSaving(vid);
+    const { error } = await SB.from("orgs").update({ verticals_enabled: next }).eq("id", userId);
+    setSaving(null);
+    if(!error) setOrg(p=>({ ...p, verticals_enabled: next }));
+  };
+  if(!canManage) return <p style={{fontSize:13,color:"var(--muted)"}}>Only the account owner or a director can manage departments.</p>;
+  return(
+    <div>
+      <p style={{fontSize:13,color:"var(--muted)",marginBottom:12}}>
+        {multiAllowed
+          ? "Choose which arts departments are open in your account. Toggle any on or off — your home department always stays on. Switch between open departments from the sidebar."
+          : "Your plan includes one department. Upgrade to ArtsTracker to open Music, Dance, Visual Art, and Boosters too."}
+      </p>
+      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+        {VERTICALS_LIST.map(v=>{
+          const isPrimary=v.id===primary, isOn=enabled.includes(v.id), locked=!multiAllowed&&!isPrimary;
+          return(
+            <div key={v.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 12px",background:"rgba(255,255,255,.04)",borderRadius:6,opacity:locked?0.6:1}}>
+              <span style={{fontSize:14}}>{v.icon} {v.label}{isPrimary&&<span style={{fontSize:11,color:"var(--muted)",marginLeft:6}}>· home</span>}</span>
+              {locked
+                ? <span style={{fontSize:11,color:"var(--gold)",fontWeight:700}}>🔒 ArtsTracker</span>
+                : <button onClick={()=>toggle(v.id)} disabled={isPrimary||saving===v.id}
+                    title={isPrimary?"Your home department is always open":(isOn?"Turn off":"Turn on")}
+                    style={{width:44,height:24,borderRadius:99,border:"none",cursor:isPrimary?"default":"pointer",position:"relative",flexShrink:0,
+                      background:isOn?"var(--gold)":"rgba(255,255,255,.18)",transition:"background .2s",opacity:isPrimary?0.7:1}}>
+                    <span style={{position:"absolute",top:2,left:isOn?22:2,width:20,height:20,borderRadius:"50%",background:"#fff",transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.3)"}}/>
+                  </button>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, plan="free", userEmail="", setPlan, memberRole=null }) {
   const [f,setF]       = useState(org);
   const [saved,setSaved] = useState(false);
@@ -787,6 +833,11 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
         <div className="card card-p">
           <div className="sh"><h2>🔒 QR Code Privacy</h2><p>Control what others see when they scan your item QR labels.</p></div>
           <QRPrivacySettings org={org} setOrg={setOrg} userId={userId}/>
+        </div>
+
+        <div className="card card-p">
+          <div className="sh"><h2>🎭 Departments</h2><p>Choose which arts departments are open in your account, and switch between them from the sidebar.</p></div>
+          <DepartmentsManager org={org} setOrg={setOrg} userId={userId} plan={plan} memberRole={memberRole}/>
         </div>
 
         <div className="card card-p">
