@@ -119,8 +119,15 @@ export function InvoiceRequestForm({ orgName, userEmail }) {
 
 export function UpgradePlans({ compact = false, userId = null, userEmail = null, plan = "free" }) {
   const [billing, setBilling] = useState("monthly");
+  const [track, setTrack] = useState("single");
   return (
     <div>
+      {/* Track toggle — one art area vs all-departments ArtsTracker */}
+      <div style={{display:"flex",alignItems:"center",background:"var(--parch)",border:"1px solid var(--border)",borderRadius:8,padding:3,width:"fit-content",margin:compact?"0 0 10px":"0 auto 14px"}}>
+        <button onClick={()=>setTrack("single")} style={{background:track==="single"?"var(--gold)":"transparent",color:track==="single"?"#1a0f00":"var(--muted)",border:"none",borderRadius:5,padding:"6px 16px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .2s"}}>One Department</button>
+        <button onClick={()=>setTrack("artstracker")} style={{background:track==="artstracker"?"var(--gold)":"transparent",color:track==="artstracker"?"#1a0f00":"var(--muted)",border:"none",borderRadius:5,padding:"6px 16px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .2s"}}>ArtsTracker · All 5</button>
+      </div>
+      {track==="artstracker" && <p style={{textAlign:compact?"left":"center",margin:"0 0 14px",fontSize:12,color:"var(--muted)"}}>One subscription opens all five departments — Theatre, Music, Dance, Visual Art, and Boosters.</p>}
       {/* Toggle */}
       <div style={{display:"flex",alignItems:"center",background:"var(--parch)",border:"1px solid var(--border)",borderRadius:8,padding:3,width:"fit-content",margin:compact?"0 0 16px":"0 auto 20px"}}>
         <button onClick={()=>setBilling("monthly")} style={{background:billing==="monthly"?"var(--gold)":"transparent",color:billing==="monthly"?"#1a0f00":"var(--muted)",border:"none",borderRadius:5,padding:"6px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .2s"}}>
@@ -135,7 +142,7 @@ export function UpgradePlans({ compact = false, userId = null, userEmail = null,
       </div>
       {/* Cards */}
       <div style={{display:"grid",gridTemplateColumns:compact?"1fr":"repeat(auto-fit,minmax(200px,1fr))",gap:12}}>
-        {UPGRADE_PLANS.map(p=>{
+        {UPGRADE_PLANS.filter(p=>(p.track||"single")===track).map(p=>{
           const price   = billing==="annual" ? p.annualPrice : p.monthlyPrice;
           const note    = billing==="annual" ? p.annualNote  : null;
           const link    = stripeLink(STRIPE_LINKS[p.id]?.[billing], userId, userEmail);
@@ -164,7 +171,7 @@ export function UpgradePlans({ compact = false, userId = null, userEmail = null,
                 ? <button className="btn btn-full" style={{background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.5)",color:"var(--gold)",cursor:"default",fontWeight:700,fontSize:13}} disabled>✓ Current Plan</button>
                 : isFree
                 ? null
-                : p.id==="enterprise"
+                : p.id.endsWith("enterprise")
                   ? <a href="mailto:hello@theatre4u.org?subject=Enterprise District Inquiry" className="btn btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",background:"linear-gradient(135deg,#1565c0,#0d47a1)",border:"1px solid rgba(66,133,244,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>Contact Us →</a>
                   : billing === "invoice"
                     ? <button className="btn btn-full" onClick={()=>document.getElementById("t4u-invoice-form")?.scrollIntoView({behavior:"smooth",block:"start"})}

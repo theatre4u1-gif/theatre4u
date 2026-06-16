@@ -35,16 +35,29 @@ export const PLANS_DEF = {
 };
 
 export const UPGRADE_PLANS = [
-  { id:"free",     name:"Free",     monthlyPrice:"$0",  annualPrice:"Free",   per:"/forever", annualNote:null,       desc:"Perfect for getting started.",     hot:false,
+  // ── Single-Department track — one art area ──────────────────────────────────
+  { id:"free",     track:"single", name:"Free",     monthlyPrice:"$0",  annualPrice:"Free",   per:"/forever", annualNote:null,       desc:"Perfect for getting started.",     hot:false,
     feats:["Up to 25 items","QR code generation","Photo uploads","Basic CSV export"] },
-  { id:"pro",      name:"Pro",      monthlyPrice:"$15", annualPrice:"$12.50",  annualTotal:"$150/yr", per:"/month", annualNote:"save $30", desc:"For active programs & companies.", hot:true,
-    feats:["Unlimited inventory","Full Backstage Exchange access","Photo storage 5GB","Analytics dashboard","Email support"] },
-  { id:"district", name:"District S", monthlyPrice:"$49", annualPrice:"$42",  annualTotal:"$500/yr", per:"/month", annualNote:"save $88", desc:"Up to 6 schools, one platform.",  hot:false,
+  { id:"pro",      track:"single", name:"Pro",      monthlyPrice:"$15", annualPrice:"$12.50",  annualTotal:"$150/yr", per:"/month", annualNote:"save $30", desc:"For active programs & companies.", hot:true,
+    feats:["Unlimited inventory","Full Exchange access","Photo storage 5GB","Analytics dashboard","Email support"] },
+  { id:"district", track:"single", name:"District S", monthlyPrice:"$49", annualPrice:"$42",  annualTotal:"$500/yr", per:"/month", annualNote:"save $88", desc:"Up to 6 schools, one platform.",  hot:false,
     feats:["Multiple organizations","District dashboard","Bulk import","Dedicated support","Everything in Pro"] },
-  { id:"district_m", name:"District M", monthlyPrice:"$99", annualPrice:"$83",  annualTotal:"$999/yr",   per:"/month", annualNote:"save $189", desc:"Up to 15 schools — 54% savings.", hot:false,
+  { id:"district_m", track:"single", name:"District M", monthlyPrice:"$99", annualPrice:"$83",  annualTotal:"$999/yr",   per:"/month", annualNote:"save $189", desc:"Up to 15 schools — 54% savings.", hot:false,
     feats:["Everything in District S","Up to 15 school sites","District dashboard","Priority support","Dedicated onboarding"] },
-  { id:"district_l", name:"District L", monthlyPrice:"$179", annualPrice:"$150", annualTotal:"$1,799/yr", per:"/month", annualNote:"save $349", desc:"Up to 30 schools — 58% savings.", hot:false,
+  { id:"district_l", track:"single", name:"District L", monthlyPrice:"$179", annualPrice:"$150", annualTotal:"$1,799/yr", per:"/month", annualNote:"save $349", desc:"Up to 30 schools — 58% savings.", hot:false,
     feats:["Everything in District M","Up to 30 school sites","District dashboard","Training webinar","Custom reporting"] },
-  { id:"enterprise",  name:"Enterprise", monthlyPrice:"Custom", annualPrice:"Custom", per:"", annualNote:null, desc:"Large districts — custom contract.", hot:false,
+  { id:"enterprise",  track:"single", name:"Enterprise", monthlyPrice:"Custom", annualPrice:"Custom", per:"", annualNote:null, desc:"Large districts — custom contract.", hot:false,
     feats:["Everything in District L","Unlimited schools","Custom PO/invoicing","Data Processing Agreement","Dedicated support","Custom pricing"] },
+
+  // ── ArtsTracker track — all five departments (Theatre · Music · Dance · Visual Art · Boosters) ──
+  { id:"at_pro",        track:"artstracker", name:"ArtsTracker Pro",        monthlyPrice:"$59",  annualPrice:"$49",  annualTotal:"$590/yr",   per:"/month", annualNote:"save $118",   desc:"All five departments, one school.", hot:true,
+    feats:["All 5 departments in one account","Switch between departments anytime","Unlimited inventory · all areas","Full Exchange access","Analytics & reports","Email support"] },
+  { id:"at_district_s", track:"artstracker", name:"ArtsTracker District S", monthlyPrice:"$199", annualPrice:"$166", annualTotal:"$1,990/yr", per:"/month", annualNote:"save $398",   desc:"All departments · up to 6 schools.", hot:false,
+    feats:["Everything in ArtsTracker Pro","Up to 6 schools","District dashboard","Bulk import","Dedicated support"] },
+  { id:"at_district_m", track:"artstracker", name:"ArtsTracker District M", monthlyPrice:"$399", annualPrice:"$333", annualTotal:"$3,990/yr", per:"/month", annualNote:"save $798",   desc:"All departments · up to 15 schools.", hot:false,
+    feats:["Everything in District S","Up to 15 schools","Priority support","Dedicated onboarding"] },
+  { id:"at_district_l", track:"artstracker", name:"ArtsTracker District L", monthlyPrice:"$699", annualPrice:"$583", annualTotal:"$6,990/yr", per:"/month", annualNote:"save $1,398", desc:"All departments · up to 30 schools.", hot:false,
+    feats:["Everything in District M","Up to 30 schools","Training webinar","Custom reporting"] },
+  { id:"at_enterprise", track:"artstracker", name:"ArtsTracker Enterprise", monthlyPrice:"Custom", annualPrice:"Custom", per:"", annualNote:null, desc:"31+ schools — custom contract.", hot:false,
+    feats:["Everything in District L","Unlimited schools","Custom PO/invoicing","Data Processing Agreement","Dedicated support"] },
 ];
