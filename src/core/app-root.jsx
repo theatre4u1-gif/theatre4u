@@ -25,7 +25,6 @@ import { HOSTNAME, IS_THEATRE4U, IS_ARTSTRACKER, APP_NAME, APP_SUBTITLE, APP_EMA
 import { POINT_EARN_RATES, POINTS_PER_DOLLAR, POINTS_FREE_MONTH, POINTS_MAX_BALANCE, POINTS_EXPIRE_DAYS, PLATFORM_FEE_PCT, POINTS_MIN_REDEEM, MILESTONE_POINTS } from "./points-config.js";
 import { Ic } from "./icons.jsx";
 import { Pager, Modal, FbShareBtn, HeroImg, CatCard, CatThumb, LegalModal, LogoMarkDark, LogoMarkLight } from "./ui.jsx";
-import { FeedbackWidget } from "./feedback.jsx";
 import { PIN_COLORS, ROW_LABELS, COL_LABELS } from "./storage-map.js";
 import { QR } from "./qr.js";
 import { ItemForm, ItemDetail } from "./items.jsx";
@@ -697,7 +696,6 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
         onTakeTour={()=>{ window.location.href = window.location.href.split("?")[0] + "?preview=1"; }}
       />
       <AuthOverlay onAuth={u=>{setUser(u);}} pendingInvite={pendingInvite} inviteInfo={inviteInfo}/>
-      {user && <FeedbackWidget userId={org?.id || user.id} orgName={org?.name||""} isLeadingPlayer={org?.is_leading_player||false}/>}
       {user && !isDemo && <AIHelpBubble user={user} />}
     </>
   );
@@ -972,7 +970,6 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       {/* ── Legal Modals ── */}
       {legalPage==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegalPage(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
       {legalPage==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegalPage(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
-      {user && <FeedbackWidget userId={org?.id || user.id} orgName={org?.name||""} isLeadingPlayer={org?.is_leading_player||false}/>}
       {user && !isDemo && <AIHelpBubble user={user} />}
       {/* ── Onboarding overlay ─ shown once to new users ── */}
       {user && onboardingStep !== null && onboardingStep < 4 && (

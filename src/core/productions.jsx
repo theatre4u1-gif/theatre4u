@@ -40,6 +40,7 @@ export function AddToProductionPicker({ item, userId, onClose }) {
       const { data } = await SB.from("productions")
         .select("*, production_items(item_id)")
         .eq("org_id", userId)
+        .eq("vertical", item?.vertical || "theatre")
         .neq("status","closed")
         .order("created_at", { ascending: false });
       setProductions(data || []);
@@ -65,6 +66,7 @@ export function AddToProductionPicker({ item, userId, onClose }) {
     const { data } = await SB.from("productions")
       .select("*, production_items(item_id)")
       .eq("org_id", userId)
+      .eq("vertical", item?.vertical || "theatre")
       .neq("status","closed")
       .order("created_at", { ascending: false });
     setProductions(data || []);
@@ -1402,10 +1404,11 @@ export function Productions({ userId, allItems, org, onNavigateTo }) {
     const { data } = await SB.from("productions")
       .select("*, production_items(id, status)")
       .eq("org_id", userId)
+      .eq("vertical", org?.vertical || "theatre")
       .order("created_at", { ascending: false });
     setProductions(data || []);
     setLoading(false);
-  }, [userId]);
+  }, [userId, org?.vertical]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -1424,7 +1427,7 @@ export function Productions({ userId, allItems, org, onNavigateTo }) {
       }
     } else {
       const { data, error } = await SB.from("productions")
-        .insert({ ...payload, org_id: userId }).select().single();
+        .insert({ ...payload, org_id: userId, vertical: org?.vertical || "theatre" }).select().single();
       if (error) { alert("Save failed: " + error.message); return; }
       if (data) setProductions(p => [data, ...p]);
     }
