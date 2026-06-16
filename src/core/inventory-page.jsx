@@ -9,7 +9,7 @@ import { CAT, CATS, CAT_GFX, CONDS, SIZES, AVAIL, MKT, getCatsMerged, customCats
 import { QR } from "./qr.js";
 import { PLANS_DEF } from "./plans.js";
 import { BG, usp } from "../lib/backgrounds.js";
-import { getExchangeName, getVertical, getCatGfx, getCats } from "../lib/verticals.js";
+import { getExchangeName, getVertical, getCatGfx, getCats, getTerm } from "../lib/verticals.js";
 import { CSVImport } from "./marketplace.jsx";
 import { ItemForm, ItemDetail } from "./items.jsx";
 import { LocationsPanel } from "./locations.jsx";
@@ -282,7 +282,7 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
           <div className="hero-body">
             <div className="hero-eyebrow">📦 Your Collection</div>
             <h1 className="hero-title" style={{fontSize:46}}>Inventory</h1>
-            <p className="hero-sub">Every costume, prop, set piece and piece of gear — all in one place.</p>
+            <p className="hero-sub">{getTerm(vVertical,"inventorySub")}</p>
           </div>
           <div className="hero-bar"/>
         </div>

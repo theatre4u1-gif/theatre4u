@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { CAT } from "./inventory.js";
 import { QR } from "./qr.js";
+import { APP_NAME } from "./config.js";
 
 const LABEL_PACKS = [
   { qty:25,  type:"standard",    label:"25 Standard",     retail:1000, desc:"Indoor use · polyester matte · water-resistant" },
@@ -117,7 +118,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
           <div class="lbl-brand">theatre4u.org</div>
         </div>`;
       }).join("");
-      w.document.write(`<!DOCTYPE html><html><head><title>QR Labels — ${org?.name||"Theatre4u"}</title>
+      w.document.write(`<!DOCTYPE html><html><head><title>QR Labels — ${org?.name||APP_NAME}</title>
       <style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:Arial,sans-serif;background:#fff;padding:12px}
@@ -134,7 +135,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
         @media print{.controls{display:none}.grid{gap:6px}.lbl{width:150px;height:150px}}
       </style></head><body>
       <div class="controls">
-        <strong>${org?.name||"Theatre4u"}</strong> — ${toPrint.length} label${toPrint.length!==1?"s":""}
+        <strong>${org?.name||APP_NAME}</strong> — ${toPrint.length} label${toPrint.length!==1?"s":""}
         <button onclick="window.print()" style="margin-left:16px;padding:5px 14px;background:#d4a843;border:none;border-radius:5px;font-weight:700;cursor:pointer">🖨 Print</button>
         <button onclick="window.close()" style="margin-left:6px;padding:5px 14px;border:1px solid #ccc;border-radius:5px;cursor:pointer">Close</button>
         <span style="margin-left:12px;color:#888;font-size:12px">Tip: In print dialog choose "Fit to page" or "No scaling" for best results</span>
@@ -249,7 +250,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
       {/* How it works — 3 steps */}
       <div style={{...card,padding:"14px 18px",marginBottom:20,
         background:"linear-gradient(135deg,rgba(212,168,67,.07),rgba(212,168,67,.02))"}}>
-        <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>How Theatre4u QR labels work</div>
+        <div style={{fontWeight:700,fontSize:13,marginBottom:10}}>How {APP_NAME} QR labels work</div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}}>
           {[
             {n:"1",ico:"🖨",t:"Print now — free",

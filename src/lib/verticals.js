@@ -17,7 +17,7 @@ export const VERTICALS = {
     color: "#b5174f",
     appName: "Theatre4u™",
     exchangeName: "Backstage Exchange",
-    terms: { productions:"Productions", production:"Production", addToProduction:"Add to Production", productionPhotos:"Production Photos", upcomingShow:"Upcoming Show", auditionNotice:"Audition Notice", showAnnouncement:"Show Announcement", crewRole:"Crew", tagline:"Every Costume Found. Every Prop Accounted For.", taglineSub:"Theatre4u™ keeps your complete inventory organized — from the costume closet to the lighting rig." },
+    terms: { productions:"Productions", production:"Production", addToProduction:"Add to Production", productionPhotos:"Production Photos", upcomingShow:"Upcoming Show", auditionNotice:"Audition Notice", showAnnouncement:"Show Announcement", crewRole:"Crew", tagline:"Every Costume Found. Every Prop Accounted For.", taglineSub:"Theatre4u™ keeps your complete inventory organized — from the costume closet to the lighting rig.", inventorySub:"Every costume, prop, set piece and piece of gear — all in one place.", productionsSub:"Create a folder for each show. Track every costume, prop, and piece of gear from wishlist to opening night.", communityIntro:"Upcoming shows, audition notices, production photos, and wanted items — from theatre programs near you." },
     fundingCats: ["Equipment","Costumes","Sets & Scenery","Lighting & Sound","Props","Scripts & Royalties","Supplies","Travel","Personnel","Other"],
     categories: [
       { id:"costumes",  label:"Costumes",        icon:"👗", color:"#b5174f", grad:"linear-gradient(135deg,#7b1560,#c2185b,#e91e8c)" },
@@ -47,7 +47,7 @@ export const VERTICALS = {
     color: "#1554a0",
     appName: "ArtsTracker",
     exchangeName: "Instrument Exchange",
-    terms: { productions:"Concerts", production:"Concert", addToProduction:"Add to Concert", productionPhotos:"Concert Photos", upcomingShow:"Upcoming Concert", auditionNotice:"Audition Notice", showAnnouncement:"Concert Announcement", crewRole:"Aide", tagline:"Every Instrument Tracked. Every Score Accounted For.", taglineSub:"ArtsTracker keeps your program organized — from the instrument room to the sheet-music library." },
+    terms: { productions:"Concerts", production:"Concert", addToProduction:"Add to Concert", productionPhotos:"Concert Photos", upcomingShow:"Upcoming Concert", auditionNotice:"Audition Notice", showAnnouncement:"Concert Announcement", crewRole:"Aide", tagline:"Every Instrument Tracked. Every Score Accounted For.", taglineSub:"ArtsTracker keeps your program organized — from the instrument room to the sheet-music library.", inventorySub:"Every instrument, accessory, and piece of gear — all in one place.", productionsSub:"Create a folder for each concert. Track every instrument and piece of gear from first rehearsal to performance night.", communityIntro:"Upcoming concerts, audition notices, performance photos, and wanted items — from music programs near you." },
     fundingCats: ["Instruments","Sheet Music","Equipment","Uniforms","Instruction","Travel","Personnel","Technology","Other"],
     categories: [
       { id:"strings",       label:"Strings",        icon:"🎻", color:"#6a1b8a", grad:"linear-gradient(135deg,#4a148c,#7b1fa2,#9c27b0)" },
@@ -74,7 +74,7 @@ export const VERTICALS = {
     color: "#c2185b",
     appName: "ArtsTracker",
     exchangeName: "Dance Exchange",
-    terms: { productions:"Performances", production:"Performance", addToProduction:"Add to Performance", productionPhotos:"Performance Photos", upcomingShow:"Upcoming Performance", auditionNotice:"Audition Notice", showAnnouncement:"Performance Announcement", crewRole:"Aide", tagline:"Every Costume Ready. Every Prop in Its Place.", taglineSub:"ArtsTracker keeps your program organized — from the costume racks to the studio and stage." },
+    terms: { productions:"Performances", production:"Performance", addToProduction:"Add to Performance", productionPhotos:"Performance Photos", upcomingShow:"Upcoming Performance", auditionNotice:"Audition Notice", showAnnouncement:"Performance Announcement", crewRole:"Aide", tagline:"Every Costume Ready. Every Prop in Its Place.", taglineSub:"ArtsTracker keeps your program organized — from the costume racks to the studio and stage.", inventorySub:"Every costume, prop, and piece of gear — all in one place.", productionsSub:"Create a folder for each performance. Track every costume and prop from first rehearsal to performance night.", communityIntro:"Upcoming performances, audition notices, performance photos, and wanted items — from dance programs near you." },
     fundingCats: ["Costumes","Footwear","Equipment","Sound & Music","Studio Supplies","Travel","Personnel","Other"],
     categories: [
       { id:"costumes", label:"Costumes",        icon:"👗", color:"#b5174f", grad:"linear-gradient(135deg,#7b1560,#c2185b,#e91e8c)" },
@@ -99,7 +99,7 @@ export const VERTICALS = {
     color: "#1554a0",
     appName: "ArtsTracker",
     exchangeName: "Materials Exchange",
-    terms: { productions:"Exhibitions", production:"Exhibition", addToProduction:"Add to Exhibition", productionPhotos:"Exhibition Photos", upcomingShow:"Upcoming Exhibition", auditionNotice:"Call for Artists", showAnnouncement:"Exhibition Announcement", crewRole:"Aide", tagline:"Every Supply Stocked. Every Tool Accounted For.", taglineSub:"ArtsTracker keeps your program organized — from the supply closet to the kiln and gallery." },
+    terms: { productions:"Exhibitions", production:"Exhibition", addToProduction:"Add to Exhibition", productionPhotos:"Exhibition Photos", upcomingShow:"Upcoming Exhibition", auditionNotice:"Call for Artists", showAnnouncement:"Exhibition Announcement", crewRole:"Aide", tagline:"Every Supply Stocked. Every Tool Accounted For.", taglineSub:"ArtsTracker keeps your program organized — from the supply closet to the kiln and gallery.", inventorySub:"Every supply, tool, and piece of equipment — all in one place.", productionsSub:"Create a folder for each exhibition. Track every piece and material from concept to opening.", communityIntro:"Upcoming exhibitions, calls for artists, show photos, and wanted items — from art programs near you." },
     fundingCats: ["Art Supplies","Equipment","Kiln & Tools","Framing & Display","Instruction","Travel","Personnel","Other"],
     categories: [
       { id:"painting",    label:"Painting Supplies", icon:"🖌️", color:"#b5174f", grad:"linear-gradient(135deg,#7b1560,#c2185b,#e91e8c)" },
@@ -126,7 +126,7 @@ export const VERTICALS = {
     color: "#7b1fa2",
     appName: "ArtsTracker",
     exchangeName: "Resource Exchange",
-    terms: { productions:"Events", production:"Event", addToProduction:"Add to Event", productionPhotos:"Event Photos", upcomingShow:"Upcoming Event", auditionNotice:"Volunteer Call", showAnnouncement:"Event Announcement", crewRole:"Volunteer", tagline:"Every Item Tracked. Every Dollar Accounted For.", taglineSub:"ArtsTracker keeps your program organized — from uniforms and equipment to event supplies." },
+    terms: { productions:"Events", production:"Event", addToProduction:"Add to Event", productionPhotos:"Event Photos", upcomingShow:"Upcoming Event", auditionNotice:"Volunteer Call", showAnnouncement:"Event Announcement", crewRole:"Volunteer", tagline:"Every Item Tracked. Every Dollar Accounted For.", taglineSub:"ArtsTracker keeps your program organized — from uniforms and equipment to event supplies.", inventorySub:"Every item, uniform, and piece of equipment — all in one place.", productionsSub:"Create a folder for each event. Track everything you need from planning to event day.", communityIntro:"Upcoming events, volunteer calls, event photos, and wanted items — from booster groups near you." },
     fundingCats: ["Fundraising","Equipment","Uniforms","Event Supplies","Concessions","Travel","Awards","Other"],
     categories: [
       { id:"uniforms",      label:"Uniforms",              icon:"👕", color:"#1554a0", grad:"linear-gradient(135deg,#0d2b6e,#1565c0,#1976d2)" },

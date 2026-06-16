@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { EM } from "./messages.js";
+import { APP_NAME, APP_URL } from "./config.js";
 import { Modal } from "./ui.jsx";
 import { fmt$ } from "./helpers.js";
 import { getFundingCats } from "../lib/verticals.js";
@@ -140,7 +141,7 @@ export function FundingPage({userId, org, plan}){
           <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:4}}>Funding Tracker</h2>
           <p style={{color:"var(--faint)",fontSize:13}}>Track, record, and report funding sources and expenditures for your own records.</p>
           <p style={{fontSize:12,color:"var(--faint)",marginTop:4,fontStyle:"italic",lineHeight:1.5}}>
-            Theatre4u helps you organize and report funding data for your own records. Consult your district’s business office for compliance determinations.
+            {APP_NAME} helps you organize and report funding data for your own records. Consult your district’s business office for compliance determinations.
           </p>
         </div>
         <div style={{display:"flex",gap:8}}>
@@ -614,7 +615,7 @@ export function ProgramImpactReport({ sources, exps, org }) {
       <h2>Expenditures by Funding Source</h2>
       ${sourcesHTML||'<p style="color:#888;font-style:italic">No sources match your current filters.</p>'}
       <div style="margin-top:40px;padding-top:16px;border-top:1px solid #e0d5c0;font-size:10px;color:#aaa;text-align:center">
-        Theatre4u™ — Artstracker LLC · theatre4u.org · For program records — consult your district's business office for compliance determinations.
+        ${APP_NAME} — Artstracker LLC · ${APP_URL.replace(/^https?:\/\//,'')} · For program records — consult your district's business office for compliance determinations.
       </div>
     </div></body></html>`;
     w.document.write(html);

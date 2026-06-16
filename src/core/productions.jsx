@@ -1455,9 +1455,9 @@ export function Productions({ userId, allItems, org, onNavigateTo }) {
           <img src={usp("photo-1503095396549-807759245b35", 1100, 280)} alt="Productions" loading="eager"/>
           <div className="hero-fade"/>
           <div className="hero-body">
-            <div className="hero-eyebrow">🎭 Show Planning</div>
-            <h1 className="hero-title" style={{ fontSize:44 }}>Productions</h1>
-            <p className="hero-sub">Create a folder for each show. Track every costume, prop, and piece of gear from wishlist to opening night.</p>
+            <div className="hero-eyebrow">🎭 {getTerm(org?.vertical,"production")} Planning</div>
+            <h1 className="hero-title" style={{ fontSize:44 }}>{getTerm(org?.vertical,"productions")}</h1>
+            <p className="hero-sub">{getTerm(org?.vertical,"productionsSub")}</p>
           </div>
           <div className="hero-bar"/>
         </div>
@@ -1490,8 +1490,8 @@ export function Productions({ userId, allItems, org, onNavigateTo }) {
             </h3>
             <p style={{ color:"var(--muted)", fontSize:13, maxWidth:380, margin:"0 auto 20px", lineHeight:1.6 }}>
               {filter==="all"
-                ? "Create a production folder for each show. Save items from your inventory to track exactly what you need."
-                : ("No shows in "+filter+" status.")}
+                ? ("Create a "+getTerm(org?.vertical,"production").toLowerCase()+" folder. Save items from your inventory to track exactly what you need.")
+                : ("No "+getTerm(org?.vertical,"productions").toLowerCase()+" in "+filter+" status.")}
             </p>
             {filter==="all" && (
               <button className="btn btn-g" onClick={()=>{ setActive(null); setModal("new"); }}>

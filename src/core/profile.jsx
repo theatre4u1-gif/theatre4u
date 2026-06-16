@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { BG, usp } from "../lib/backgrounds.js";
 import { geocodeLocation } from "../lib/geo.js";
+import { APP_URL } from "./config.js";
 
 // Public org profile editor page — extracted from App.jsx.
 
@@ -62,7 +63,7 @@ export function OrgProfilePage({ userId, org, setOrg, plan, items }) {
   };
 
   const profileUrl = org?.slug
-    ? `https://theatre4u.org/#/org/${org.slug}`
+    ? `${APP_URL}/#/org/${org.slug}`
     : null;
 
   const copyUrl = () => {
@@ -262,7 +263,7 @@ export function OrgProfilePage({ userId, org, setOrg, plan, items }) {
 
               <div className="fg fu"><label className="fl">Profile URL Slug</label>
                 <input className="fi" value={f.slug || ""} onChange={e => upd("slug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} placeholder="lincoln-high-drama" />
-                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>Your profile will be at: theatre4u.org/org/<strong>{f.slug || "your-slug-here"}</strong></div>
+                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>Your profile will be at: {APP_URL.replace(/^https?:\/\//,"")}/#/org/<strong>{f.slug || "your-slug-here"}</strong></div>
               </div>
             </div>
 

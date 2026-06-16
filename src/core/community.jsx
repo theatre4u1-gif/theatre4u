@@ -8,6 +8,7 @@ import { resizeImg, postShareText } from "./helpers.js";
 import { EM } from "./messages.js";
 import { FbShareBtn, Modal } from "./ui.jsx";
 import { usp } from "../lib/backgrounds.js";
+import { getVertical, getTerm } from "../lib/verticals.js";
 
 // ══════════════════════════════════════════════════════════════════════════════
 // COMMUNITY BOARD
@@ -329,9 +330,9 @@ function CommunityPage({userId, org, plan}) {
           <img src={usp("photo-1503095396549-807759245b35",1100,290)} alt="Community" loading="eager"/>
           <div className="hero-fade"/>
           <div className="hero-body">
-            <div className="hero-eyebrow">🎪 Theatre Community</div>
+            <div className="hero-eyebrow">🎪 {getVertical(org?.vertical).label} Community</div>
             <h1 className="hero-title" style={{fontSize:44}}>Community Board</h1>
-            <p className="hero-sub">Upcoming shows, audition notices, production photos, and wanted items — from programs across the network.</p>
+            <p className="hero-sub">{getTerm(org?.vertical,"communityIntro")}</p>
           </div>
           <div className="hero-bar"/>
         </div>
@@ -342,7 +343,7 @@ function CommunityPage({userId, org, plan}) {
         <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:20,alignItems:"center"}}>
           <div className="srch" style={{position:"relative",flex:1,minWidth:220}}>
             <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"var(--muted)",display:"flex",pointerEvents:"none"}}>{Ic.search}</span>
-            <input className="fi" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search shows, auditions, wanted items…" style={{paddingLeft:34,width:"100%"}}/>
+            <input className="fi" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search the board…" style={{paddingLeft:34,width:"100%"}}/>
           </div>
           <div style={{display:"flex",gap:0,border:"1px solid var(--border)",borderRadius:6,overflow:"hidden"}}>
             {[["all","All"],["show","🎟️ Events"],["audition","🎤 Calls"],["photo","📸 Photos"],["wanted","🔍 Wanted"],["announcement","📢 News"]].map(([id,label])=>(
@@ -469,7 +470,7 @@ export function CommunityGate({userId, org, setOrg, plan}) {
           <div style={{fontSize:44,marginBottom:16,textAlign:"center"}}>🎪</div>
           <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:26,marginBottom:12,textAlign:"center"}}>Join the Community Board</h2>
           <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.7,marginBottom:20,textAlign:"center",maxWidth:500,margin:"0 auto 20px"}}>
-            The Community Board is a shared space for theatre programs to connect — post upcoming shows, audition notices, production photos, and wanted items. Other opted-in programs can see your posts.
+            The Community Board is a shared space for {getVertical(org?.vertical).label} programs to connect — post updates, notices, photos, and requests. Other opted-in programs can see your posts.
           </p>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:24}}>
             {[
