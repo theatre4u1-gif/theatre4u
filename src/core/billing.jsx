@@ -78,10 +78,18 @@ export function InvoiceRequestForm({ orgName, userEmail }) {
         <div>
           <label style={labelStyle}>Plan</label>
           <select style={{...inputStyle,cursor:"pointer"}} value={form.plan} onChange={e=>upd("plan",e.target.value)}>
-            <option value="pro">Pro — $15/month or $150/year</option>
-            <option value="district">District S — $49/month or $500/year (up to 6 schools)</option>
-            <option value="district_m">District M — $99/month or $1,000/year (up to 15 schools)</option>
-            <option value="district_l">District L — $199/month or $2,000/year (up to 30 schools)</option>
+            <optgroup label="Single Department">
+              <option value="pro">Pro — $15/month or $150/year</option>
+              <option value="district">District S — $49/month or $500/year (up to 6 schools)</option>
+              <option value="district_m">District M — $99/month or $999/year (up to 15 schools)</option>
+              <option value="district_l">District L — $179/month or $1,799/year (up to 30 schools)</option>
+            </optgroup>
+            <optgroup label="ArtsTracker — All Departments">
+              <option value="at_pro">ArtsTracker Pro — $59/month or $590/year (1 school)</option>
+              <option value="at_district_s">ArtsTracker District S — $199/month or $1,990/year (up to 6 schools)</option>
+              <option value="at_district_m">ArtsTracker District M — $399/month or $3,990/year (up to 15 schools)</option>
+              <option value="at_district_l">ArtsTracker District L — $699/month or $6,990/year (up to 30 schools)</option>
+            </optgroup>
             <option value="enterprise">Enterprise — Custom pricing (contact us)</option>
           </select>
         </div>
