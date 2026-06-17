@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { STRIPE_LINKS, stripeLink, UPGRADE_PLANS } from "./plans.js";
+import { APP_NAME, APP_URL } from "./config.js";
 
 // Billing UI: upgrade prompt, plans/pricing cards, invoice request — extracted from App.jsx.
 
@@ -33,7 +34,7 @@ export function InvoiceRequestForm({ orgName, userEmail }) {
       const res = await fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/invoice-request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
+        body: JSON.stringify({ ...form, brand: APP_NAME.replace(/™/g,""), brandUrl: APP_URL })
       });
       const json = await res.json();
       if(json.success) setDone(true);
