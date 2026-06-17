@@ -66,11 +66,11 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
   const[storLocs,setStorLocs]=useState([]);
   useEffect(()=>{
     if(!userId)return;
-    SB.from("funding_sources").select("id,name,source_type").eq("org_id",userId).eq("is_active",true).order("name")
+    SB.from("funding_sources").select("id,name,source_type").eq("org_id",userId).eq("vertical",vertical).eq("is_active",true).order("name")
       .then(({data})=>{ if(data) setFundSources(data); });
-    SB.from("storage_locations").select("id,name,code,location_type,map_pins,rack_rows,rack_cols,rack_row_style,rack_col_style").eq("org_id",userId).order("name")
+    SB.from("storage_locations").select("id,name,code,location_type,map_pins,rack_rows,rack_cols,rack_row_style,rack_col_style").eq("org_id",userId).eq("vertical",vertical).order("name")
       .then(({data})=>{ if(data) setStorLocs(data); });
-  },[userId]);
+  },[userId,vertical]);
 
   // Quick-add state — inline creation of new location or funding source
   const[qloc, setQloc] = useState(false);  // showing new-location mini-form
@@ -85,7 +85,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
     if(!qlocName.trim()||qsaving) return;
     setQsaving(true);
     const{data,error}=await SB.from("storage_locations").insert({
-      org_id:userId, name:qlocName.trim(), code:qlocCode.trim()||null
+      org_id:userId, vertical, name:qlocName.trim(), code:qlocCode.trim()||null
     }).select("id,name,code").single();
     setQsaving(false);
     if(error){alert("Could not create location: "+error.message);return;}
@@ -101,7 +101,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
     if(!qfundName.trim()||qsaving) return;
     setQsaving(true);
     const{data,error}=await SB.from("funding_sources").insert({
-      org_id:userId, name:qfundName.trim(), source_type:qfundType, is_active:true
+      org_id:userId, vertical, name:qfundName.trim(), source_type:qfundType, is_active:true
     }).select("id,name,source_type").single();
     setQsaving(false);
     if(error){alert("Could not create funding source: "+error.message);return;}

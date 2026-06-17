@@ -355,6 +355,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       if(item.funding_source_id && item.purchase_cost && parseFloat(item.purchase_cost)>0){
         await SB.from("funding_expenditures").insert({
           org_id:           activeOrgId,
+          vertical:         row.vertical,
           funding_source_id: item.funding_source_id,
           item_id:          data.id,
           amount:           parseFloat(item.purchase_cost),
@@ -393,6 +394,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
         if(!existing){
           await SB.from("funding_expenditures").insert({
             org_id:           activeOrgId,
+            vertical:         item.vertical || activeVertical || org?.vertical || "theatre",
             funding_source_id: item.funding_source_id,
             item_id:          item.id,
             amount:           parseFloat(item.purchase_cost),

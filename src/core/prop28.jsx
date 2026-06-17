@@ -17,13 +17,13 @@ export function Prop28Page({userId, org, onNav}) {
       setLoading(true);
       const [pr, sr] = await Promise.all([
         SB.from("prop28_purchases").select("*").eq("org_id", userId).order("date_purchased", {ascending:false}),
-        SB.from("funding_sources").select("id,name").eq("org_id", userId).ilike("name", "%prop 28%"),
+        SB.from("funding_sources").select("id,name").eq("org_id", userId).eq("vertical", org?.vertical||"theatre").ilike("name", "%prop 28%"),
       ]);
       setPurchases(pr.data || []);
       if (sr.data && sr.data.length > 0) setAlreadyMigrated(true);
       setLoading(false);
     })();
-  }, [userId]);
+  }, [userId, org?.vertical]);
 
   const handleMigrate = async () => {
     if (!window.confirm(
@@ -43,6 +43,7 @@ export function Prop28Page({userId, org, onNav}) {
 
       const { data: src, error: srcErr } = await SB.from("funding_sources").insert({
         org_id:       userId,
+        vertical:     org?.vertical||"theatre",
         name:         "Prop 28",
         source_type:  "state_grant",
         funder:       "California Department of Education",
@@ -59,6 +60,7 @@ export function Prop28Page({userId, org, onNav}) {
       for (const p of purchases) {
         const { error: expErr } = await SB.from("funding_expenditures").insert({
           org_id:            userId,
+          vertical:          org?.vertical||"theatre",
           funding_source_id: src.id,
           description:       p.item_description || "Prop 28 purchase",
           amount:            parseFloat(p.cost) || 0,

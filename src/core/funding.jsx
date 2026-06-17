@@ -34,15 +34,16 @@ export function FundingPage({userId, org, plan}){
     if(!userId) return;
     (async()=>{
       setLoading(true);
+      const vert = org?.vertical || "theatre";
       const [sr, er] = await Promise.all([
-        SB.from("funding_sources").select("*").eq("org_id",userId).order("created_at",{ascending:false}),
-        SB.from("funding_expenditures").select("*").eq("org_id",userId).order("purchase_date",{ascending:false}),
+        SB.from("funding_sources").select("*").eq("org_id",userId).eq("vertical",vert).order("created_at",{ascending:false}),
+        SB.from("funding_expenditures").select("*").eq("org_id",userId).eq("vertical",vert).order("purchase_date",{ascending:false}),
       ]);
       if(sr.data) setSources(sr.data);
       if(er.data) setExps(er.data);
       setLoading(false);
     })();
-  },[userId]);
+  },[userId, org?.vertical]);
 
   // ── source CRUD ───────────────────────────────────────────────────────────
   const saveSource = async(f) => {
@@ -52,7 +53,7 @@ export function FundingPage({userId, org, plan}){
       if(error){ flash("❌ "+EM.fundingSave.body); }
       else{ setSources(p=>p.map(x=>x.id===data.id?data:x)); flash("✓ Source updated"); setModal(null); setActive(null); }
     } else {
-      const{data,error}=await SB.from("funding_sources").insert({...f,org_id:userId}).select().single();
+      const{data,error}=await SB.from("funding_sources").insert({...f,org_id:userId,vertical:org?.vertical||"theatre"}).select().single();
       if(error){ flash("❌ "+EM.fundingSave.body); }
       else{ setSources(p=>[data,...p]); flash("✓ Source added"); setModal(null); }
     }
@@ -75,7 +76,7 @@ export function FundingPage({userId, org, plan}){
       if(error){ flash("❌ "+EM.fundingSave.body); }
       else{ setExps(p=>p.map(x=>x.id===data.id?data:x)); flash("✓ Expenditure updated"); setModal(null); setActive(null); }
     } else {
-      const{data,error}=await SB.from("funding_expenditures").insert({...f,org_id:userId}).select().single();
+      const{data,error}=await SB.from("funding_expenditures").insert({...f,org_id:userId,vertical:org?.vertical||"theatre"}).select().single();
       if(error){ flash("❌ "+EM.fundingSave.body); }
       else{ setExps(p=>[data,...p]); flash("✓ Expenditure added"); setModal(null); }
     }

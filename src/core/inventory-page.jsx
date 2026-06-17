@@ -514,6 +514,7 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
       {view==="locations"&&<LocationsPanel
         userId={userId}
         items={items}
+        vertical={vVertical}
         onEditItem={item=>{setActive(item);setModal("e");}}
         onDeleteItem={id=>{onDelete(id);}}
       />}

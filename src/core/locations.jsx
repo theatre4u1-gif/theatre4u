@@ -13,7 +13,7 @@ import { QR } from "./qr.js";
 // STORAGE LOCATIONS — manage named locations, browse items by location
 // ══════════════════════════════════════════════════════════════════════════════
 // ── Room Map sub-component ──────────────────────────────────────────────────
-function RoomMap({ loc, items, userId, onUpdate }) {
+function RoomMap({ loc, items, userId, onUpdate, vertical="theatre" }) {
   const [pins,        setPins]        = useState(loc.map_pins || []);
   const [adding,      setAdding]      = useState(false);
   const [pending,     setPending]     = useState(null);
@@ -33,6 +33,7 @@ function RoomMap({ loc, items, userId, onUpdate }) {
     SB.from("storage_locations")
       .select("id,name,location_type,code")
       .eq("org_id", userId)
+      .eq("vertical", vertical)
       .neq("id", loc.id)
       .order("name")
       .then(({ data }) => { setAllLocs(data || []); setLocsLoaded(true); });
@@ -335,7 +336,7 @@ function StorageRack({ loc, items, onUpdate }) {
 }
 
 // ── Main LocationsPanel ─────────────────────────────────────────────────────
-export function LocationsPanel({ userId, items, onEditItem, onDeleteItem }) {
+export function LocationsPanel({ userId, items, onEditItem, onDeleteItem, vertical="theatre" }) {
   const [locations,    setLocations]    = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [modal,        setModal]        = useState(null);
@@ -352,13 +353,14 @@ export function LocationsPanel({ userId, items, onEditItem, onDeleteItem }) {
     const { data } = await SB.from("storage_locations")
       .select("*")
       .eq("org_id", userId)
+      .eq("vertical", vertical)
       .order("sort_order")
       .order("name");
     const locs = data || [];
     setLocations(locs);
     if (locs.length > 0 && !activeRoom) setActiveRoom(locs[0].id);
     setLoading(false);
-  }, [userId]);
+  }, [userId, vertical]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -370,7 +372,7 @@ export function LocationsPanel({ userId, items, onEditItem, onDeleteItem }) {
       if (error) { flash("❌ " + EM.fundingSave.body); }
       else { setLocations(p => p.map(x => x.id === data.id ? data : x)); flash("✓ Location updated"); setModal(null); setActive(null); }
     } else {
-      const { data, error } = await SB.from("storage_locations").insert({ org_id: userId, ...payload, map_pins: [], rack_slots: {} }).select().single();
+      const { data, error } = await SB.from("storage_locations").insert({ org_id: userId, vertical, ...payload, map_pins: [], rack_slots: {} }).select().single();
       if (error) { flash("❌ " + EM.fundingSave.body); }
       else { setLocations(p => [...p, data]); setActiveRoom(data.id); flash("✓ Location added"); setModal(null); }
     }
@@ -483,7 +485,7 @@ export function LocationsPanel({ userId, items, onEditItem, onDeleteItem }) {
               {currentLoc.description && <div style={{ fontSize:12,color:"var(--muted)",marginBottom:12,fontStyle:"italic" }}>{currentLoc.description}</div>}
 
               {currentLoc.location_type === "room" && (
-                <RoomMap loc={currentLoc} items={items} userId={userId} onUpdate={updateLoc} />
+                <RoomMap loc={currentLoc} items={items} userId={userId} onUpdate={updateLoc} vertical={vertical} />
               )}
               {currentLoc.location_type === "rack" && (
                 <StorageRack loc={currentLoc} items={items} onUpdate={updateLoc} />
