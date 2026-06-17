@@ -1,0 +1,17 @@
+# Dependencies — installed by npm, never committed
+node_modules/
+
+# Build output
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor noise
+.DS_Store
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
