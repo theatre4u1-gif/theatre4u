@@ -553,7 +553,7 @@ function SelfServiceDeleteAccount({ user, org }) {
 
 function CustomCategoriesManager({ org, userId, memberRole=null }){
   const vertical = org?.vertical || "theatre";
-  const CAT_EXAMPLE = { theatre:"Concessions", music:"Sheet Music", dance:"Recital Props", art:"Canvases", booster:"Banners" };
+  const CAT_EXAMPLE = { theatre:"Concessions", music:"Sheet Music", dance:"Recital Props", art:"Canvases", booster:"Merchandise" };
   const catExample = CAT_EXAMPLE[vertical] || "Concessions";
   const canManage = !memberRole || memberRole==="director" || memberRole==="program_director";
   const [list,setList] = useState([]);
@@ -626,7 +626,7 @@ function DepartmentsManager({ org, setOrg, userId, plan="free", memberRole=null 
       <p style={{fontSize:13,color:"var(--muted)",marginBottom:12}}>
         {multiAllowed
           ? "Choose which arts departments are open in your account. Toggle any on or off — your home department always stays on. Switch between open departments from the sidebar."
-          : "Your plan includes one department. Upgrade to ArtsTracker to open Music, Dance, Visual Art, and Boosters too."}
+          : "Your plan includes one department. Upgrade to ArtsTracker to open Music, Dance, Visual Art, and Organizations too."}
       </p>
       <div style={{display:"flex",flexDirection:"column",gap:6}}>
         {VERTICALS_LIST.map(v=>{
