@@ -308,7 +308,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       const { count: unread } = await SB.from("messages")
         .select("id", { count: "exact", head: true })
         .eq("read", false)
-        .neq("sender_id", user.id);
+        .neq("sender_id", targetOrgId);
       setUnreadCount(unread || 0);
       // Load pending request count (incoming)
       const { count: reqCount } = await SB.from("rental_requests")
@@ -914,7 +914,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                       const{count}=await SB.from("rental_requests").select("id",{count:"exact",head:true}).eq("owner_id",user?.id).eq("status","pending");
                       setPendingReqCount(count||0);
                     }}/>}
-                  {page==="messages"    && <Messages userId={user?.id} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",user?.id); setUnreadCount(count||0); }}/>}
+                  {page==="messages"    && <Messages userId={activeOrgId} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",activeOrgId); setUnreadCount(count||0); }}/>}
                   {page==="dashboard"   && <Dashboard   items={vItems} org={viewOrg} plan={plan} pointBalance={creditBalance} goInventory={(cat)=>{ if(cat) setDeepLinkCategory(cat); nav("inventory"); }} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
                   {page==="inventory"   && !activeSchool && <Inventory   items={vItems} onAdd={add} onEdit={edit} onDelete={del} userId={org?.id || user?.id} plan={plan} memberRole={memberRole} org={viewOrg} enableLoans={!memberRole} onImported={(data)=>setItems(data)} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} deepLinkCategory={deepLinkCategory} onDeepLinkCategoryConsumed={()=>setDeepLinkCategory(null)}/>}
                   {page==="inventory"   && activeSchool && (
