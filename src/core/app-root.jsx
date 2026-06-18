@@ -313,7 +313,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       // Load pending request count (incoming)
       const { count: reqCount } = await SB.from("rental_requests")
         .select("id", { count: "exact", head: true })
-        .eq("owner_id", user.id)
+        .eq("owner_id", targetOrgId)
         .eq("status", "pending");
       setPendingReqCount(reqCount || 0);
       // Stage Points balance — loaded at login so it shows in nav/dashboard
@@ -911,7 +911,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
               : <div className="fin">
                   {page==="requests"    && <Requests userId={org?.id || user?.id} orgName={org?.name} orgEmail={org?.email}
                     onUnreadChange={async()=>{
-                      const{count}=await SB.from("rental_requests").select("id",{count:"exact",head:true}).eq("owner_id",user?.id).eq("status","pending");
+                      const{count}=await SB.from("rental_requests").select("id",{count:"exact",head:true}).eq("owner_id",activeOrgId).eq("status","pending");
                       setPendingReqCount(count||0);
                     }}/>}
                   {page==="messages"    && <Messages userId={activeOrgId} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",activeOrgId); setUnreadCount(count||0); }}/>}
