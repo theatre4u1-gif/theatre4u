@@ -91,9 +91,9 @@ function CommunityPostForm({initial, onSave, onCancel, saving=false}) {
         ))}
       </div>
     </div>
-    <div className="fg fu"><label className="fl">Title *</label><input className="fi" value={f.title} onChange={e=>upd("title",e.target.value)} placeholder={f.type==="show"?"e.g. Tickets Now Available — Into the Woods":f.type==="audition"?"e.g. Seeking Leads & Ensemble for Spring Musical":f.type==="wanted"?"e.g. Looking for Wizard of Oz costume set":"Title"} autoFocus/></div>
+    <div className="fg fu"><label className="fl">Title *</label><input className="fi" value={f.title} onChange={e=>upd("title",e.target.value)} placeholder={f.type==="show"?"e.g. Tickets now available for our spring show":f.type==="audition"?"e.g. Now seeking performers, members, and crew":f.type==="wanted"?"e.g. Looking for a specific costume, prop, or instrument":"Title"} autoFocus/></div>
     {(f.type==="show"||f.type==="audition")&&<>
-      <div className="fg"><label className="fl">Show Title</label><input className="fi" value={f.show_title||""} onChange={e=>upd("show_title",e.target.value)} placeholder="Into the Woods"/></div>
+      <div className="fg"><label className="fl">Event / Production Title</label><input className="fi" value={f.show_title||""} onChange={e=>upd("show_title",e.target.value)} placeholder="Your show, concert, or exhibition"/></div>
       <div className="fg"><label className="fl">Venue</label><input className="fi" value={f.venue||""} onChange={e=>upd("venue",e.target.value)} placeholder="Lincoln High Auditorium"/></div>
     </>}
     {f.type==="show"&&<>
@@ -105,18 +105,18 @@ function CommunityPostForm({initial, onSave, onCancel, saving=false}) {
       <div className="fg"><label className="fl">Audition Date(s)</label><input className="fi" type="date" value={f.start_date||""} onChange={e=>upd("start_date",e.target.value)}/></div>
       <div className="fg"><label className="fl">Contact Email</label><input className="fi" type="email" value={f.contact_email||""} onChange={e=>upd("contact_email",e.target.value)} placeholder="director@school.edu"/></div>
     </>}
-    <div className="fg fu"><label className="fl">{f.type==="photo"?"Caption / Description":f.type==="audition"?"What You're Looking For":"Details"}</label><textarea className="ft" value={f.body||""} onChange={e=>upd("body",e.target.value)} placeholder={f.type==="show"?"Tell the community about your production...":f.type==="audition"?"Describe the roles available, experience needed, rehearsal schedule...":f.type==="wanted"?"Describe exactly what you're looking for...":"What would you like to share?"}/></div>
+    <div className="fg fu"><label className="fl">{f.type==="photo"?"Caption / Description":f.type==="audition"?"What You're Looking For":"Details"}</label><textarea className="ft" value={f.body||""} onChange={e=>upd("body",e.target.value)} placeholder={f.type==="show"?"Tell the community about your event...":f.type==="audition"?"Describe what you're looking for, experience needed, and schedule...":f.type==="wanted"?"Describe exactly what you're looking for...":"What would you like to share?"}/></div>
 
     <div className="fg fu">
       <label className="fl">Tags</label>
       <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:4}}>{(f.tags||[]).map(t=><span key={t} className="mt" style={{cursor:"pointer"}} onClick={()=>upd("tags",f.tags.filter(x=>x!==t))}>{t} ×</span>)}</div>
-      <div style={{display:"flex",gap:6}}><input className="fi" value={tagInput} onChange={e=>setTagInput(e.target.value)} placeholder="musical, drama, comedy..." style={{flex:1}} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addTag();}}}/><button className="btn btn-o btn-sm" onClick={addTag}>Add</button></div>
+      <div style={{display:"flex",gap:6}}><input className="fi" value={tagInput} onChange={e=>setTagInput(e.target.value)} placeholder="add tags or keywords…" style={{flex:1}} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addTag();}}}/><button className="btn btn-o btn-sm" onClick={addTag}>Add</button></div>
     </div>
     
     {/* ── Photo Upload ─────────────────────────────────────────── */}
     <div className="fg fu" style={{marginBottom:4}}>
       <label className="fl" style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
-        📸 Production Photos <span style={{fontWeight:400,color:"var(--muted)",fontSize:10}}>(up to 6)</span>
+        📸 Photos <span style={{fontWeight:400,color:"var(--muted)",fontSize:10}}>(up to 6)</span>
       </label>
       {(f.images||[]).length>0&&(
         <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:10}}>
