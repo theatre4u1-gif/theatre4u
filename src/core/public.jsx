@@ -2,7 +2,7 @@
 // LandingPage, PublicOrgPage, PublicItemPage (+ UnassignedLabelAssigner, internal).
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
-import { APP_NAME, LOGO_ICON, LOGO_FULL } from "./config.js";
+import { APP_NAME, LOGO_ICON, LOGO_FULL, IS_ARTSTRACKER } from "./config.js";
 import { getRefCode } from "./helpers.js";
 import { CAT_MAP } from "./inventory.js";
 import { QR } from "./qr.js";
@@ -44,7 +44,14 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     return()=>window.removeEventListener("scroll",h);
   },[]);
 
-  const features=[
+  const features = IS_ARTSTRACKER ? [
+    {icon:"📦",title:"Inventory That Actually Works",desc:"Catalog every costume, instrument, prop, light, art supply, uniform, or piece of equipment your program owns. Add photos, tag by show or unit, print QR labels for storage. Always know exactly what you have and where it lives."},
+    {icon:"🎭",title:"Productions & Events",desc:"Create a folder for each show, concert, exhibition, or event. Pull items straight from your inventory, track what's checked out, and see what each one still needs."},
+    {icon:"📱",title:"Mobile-Ready",desc:"Add items by taking a photo. Scan QR labels with your phone's camera — instantly. Works on iPhone and Android — no app store required."},
+    {icon:"💰",title:"Funding Tracker",desc:"Track grants, district allocations, booster funds, and donations. Log expenditures against each source, generate reports, and export to CSV. California programs can track Prop 28 spending here too."},
+    {icon:"🔄",title:"The Exchange",desc:"Opt in to share selected items with other programs — across theatre, music, dance, and art. You choose exactly what to post; your full inventory stays private. Browse what others near you have, then rent, buy, or borrow."},
+    {icon:"🎪",title:"Community Board",desc:"Post calls and auditions, share upcoming dates, upload event photos, and find what you need. A regional bulletin board for the whole arts community."},
+  ] : [
     {icon:"📦",title:"Inventory That Actually Works",desc:"Catalog every costume, prop, light, and sound item your program owns. Add photos, tag by production, print QR labels for storage bins. Always know exactly what you have and where it lives."},
     {icon:"🎭",title:"Productions Tracker",desc:"Create a folder for each show. Assign items from your inventory, track what's checked out, and see at a glance what every production needs from wishlist to opening night."},
     {icon:"📱",title:"Mobile-Ready Backstage",desc:"Add items by taking a photo. Scan QR labels with your phone's camera — the iPhone Camera app reads Theatre4u labels instantly. Available on iPhone and Android — no app store required."},
@@ -59,7 +66,12 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     {name:"District",price:"$49",period:"/month",annual:"$500/year",color:"linear-gradient(135deg,#1565c0,#0d47a1)",textColor:"#fff",features:["Everything in Pro","Up to 6 school sites","District dashboard","Shared Backstage Exchange","District funding rollup","Priority support"],cta:"Start District",primary:false},
   ];
 
-  const steps=[
+  const steps = IS_ARTSTRACKER ? [
+    {n:"1",title:"Create your free account",desc:"Sign up in 60 seconds. No credit card needed. Your first 25 items are always free."},
+    {n:"2",title:"Build your inventory",desc:"Photograph costumes, instruments, props, or supplies on your phone, or upload from your computer. Add name, category, condition, and location. Print QR labels."},
+    {n:"3",title:"Track your shows, concerts & events",desc:"Create a folder and pull items straight from your inventory. See what's assigned, checked out, and still needed."},
+    {n:"4",title:"Optionally join the Exchange",desc:"Share items for rent, loan, or sale, and browse what other programs near you have available."},
+  ] : [
     {n:"1",title:"Create your free account",desc:"Sign up in 60 seconds. No credit card needed. Your first 25 items are always free."},
     {n:"2",title:"Build your inventory",desc:"Take photos on your phone or upload from your computer. Add name, category, condition, and location. Print QR labels for bins and racks."},
     {n:"3",title:"Track your productions",desc:"Create a show folder and pull items straight from your inventory. See what's assigned, what's checked out, and what you still need."},
@@ -91,14 +103,14 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
           <img src={LOGO_FULL} alt={APP_NAME} style={{position:"relative",zIndex:1,width:"min(430px,80vw)",height:"auto",display:"block"}}/>
         </div>
         <div style={{display:"inline-flex",alignItems:"center",gap:7,padding:"4px 14px",background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.3)",borderRadius:20,fontSize:12,fontWeight:700,color:"var(--gold)",textTransform:"uppercase",letterSpacing:1,marginBottom:20}}>
-          🎭 The Platform for Theatre Programs
+          {IS_ARTSTRACKER ? "🎨 The Platform for Arts & Activity Programs" : "🎭 The Platform for Theatre Programs"}
         </div>
         <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(42px,7vw,76px)",lineHeight:1.05,marginBottom:20,color:"#fff"}}>
-          Everything your theatre program needs —{" "}
+          {IS_ARTSTRACKER ? "Everything your program needs —" : "Everything your theatre program needs —"}{" "}
           <span style={{color:"var(--gold)"}}>in one place</span>
         </h1>
         <p style={{fontSize:"clamp(16px,2.5vw,20px)",color:"rgba(255,255,255,.7)",lineHeight:1.7,marginBottom:36,maxWidth:600,margin:"0 auto 36px"}}>
-          Know what you have. Find what you need. Built specifically for theatre programs of every size.
+          {IS_ARTSTRACKER ? "For theatre, music, dance, and visual arts — and any program that needs to keep track of what it owns. Know what you have, find what you need, and share with programs near you." : "Know what you have. Find what you need. Built specifically for theatre programs of every size."}
         </p>
         <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
           <button onClick={onSignUp} style={{background:"linear-gradient(135deg,var(--gold),var(--goldd))",border:"none",color:"#1a0f00",padding:"14px 32px",borderRadius:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:16,fontWeight:800,boxShadow:"0 4px 24px rgba(212,168,67,.4)"}}>
@@ -133,7 +145,7 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
 
     {/* ── Social proof strip ── */}
     <div style={{background:"rgba(212,168,67,.08)",borderTop:"1px solid rgba(212,168,67,.15)",borderBottom:"1px solid rgba(212,168,67,.15)",padding:"16px 32px",display:"flex",flexWrap:"wrap",gap:24,justifyContent:"center",alignItems:"center"}}>
-      {[["📦","Inventory management"],["🎭","Productions tracker"],["📱","Mobile-ready"],["💰","Funding Tracker"],["🏪","Backstage Exchange"],["🎪","Community board"]].map(([ico,lbl])=>(
+      {(IS_ARTSTRACKER ? [["📦","Inventory management"],["🎭","Productions & events"],["📱","Mobile-ready"],["💰","Funding Tracker"],["🔄","The Exchange"],["🎪","Community board"]] : [["📦","Inventory management"],["🎭","Productions tracker"],["📱","Mobile-ready"],["💰","Funding Tracker"],["🏪","Backstage Exchange"],["🎪","Community board"]]).map(([ico,lbl])=>(
         <div key={lbl} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,fontWeight:600,color:"rgba(255,255,255,.7)"}}>
           <span style={{fontSize:16}}>{ico}</span>{lbl}
         </div>

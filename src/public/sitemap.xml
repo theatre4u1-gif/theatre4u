@@ -38,4 +38,22 @@
     <priority>0.8</priority>
   </url>
 
+  <url>
+    <loc>https://theatre4u.org/guides/sharing-costumes-props-between-theatre-programs.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://theatre4u.org/costume-inventory-software.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://theatre4u.org/qr-labels-for-theatre.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
 </urlset>
