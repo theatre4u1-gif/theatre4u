@@ -228,6 +228,14 @@ async function handleSignup() {
 
   if(error){ showErr(error.message); return; }
 
+  // Already-registered email: Supabase returns success with a user that has no
+  // identities (anti-enumeration) and no usable id. Catch it so the button never
+  // hangs on "Creating your account…".
+  if(!data || !data.user || (Array.isArray(data.user.identities) && data.user.identities.length === 0)){
+    showErr('This email is already registered. Please sign in at theatre4u.org instead (or use “Forgot password”).');
+    return;
+  }
+
   // Create org
   await SB.from('orgs').upsert({
     id: data.user.id, name: orgName, email,
