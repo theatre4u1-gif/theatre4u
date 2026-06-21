@@ -196,7 +196,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
 
   const resetPass=async()=>{
     if(!email){setErr("Enter your email above first.");return;}
-    const{error:re}=await SB.auth.resetPasswordForEmail(email,{redirectTo:"https://theatre4u.org"});
+    const{error:re}=await SB.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});
     if(re){setErr(EM.resetPass.body);return;}
     setErr("✓ Password reset email sent — check your inbox.");
   };
@@ -415,7 +415,7 @@ export function AuthScreen({onAuth}){
 
   const resetPass=async()=>{
     if(!email){setErr("Enter your email above first.");return;}
-    const{error:re}=await SB.auth.resetPasswordForEmail(email,{redirectTo:"https://theatre4u.org"});
+    const{error:re}=await SB.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});
     if(re){setErr(EM.resetPass.body);return;}
     setErr("✓ Password reset email sent — check your inbox.");
   };
