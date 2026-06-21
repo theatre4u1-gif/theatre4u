@@ -4,6 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+    <!-- Password-reset forwarder: route recovery links to the set-password page before the app loads -->
+    <script>
+      (function(){var h=location.hash||"";if(h.indexOf("type=recovery")>-1&&location.pathname.indexOf("reset-password")===-1){location.replace("/reset-password.html"+h);}})();
+    </script>
+
     <!-- ═══ PRIMARY SEO ═══════════════════════════════════════════════════ -->
     <title>Theatre4u™ — Inventory & Backstage Exchange for Theatre Programs</title>
     <meta name="description" content="Theatre4u helps high school and community theatre programs catalog costumes, props, lighting, and sets. Print QR labels, track funding, and share resources with nearby programs through Backstage Exchange. Free to start."/>
