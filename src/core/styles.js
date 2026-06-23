@@ -2,7 +2,7 @@
 export const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600&family=Lora:ital,wght@0,500;0,600;1,400;1,500&family=Raleway:wght@500;600;700;800&display=swap');
 :root{
-  --ink:#4c1035;--deep:#360b26;--cog:#9a5f1f;--amber:#996226;--gold:#a77134;--gilt:#da975a;
+  --ink:#1a0c06;--deep:#2a0f09;--cog:#9a5f1f;--amber:#996226;--gold:#a77134;--gilt:#da975a;
   --cream:#f5ede3;--parch:#ede0cf;--linen:#ddd0ba;--sand:#c8b895;
   --text:#352130;--muted:#6e4a5e;--faint:#8a5e2e;--border:#d8c6a6;
   /* Official logo palette (2026): aubergine, berry, apricot, bronze, sage */
