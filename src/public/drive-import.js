@@ -4,6 +4,7 @@
 (function () {
   var CLIENT_ID = "33303253369-j21rc2jvqtrg5kf3ajpja1dg55n77fmh.apps.googleusercontent.com";
   var API_KEY = "AIzaSyBDJu1y0B4-UKxNeFGCDiEal_mJa3bU5r8";
+  var APP_ID = "33303253369"; // project number (prefix of the client ID) — required for drive.file picks to grant access
   var SCOPE = "https://www.googleapis.com/auth/drive.file";
   var pickerLoaded = false;
 
@@ -53,6 +54,7 @@
       var picker = new google.picker.PickerBuilder()
         .setOAuthToken(token)
         .setDeveloperKey(API_KEY)
+        .setAppId(APP_ID)
         .addView(view)
         .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
         .setCallback(async function (data) {
@@ -70,7 +72,7 @@
               onFile(file);
             } catch (e) {
               console.error("Drive download failed", e);
-              alert("Couldn't download a photo from Google Drive. Please try again.");
+              alert("Couldn't download a photo from Google Drive (" + (e && e.message ? e.message : e) + "). Please try again.");
             }
           }
         })
