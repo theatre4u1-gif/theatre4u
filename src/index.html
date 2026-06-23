@@ -9,6 +9,9 @@
       (function(){var h=location.hash||"";if(h.indexOf("type=recovery")>-1&&location.pathname.indexOf("reset-password")===-1){location.replace("/reset-password.html"+h);}})();
     </script>
 
+    <!-- Google Drive photo import helper (defines window.t4uPickFromDrive; SDKs load lazily on first use) -->
+    <script src="/drive-import.js" defer></script>
+
     <!-- ═══ PRIMARY SEO ═══════════════════════════════════════════════════ -->
     <title>Theatre4u™ — Inventory & Backstage Exchange for Theatre Programs</title>
     <meta name="description" content="Theatre4u helps high school and community theatre programs catalog costumes, props, lighting, and sets. Print QR labels, track funding, and share resources with nearby programs through Backstage Exchange. Free to start."/>

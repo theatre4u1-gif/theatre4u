@@ -916,8 +916,8 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical
   const showRent=f.mkt==="For Rent"||f.mkt==="Rent or Sale";
   const showSale=f.mkt==="For Sale"||f.mkt==="Rent or Sale";
   const showLoan=f.mkt==="For Loan";
-  const handlePhoto=async e=>{
-    const file=e.target.files?.[0];if(!file)return;
+  const processPhoto=async file=>{
+    if(!file)return;
     setUpl(true);
     const url = userId ? await uploadPhoto(file, userId) : await resizeImg(file);
     if(url) upd("img", url);
@@ -925,6 +925,8 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical
     setUpl(false);
     if(fr.current)fr.current.value="";
   };
+  const handlePhoto=e=>processPhoto(e.target.files?.[0]);
+  const handleDrive=()=>{ if(window.t4uPickFromDrive){window.t4uPickFromDrive(processPhoto);} else {alert("Google Drive import isn't ready yet — please refresh the page and try again.");} };
   const addTag=()=>{const t=ti.trim().toLowerCase();if(t&&!(f.tags||[]).includes(t))upd("tags",[...(f.tags||[]),t]);setTi("");};
   // Load active funding sources for the "charge to fund" dropdown
   const[fundSources,setFundSources]=useState([]);
@@ -1075,9 +1077,10 @@ function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical
       </div>
       <div className="fg fu sdiv">
         <div className="slbl">📷 Photo</div>
-        <div style={{display:"flex",gap:10}}>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
           {f.img?<div className="ph-wrap"><img src={f.img} alt=""/><button className="ph-rm" onClick={()=>upd("img",null)}>×</button></div>
-                :<label className="ph-add" style={{opacity:upl?.5:1}}>{Ic.cam}<span>{upl?"Uploading…":"Add Photo"}</span><input ref={fr} type="file" accept="image/*" hidden onChange={handlePhoto} disabled={upl}/></label>}
+                :<><label className="ph-add" style={{opacity:upl?.5:1}}>{Ic.cam}<span>{upl?"Uploading…":"Add Photo"}</span><input ref={fr} type="file" accept="image/*" hidden onChange={handlePhoto} disabled={upl}/></label>
+                <button type="button" className="ph-add" onClick={handleDrive} disabled={upl} style={{opacity:upl?.5:1,cursor:upl?"default":"pointer"}}><span>📁 Google Drive</span></button></>}
         </div>
       </div>
       <div className="fg fu">
@@ -2234,6 +2237,74 @@ function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMarketpla
   );
 }
 
+function BulkPhotoAdd({ userId, vertical = "theatre", cats = [], onClose, onImport }) {
+  const defaultCat = cats[0]?.id || "costumes";
+  const [rows, setRows] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const fileRef = useRef();
+  const baseName = (fn) => (fn || "Photo").replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim() || "Photo";
+  const addFile = async (file) => {
+    if (!file) return;
+    const key = uid();
+    setRows((p) => [...p, { key, name: baseName(file.name), category: defaultCat, qty: 1, img: null, uploading: true }]);
+    const url = userId ? await uploadPhoto(file, userId) : null;
+    setRows((p) => p.map((r) => (r.key === key ? { ...r, img: url, uploading: false } : r)));
+  };
+  const fromDevice = (e) => { Array.from(e.target.files || []).forEach(addFile); if (fileRef.current) fileRef.current.value = ""; };
+  const fromDrive = () => { if (window.t4uPickFromDrive) window.t4uPickFromDrive(addFile); else alert("Google Drive import isn't ready yet — please refresh the page and try again."); };
+  const upd = (key, k, v) => setRows((p) => p.map((r) => (r.key === key ? { ...r, [k]: v } : r)));
+  const remove = (key) => setRows((p) => p.filter((r) => r.key !== key));
+  const anyUploading = rows.some((r) => r.uploading);
+  const saveAll = async () => {
+    const ready = rows.filter((r) => !r.uploading);
+    if (!ready.length) return;
+    setSaving(true);
+    const now = new Date().toISOString();
+    const payload = ready.map((r) => ({
+      id: uid(), org_id: userId, name: (r.name || "").trim() || "Untitled",
+      category: r.category || defaultCat, condition: "Good", size: "N/A",
+      qty: parseInt(r.qty) || 1, location: "", notes: "", mkt: "Not Listed",
+      rent: 0, sale: 0, loan_period: 2, deposit: 0, avail: "In Stock",
+      img: r.img || null, tags: [], vertical: vertical || "theatre", added: now,
+    }));
+    const { error } = await SB.from("items").insert(payload);
+    setSaving(false);
+    if (error) { console.error("Bulk insert failed", error); alert("Couldn't save the items. " + (error.message || "Please try again.")); return; }
+    const { data } = await SB.from("items").select("*").eq("org_id", userId).order("added", { ascending: false });
+    if (data && onImport) onImport(data);
+    onClose();
+  };
+  return (
+    <Modal title="Bulk add from photos" onClose={onClose}
+      footer={<div style={{display:"flex",gap:8,justifyContent:"flex-end",alignItems:"center"}}>
+        {rows.length>0&&<span style={{marginRight:"auto",fontSize:12,color:"var(--muted)"}}>{rows.length} photo{rows.length!==1?"s":""}{anyUploading?" · uploading…":""}</span>}
+        <button className="btn btn-o" onClick={onClose} disabled={saving}>Cancel</button>
+        <button className="btn btn-g" onClick={saveAll} disabled={saving||anyUploading||rows.length===0}>{saving?"Saving…":"Add "+(rows.length||"")+" item"+(rows.length!==1?"s":"")}</button>
+      </div>}>
+      <p style={{fontSize:13,color:"var(--muted)",marginBottom:12}}>Pick a batch of photos — each one becomes its own item. Then adjust the name, category, and quantity, and save them all at once.</p>
+      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+        <button type="button" className="btn btn-o" onClick={fromDrive}>📁 From Google Drive</button>
+        <label className="btn btn-o" style={{cursor:"pointer"}}>📷 From this device<input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={fromDevice}/></label>
+      </div>
+      {rows.length===0
+        ? <div style={{textAlign:"center",color:"var(--muted)",padding:"24px 0",fontSize:13}}>No photos yet — add some above.</div>
+        : <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {rows.map((r)=>(
+              <div key={r.key} style={{display:"flex",gap:8,alignItems:"center",border:"1px solid var(--border)",borderRadius:8,padding:8}}>
+                <div style={{width:48,height:48,borderRadius:6,overflow:"hidden",flexShrink:0,background:"rgba(0,0,0,.06)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  {r.uploading?<span style={{fontSize:10,color:"var(--muted)"}}>…</span>:(r.img?<img src={r.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{fontSize:18}}>🖼</span>)}
+                </div>
+                <input className="fi" style={{flex:2,minWidth:120}} value={r.name} onChange={(e)=>upd(r.key,"name",e.target.value)} placeholder="Item name"/>
+                <select className="fs" style={{flex:1,minWidth:110}} value={r.category} onChange={(e)=>upd(r.key,"category",e.target.value)}>{cats.map((c)=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</select>
+                <input className="fi" style={{width:56}} type="number" min="1" step="1" value={r.qty} onChange={(e)=>upd(r.key,"qty",parseInt(e.target.value)||1)} title="Quantity"/>
+                <button type="button" className="ico-btn" onClick={()=>remove(r.key)} title="Remove">✕</button>
+              </div>
+            ))}
+          </div>}
+    </Modal>
+  );
+}
+
 function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null, enableLoans=false, onImported=null}){
     const[upgradeReason,setUpgradeReason]=useState(null);
   const vVertical=org?.vertical||"theatre";
@@ -2276,6 +2347,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
   const[showF,setShowF]=useState(false);const[pg,setPg]=useState(1);
   const[modal,setModal]=useState(null);const[active,setActive]=useState(null);
   const[showImport,setShowImport]=useState(false);
+  const[showBulk,setShowBulk]=useState(false);
   const[invView,setInvView]=useState("items"); // items | loans (Borrowed & Lent tab)
 
   // ── Bulk / mass edit state ───────────────────────────────────────────────
@@ -2526,6 +2598,8 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
             </button>
             <button className="btn btn-o" style={{fontSize:12,padding:"6px 12px"}} onClick={()=>setShowImport(true)}
               title="Import from CSV">⬆ Import CSV</button>
+            {canAdd&&<button className="btn btn-o" style={{fontSize:12,padding:"6px 12px"}} onClick={()=>setShowBulk(true)}
+              title="Add many items from photos at once">📸 Bulk Photos</button>}
             {canAdd&&<button className="btn btn-g" onClick={()=>{
               const max=PLANS_DEF[plan]?.maxItems??25;
               if(items.length>=max){setUpgradeReason(EM.planItemLimit.body);return;}
@@ -2745,6 +2819,7 @@ function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",pl
         </Modal>)}
       {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{onDelete(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete}/></Modal>}
       {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",userId).order("added",{ascending:false});if(data&&onImported)onImported(data);}}/>}
+      {showBulk&&<BulkPhotoAdd userId={userId} vertical={vVertical} cats={vCATS} onClose={()=>setShowBulk(false)} onImport={(data)=>{if(onImported)onImported(data);}}/>}
     </div>
     </>)}
   </>
@@ -11050,6 +11125,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
   const[showPass,setShowPass]=useState(false);
   const[ageConfirmed,setAgeConfirmed]=useState(false);
   const[vertical,setVertical]=useState("theatre");
+  const[ownerName,setOwnerName]=useState("");
 
   useEffect(()=>{
     window.__t4u_show_auth=(m)=>{setMode(m||"login");setErr("");setVisible(true);};
@@ -11098,6 +11174,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
 
     try{
       if(mode==="signup"){
+        if(!ownerName.trim()){setErr("Please enter your name.");setLoading(false);return;}
         if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
         // All signups during beta get temp_pro — no access code needed
         const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName},emailRedirectTo:"https://theatre4u.org"}});
@@ -11130,7 +11207,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             referrer: document.referrer||null
           }).then(()=>{}).catch(()=>{}); // fire and forget
           await SB.from("orgs").upsert({
-            id:data.user.id, name:orgName, email,
+            id:data.user.id, name:orgName, email, director_name: ownerName.trim()||null,
             type:"", phone:"", location:"", bio:"",
             vertical: vertical, verticals_enabled: [vertical],
             signup_domain: (typeof window!=="undefined" && window.location && window.location.hostname.includes("artstracker")) ? "artstracker.org" : "theatre4u.org",
@@ -11283,6 +11360,9 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
                 </select>
               </div>
             )}
+            <div><label style={labelStyle}>Your Name *</label>
+              <input value={ownerName} onChange={e=>setOwnerName(e.target.value)} placeholder="e.g. Jane Smith" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
+            </div>
             <div><label style={labelStyle}>Program / Organization Name *</label>
               <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High School Drama" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
             </div>
