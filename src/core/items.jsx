@@ -51,8 +51,8 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
   const showRent=f.mkt==="For Rent"||f.mkt==="Rent or Sale";
   const showSale=f.mkt==="For Sale"||f.mkt==="Rent or Sale";
   const showLoan=f.mkt==="For Loan";
-  const handlePhoto=async e=>{
-    const file=e.target.files?.[0];if(!file)return;
+  const processPhoto=async file=>{
+    if(!file)return;
     setUpl(true);
     const url = userId ? await uploadPhoto(file, userId) : await resizeImg(file);
     if(url) upd("img", url);
@@ -60,6 +60,8 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
     setUpl(false);
     if(fr.current)fr.current.value="";
   };
+  const handlePhoto=e=>processPhoto(e.target.files?.[0]);
+  const handleDrive=()=>{ if(window.t4uPickFromDrive){window.t4uPickFromDrive(processPhoto);} else {alert("Google Drive import isn't ready yet — please refresh the page and try again.");} };
   const addTag=()=>{const t=ti.trim().toLowerCase();if(t&&!(f.tags||[]).includes(t))upd("tags",[...(f.tags||[]),t]);setTi("");};
   // Load active funding sources for the "charge to fund" dropdown
   const[fundSources,setFundSources]=useState([]);
@@ -210,9 +212,10 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
       </div>
       <div className="fg fu sdiv">
         <div className="slbl">📷 Photo</div>
-        <div style={{display:"flex",gap:10}}>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
           {f.img?<div className="ph-wrap"><img src={f.img} alt=""/><button className="ph-rm" onClick={()=>upd("img",null)}>×</button></div>
-                :<label className="ph-add" style={{opacity:upl?.5:1}}>{Ic.cam}<span>{upl?"Uploading…":"Add Photo"}</span><input ref={fr} type="file" accept="image/*" hidden onChange={handlePhoto} disabled={upl}/></label>}
+                :<><label className="ph-add" style={{opacity:upl?.5:1}}>{Ic.cam}<span>{upl?"Uploading…":"Add Photo"}</span><input ref={fr} type="file" accept="image/*" hidden onChange={handlePhoto} disabled={upl}/></label>
+                <button type="button" className="ph-add" onClick={handleDrive} disabled={upl} style={{opacity:upl?.5:1,cursor:upl?"default":"pointer"}}><span>📁 Google Drive</span></button></>}
         </div>
       </div>
       <div className="fg fu">
