@@ -536,7 +536,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
             <div style={{marginTop:24,paddingTop:20,borderTop:"1px solid var(--border)",
               fontSize:13,color:"var(--muted)"}}>
               Questions? Email{" "}
-              <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)",fontWeight:600}}>
+              <a href="mailto:hello@theatre4u.org" style={{color:"var(--goldink)",fontWeight:600}}>
                 hello@theatre4u.org
               </a>
             </div>
@@ -647,7 +647,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
             borderRadius:10,padding:"10px 16px",marginBottom:20,display:"flex",
             gap:10,alignItems:"center"}}>
             <span style={{fontSize:16}}>🔧</span>
-            <span style={{fontSize:13,fontWeight:700,color:"var(--gold)"}}>Admin preview</span>
+            <span style={{fontSize:13,fontWeight:700,color:"var(--goldink)"}}>Admin preview</span>
             <span style={{fontSize:13,color:"var(--muted)"}}>
               This order UI is visible only to you. Other programs see a Coming Soon page.
             </span>

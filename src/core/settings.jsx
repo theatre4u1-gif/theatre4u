@@ -332,7 +332,7 @@ function TeamSettings({ userId, orgName, plan }) {
               <div>
                 <div style={{ fontSize: 11, color: "var(--faint)", marginBottom: 4 }}>Share this code</div>
                 <div style={{ fontFamily: "monospace", fontSize: 28, fontWeight: 900,
-                  letterSpacing: 4, color: "var(--gold)" }}>{joinCode}</div>
+                  letterSpacing: 4, color: "var(--goldink)" }}>{joinCode}</div>
               </div>
               <div style={{ flex: 1, minWidth: 160 }}>
                 <div style={{ fontSize: 11, color: "var(--faint)", marginBottom: 4 }}>Or share this link</div>
@@ -635,7 +635,7 @@ function DepartmentsManager({ org, setOrg, userId, plan="free", memberRole=null 
             <div key={v.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 12px",background:"rgba(255,255,255,.04)",borderRadius:6,opacity:locked?0.6:1}}>
               <span style={{fontSize:14}}>{v.icon} {v.label}{isPrimary&&<span style={{fontSize:11,color:"var(--muted)",marginLeft:6}}>· home</span>}</span>
               {locked
-                ? <span style={{fontSize:11,color:"var(--gold)",fontWeight:700}}>🔒 ArtsTracker</span>
+                ? <span style={{fontSize:11,color:"var(--goldink)",fontWeight:700}}>🔒 ArtsTracker</span>
                 : <button onClick={()=>toggle(v.id)} disabled={isPrimary||saving===v.id}
                     title={isPrimary?"Your home department is always open":(isOn?"Turn off":"Turn on")}
                     style={{width:44,height:24,borderRadius:99,border:"none",cursor:isPrimary?"default":"pointer",position:"relative",flexShrink:0,
@@ -732,7 +732,7 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
           {plan !== "free" && !isAdminEmail(userEmail) && (
             <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid var(--bd)"}}>
               <div style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>
-                You are on the <strong style={{color:"var(--gold)",textTransform:"capitalize"}}>{plan}</strong> plan.
+                You are on the <strong style={{color:"var(--goldink)",textTransform:"capitalize"}}>{plan}</strong> plan.
                 Your subscription renews automatically. Cancel anytime — you keep access until the end of your billing period.
               </div>
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -748,11 +748,11 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
                 </a>
               </div>
               <div style={{fontSize:11,color:"var(--faint)",marginTop:8,lineHeight:1.6}}>
-                Need help? Email <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)"}}>hello@theatre4u.org</a> — we respond personally.
+                Need help? Email <a href="mailto:hello@theatre4u.org" style={{color:"var(--goldink)"}}>hello@theatre4u.org</a> — we respond personally.
               </div>
               <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid var(--bd)",fontSize:12,color:"var(--muted)",lineHeight:1.7}}>
                 <span style={{fontWeight:700,color:"var(--text)"}}>🏛️ Paying by check or PO?</span> Email{" "}
-                <a href="mailto:hello@theatre4u.org?subject=Check/PO Subscription Request" style={{color:"var(--gold)"}}>hello@theatre4u.org</a>
+                <a href="mailto:hello@theatre4u.org?subject=Check/PO Subscription Request" style={{color:"var(--goldink)"}}>hello@theatre4u.org</a>
                 {" "}and we'll send a formal invoice. Payment made payable to <strong>Artstracker LLC</strong>. Net-30 available for districts.
               </div>
             </div>
@@ -764,7 +764,7 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
         {isAdminEmail(userEmail)&&(
           <div className="card card-p" style={{marginBottom:20,border:"1px solid rgba(212,168,67,.4)",background:"rgba(212,168,67,.04)"}}>
             <div className="sh">
-              <h2 style={{color:"var(--gold)"}}>🔧 Admin: Plan Test Mode</h2>
+              <h2 style={{color:"var(--goldink)"}}>🔧 Admin: Plan Test Mode</h2>
               <p>Simulate any subscription level. Changes are saved to the database so you can test the full flow.</p>
             </div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>

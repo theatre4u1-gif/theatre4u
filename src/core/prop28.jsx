@@ -123,7 +123,7 @@ export function Prop28Page({userId, org, onNav}) {
             {alreadyMigrated && !migrated ? (
               <div style={{fontSize:13,color:"var(--green)",fontWeight:600}}>
                 ✓ Already migrated — a "Prop 28" source exists in your Funding Tracker.
-                {" "}<button style={{background:"none",border:"none",color:"var(--gold)",cursor:"pointer",
+                {" "}<button style={{background:"none",border:"none",color:"var(--goldink)",cursor:"pointer",
                   fontFamily:"inherit",fontSize:13,fontWeight:700,padding:0}}
                   onClick={()=>onNav("funding")}>Go to Funding Tracker →</button>
               </div>
@@ -140,7 +140,7 @@ export function Prop28Page({userId, org, onNav}) {
             ) : purchases.length === 0 ? (
               <div style={{fontSize:13,color:"var(--faint)"}}>
                 No Prop 28 records to migrate.{" "}
-                <button style={{background:"none",border:"none",color:"var(--gold)",cursor:"pointer",
+                <button style={{background:"none",border:"none",color:"var(--goldink)",cursor:"pointer",
                   fontFamily:"inherit",fontSize:13,fontWeight:700,padding:0}}
                   onClick={()=>onNav("funding")}>Go to Funding Tracker →</button>
               </div>
@@ -150,7 +150,7 @@ export function Prop28Page({userId, org, onNav}) {
                   disabled={migrating} onClick={handleMigrate}>
                   {migrating ? "Migrating…" : "Migrate " + purchases.length + " Record" + (purchases.length !== 1 ? "s" : "") + " to Funding Tracker"}
                 </button>
-                <button style={{background:"none",border:"none",color:"var(--gold)",cursor:"pointer",
+                <button style={{background:"none",border:"none",color:"var(--goldink)",cursor:"pointer",
                   fontFamily:"inherit",fontSize:13,fontWeight:700,padding:0}}
                   onClick={()=>onNav("funding")}>
                   Go to Funding Tracker →
@@ -193,7 +193,7 @@ export function Prop28Page({userId, org, onNav}) {
                   </div>
                   {p.notes && <div style={{fontSize:12,color:"var(--faint)",fontStyle:"italic"}}>{p.notes}</div>}
                 </div>
-                <div style={{fontWeight:800,fontSize:18,color:"var(--gold)",fontFamily:"'Playfair Display',serif",flexShrink:0}}>
+                <div style={{fontWeight:800,fontSize:18,color:"var(--goldink)",fontFamily:"'Playfair Display',serif",flexShrink:0}}>
                   {p.cost != null ? "$" + parseFloat(p.cost).toLocaleString("en-US",{minimumFractionDigits:2}) : "—"}
                 </div>
               </div>

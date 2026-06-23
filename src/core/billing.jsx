@@ -49,7 +49,7 @@ export function InvoiceRequestForm({ orgName, userEmail }) {
     <div style={{marginTop:16,padding:16,background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.3)",borderRadius:10,textAlign:"center"}}>
       <div style={{fontSize:28,marginBottom:8}}>✅</div>
       <div style={{fontWeight:700,fontSize:15,color:"#ede8df",marginBottom:4}}>Invoice request sent!</div>
-      <div style={{fontSize:13,color:"#b0a8c0",lineHeight:1.6}}>Check your inbox — we sent a copy to <strong>{form.email}</strong> and will follow up within one business day. Questions? Email <a href="mailto:hello@theatre4u.org" style={{color:"var(--gold)"}}>hello@theatre4u.org</a>.</div>
+      <div style={{fontSize:13,color:"#b0a8c0",lineHeight:1.6}}>Check your inbox — we sent a copy to <strong>{form.email}</strong> and will follow up within one business day. Questions? Email <a href="mailto:hello@theatre4u.org" style={{color:"var(--goldink)"}}>hello@theatre4u.org</a>.</div>
     </div>
   );
 
@@ -162,7 +162,7 @@ export function UpgradePlans({ compact = false, userId = null, userEmail = null,
               {p.hot && <div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",background:"var(--gold)",color:"#1a0f00",fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",padding:"2px 10px",borderRadius:9,whiteSpace:"nowrap"}}>Most Popular</div>}
               <div style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:16,fontWeight:700,marginBottom:4,color:"#f0e6d3"}}>{p.name}</div>
               <div style={{display:"flex",alignItems:"baseline",gap:4,marginBottom:2}}>
-                <span style={{fontSize:26,fontWeight:800,color:"var(--gold)"}}>{price}</span>
+                <span style={{fontSize:26,fontWeight:800,color:"var(--goldink)"}}>{price}</span>
                 {!isFree && <span style={{fontSize:12,color:"rgba(240,230,211,.5)"}}>{p.per}</span>}
               </div>
               {billing==="annual" && !isFree && p.annualTotal && <div style={{fontSize:11,color:"rgba(240,230,211,.45)",marginBottom:2}}>billed {p.annualTotal}</div>}
@@ -177,7 +177,7 @@ export function UpgradePlans({ compact = false, userId = null, userEmail = null,
                 ))}
               </ul>
               {isCurrentPlan
-                ? <button className="btn btn-full" style={{background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.5)",color:"var(--gold)",cursor:"default",fontWeight:700,fontSize:13}} disabled>✓ Current Plan</button>
+                ? <button className="btn btn-full" style={{background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.5)",color:"var(--goldink)",cursor:"default",fontWeight:700,fontSize:13}} disabled>✓ Current Plan</button>
                 : isFree
                 ? null
                 : p.id.endsWith("enterprise")
@@ -199,20 +199,20 @@ export function UpgradePlans({ compact = false, userId = null, userEmail = null,
       </div>
       {billing === "invoice" ? (
         <div id="t4u-invoice-form" style={{marginTop:16,background:"rgba(15,10,25,.85)",border:"1.5px solid rgba(212,168,67,.3)",borderRadius:12,padding:20,scrollMarginTop:20}}>
-          <div style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:17,fontWeight:700,color:"var(--gold)",marginBottom:6}}>🏛️ Pay by Check or Purchase Order</div>
+          <div style={{fontFamily:"'Playfair Display','Georgia',serif",fontSize:17,fontWeight:700,color:"var(--goldink)",marginBottom:6}}>🏛️ Pay by Check or Purchase Order</div>
           <p style={{fontSize:13,color:"#c8bfd0",lineHeight:1.7,marginBottom:14}}>
             School districts and organizations that cannot pay by credit card can subscribe via check or purchase order.
             We will issue a formal invoice and accept payment by school check, district PO, or ACH transfer.
           </p>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
             <div style={{background:"#1e1208",border:"1px solid rgba(212,168,67,.3)",borderRadius:8,padding:14}}>
-              <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--gold)",marginBottom:6}}>Pro Plan</div>
+              <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--goldink)",marginBottom:6}}>Pro Plan</div>
               <div style={{fontSize:22,fontWeight:800,color:"#f0e6d3",marginBottom:2}}>$15<span style={{fontSize:12,color:"rgba(240,230,211,.6)"}}>/month</span></div>
               <div style={{fontSize:11,color:"rgba(240,230,211,.65)",marginBottom:8}}>or $150/year (billed annually)</div>
               <div style={{fontSize:12,color:"rgba(240,230,211,.8)",lineHeight:1.5}}>Unlimited inventory · Backstage Exchange · Funding Tracker · Team sharing</div>
             </div>
             <div style={{background:"#1e1208",border:"1px solid rgba(212,168,67,.3)",borderRadius:8,padding:14}}>
-              <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--gold)",marginBottom:6}}>District Plan</div>
+              <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--goldink)",marginBottom:6}}>District Plan</div>
               <div style={{fontSize:22,fontWeight:800,color:"#f0e6d3",marginBottom:2}}>$49<span style={{fontSize:12,color:"rgba(240,230,211,.6)"}}>/month</span></div>
               <div style={{fontSize:11,color:"rgba(240,230,211,.65)",marginBottom:8}}>or $500/year (billed annually)</div>
               <div style={{fontSize:12,color:"rgba(240,230,211,.8)",lineHeight:1.5}}>All Pro features · Multiple schools · District dashboard</div>
@@ -220,7 +220,7 @@ export function UpgradePlans({ compact = false, userId = null, userEmail = null,
           </div>
           <div style={{fontSize:12.5,color:"#b0a8c0",lineHeight:1.7,marginBottom:14}}>
             <strong style={{color:"#ede8df"}}>To get started:</strong> Email us at{" "}
-            <a href="mailto:hello@theatre4u.org?subject=Check/PO Subscription Request&body=Hi, I would like to subscribe to Theatre4u via check/purchase order.%0A%0AOrganization name:%0APlan requested (Pro / District):%0ABilling period (monthly / annual):%0AContact name:%0APO number (if applicable):%0AAccounts payable email:" style={{color:"var(--gold)"}}>hello@theatre4u.org</a>
+            <a href="mailto:hello@theatre4u.org?subject=Check/PO Subscription Request&body=Hi, I would like to subscribe to Theatre4u via check/purchase order.%0A%0AOrganization name:%0APlan requested (Pro / District):%0ABilling period (monthly / annual):%0AContact name:%0APO number (if applicable):%0AAccounts payable email:" style={{color:"var(--goldink)"}}>hello@theatre4u.org</a>
             {" "}with your organization name, plan, and billing period. We will send a formal invoice within one business day.
           </div>
           <InvoiceRequestForm orgName={userId||""} userEmail={userEmail||""} />

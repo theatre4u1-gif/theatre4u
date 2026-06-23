@@ -674,7 +674,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
     <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexDirection:"column"}}>
       <style>{CSS}</style>
       <div style={{fontSize:52}}>🎭</div>
-      <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--gold)"}}>Loading Theatre4u™…</div>
+      <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--goldink)"}}>Loading Theatre4u™…</div>
       <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
     </div>
   );
@@ -733,7 +733,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                     {plan==="free"?"Free Plan":plan==="pro"?"Pro":"District"}
                   </span>
                   {IS_ARTSTRACKER && org?.vertical && (
-                    <span style={{padding:"2px 8px",background:"rgba(212,168,67,.15)",color:"var(--gold)",borderRadius:9,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1,display:"inline-flex",alignItems:"center",gap:4}}>
+                    <span style={{padding:"2px 8px",background:"rgba(212,168,67,.15)",color:"var(--goldink)",borderRadius:9,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1,display:"inline-flex",alignItems:"center",gap:4}}>
                       {getVertical(org.vertical).icon} {getVertical(org.vertical).label}
                     </span>
                   )}
@@ -775,7 +775,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                   fontSize:11,
                   lineHeight:1.4,
                 }}>
-                  <div style={{color:"var(--gold)",fontWeight:700,marginBottom:2}}>
+                  <div style={{color:"var(--goldink)",fontWeight:700,marginBottom:2}}>
                     {memberRole==="stage_manager"?"📋 Stage Manager":
                      memberRole==="crew"?("🔧 "+getTerm(curVertical,"crewRole")):
                      memberRole==="house"?"🎟 House":
@@ -811,15 +811,15 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                          : {}}>
                     <span className="sb-ico">{n.admin ? "🔧" : n.district ? "🏢" : n.ico}</span>
                     <span>{n.label}</span>
-                    {n.admin && <span style={{marginLeft:"auto",fontSize:9,padding:"1px 5px",background:"rgba(212,168,67,.2)",color:"var(--gold)",borderRadius:4,fontWeight:700,letterSpacing:1}}>ADMIN</span>}
+                    {n.admin && <span style={{marginLeft:"auto",fontSize:9,padding:"1px 5px",background:"rgba(212,168,67,.2)",color:"var(--goldink)",borderRadius:4,fontWeight:700,letterSpacing:1}}>ADMIN</span>}
                     {n.district && <span style={{marginLeft:"auto",fontSize:9,padding:"1px 5px",background:"rgba(66,165,245,.2)",color:"#42a5f5",borderRadius:4,fontWeight:700,letterSpacing:1}}>DIST</span>}
                     {n.id==="messages"   && unreadCount>0    && <span className="sb-badge" style={{background:"var(--red)",color:"#fff"}}>{unreadCount}</span>}
                     {n.id==="requests"   && pendingReqCount>0 && <span className="sb-badge" style={{background:"var(--red)",color:"#fff"}}>{pendingReqCount}</span>}
                     {n.id==="inventory"  && items.length>0 && <span className="sb-badge">{activeSchool ? schoolItems.length : items.length}</span>}
                     {n.id==="marketplace"&& listed>0       && <span className="sb-badge">{listed}</span>}
-                    {n.id==="productions"&& <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--gold)"}}>🎭</span>}
+                    {n.id==="productions"&& <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--goldink)"}}>🎭</span>}
                     
-                    {n.id==="points"    && creditBalance>0 && <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--gold)"}}>{creditBalance}</span>}
+                    {n.id==="points"    && creditBalance>0 && <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--goldink)"}}>{creditBalance}</span>}
                   </div>
                 ))}
               </nav>
@@ -828,7 +828,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                 <div style={{display:"flex",gap:5,flexDirection:"column"}}>
                   {(plan==="pro"||plan==="district"||isAdmin)&&!isDemo&&(
                     <a href="/app.html" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
-                      style={{color:"var(--gold)",borderColor:"rgba(212,168,67,.3)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                      style={{color:"var(--goldink)",borderColor:"rgba(212,168,67,.3)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                       📱 Mobile App
                     </a>
                   )}

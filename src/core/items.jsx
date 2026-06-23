@@ -195,7 +195,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
         })()}
         {qloc&&(
           <div style={{marginTop:8,padding:"12px 14px",background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.25)",borderRadius:8}}>
-            <div style={{fontWeight:700,fontSize:12,color:"var(--gold)",marginBottom:8}}>New Storage Location</div>
+            <div style={{fontWeight:700,fontSize:12,color:"var(--goldink)",marginBottom:8}}>New Storage Location</div>
             <div style={{display:"flex",gap:6,marginBottom:6}}>
               <input className="fi" style={{flex:1}} placeholder="Name (e.g. Costume Closet A)" value={qlocName}
                 onChange={e=>setQlocName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addLocation()}/>
@@ -286,7 +286,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
         )}
         {qfund&&(
           <div style={{marginTop:8,padding:"12px 14px",background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.25)",borderRadius:8}}>
-            <div style={{fontWeight:700,fontSize:12,color:"var(--gold)",marginBottom:8}}>New Funding Source</div>
+            <div style={{fontWeight:700,fontSize:12,color:"var(--goldink)",marginBottom:8}}>New Funding Source</div>
             <div style={{display:"flex",gap:6,marginBottom:6}}>
               <input className="fi" style={{flex:1}} placeholder="Name (e.g. Prop 28, Booster Fund)"
                 value={qfundName} onChange={e=>setQfundName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addFundSource()}/>

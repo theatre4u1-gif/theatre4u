@@ -720,7 +720,7 @@ function ProductionNeedsImport({ prod, userId, onImported, onClose }) {
 
 const NEED_STATUSES = [
   { key:"needed",     label:"Still Needed",  color:"var(--red)",   icon:"🔴" },
-  { key:"searching",  label:"Searching",     color:"var(--gold)",  icon:"🟡" },
+  { key:"searching",  label:"Searching",     color:"var(--goldink)",  icon:"🟡" },
   { key:"found",      label:"Found",         color:"var(--blue)",  icon:"🔵" },
   { key:"acquired",   label:"Acquired",      color:"var(--green)", icon:"🟢" },
   { key:"not_needed", label:"Not Needed",    color:"var(--muted)", icon:"⚫" },
@@ -840,7 +840,7 @@ function ProductionNeedsChecklist({ prod, allItems, userId, org, onNavigateToExc
 
   const NeedForm = ({ onDone }) => (
     <div style={{ ...card, padding:20, marginBottom:16 }}>
-      <div style={{ fontWeight:700, fontSize:14, marginBottom:16, color:"var(--gold)" }}>
+      <div style={{ fontWeight:700, fontSize:14, marginBottom:16, color:"var(--goldink)" }}>
         {editing ? "Edit Item" : "Add to Needs List"}
       </div>
 
@@ -1251,7 +1251,7 @@ function ProductionDetail({ prod, allItems, userId, onEdit, onDelete, onClose, o
                 .select("*").eq("production_id", prod.id).order("added_at");
               printProductionReport(prod, needsData||[], piData||[], allItems, org);
             }}
-            style={{ color:"var(--gold)", borderColor:"rgba(212,168,67,.3)" }}>
+            style={{ color:"var(--goldink)", borderColor:"rgba(212,168,67,.3)" }}>
             🖨 Print Report
           </button>
           <button className="btn btn-o btn-sm" style={{ color:"var(--red)" }}

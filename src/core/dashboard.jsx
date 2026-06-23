@@ -234,13 +234,13 @@ export function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMa
               <div style={{display:"flex",gap:12,alignItems:"flex-start",flexWrap:"wrap"}}>
                 <span style={{fontSize:20,flexShrink:0}}>⭐</span>
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:700,fontSize:13,color:"var(--gold)",marginBottom:3}}>
+                  <div style={{fontWeight:700,fontSize:13,color:"var(--goldink)",marginBottom:3}}>
                     Full Pro access — complimentary during Theatre4u beta
                   </div>
                   <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
                     When Theatre4u launches you'll have the option to subscribe.
                     {" "}<strong style={{color:"var(--text)"}}>Add 25+ items and share feedback</strong>{" "}
-                    to lock in the founding member rate of <strong style={{color:"var(--gold)"}}>$9.99/month</strong> — 
+                    to lock in the founding member rate of <strong style={{color:"var(--goldink)"}}>$9.99/month</strong> — 
                     instead of the standard $15 — for life.
                   </div>
                   <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
@@ -318,14 +318,14 @@ export function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMa
             onClick={()=>goProfile&&goProfile()}>
             <div style={{fontSize:28,flexShrink:0}}>✏️</div>
             <div style={{flex:1}}>
-              <div style={{fontWeight:700,fontSize:14,color:"var(--gold)",marginBottom:3}}>
+              <div style={{fontWeight:700,fontSize:14,color:"var(--goldink)",marginBottom:3}}>
                 Complete your profile
               </div>
               <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>
                 Add your location, phone, and bio so other programs can find and contact you in Backstage Exchange.
               </div>
             </div>
-            <div style={{color:"var(--gold)",fontSize:18,flexShrink:0}}>→</div>
+            <div style={{color:"var(--goldink)",fontSize:18,flexShrink:0}}>→</div>
           </div>
         )}
 
@@ -361,8 +361,8 @@ export function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMa
             <div style={{fontSize:36,flexShrink:0}}>🪙</div>
             <div style={{flex:1,minWidth:0}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:6}}>
-                <div style={{fontWeight:800,fontSize:15,color:"var(--gold)"}}>{getPointsName(vVertical)}</div>
-                <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--gold)",fontWeight:700}}>
+                <div style={{fontWeight:800,fontSize:15,color:"var(--goldink)"}}>{getPointsName(vVertical)}</div>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--goldink)",fontWeight:700}}>
                   {(pointBalance||0).toLocaleString()}
                   <span style={{fontSize:12,color:"var(--muted)",fontWeight:400}}> pts</span>
                 </div>
@@ -381,7 +381,7 @@ export function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMa
                 </span>
               </div>
             </div>
-            <div style={{color:"var(--gold)",fontSize:18,flexShrink:0}}>→</div>
+            <div style={{color:"var(--goldink)",fontSize:18,flexShrink:0}}>→</div>
           </div>
         )}
 

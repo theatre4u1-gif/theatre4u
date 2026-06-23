@@ -78,7 +78,7 @@ export function PoolHealthWidget() {
         {[
           {n:stats.available,label:"Available",color:"#4caf50"},
           {n:stats.assigned, label:"Assigned (ordered)",color:"#2196f3"},
-          {n:stats.claimed,  label:"Claimed (in use)",color:"var(--gold)"},
+          {n:stats.claimed,  label:"Claimed (in use)",color:"var(--goldink)"},
         ].map(s=>(
           <div key={s.label} style={{textAlign:"center",minWidth:100}}>
             <div style={{fontSize:22,fontWeight:800,color:s.color}}>{s.n.toLocaleString()}</div>
@@ -371,11 +371,11 @@ export function AdminHub({ currentUser, org }) {
         <div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:24}}>
             {[
-              { n:totalOrgs,                                          label:"Total Programs", color:"var(--gold)", icon:"🎭" },
+              { n:totalOrgs,                                          label:"Total Programs", color:"var(--goldink)", icon:"🎭" },
               { n:paidOrgs,                                           label:"Paid Plans",     color:"#4caf50",     icon:"💳" },
-              { n:orgs.filter(o=>o.founding_member).length,               label:"Founding Members", color:"var(--gold)", icon:"⭐" },
+              { n:orgs.filter(o=>o.founding_member).length,               label:"Founding Members", color:"var(--goldink)", icon:"⭐" },
               { n:orgs.filter(o=>o.temp_pro&&!o.founding_member).length,  label:"Beta Only",        color:"#ce93d8",     icon:"🎭" },
-              { n:adminItemCount!==null?adminItemCount:orgs.reduce((s,o)=>s+(Number(o.item_count)||0),0)||"…", label:"Total Items", color:"var(--gold)", icon:"📦" },
+              { n:adminItemCount!==null?adminItemCount:orgs.reduce((s,o)=>s+(Number(o.item_count)||0),0)||"…", label:"Total Items", color:"var(--goldink)", icon:"📦" },
               { n:newLeads,                                           label:"New Leads",      color:"#2196f3",     icon:"📥" },
               { n:newFeedback,                                        label:"New Feedback",   color:"#ff9800",     icon:"💬" },
               { n:analytics.views||0,                                 label:"Page Views",     color:"var(--muted)",icon:"👁" },
@@ -408,7 +408,7 @@ export function AdminHub({ currentUser, org }) {
                     const statusBadge = o.stripe_subscription_id
                       ? {label:"💳 Paying",bg:"rgba(76,175,80,.12)",color:"#4caf50"}
                       : o.founding_member
-                      ? {label:"⭐ Founding",bg:"rgba(212,168,67,.15)",color:"var(--gold)"}
+                      ? {label:"⭐ Founding",bg:"rgba(212,168,67,.15)",color:"var(--goldink)"}
                       : o.temp_pro
                       ? {label:"🎭 Beta Pro",bg:"rgba(156,39,176,.1)",color:"#ce93d8"}
                       : {label:"Free",bg:"rgba(150,150,150,.1)",color:"var(--muted)"};
@@ -458,7 +458,7 @@ export function AdminHub({ currentUser, org }) {
                     <tr key={o.id} style={{borderTop:"1px solid var(--border)"}}>
                       <td style={{padding:"8px 12px",fontWeight:600}}>{o.name}</td>
                       <td style={{padding:"8px 12px",color:"var(--muted)",fontSize:12}}>{o.director_name||"—"}</td>
-                      <td style={{padding:"8px 12px"}}><a href={"mailto:"+o.email} style={{color:"var(--gold)",fontSize:12}}>{o.email}</a></td>
+                      <td style={{padding:"8px 12px"}}><a href={"mailto:"+o.email} style={{color:"var(--goldink)",fontSize:12}}>{o.email}</a></td>
                       <td style={{padding:"8px 12px"}}>
                         <span style={{fontSize:11,fontWeight:700,padding:"2px 7px",borderRadius:6,
                           background:o.plan==="free"?"rgba(100,100,100,.15)":"rgba(76,175,80,.15)",
@@ -479,7 +479,7 @@ export function AdminHub({ currentUser, org }) {
                   <div key={f.id} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:8,padding:"10px 14px",display:"flex",gap:12,alignItems:"flex-start"}}>
                     <div style={{fontSize:18,flexShrink:0}}>{f.category==="bug"?"🐛":f.category==="feature"?"✨":f.category==="ux"?"👁":"💬"}</div>
                     <div style={{flex:1}}>
-                      <div style={{fontSize:12,fontWeight:700,color:"var(--gold)",marginBottom:2}}>{f.org_name||"Anonymous"} · {f.category}</div>
+                      <div style={{fontSize:12,fontWeight:700,color:"var(--goldink)",marginBottom:2}}>{f.org_name||"Anonymous"} · {f.category}</div>
                       <div style={{fontSize:13,color:"var(--text)",lineHeight:1.5}}>{f.message||"(no message)"}</div>
                     </div>
                     <span style={{fontSize:10,color:"var(--muted)",flexShrink:0,marginTop:2}}>{new Date(f.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>
@@ -523,7 +523,7 @@ export function AdminHub({ currentUser, org }) {
                       <div>{o.director_name||"—"}</div>
                       {o.director_title&&<div style={{fontSize:11,color:"var(--muted)"}}>{o.director_title}</div>}
                     </td>
-                    <td style={{padding:"9px 12px"}}><a href={"mailto:"+o.email} style={{color:"var(--gold)",fontSize:12}}>{o.email}</a></td>
+                    <td style={{padding:"9px 12px"}}><a href={"mailto:"+o.email} style={{color:"var(--goldink)",fontSize:12}}>{o.email}</a></td>
                     <td style={{padding:"9px 12px"}}>
                       <div style={{fontFamily:"monospace",fontSize:11,fontWeight:800,letterSpacing:1,
                         color:o.label_prefix?"var(--gold)":"var(--muted)",
@@ -550,7 +550,7 @@ export function AdminHub({ currentUser, org }) {
                     <td style={{padding:"9px 12px"}}>
                       <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
                         <a href={"mailto:"+o.email+"?subject=Theatre4u — Following up"}
-                          style={{fontSize:11,color:"var(--gold)",textDecoration:"none",fontWeight:700}}>✉ Email</a>
+                          style={{fontSize:11,color:"var(--goldink)",textDecoration:"none",fontWeight:700}}>✉ Email</a>
                         <button onClick={async()=>{
                           const {error}=await SB.from("orgs").update({
                             temp_pro:!o.temp_pro,
@@ -588,7 +588,7 @@ export function AdminHub({ currentUser, org }) {
                     <tr key={l.id} style={{borderTop:"1px solid var(--border)"}}>
                       <td style={{padding:"8px 12px",fontWeight:600}}>{l.org}</td>
                       <td style={{padding:"8px 12px"}}>{l.name}</td>
-                      <td style={{padding:"8px 12px"}}><a href={"mailto:"+l.email} style={{color:"var(--gold)",fontSize:12}}>{l.email}</a></td>
+                      <td style={{padding:"8px 12px"}}><a href={"mailto:"+l.email} style={{color:"var(--goldink)",fontSize:12}}>{l.email}</a></td>
                       <td style={{padding:"8px 12px",color:"var(--muted)",fontSize:12}}>{l.type||"—"}</td>
                       <td style={{padding:"8px 12px",color:"var(--muted)",fontSize:12}}>{l.location||"—"}</td>
                       <td style={{padding:"8px 12px"}}>
@@ -613,7 +613,7 @@ export function AdminHub({ currentUser, org }) {
             <h3 style={{fontFamily:"var(--serif)",fontSize:22,marginBottom:4}}>Billing & Access Management</h3>
             <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.6}}>
               Control who has Pro access and how. Right now everyone is on
-              {" "}<strong style={{color:"var(--gold)"}}>Beta Temp Pro</strong> — free access you granted manually.
+              {" "}<strong style={{color:"var(--goldink)"}}>Beta Temp Pro</strong> — free access you granted manually.
               When beta ends, you'll end temp pro here, and programs will need to subscribe through Stripe to keep Pro features.
             </p>
           </div>
@@ -621,7 +621,7 @@ export function AdminHub({ currentUser, org }) {
           {/* Status summary */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12,marginBottom:24}}>
             {[
-              { n: orgs.filter(o=>o.temp_pro).length,                                    label:"Beta Temp Pro",   color:"var(--gold)",  icon:"⭐", desc:"Free beta access" },
+              { n: orgs.filter(o=>o.temp_pro).length,                                    label:"Beta Temp Pro",   color:"var(--goldink)",  icon:"⭐", desc:"Free beta access" },
               { n: orgs.filter(o=>o.stripe_subscription_id).length,                      label:"Paying (Stripe)", color:"#4caf50",      icon:"💳", desc:"Active subscriptions" },
               { n: orgs.filter(o=>o.plan==="district"&&!o.temp_pro).length,              label:"District",        color:"#2196f3",      icon:"🏛", desc:"Manually granted" },
               { n: orgs.filter(o=>o.plan==="free"&&!o.temp_pro).length,                  label:"Free",            color:"var(--muted)", icon:"⚪", desc:"Limited access" },
@@ -652,7 +652,7 @@ export function AdminHub({ currentUser, org }) {
                 if(!error){flash("✓ Temp Pro granted to all free accounts");setOrgs(p=>p.map(o=>o.plan==="free"&&!o.temp_pro?{...o,temp_pro:true}:o));}
               }} style={{padding:"10px 18px",borderRadius:8,fontFamily:"inherit",
                 fontSize:14,fontWeight:700,cursor:"pointer",
-                background:"rgba(212,168,67,.15)",color:"var(--gold)",border:"1px solid rgba(212,168,67,.3)"}}>
+                background:"rgba(212,168,67,.15)",color:"var(--goldink)",border:"1px solid rgba(212,168,67,.3)"}}>
                 ⭐ Grant Temp Pro to all free accounts
               </button>
 
@@ -738,7 +738,7 @@ export function AdminHub({ currentUser, org }) {
                           {o.stripe_subscription_id
                             ? <span style={{color:"#4caf50"}}>✓ Active</span>
                             : o.stripe_customer_id
-                            ? <span style={{color:"var(--gold)"}}>Customer, no sub</span>
+                            ? <span style={{color:"var(--goldink)"}}>Customer, no sub</span>
                             : <span>None</span>}
                         </td>
                         <td style={{padding:"9px 12px"}}>
@@ -751,7 +751,7 @@ export function AdminHub({ currentUser, org }) {
                               +"%0A%0ATo activate your founding member subscription: https%3A%2F%2Ftheatre4u.org"
                               +"%0A%0AIf you have any questions just reply to this email."
                               +"%0A%0ABob Zick%0AFounder, Theatre4u™%0Ahello%40theatre4u.org"}
-                              style={{fontSize:12,color:"var(--gold)",fontWeight:700,
+                              style={{fontSize:12,color:"var(--goldink)",fontWeight:700,
                                 textDecoration:"none",whiteSpace:"nowrap"}}>
                               ✉ Send invite
                             </a>
@@ -888,7 +888,7 @@ export function AdminHub({ currentUser, org }) {
             ].map(k=>(
               <div key={k.label} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px",textAlign:"center"}}>
                 <div style={{fontSize:22,marginBottom:4}}>{k.icon}</div>
-                <div style={{fontSize:26,fontWeight:800,color:"var(--gold)",fontFamily:"var(--serif)",lineHeight:1}}>{k.val}</div>
+                <div style={{fontSize:26,fontWeight:800,color:"var(--goldink)",fontFamily:"var(--serif)",lineHeight:1}}>{k.val}</div>
                 <div style={{fontSize:11,color:"var(--muted)",marginTop:4,textTransform:"uppercase",letterSpacing:.8}}>{k.label}</div>
               </div>
             ))}
@@ -943,7 +943,7 @@ export function AdminHub({ currentUser, org }) {
                       <div style={{flex:1,height:18,background:"var(--border)",borderRadius:4,overflow:"hidden"}}>
                         <div style={{width:pct+"%",height:"100%",background:"var(--gold)",borderRadius:4,opacity:.8,transition:"width .4s"}}/>
                       </div>
-                      <div style={{fontSize:13,fontWeight:700,color:"var(--gold)",width:50,textAlign:"right"}}>{count}</div>
+                      <div style={{fontSize:13,fontWeight:700,color:"var(--goldink)",width:50,textAlign:"right"}}>{count}</div>
                       <div style={{fontSize:11,color:"var(--muted)",width:36,textAlign:"right"}}>{pct}%</div>
                     </div>
                   );
@@ -962,7 +962,7 @@ export function AdminHub({ currentUser, org }) {
                   <div style={{flex:1,height:18,background:"var(--border)",borderRadius:4,overflow:"hidden"}}>
                     <div style={{width:(count/Math.max(...analytics.byPage.map(([,v])=>v))*100)+"%",height:"100%",background:"var(--gold)",borderRadius:4,opacity:.7,transition:"width .4s"}}/>
                   </div>
-                  <div style={{fontSize:13,fontWeight:700,color:"var(--gold)",width:40,textAlign:"right"}}>{count}</div>
+                  <div style={{fontSize:13,fontWeight:700,color:"var(--goldink)",width:40,textAlign:"right"}}>{count}</div>
                 </div>
               ))}
             </div>
@@ -1003,7 +1003,7 @@ export function AdminHub({ currentUser, org }) {
                         <span style={{fontSize:18}}>{f.category==="bug"?"🐛":f.category==="feature"?"✨":f.category==="ux"?"👁":"💬"}</span>
                         <span style={{fontWeight:700,fontSize:13}}>{f.org_name||"Anonymous"}</span>
                         <span style={{fontSize:11,color:"var(--muted)",textTransform:"capitalize",background:"var(--border)",padding:"1px 6px",borderRadius:4}}>{f.category}</span>
-                        {f.rating&&<span style={{fontSize:11,color:"var(--gold)"}}>{("★").repeat(f.rating)}{("☆").repeat(5-f.rating)}</span>}
+                        {f.rating&&<span style={{fontSize:11,color:"var(--goldink)"}}>{("★").repeat(f.rating)}{("☆").repeat(5-f.rating)}</span>}
                         <span style={{fontSize:11,color:"var(--muted)"}}>{new Date(f.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</span>
                       </div>
                       <div style={{fontSize:13,color:"var(--text)",lineHeight:1.6}}>{f.message||"(no message)"}</div>
@@ -1092,7 +1092,7 @@ export function AdminHub({ currentUser, org }) {
               ))}
             </div>
             <div style={{marginTop:12,display:"flex",gap:12,flexWrap:"wrap",fontSize:12,color:"var(--muted)"}}>
-              <span>🔗 <a href="https://www.weprintbarcodes.com/qr-code-labels.html" target="_blank" rel="noreferrer" style={{color:"var(--gold)"}}>WePrintBarcodes QR Labels ↗</a></span>
+              <span>🔗 <a href="https://www.weprintbarcodes.com/qr-code-labels.html" target="_blank" rel="noreferrer" style={{color:"var(--goldink)"}}>WePrintBarcodes QR Labels ↗</a></span>
               <span>📏 Recommended size: 1.5" × 1.5"</span>
               <span>🏷 Material: polyester matte (indoor) or vinyl weatherproof</span>
             </div>
@@ -1116,11 +1116,11 @@ export function AdminHub({ currentUser, org }) {
                       <div>
                         <div style={{fontWeight:700,fontSize:15}}>{o.org_name}</div>
                         <div style={{fontSize:12,color:"var(--muted)"}}>
-                          <a href={"mailto:"+o.contact_email} style={{color:"var(--gold)"}}>{o.contact_email}</a>
+                          <a href={"mailto:"+o.contact_email} style={{color:"var(--goldink)"}}>{o.contact_email}</a>
                         </div>
                       </div>
                       <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                        <span style={{fontWeight:800,fontSize:18,color:"var(--gold)"}}>{o.item_count}</span>
+                        <span style={{fontWeight:800,fontSize:18,color:"var(--goldink)"}}>{o.item_count}</span>
                         <span style={{fontSize:12,color:"var(--muted)",textTransform:"capitalize"}}>{o.label_type} labels</span>
                         <select value={o.status} onChange={e=>updateLabelOrder(o.id,{status:e.target.value})}
                           style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:6,
@@ -1243,7 +1243,7 @@ export function AdminHub({ currentUser, org }) {
             </p>
             <div style={{background:"rgba(0,0,0,.15)",borderRadius:8,padding:"14px 16px",
               border:"1px solid rgba(212,168,67,.15)"}}>
-              <div style={{fontSize:12,fontWeight:700,color:"var(--gold)",marginBottom:6}}>
+              <div style={{fontSize:12,fontWeight:700,color:"var(--goldink)",marginBottom:6}}>
                 ⭐ Free Pro Access During Beta — shown on signup form
               </div>
               <div style={{fontSize:13,color:"rgba(255,255,255,.75)",lineHeight:1.7}}>
@@ -1255,7 +1255,7 @@ export function AdminHub({ currentUser, org }) {
             </div>
             <div style={{background:"rgba(0,0,0,.15)",borderRadius:8,padding:"14px 16px",
               border:"1px solid rgba(212,168,67,.15)",marginTop:10}}>
-              <div style={{fontSize:12,fontWeight:700,color:"var(--gold)",marginBottom:6}}>
+              <div style={{fontSize:12,fontWeight:700,color:"var(--goldink)",marginBottom:6}}>
                 ⭐ Dashboard banner — shown to all beta users
               </div>
               <div style={{fontSize:13,color:"rgba(255,255,255,.75)",lineHeight:1.7}}>
@@ -1281,7 +1281,7 @@ export function AdminHub({ currentUser, org }) {
                 <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>
                   Use this to give any program full Pro access during the beta — or take it away.
                   Go to the <strong style={{color:"var(--text)"}}>Users &amp; Leads</strong> tab,
-                  find the program you want to update, then click the <strong style={{color:"var(--gold)"}}>⭐ Pro</strong> button
+                  find the program you want to update, then click the <strong style={{color:"var(--goldink)"}}>⭐ Pro</strong> button
                   next to their name. It toggles on and off instantly.
                 </div>
               </div>
@@ -1302,7 +1302,7 @@ export function AdminHub({ currentUser, org }) {
                 <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>Email a Program</div>
                 <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>
                   Go to <strong style={{color:"var(--text)"}}>Users &amp; Leads</strong>, find the program,
-                  and click the <strong style={{color:"var(--gold)"}}>✉ Email</strong> link next to their name.
+                  and click the <strong style={{color:"var(--goldink)"}}>✉ Email</strong> link next to their name.
                   It opens a pre-addressed email in your mail app so you can write to them directly.
                 </div>
               </div>
@@ -1324,7 +1324,7 @@ export function AdminHub({ currentUser, org }) {
                 <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>
                   Reward a program for giving great feedback or referring a new school.
                   Go to the <strong style={{color:"var(--text)"}}>Feedback</strong> tab and use
-                  the <strong style={{color:"var(--gold)"}}>🎁 Award Points</strong> button on any feedback entry.
+                  the <strong style={{color:"var(--goldink)"}}>🎁 Award Points</strong> button on any feedback entry.
                   The points appear in their account immediately.
                 </div>
               </div>
@@ -1379,7 +1379,7 @@ export function AdminHub({ currentUser, org }) {
             <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
               <span style={{fontSize:28,flexShrink:0}}>💵</span>
               <div>
-                <div style={{fontWeight:700,fontSize:16,marginBottom:8,color:"var(--gold)"}}>
+                <div style={{fontWeight:700,fontSize:16,marginBottom:8,color:"var(--goldink)"}}>
                   Label Pricing Reference
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
@@ -2380,7 +2380,7 @@ export function AdminDistrictAssignPanel({ orgs, onUpdated }) {
           {/* Capacity warning */}
           {!removeMode && atCapacity && (
             <div style={{ background: "rgba(212,168,67,.1)", border: "1px solid rgba(212,168,67,.3)",
-              borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "var(--gold)",
+              borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "var(--goldink)",
               marginBottom: 12 }}>
               ⚠️ This district is at capacity ({districtSchoolCount}/{selDist?.max_schools} schools).
               Upgrade the district plan to add more schools.
@@ -2392,7 +2392,7 @@ export function AdminDistrictAssignPanel({ orgs, onUpdated }) {
             letterSpacing: 1, color: "var(--muted)", marginBottom: 8 }}>
             {removeMode ? "Schools Currently in District" : "Schools to Add"}
             {" — "}<button onClick={() => setSelOrgs(displayOrgs.map(o => o.id))}
-              style={{ background: "none", border: "none", color: "var(--gold)",
+              style={{ background: "none", border: "none", color: "var(--goldink)",
                 fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 700 }}>
               Select All
             </button>
@@ -2836,7 +2836,7 @@ export function AdminDailyDigest() {
                 </div>
                 {data.missedSignups.map((s,i)=>(
                   <div key={i} style={{fontSize:12,color:"var(--muted)",marginBottom:2}}>
-                    • {s.org_name} — <a href={`mailto:${s.org_email}`} style={{color:"var(--gold)"}}>{s.org_email}</a> ({s.plan})
+                    • {s.org_name} — <a href={`mailto:${s.org_email}`} style={{color:"var(--goldink)"}}>{s.org_email}</a> ({s.plan})
                   </div>
                 ))}
               </div>
@@ -2846,7 +2846,7 @@ export function AdminDailyDigest() {
           {/* KPI Cards */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:10,marginBottom:24}}>
             {[
-              {icon:"🎭",label:"New Signups",    n:data.newOrgs.length,                         color:"var(--gold)"},
+              {icon:"🎭",label:"New Signups",    n:data.newOrgs.length,                         color:"var(--goldink)"},
               {icon:"👥",label:"Active Users",   n:data.activeUsers||0,                         color:"#4caf50"},
               {icon:"🔑",label:"Logins Today",   n:(data.loginToday||[]).length,                color:"#ff9800"},
               {icon:"📦",label:"Items Added",    n:data.newItems.length,                        color:"#4caf50"},
@@ -2908,7 +2908,7 @@ export function AdminDailyDigest() {
                           <div style={{height:"100%",width:(n/Math.max(...Object.values(data.pvBySource))*100)+"%",background:"var(--gold)",borderRadius:2}}/>
                         </div>
                       </div>
-                      <span style={{fontSize:13,fontWeight:700,color:"var(--gold)",minWidth:24,textAlign:"right"}}>{n}</span>
+                      <span style={{fontSize:13,fontWeight:700,color:"var(--goldink)",minWidth:24,textAlign:"right"}}>{n}</span>
                     </div>
                   ))}
                 </div>
@@ -2945,7 +2945,7 @@ export function AdminDailyDigest() {
                   <div key={o.id} style={{padding:"9px 14px",borderBottom:"1px solid var(--border)",
                     display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
                     <span style={{fontWeight:600,fontSize:13}}>{o.name||"Unnamed"}</span>
-                    <a href={"mailto:"+o.email} style={{fontSize:12,color:"var(--gold)"}}>{o.email}</a>
+                    <a href={"mailto:"+o.email} style={{fontSize:12,color:"var(--goldink)"}}>{o.email}</a>
                     <span style={{fontSize:11,padding:"1px 6px",borderRadius:4,
                       background:o.plan==="free"?"rgba(100,100,100,.1)":"rgba(76,175,80,.1)",
                       color:o.plan==="free"?"var(--muted)":"#4caf50",textTransform:"capitalize"}}>{o.plan||"free"}</span>
@@ -2988,7 +2988,7 @@ export function AdminDailyDigest() {
                     display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
                     <span style={{fontWeight:600,fontSize:13}}>{l.name}</span>
                     <span style={{fontSize:12,color:"var(--muted)"}}>{l.org}</span>
-                    <a href={"mailto:"+l.email} style={{fontSize:12,color:"var(--gold)"}}>{l.email}</a>
+                    <a href={"mailto:"+l.email} style={{fontSize:12,color:"var(--goldink)"}}>{l.email}</a>
                     <span style={{fontSize:11,color:"var(--muted)",marginLeft:"auto"}}>
                       {new Date(l.created_at).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit",timeZone:"America/Los_Angeles"})}
                     </span>
@@ -3008,7 +3008,7 @@ export function AdminDailyDigest() {
                     <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
                       {entry.emails.map(n=>(
                         <span key={n} style={{fontSize:11,padding:"1px 7px",borderRadius:5,
-                          background:"rgba(212,168,67,.12)",color:"var(--gold)",fontWeight:600}}>
+                          background:"rgba(212,168,67,.12)",color:"var(--goldink)",fontWeight:600}}>
                           #{n} {data.emailLabels[n]||""}
                         </span>
                       ))}
@@ -3109,7 +3109,7 @@ export function AdminPaymentsTab() {
           {ico:"💰",label:"Revenue "+year, val:fmt$(totalRevenue), color:"#4caf50"},
           {ico:"↩️",label:"Refunded",      val:fmt$(totalRefunded),color:"#e53935"},
           {ico:"❌",label:"Failed",        val:totalFailed+" payments",color:"var(--muted)"},
-          {ico:"📋",label:"Total events",  val:payments.length+" logged",color:"var(--gold)"},
+          {ico:"📋",label:"Total events",  val:payments.length+" logged",color:"var(--goldink)"},
         ].map(k=>(
           <div key={k.label} style={{...card,textAlign:"center"}}>
             <div style={{fontSize:22,marginBottom:4}}>{k.ico}</div>
@@ -3167,7 +3167,7 @@ export function AdminPaymentsTab() {
                   </td>
                   <td style={{padding:"9px 12px",fontSize:12,color:"var(--muted)",maxWidth:220}}>
                     {p.description||p.stripe_event_type}
-                    {p.plan&&<span style={{marginLeft:6,fontWeight:700,color:"var(--gold)",fontSize:11}}>
+                    {p.plan&&<span style={{marginLeft:6,fontWeight:700,color:"var(--goldink)",fontSize:11}}>
                       {p.plan} {p.plan_interval}
                     </span>}
                   </td>
@@ -3458,7 +3458,7 @@ export function AdminProgramsTab({ orgs, currentUser, flash }) {
                 <div key={k.lbl} style={{background:"var(--parch)",border:"1px solid var(--border)",
                   borderRadius:10,padding:"14px",textAlign:"center"}}>
                   <div style={{fontSize:24,marginBottom:4}}>{k.icon}</div>
-                  <div style={{fontSize:22,fontWeight:800,color:"var(--gold)",
+                  <div style={{fontSize:22,fontWeight:800,color:"var(--goldink)",
                     fontFamily:"var(--serif)",lineHeight:1}}>{k.val}</div>
                   <div style={{fontSize:11,color:"var(--muted)",marginTop:4,
                     textTransform:"uppercase",letterSpacing:.8}}>{k.lbl}</div>
@@ -3475,7 +3475,7 @@ export function AdminProgramsTab({ orgs, currentUser, flash }) {
               {editItem&&(
                 <div style={{background:"var(--parch)",border:"1px solid var(--gold)",
                   borderRadius:10,padding:16,marginBottom:16}}>
-                  <div style={{fontWeight:700,fontSize:14,marginBottom:12,color:"var(--gold)"}}>
+                  <div style={{fontWeight:700,fontSize:14,marginBottom:12,color:"var(--goldink)"}}>
                     ✏️ Editing: {editItem.name}
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
@@ -3582,7 +3582,7 @@ export function AdminProgramsTab({ orgs, currentUser, flash }) {
                     borderRadius:8,border:"1px solid var(--border)",fontSize:13}}>
                     <span style={{fontWeight:600}}>{inv.email||"Join code"}</span>
                     <span style={{color:"var(--muted)",marginLeft:8}}>{inv.role?.replace("_"," ")}</span>
-                    {inv.join_code&&<span style={{fontFamily:"monospace",color:"var(--gold)",
+                    {inv.join_code&&<span style={{fontFamily:"monospace",color:"var(--goldink)",
                       marginLeft:8,fontSize:12}}>code: {inv.join_code}</span>}
                     {inv.accepted_at&&<span style={{color:"var(--grn)",marginLeft:8,fontSize:11}}>✓ accepted</span>}
                     {!inv.accepted_at&&<span style={{color:"var(--muted)",marginLeft:8,fontSize:11}}>
@@ -3779,7 +3779,7 @@ export function AdminAnalyticsTab({ analytics, loading, onLoad }) {
           {icon:"👁",  label:"Total Pageviews",    val:(totalViews||0).toLocaleString()},
           {icon:"🧑",  label:"Unique Sessions",     val:(totalSessions||0).toLocaleString()},
           {icon:"📅",  label:"Views This Week",     val:pvWeek.length.toLocaleString()},
-          {icon:"🔥",  label:"Sessions This Week",  val:uniqSessions.toLocaleString(), color:"var(--gold)"},
+          {icon:"🔥",  label:"Sessions This Week",  val:uniqSessions.toLocaleString(), color:"var(--goldink)"},
         ].map(s=>(
           <div key={s.label} style={{...card,textAlign:"center"}}>
             <div style={{fontSize:24,marginBottom:4}}>{s.icon}</div>
@@ -3816,7 +3816,7 @@ export function AdminAnalyticsTab({ analytics, loading, onLoad }) {
             <div key={src} style={{display:"flex",alignItems:"center",gap:10,marginBottom:7}}>
               <div style={{flex:1,fontSize:12,color:"var(--muted)"}}>{src}</div>
               <span style={{fontSize:12,fontWeight:700,background:"rgba(212,168,67,.12)",
-                color:"var(--gold)",padding:"1px 8px",borderRadius:6}}>{n} visits</span>
+                color:"var(--goldink)",padding:"1px 8px",borderRadius:6}}>{n} visits</span>
             </div>
           ))}
           <div style={{marginTop:12,fontSize:11,color:"var(--muted)",lineHeight:1.5,borderTop:"1px solid var(--border)",paddingTop:8}}>

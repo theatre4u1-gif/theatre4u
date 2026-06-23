@@ -95,14 +95,14 @@ export function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
             <div>
               <div style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", marginBottom: 6 }}>Your Balance</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-                <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 64, color: "var(--gold)", lineHeight: 1 }}>{balance.toLocaleString()}</span>
+                <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 64, color: "var(--goldink)", lineHeight: 1 }}>{balance.toLocaleString()}</span>
                 <span style={{ fontSize: 18, color: "var(--muted)", fontWeight: 700 }}>points</span>
               </div>
               <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>1 point = $0.01 · 1,500 points = free Pro month</div>
               {isAnnual && (
                 <div style={{ marginTop: 6, display: "inline-flex", alignItems: "center", gap: 6,
                   background: "rgba(212,168,67,.15)", border: "1px solid rgba(212,168,67,.3)",
-                  borderRadius: 6, padding: "3px 10px", fontSize: 12, color: "var(--gold)", fontWeight: 700 }}>
+                  borderRadius: 6, padding: "3px 10px", fontSize: 12, color: "var(--goldink)", fontWeight: 700 }}>
                   ⭐ Annual plan — earning at 1.5× rate on loans &amp; rentals
                 </div>
               )}
@@ -179,7 +179,7 @@ export function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
                       <div style={{ flex: 1, minWidth: 200, background: "var(--parch)",
                         border: "1px solid var(--border)", borderRadius: 8,
                         padding: "9px 14px", fontFamily: "monospace", fontSize: 13,
-                        color: "var(--gold)", letterSpacing: 0.3, wordBreak: "break-all" }}>
+                        color: "var(--goldink)", letterSpacing: 0.3, wordBreak: "break-all" }}>
                         {refUrl}
                       </div>
                       <button onClick={copy}
@@ -207,7 +207,7 @@ export function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
                   );
                 })()}
                 <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
-                  Your referral code: <strong style={{ color: "var(--gold)", fontFamily: "monospace", letterSpacing: 1 }}>{org.referral_code}</strong>
+                  Your referral code: <strong style={{ color: "var(--goldink)", fontFamily: "monospace", letterSpacing: 1 }}>{org.referral_code}</strong>
                   {" · "}Points appear in your ledger within seconds of the new program signing up.
                 </div>
               </div>
@@ -340,7 +340,7 @@ export function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
                               {row.amount > 0 ? "+" : ""}{row.amount.toLocaleString()}
                             </span>
                           </td>
-                          <td style={{ padding: "9px 14px", fontFamily: "'Playfair Display',serif", fontSize: 15, color: "var(--gold)" }}>
+                          <td style={{ padding: "9px 14px", fontFamily: "'Playfair Display',serif", fontSize: 15, color: "var(--goldink)" }}>
                             {runningBal.toLocaleString()}
                           </td>
                         </tr>

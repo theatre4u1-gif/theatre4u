@@ -158,7 +158,7 @@ export function FundingPage({userId, org, plan}){
       {/* Summary cards */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:24}}>
         {[
-          {label:"Total Allocated",  val:"$"+totalAllocated.toLocaleString("en-US",{minimumFractionDigits:2}), color:"var(--gold)"},
+          {label:"Total Allocated",  val:"$"+totalAllocated.toLocaleString("en-US",{minimumFractionDigits:2}), color:"var(--goldink)"},
           {label:"Total Spent",      val:"$"+totalSpent.toLocaleString("en-US",{minimumFractionDigits:2}),     color:"var(--blue)"},
           {label:"Remaining",        val:"$"+remaining.toLocaleString("en-US",{minimumFractionDigits:2}),      color:remaining>=0?"var(--green)":"var(--red)"},
           {label:"Active Sources",   val:sources.filter(s=>s.is_active).length,                                color:"var(--text)"},
@@ -278,7 +278,7 @@ export function FundingPage({userId, org, plan}){
                   </div>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{fontWeight:800,fontSize:16,color:"var(--gold)",fontFamily:"'Playfair Display',serif"}}>
+                  <div style={{fontWeight:800,fontSize:16,color:"var(--goldink)",fontFamily:"'Playfair Display',serif"}}>
                     ${parseFloat(e.amount).toLocaleString("en-US",{minimumFractionDigits:2})}
                   </div>
                   <button className="btn btn-o bsm" onClick={()=>{setActive(e);setModal("edit-exp");}}>Edit</button>
@@ -318,7 +318,7 @@ export function FundingPage({userId, org, plan}){
                     {s.fiscal_year&&<span style={{fontSize:12,color:"var(--faint)",marginLeft:8}}>FY {s.fiscal_year}</span>}
                   </div>
                   <div style={{textAlign:"right"}}>
-                    <div style={{fontSize:18,fontWeight:800,color:"var(--gold)",fontFamily:"'Playfair Display',serif"}}>
+                    <div style={{fontSize:18,fontWeight:800,color:"var(--goldink)",fontFamily:"'Playfair Display',serif"}}>
                       ${spent.toLocaleString("en-US",{minimumFractionDigits:2})}
                       {alloc>0&&<span style={{fontSize:12,fontWeight:400,color:"var(--faint)"}}> of ${alloc.toLocaleString("en-US",{minimumFractionDigits:2})}</span>}
                     </div>
@@ -663,7 +663,7 @@ export function ProgramImpactReport({ sources, exps, org }) {
       {/* Summary tiles */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12,marginBottom:20}}>
         {[
-          {label:"Total Allocated",val:fmt(totalAllocated),          color:"var(--gold)"},
+          {label:"Total Allocated",val:fmt(totalAllocated),          color:"var(--goldink)"},
           {label:"Total Spent",    val:fmt(totalSpent),              color:"var(--blue)"},
           {label:"Remaining",      val:fmt(totalRemaining),           color:totalRemaining>=0?"var(--green)":"var(--red)"},
           {label:"Sources",        val:filteredSources.length,        color:"var(--text)"},
@@ -720,7 +720,7 @@ export function ProgramImpactReport({ sources, exps, org }) {
                 </div>
               </div>
               <div style={{textAlign:"right"}}>
-                <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:"var(--gold)"}}>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:"var(--goldink)"}}>
                   {fmt(srcSpent)}{srcAlloc>0&&<span style={{fontSize:12,fontWeight:400,color:"var(--faint)"}}> / {fmt(srcAlloc)}</span>}
                 </div>
                 {srcAlloc>0&&<div style={{fontSize:11,color:srcAlloc-srcSpent<0?"var(--red)":"var(--faint)"}}>{fmt(Math.max(0,srcAlloc-srcSpent))} remaining</div>}

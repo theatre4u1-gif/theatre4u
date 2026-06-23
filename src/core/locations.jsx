@@ -137,7 +137,7 @@ function RoomMap({ loc, items, userId, onUpdate, vertical="theatre" }) {
                 </div>
                 {selPin?.id===pin.id && (
                   <div style={{ position:"absolute",bottom:34,left:"50%",transform:"translateX(-50%)",background:"var(--dark2)",border:"1px solid var(--border)",borderRadius:8,padding:"10px 12px",minWidth:180,zIndex:20,whiteSpace:"nowrap" }}>
-                    <div style={{ fontWeight:700,fontSize:13,color:"var(--gold)",marginBottom:2 }}>{pin.name}</div>
+                    <div style={{ fontWeight:700,fontSize:13,color:"var(--goldink)",marginBottom:2 }}>{pin.name}</div>
                     {pin.linked_location_id && <div style={{ fontSize:10,color:"var(--muted)",marginBottom:4 }}>🔗 Linked location</div>}
                     {pin.notes && <div style={{ fontSize:11,color:"var(--muted)",marginBottom:6 }}>{pin.notes}</div>}
                     <div style={{ fontSize:11,color:"var(--muted)",marginBottom:6 }}>{getPinItemCount(pin)} items stored here</div>
@@ -319,7 +319,7 @@ function StorageRack({ loc, items, onUpdate }) {
 
       {selSlot && (
         <div style={{ marginTop:12,padding:12,background:"var(--parch)",border:"1px solid var(--border)",borderRadius:10 }}>
-          <div style={{ fontWeight:700,fontSize:13,marginBottom:8,color:"var(--gold)" }}>Slot {selSlot}</div>
+          <div style={{ fontWeight:700,fontSize:13,marginBottom:8,color:"var(--goldink)" }}>Slot {selSlot}</div>
           {slotItems.length===0 ? (
             <div style={{ fontSize:12,color:"var(--muted)",textAlign:"center",padding:"12px 0" }}>Empty — assign items to this slot by editing an item and selecting this location + slot.</div>
           ) : (

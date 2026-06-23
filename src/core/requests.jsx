@@ -268,7 +268,7 @@ export function RequestItemModal({ item, currentUserId, currentOrgName, currentO
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <span style={{fontSize:20}}>🪙</span>
                     <div>
-                      <div style={{fontWeight:700,fontSize:13,color:"var(--gold)"}}>Apply Stage Points</div>
+                      <div style={{fontWeight:700,fontSize:13,color:"var(--goldink)"}}>Apply Stage Points</div>
                       <div style={{fontSize:11,color:"var(--muted)"}}>You have {myCredits.toLocaleString()} points available</div>
                     </div>
                   </div>
@@ -1232,7 +1232,7 @@ export function Requests({ userId, orgName, orgEmail }) {
                               borderRadius:8,padding:"8px 12px",marginBottom:8,display:"flex",alignItems:"center",gap:10}}>
                               <span style={{fontSize:18}}>⚠️</span>
                               <div style={{flex:1}}>
-                                <div style={{fontWeight:800,fontSize:13,color:"var(--gold)"}}>Return date has passed</div>
+                                <div style={{fontWeight:800,fontSize:13,color:"var(--goldink)"}}>Return date has passed</div>
                                 <div style={{fontSize:12,color:"var(--muted)"}}>Mark the item returned to release the calendar and earn your Stage Points.</div>
                               </div>
                             </div>

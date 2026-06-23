@@ -294,7 +294,7 @@ export function PlatformUsageReport({ items, org, plan }) {
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12,marginBottom:20}}>
         {[
-          {label:"Cataloged Items",val:totalItems,                        color:"var(--gold)"},
+          {label:"Cataloged Items",val:totalItems,                        color:"var(--goldink)"},
           {label:"Total Qty",      val:totalQty.toLocaleString(),          color:"var(--text)"},
           {label:"Est. Value",     val:totalValue>0?"$"+totalValue.toLocaleString("en-US",{maximumFractionDigits:0}):"—",color:"var(--green)"},
           {label:"With Photos",   val:withPhotos,                          color:"var(--text)"},
@@ -472,7 +472,7 @@ export function ProductionReportTab({ org, allItems }) {
                     background:"rgba(255,255,255,.04)",border:"1px solid var(--border)",
                     borderRadius:8,minWidth:80}}>
                     <div style={{fontFamily:"var(--serif)",fontSize:22,fontWeight:700,
-                      color:"var(--gold)"}}>{s.v}</div>
+                      color:"var(--goldink)"}}>{s.v}</div>
                     <div style={{fontSize:10,color:"var(--muted)",marginTop:2}}>{s.l}</div>
                   </div>
                 ))}

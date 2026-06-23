@@ -109,7 +109,7 @@ export function ExternalLoans({ userId, org, items=[] }){
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12,marginBottom:20}}>
         {[
-          {label:"Lent out",  val:activeOut, color:"var(--gold)"},
+          {label:"Lent out",  val:activeOut, color:"var(--goldink)"},
           {label:"Borrowed",  val:activeIn,  color:"var(--blue)"},
           {label:"Overdue",   val:overdueN,  color:overdueN>0?"var(--red)":"var(--text)"},
         ].map(s=>(

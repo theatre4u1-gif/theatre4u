@@ -60,6 +60,7 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
   const[modal,setModal]=useState(null);const[active,setActive]=useState(null);
   const[showImport,setShowImport]=useState(false);
   const[showBulk,setShowBulk]=useState(false);
+  const[addMenu,setAddMenu]=useState(false);
   const[invView,setInvView]=useState("items"); // items | loans (Borrowed & Lent tab)
 
   // ── Bulk / mass edit state ───────────────────────────────────────────────
@@ -259,7 +260,7 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
       <div style={{display:"flex",alignItems:"center",gap:10,background:"rgba(232,184,93,.1)",border:"1px solid rgba(232,184,93,.3)",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
         <span style={{fontSize:20}}>📦</span>
         <div style={{flex:1}}>
-          <div style={{fontWeight:700,fontSize:14,color:"var(--gold)"}}>{locFilterName.name}{locFilterName.code?` · ${locFilterName.code}`:""}</div>
+          <div style={{fontWeight:700,fontSize:14,color:"var(--goldink)"}}>{locFilterName.name}{locFilterName.code?` · ${locFilterName.code}`:""}</div>
           <div style={{fontSize:12,color:"var(--t2)",marginTop:1}}>{filtered.length} item{filtered.length!==1?"s":""} in this location</div>
           {locFilterName.description&&<div style={{fontSize:11,color:"var(--t3)",marginTop:1,fontStyle:"italic"}}>{locFilterName.description}</div>}
         </div>
@@ -308,15 +309,19 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
               onClick={printQRFiltered} title="Print QR labels for visible items">
               {printingQR ? "Generating…" : ("🖨 Print QR" + (filtered.length < items.length ? " ("+filtered.length+")" : ""))}
             </button>
-            <button className="btn btn-o" style={{fontSize:12,padding:"6px 12px"}} onClick={()=>setShowImport(true)}
-              title="Import from CSV">⬆ Import CSV</button>
-            {canAdd&&<button className="btn btn-o" style={{fontSize:12,padding:"6px 12px"}} onClick={()=>setShowBulk(true)}
-              title="Add many items from photos at once">📸 Bulk Photos</button>}
-            {canAdd&&<button className="btn btn-g" onClick={()=>{
-              const max=PLANS_DEF[plan]?.maxItems??25;
-              if(items.length>=max){setUpgradeReason(EM.planItemLimit.body);return;}
-              setActive(null);setModal("a");
-            }}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add Item</button>}
+            {canAdd&&<div style={{position:"relative"}}>
+              <button className="btn btn-g" onClick={()=>setAddMenu(m=>!m)} title="Add items">
+                <span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add <span style={{fontSize:10,marginLeft:2}}>▾</span>
+              </button>
+              {addMenu&&<>
+                <div onClick={()=>setAddMenu(false)} style={{position:"fixed",inset:0,zIndex:40}}/>
+                <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",zIndex:41,background:"var(--cream)",border:"1px solid var(--border)",borderRadius:"var(--rm)",boxShadow:"var(--sh2)",minWidth:236,overflow:"hidden"}}>
+                  <button className="addmenu-item" onClick={()=>{setAddMenu(false);const max=PLANS_DEF[plan]?.maxItems??25;if(items.length>=max){setUpgradeReason(EM.planItemLimit.body);return;}setActive(null);setModal("a");}}>✚&nbsp;&nbsp;Add one item</button>
+                  <button className="addmenu-item" onClick={()=>{setAddMenu(false);setShowBulk(true);}}>📸&nbsp;&nbsp;Bulk add from photos</button>
+                  <button className="addmenu-item" onClick={()=>{setAddMenu(false);setShowImport(true);}}>⬆&nbsp;&nbsp;Import from CSV</button>
+                </div>
+              </>}
+            </div>}
           </div>
         </div>
 
@@ -337,7 +342,7 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
                   background:"transparent",color:"var(--muted)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
                 Clear
               </button>}
-              {selected.size>0&&<span style={{fontSize:13,fontWeight:700,color:"var(--gold)"}}>
+              {selected.size>0&&<span style={{fontSize:13,fontWeight:700,color:"var(--goldink)"}}>
                 {selected.size} selected
               </span>}
             </div>
@@ -347,7 +352,7 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
               <button onClick={autoCategorizeSel} disabled={autoCatRunning}
                 title="Use AI to suggest the best category for each selected item based on its name and description"
                 style={{padding:"5px 13px",borderRadius:6,border:"1px solid rgba(212,168,67,.4)",
-                  background:"rgba(212,168,67,.1)",color:"var(--gold)",fontSize:12,fontWeight:700,
+                  background:"rgba(212,168,67,.1)",color:"var(--goldink)",fontSize:12,fontWeight:700,
                   cursor:autoCatRunning?"not-allowed":"pointer",fontFamily:"inherit",
                   display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
                 {autoCatRunning ? "✨ Analyzing…" : "✨ Auto-categorize"}

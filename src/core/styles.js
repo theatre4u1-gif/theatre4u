@@ -2,12 +2,13 @@
 export const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600&family=Lora:ital,wght@0,500;0,600;1,400;1,500&family=Raleway:wght@500;600;700;800&display=swap');
 :root{
-  --ink:#1a0c06;--deep:#2a0f09;--cog:#9a5f1f;--amber:#996226;--gold:#a77134;--gilt:#da975a;
+  --ink:#1a0c06;--deep:#2a0f09;--cog:#8b5a0f;--amber:#c49a30;--gold:#e8b85d;--gilt:#f5cc70;
   --cream:#f5ede3;--parch:#ede0cf;--linen:#ddd0ba;--sand:#c8b895;
-  --text:#352130;--muted:#6e4a5e;--faint:#8a5e2e;--border:#d8c6a6;
-  /* Official logo palette (2026): aubergine, berry, apricot, bronze, sage */
-  --brand-burgundy:#4c1035;--brand-magenta:#841c56;--brand-mint:#64a383;--brand-gold:#a77134;--brand-apricot:#da975a;--brand-black:#222222;
-  --white:#ffffff;--red:#8b1a2a;--green:#3f7a5b;--blue:#1a3570;
+  --text:#3b2a1f;--muted:#7a5538;--faint:#8a6a2e;--border:#d4c09a;
+  --goldink:#8a5e12; /* darker gold for gold TEXT on the cream background (readable; bright --gold stays for accents/buttons) */
+  /* Official logo palette (2026) — for brand accents: aubergine, berry, apricot, bronze, sage */
+  --brand-aubergine:#4c1035;--brand-berry:#841c56;--brand-apricot:#da975a;--brand-bronze:#a77134;--brand-sage:#64a383;--brand-black:#222222;
+  --white:#ffffff;--red:#8b1a2a;--green:#265e2a;--blue:#1a3570;
   --sh1:0 2px 14px rgba(18,6,0,.1);--sh2:0 6px 28px rgba(18,6,0,.17);--sh3:0 14px 52px rgba(18,6,0,.25);
   --r:5px;--rm:12px;--rl:18px;
 }
@@ -31,7 +32,7 @@ body{font-family:'Raleway',sans-serif;-webkit-font-smoothing:antialiased}
 .sb-inner{position:relative;z-index:1;display:flex;flex-direction:column;height:100%;overflow-y:auto}
 .sb-logo{padding:28px 20px 20px;border-bottom:1px solid rgba(212,168,67,.15)}
 .sb-glyph{display:none}
-.sb-name{font-family:'Cormorant Garamond','Playfair Display',serif;font-size:27px;color:var(--gilt);letter-spacing:.8px;line-height:1;font-weight:700}
+.sb-name{font-family:'Cormorant Garamond','Playfair Display',serif;font-size:27px;color:var(--gold);letter-spacing:.8px;line-height:1;font-weight:700}
 .sb-sub{font-size:9.5px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:3px;margin-top:6px;font-weight:700}
 .sb-nav{padding:14px 10px;flex:1}
 .sb-section{font-size:9px;text-transform:uppercase;letter-spacing:3px;color:rgba(255,255,255,.2);padding:14px 12px 5px;font-weight:800}
@@ -105,7 +106,7 @@ body{font-family:'Raleway',sans-serif;-webkit-font-smoothing:antialiased}
 .sc-badge{position:absolute;top:11px;right:11px;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
 .bd-rent{background:var(--gold);color:var(--ink)}
 .bd-sale{background:var(--green);color:#fff}
-.bd-both{background:var(--ink);color:var(--gilt)}
+.bd-both{background:var(--ink);color:var(--gold)}
 .sc-body{padding:14px 16px}
 .sc-cat{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--amber);margin-bottom:4px}
 .sc-name{font-family:'Lora',serif;font-size:17px;font-weight:600;color:var(--ink);margin-bottom:5px;line-height:1.3}
@@ -160,11 +161,14 @@ tr.select-row{cursor:pointer}tr.select-row:hover td{background:rgba(212,168,67,.
 /* Buttons */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 21px;border-radius:var(--r);font-size:14px;font-weight:800;cursor:pointer;border:1.5px solid transparent;font-family:'Raleway',sans-serif;letter-spacing:.3px;transition:all .15s;white-space:nowrap}
 .btn:disabled{opacity:.42;cursor:not-allowed}
-.btn-p{background:var(--ink);color:var(--gilt);border-color:var(--ink)}
+.btn-p{background:var(--ink);color:var(--gold);border-color:var(--ink)}
 .btn-p:hover:not(:disabled){background:var(--deep)}
-.btn-g{background:linear-gradient(135deg,var(--gilt),var(--gold));color:#3a1414;border:none;font-weight:800;box-shadow:0 3px 12px rgba(196,118,26,.38)}
+.btn-g{background:linear-gradient(135deg,var(--gold),var(--amber));color:var(--ink);border:none;font-weight:800;box-shadow:0 3px 12px rgba(196,118,26,.38)}
 .btn-g:hover:not(:disabled){filter:brightness(1.09);transform:translateY(-1px);box-shadow:0 6px 20px rgba(196,118,26,.48)}
 .btn-o{background:transparent;color:var(--text);border-color:var(--border)}
+.addmenu-item{display:block;width:100%;text-align:left;padding:11px 16px;background:none;border:none;border-bottom:1px solid var(--border);cursor:pointer;font-size:14px;font-weight:600;color:var(--text);font-family:inherit;transition:background .12s}
+.addmenu-item:last-child{border-bottom:none}
+.addmenu-item:hover{background:var(--parch)}
 .btn-o:hover:not(:disabled){background:var(--parch);border-color:var(--sand)}
 .btn-d{background:rgba(139,26,42,.07);color:var(--red);border-color:rgba(139,26,42,.2)}
 .btn-d:hover:not(:disabled){background:rgba(139,26,42,.14)}
@@ -228,13 +232,13 @@ tr:hover td{background:rgba(243,230,204,.55)}
 .pgn{display:flex;align-items:center;justify-content:center;gap:5px;padding:20px 0}
 .pgn button{background:rgba(253,246,236,.9);border:1.5px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:var(--r);cursor:pointer;font-size:13.5px;font-family:'Raleway',sans-serif;font-weight:800;transition:all .15s}
 .pgn button:hover:not(:disabled){border-color:var(--gold);color:var(--cog)}
-.pgn button.on{background:var(--ink);color:var(--gilt);border-color:var(--ink)}
+.pgn button.on{background:var(--ink);color:var(--gold);border-color:var(--ink)}
 .pgn button:disabled{opacity:.3;cursor:not-allowed}
 
 /* View toggle */
 .vtog{display:flex;border:1.5px solid var(--border);border-radius:var(--r);overflow:hidden}
 .vtog button{background:none;border:none;color:var(--muted);padding:7px 15px;cursor:pointer;font-size:13.5px;font-family:'Raleway',sans-serif;font-weight:800;transition:all .15s}
-.vtog button.on{background:var(--ink);color:var(--gilt)}
+.vtog button.on{background:var(--ink);color:var(--gold)}
 .vtog button:not(.on):hover{background:var(--parch);color:var(--text)}
 
 /* Search */

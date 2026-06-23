@@ -668,7 +668,7 @@ export function CSVImport({ onImport, onClose, userId }) {
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
               <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",
                 borderRadius:10,padding:16}}>
-                <div style={{fontWeight:700,fontSize:13,marginBottom:6,color:"var(--gold)"}}>💡 Two ways to import</div>
+                <div style={{fontWeight:700,fontSize:13,marginBottom:6,color:"var(--goldink)"}}>💡 Two ways to import</div>
                 <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
                   <strong style={{color:"var(--ink)"}}>Option A</strong> — Download our template, fill it in, upload it back.<br/>
                   <strong style={{color:"var(--ink)"}}>Option B</strong> — Upload any spreadsheet you already have. We'll help you match your columns to ours.

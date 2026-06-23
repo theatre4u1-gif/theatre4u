@@ -136,7 +136,7 @@ function CommunityPostForm({initial, onSave, onCancel, saving=false}) {
           <input ref={photoRef} type="file" accept="image/*" multiple hidden onChange={handlePhotos} disabled={uploading}/>
         </label>
       )}
-      {uploading&&<div style={{fontSize:12,color:"var(--gold)",marginTop:4}}>Uploading photos…</div>}
+      {uploading&&<div style={{fontSize:12,color:"var(--goldink)",marginTop:4}}>Uploading photos…</div>}
     </div>
     <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10,paddingTop:14,borderTop:"1.5px solid var(--border)",gridColumn:"1/-1"}}>
       <button className="btn btn-o" onClick={onCancel}>Cancel</button>
@@ -403,7 +403,7 @@ function CommunityPage({userId, org, plan}) {
 
             {/* What to post guide */}
             <div className="card card-p" style={{background:"linear-gradient(135deg,rgba(212,168,67,.08),rgba(212,168,67,.03))",borderColor:"rgba(212,168,67,.25)"}}>
-              <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:12,color:"var(--gold)"}}>What to Share</h3>
+              <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:12,color:"var(--goldink)"}}>What to Share</h3>
               {POST_TYPES.map(pt=>(
                 <div key={pt.id} style={{display:"flex",gap:8,padding:"7px 0",borderBottom:"1px solid var(--linen)"}}>
                   <span style={{fontSize:18,flexShrink:0}}>{pt.icon}</span>

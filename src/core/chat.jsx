@@ -99,7 +99,7 @@ export function Messages({ userId, orgName, openConvId, onClearOpenConv }) {
         <div style={{padding:"16px 16px 10px",borderBottom:"1px solid var(--border)"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
             <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700}}>
-              Messages {totalUnread>0&&<span style={{fontSize:13,background:"var(--ink)",color:"var(--gold)",borderRadius:9,padding:"1px 7px",marginLeft:6}}>{totalUnread}</span>}
+              Messages {totalUnread>0&&<span style={{fontSize:13,background:"var(--ink)",color:"var(--goldink)",borderRadius:9,padding:"1px 7px",marginLeft:6}}>{totalUnread}</span>}
             </div>
             <button className="btn btn-g btn-sm" onClick={()=>setShowNew(!showNew)}>+ New</button>
           </div>
@@ -179,7 +179,7 @@ export function Messages({ userId, orgName, openConvId, onClearOpenConv }) {
                         display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                         <span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis"}}>{conv.last_message || "No messages yet"}</span>
                         {unread > 0 && (
-                          <span style={{background:"var(--ink)",color:"var(--gold)",borderRadius:"50%",
+                          <span style={{background:"var(--ink)",color:"var(--goldink)",borderRadius:"50%",
                             width:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",
                             fontSize:10,fontWeight:800,flexShrink:0,marginLeft:6}}>{unread}</span>
                         )}
