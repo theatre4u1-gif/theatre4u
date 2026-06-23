@@ -31,7 +31,7 @@ export async function uploadPhoto(file, userId) {
   } catch(e) { console.error("uploadPhoto failed:", e); return null; }
 }
 
-export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical="theatre"}){
+export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical="theatre",plan="free"}){
   const vConfig = getVertical(vertical);
   const vCATS   = [...vConfig.categories, ...customCatsFor(vertical)];
   const vCONDS  = vConfig.conditions;
@@ -39,7 +39,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
   const vAVAIL  = vConfig.availability;
   const vMKT    = vConfig.marketOptions;
   const defaultCat = vCATS[0]?.id || "costumes";
-  const blank={name:"",category:defaultCat,condition:vCONDS[2]||"Good",size:vSIZES.includes("N/A")?"N/A":vSIZES[0],qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,loan_period:2,deposit:0,avail:"In Stock",img:null,tags:[],purchase_cost:"",purchase_date:"",purchase_vendor:"",funding_source_id:"",low_stock_threshold:0};
+  const blank={name:"",category:defaultCat,condition:vCONDS[2]||"Good",size:vSIZES.includes("N/A")?"N/A":vSIZES[0],qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,loan_period:2,deposit:0,avail:"In Stock",img:null,images:[],tags:[],purchase_cost:"",purchase_date:"",purchase_vendor:"",funding_source_id:"",low_stock_threshold:0};
   const[f,setF]=useState(item||blank);
   const[ti,setTi]=useState("");
   const[upl,setUpl]=useState(false);
@@ -51,11 +51,17 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
   const showRent=f.mkt==="For Rent"||f.mkt==="Rent or Sale";
   const showSale=f.mkt==="For Sale"||f.mkt==="Rent or Sale";
   const showLoan=f.mkt==="For Loan";
+  const maxImg = plan==="free" ? 1 : 5;
+  const imgsOf = (o)=> (o.images && o.images.length ? o.images : (o.img ? [o.img] : []));
+  const addImage = (url)=> setF(p=>{ const cur=imgsOf(p); if(cur.length>=maxImg) return p; const next=[...cur,url]; return {...p, images:next, img:next[0]}; });
+  const removeImage = (idx)=> setF(p=>{ const cur=imgsOf(p); const next=cur.filter((_,i)=>i!==idx); return {...p, images:next, img:next[0]||null}; });
+  const makeCover = (idx)=> setF(p=>{ const cur=imgsOf(p); if(idx<=0||idx>=cur.length) return p; const next=[cur[idx],...cur.filter((_,i)=>i!==idx)]; return {...p, images:next, img:next[0]}; });
   const processPhoto=async file=>{
     if(!file)return;
+    if(imgsOf(f).length>=maxImg){ alert(maxImg===1?"The free plan includes 1 photo per item. Upgrade to Pro for up to 5 photos.":"You can add up to "+maxImg+" photos per item."); return; }
     setUpl(true);
     const url = userId ? await uploadPhoto(file, userId) : await resizeImg(file);
-    if(url) upd("img", url);
+    if(url) addImage(url);
     if(!url){console.error("Photo upload failed"); alert(EM.photoTooLarge.title+"\n\n"+EM.photoTooLarge.body);}
     setUpl(false);
     if(fr.current)fr.current.value="";
@@ -211,12 +217,21 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
         )}
       </div>
       <div className="fg fu sdiv">
-        <div className="slbl">📷 Photo</div>
-        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-          {f.img?<div className="ph-wrap"><img src={f.img} alt=""/><button className="ph-rm" onClick={()=>upd("img",null)}>×</button></div>
-                :<><label className="ph-add" style={{opacity:upl?.5:1}}>{Ic.cam}<span>{upl?"Uploading…":"Add Photo"}</span><input ref={fr} type="file" accept="image/*" hidden onChange={handlePhoto} disabled={upl}/></label>
+        <div className="slbl">📷 {maxImg>1?"Photos":"Photo"} {maxImg>1&&<span style={{fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:10,color:"var(--muted)"}}>({imgsOf(f).length}/{maxImg})</span>}</div>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+          {imgsOf(f).map((u,i)=>(
+            <div key={u+"_"+i} className="ph-wrap" style={{position:"relative"}}>
+              <img src={u} alt=""/>
+              <button type="button" className="ph-rm" onClick={()=>removeImage(i)} title="Remove">×</button>
+              {i===0
+                ? <span style={{position:"absolute",bottom:2,left:2,background:"rgba(18,6,0,.72)",color:"#fff",fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:3}}>Cover</span>
+                : <button type="button" onClick={()=>makeCover(i)} title="Make cover photo" style={{position:"absolute",bottom:2,left:2,background:"rgba(18,6,0,.72)",color:"#fff",fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:3,border:"none",cursor:"pointer"}}>Set cover</button>}
+            </div>
+          ))}
+          {imgsOf(f).length<maxImg&&<><label className="ph-add" style={{opacity:upl?.5:1}}>{Ic.cam}<span>{upl?"Uploading…":"Add Photo"}</span><input ref={fr} type="file" accept="image/*" hidden onChange={handlePhoto} disabled={upl}/></label>
                 <button type="button" className="ph-add" onClick={handleDrive} disabled={upl} style={{opacity:upl?.5:1,cursor:upl?"default":"pointer"}}><span>📁 Google Drive</span></button></>}
         </div>
+        {maxImg===1&&<div style={{fontSize:11,color:"var(--muted)",marginTop:6}}>Free plan: 1 photo per item. Upgrade to Pro for up to 5 photos.</div>}
       </div>
       <div className="fg fu">
         <div className="slbl">🏷 Tags</div>
@@ -364,6 +379,9 @@ export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, ca
           :<div style={{width:"100%",height:"100%",background:gfx.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:72,opacity:.85}}>{gfx.icon}</div>
         }
       </div>
+      {(item.images&&item.images.length>1)&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
+        {item.images.map((u,i)=><img key={u+"_"+i} src={u} alt="" onClick={()=>window.open(u,"_blank")} title="Open full size" style={{width:52,height:52,objectFit:"cover",borderRadius:6,cursor:"pointer",border:u===item.img?"2px solid var(--gold)":"1px solid var(--border)"}}/>)}
+      </div>}
       <div style={{display:"flex",alignItems:"center",gap:13,marginBottom:16}}>
         <div style={{width:50,height:50,background:cat.color+"22",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0,border:`1.5px solid ${cat.color}44`}}>{cat.icon}</div>
         <div>
