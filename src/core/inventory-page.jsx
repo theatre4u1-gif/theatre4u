@@ -12,6 +12,7 @@ import { BG, usp } from "../lib/backgrounds.js";
 import { getExchangeName, getVertical, getCatGfx, getCats, getTerm } from "../lib/verticals.js";
 import { CSVImport } from "./marketplace.jsx";
 import { ItemForm, ItemDetail } from "./items.jsx";
+import { BulkPhotoAdd } from "./bulk-photo-add.jsx";
 import { LocationsPanel } from "./locations.jsx";
 import { ExternalLoans } from "./external-loans.jsx";
 import { UpgradePrompt } from "./billing.jsx";
@@ -58,6 +59,7 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
   const[showF,setShowF]=useState(false);const[pg,setPg]=useState(1);
   const[modal,setModal]=useState(null);const[active,setActive]=useState(null);
   const[showImport,setShowImport]=useState(false);
+  const[showBulk,setShowBulk]=useState(false);
   const[invView,setInvView]=useState("items"); // items | loans (Borrowed & Lent tab)
 
   // ── Bulk / mass edit state ───────────────────────────────────────────────
@@ -308,6 +310,8 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
             </button>
             <button className="btn btn-o" style={{fontSize:12,padding:"6px 12px"}} onClick={()=>setShowImport(true)}
               title="Import from CSV">⬆ Import CSV</button>
+            {canAdd&&<button className="btn btn-o" style={{fontSize:12,padding:"6px 12px"}} onClick={()=>setShowBulk(true)}
+              title="Add many items from photos at once">📸 Bulk Photos</button>}
             {canAdd&&<button className="btn btn-g" onClick={()=>{
               const max=PLANS_DEF[plan]?.maxItems??25;
               if(items.length>=max){setUpgradeReason(EM.planItemLimit.body);return;}
@@ -528,6 +532,7 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
         </Modal>)}
       {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{onDelete(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete}/></Modal>}
       {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",userId).order("added",{ascending:false});if(data&&onImported)onImported(data);}}/>}
+      {showBulk&&<BulkPhotoAdd userId={userId} vertical={vVertical} cats={vCATS} onClose={()=>setShowBulk(false)} onImport={(data)=>{if(onImported)onImported(data);}}/>}
     </div>
     </>)}
   </>

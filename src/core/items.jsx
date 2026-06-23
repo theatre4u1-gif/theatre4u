@@ -18,7 +18,7 @@ import { getVertical, getExchangeName, getTerm } from "../lib/verticals.js";
 const itemNum = n => n != null ? "#" + String(n).padStart(4, "0") : "";
 
 // Upload a file to Supabase Storage and return the public URL
-async function uploadPhoto(file, userId) {
+export async function uploadPhoto(file, userId) {
   try {
     const dataUrl = await resizeImg(file, 800, 0.82);
     const res = await fetch(dataUrl);
