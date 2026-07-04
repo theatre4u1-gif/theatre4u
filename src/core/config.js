@@ -28,6 +28,7 @@ export const LOGO_ICON  = IS_THEATRE4U ? "/favicon-theatre4u.svg"          : "/i
 export const FAVICON    = IS_THEATRE4U ? "/favicon-theatre4u.svg"          : "/favicon-artstracker.png";
 export const TOUCH_ICON = IS_THEATRE4U ? "/apple-touch-icon-theatre4u.png" : "/apple-touch-icon-artstracker.png";
 export const LOGO_FULL  = IS_THEATRE4U ? "/logo-theatre4u.svg"             : "/logo-artstracker.png";
+export const LOGO_MARK  = IS_THEATRE4U ? "/logo-mark-theatre4u.png"        : "/logo-mark-artstracker.png"; // tag-only "Simple" logo (loading screens etc.)
 
 // Admin account gating (client-side)
 export const ADMIN_EMAILS = [

@@ -21,7 +21,7 @@ import { CreditsPage } from "./points.jsx";
 import { Reports } from "./reports.jsx";
 import { FundingPage } from "./funding.jsx";
 import { ExternalLoans } from "./external-loans.jsx";
-import { HOSTNAME, IS_THEATRE4U, IS_ARTSTRACKER, APP_NAME, APP_SUBTITLE, APP_EMAIL, APP_URL, ADMIN_EMAILS, isAdminEmail, ADMIN_EMAIL, LOGO_ICON, FAVICON, TOUCH_ICON, LOGO_FULL } from "./config.js";
+import { HOSTNAME, IS_THEATRE4U, IS_ARTSTRACKER, APP_NAME, APP_SUBTITLE, APP_EMAIL, APP_URL, ADMIN_EMAILS, isAdminEmail, ADMIN_EMAIL, LOGO_ICON, FAVICON, TOUCH_ICON, LOGO_FULL, LOGO_MARK } from "./config.js";
 import { POINT_EARN_RATES, POINTS_PER_DOLLAR, POINTS_FREE_MONTH, POINTS_MAX_BALANCE, POINTS_EXPIRE_DAYS, PLATFORM_FEE_PCT, POINTS_MIN_REDEEM, MILESTONE_POINTS } from "./points-config.js";
 import { Ic } from "./icons.jsx";
 import { Pager, Modal, FbShareBtn, HeroImg, CatCard, CatThumb, LegalModal, LogoMarkDark, LogoMarkLight } from "./ui.jsx";
@@ -700,7 +700,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   if(!authChk) return(
     <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexDirection:"column"}}>
       <style>{CSS}</style>
-      <img src={LOGO_ICON} alt="" style={{width:64,height:64,objectFit:"contain",display:"block"}}/>
+      <img src={LOGO_MARK} alt="" style={{width:96,height:72,objectFit:"contain",display:"block"}}/>
       <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--goldink)"}}>{"Loading "+APP_NAME+"…"}</div>
       <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
     </div>
@@ -931,7 +931,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
             )}
             {!loaded
               ? <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:18,color:"var(--faint)"}}>
-                  <img src={LOGO_ICON} alt="" style={{width:64,height:64,objectFit:"contain",display:"block"}}/>
+                  <img src={LOGO_MARK} alt="" style={{width:96,height:72,objectFit:"contain",display:"block"}}/>
                   <div style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:"var(--muted)"}}>Loading your collection…</div>
                   <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
                 </div>
