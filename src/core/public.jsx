@@ -60,10 +60,14 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     {icon:"🎪",title:"Community Board",desc:"Post audition notices, share upcoming show dates, upload production photos, and find items you need. A regional bulletin board for the performing arts community."},
   ];
 
+  // ArtsTracker door renames: "Backstage Exchange" → "The Exchange", "Stage Points" → "ArtsPoints".
+  // (Full two-track ArtsTracker pricing display is a tracked follow-up.)
+  const XCHG = IS_ARTSTRACKER ? "The Exchange" : "Backstage Exchange";
+  const PTS  = IS_ARTSTRACKER ? "ArtsPoints" : "Stage Points";
   const plans=[
-    {name:"Free",price:"$0",period:"forever",color:"rgba(255,255,255,.15)",textColor:"rgba(255,255,255,.7)",features:["Up to 25 inventory items","QR labels & photos","Productions tracking","Browse Backstage Exchange","Community Board"],cta:"Get Started",primary:false},
-    {name:"Pro",price:"$15",period:"/month",annual:"$150/year",color:"linear-gradient(135deg,var(--gold),var(--goldd))",textColor:"#1a0f00",features:["Unlimited inventory","Full Backstage Exchange access","Stage Points","Reports & CSV export","Funding Tracker","Mobile app","Messages & requests"],cta:"Start Pro",primary:true},
-    {name:"District",price:"$49",period:"/month",annual:"$500/year",color:"linear-gradient(135deg,#1565c0,#0d47a1)",textColor:"#fff",features:["Everything in Pro","Up to 6 school sites","District dashboard","Shared Backstage Exchange","District funding rollup","Priority support"],cta:"Start District",primary:false},
+    {name:"Free",price:"$0",period:"forever",color:"rgba(255,255,255,.15)",textColor:"rgba(255,255,255,.7)",features:["Up to 25 inventory items","QR labels & photos","Productions tracking","Browse "+XCHG,"Community Board"],cta:"Get Started",primary:false},
+    {name:"Pro",price:"$15",period:"/month",annual:"$150/year",color:"linear-gradient(135deg,var(--gold),var(--goldd))",textColor:"#1a0f00",features:["Unlimited inventory","Full "+XCHG+" access",PTS,"Reports & CSV export","Funding Tracker","Mobile app","Messages & requests"],cta:"Start Pro",primary:true},
+    {name:"District",price:"$49",period:"/month",annual:"$500/year",color:"linear-gradient(135deg,#1565c0,#0d47a1)",textColor:"#fff",features:["Everything in Pro","Up to 6 school sites","District dashboard","Shared "+XCHG,"District funding rollup","Priority support"],cta:"Start District",primary:false},
   ];
 
   const steps = IS_ARTSTRACKER ? [
@@ -98,9 +102,9 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
       <img src={usp("photo-1503095396549-807759245b35",1600,900)} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.2,pointerEvents:"none"}}/>
       <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,rgba(13,10,8,.7) 0%,rgba(13,10,8,.5) 50%,rgba(13,10,8,.95) 100%)",pointerEvents:"none"}}/>
       <div style={{position:"relative",zIndex:1,maxWidth:760}}>
-        <div style={{position:"relative",display:"flex",justifyContent:"center",alignItems:"center",margin:"0 auto 30px",minHeight:190}}>
-          <div aria-hidden="true" style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:"min(820px,100vw)",height:310,borderRadius:"50%",pointerEvents:"none",background:"radial-gradient(ellipse at 50% 50%, rgba(250,244,232,.98) 0%, rgba(249,242,227,.93) 46%, rgba(243,221,165,.5) 64%, rgba(234,193,108,.18) 76%, transparent 86%)",filter:"blur(3px)"}}/>
-          <img src={LOGO_FULL} alt={APP_NAME} style={{position:"relative",zIndex:1,width:"min(430px,80vw)",height:"auto",display:"block"}}/>
+        <div style={{position:"relative",display:"flex",justifyContent:"center",alignItems:"center",margin:"0 auto 30px",minHeight:280}}>
+          <div aria-hidden="true" style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:"min(780px,98vw)",height:400,borderRadius:"50%",pointerEvents:"none",background:"radial-gradient(ellipse at 50% 50%, rgba(250,244,232,.97) 0%, rgba(249,242,227,.95) 68%, rgba(243,221,165,.45) 80%, rgba(234,193,108,.15) 88%, transparent 94%)",filter:"blur(2px)"}}/>
+          <img src={LOGO_FULL} alt={APP_NAME} style={{position:"relative",zIndex:1,width:"min(320px,72vw)",height:"auto",display:"block"}}/>
         </div>
         <div style={{display:"inline-flex",alignItems:"center",gap:7,padding:"4px 14px",background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.3)",borderRadius:20,fontSize:12,fontWeight:700,color:"var(--gold)",textTransform:"uppercase",letterSpacing:1,marginBottom:20}}>
           {IS_ARTSTRACKER ? "🎨 The Platform for Arts & Activity Programs" : "🎭 The Platform for Theatre Programs"}
@@ -155,9 +159,9 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     {/* ── Features ── */}
     <div style={{padding:"80px 32px",maxWidth:1100,margin:"0 auto"}}>
       <div style={{textAlign:"center",marginBottom:52}}>
-        <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>What Theatre4u™ does</div>
-        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(32px,5vw,48px)",color:"#fff",lineHeight:1.15}}>Built for busy drama directors</h2>
-        <p style={{fontSize:16,color:"rgba(255,255,255,.55)",marginTop:12,maxWidth:520,margin:"12px auto 0"}}>Not a generic inventory app. Built specifically for theatre programs, schools, and the broader performing arts community — by someone who has lived it.</p>
+        <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>What {APP_NAME} does</div>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(32px,5vw,48px)",color:"#fff",lineHeight:1.15}}>{IS_ARTSTRACKER ? "Built for busy program directors" : "Built for busy drama directors"}</h2>
+        <p style={{fontSize:16,color:"rgba(255,255,255,.55)",marginTop:12,maxWidth:520,margin:"12px auto 0"}}>{IS_ARTSTRACKER ? "Not a generic inventory app. Built for theatre, music, dance, and visual arts programs — and any group with equipment to track — by someone who has lived it." : "Not a generic inventory app. Built specifically for theatre programs, schools, and the broader performing arts community — by someone who has lived it."}</p>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:20}}>
         {features.map(f=>(
@@ -230,9 +234,9 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     {/* ── Final CTA ── */}
     <div style={{textAlign:"center",padding:"72px 32px 96px",borderTop:"1px solid rgba(255,255,255,.06)"}}>
       <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(28px,5vw,52px)",color:"#fff",marginBottom:16,lineHeight:1.15}}>
-        Ready to get your<br/><span style={{color:"var(--gold)"}}>theatre organized?</span>
+        Ready to get your<br/><span style={{color:"var(--gold)"}}>{IS_ARTSTRACKER ? "program organized?" : "theatre organized?"}</span>
       </h2>
-      <p style={{fontSize:16,color:"rgba(255,255,255,.5)",marginBottom:32,maxWidth:440,margin:"0 auto 32px"}}>Join theatre programs already using Theatre4u™ to get their inventory under control, track their shows, and connect with their community.</p>
+      <p style={{fontSize:16,color:"rgba(255,255,255,.5)",marginBottom:32,maxWidth:440,margin:"0 auto 32px"}}>{IS_ARTSTRACKER ? "Join programs already using ArtsTracker to get their inventory under control, track their events, and connect with their community." : "Join theatre programs already using Theatre4u™ to get their inventory under control, track their shows, and connect with their community."}</p>
       <button onClick={onSignUp} style={{background:"linear-gradient(135deg,var(--gold),var(--goldd))",border:"none",color:"#1a0f00",padding:"16px 40px",borderRadius:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:18,fontWeight:800,boxShadow:"0 4px 32px rgba(212,168,67,.45)"}}>
         Start Free — No credit card required →
       </button>
@@ -245,7 +249,7 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
         Our Story
       </div>
       <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(26px,4vw,40px)",marginBottom:24,lineHeight:1.2}}>
-        Built by a Theatre Person,<br/><span style={{color:"var(--gold)"}}>For Theatre People.</span>
+        {IS_ARTSTRACKER ? <>Built by an Arts Educator,<br/><span style={{color:"var(--gold)"}}>For Arts Programs.</span></> : <>Built by a Theatre Person,<br/><span style={{color:"var(--gold)"}}>For Theatre People.</span></>}
       </h2>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,textAlign:"left",marginBottom:48}}>
         <div>
@@ -253,15 +257,15 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
             After spending over 30 years in the theatre and 18+ years in the classroom, I know how quickly props and costumes can seem to explode out of control. As theatre artists moving from one production to the next, we need to know which box that magic wand for Puffs lives in.
           </p>
           <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)"}}>
-            And we need a chance to connect with other theatre programs that may have something we need, or need something we have. This is why Theatre4u was started.
+            And we need a chance to connect with other {IS_ARTSTRACKER ? "programs" : "theatre programs"} that may have something we need, or need something we have. This is why {IS_ARTSTRACKER ? "this platform" : "Theatre4u"} was started.
           </p>
         </div>
         <div>
           <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)",marginBottom:16}}>
-            Theatre4u keeps track of everything your program owns — and opens the door to a community of programs ready to share resources, collaborate, and support each other.
+            {APP_NAME} keeps track of everything your program owns — and opens the door to a community of programs ready to share resources, collaborate, and support each other.
           </p>
           <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)"}}>
-            <strong style={{color:"#fff"}}>Theatre is always better together.</strong> This platform was built to help make that connection easier — from the wings to the whole community.
+            <strong style={{color:"#fff"}}>{IS_ARTSTRACKER ? "The arts are always better together." : "Theatre is always better together."}</strong> This platform was built to help make that connection easier — {IS_ARTSTRACKER ? "from the classroom to the whole community." : "from the wings to the whole community."}
           </p>
           <div style={{marginTop:28,paddingTop:20,borderTop:"1px solid rgba(255,255,255,.1)",display:"flex",alignItems:"center",gap:12}}>
             <div style={{width:40,height:40,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),#8a6a20)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
