@@ -146,7 +146,7 @@ function ProductionForm({ prod, onSave, onCancel, vertical="theatre" }) {
   const s = (k,v) => setF(p => ({ ...p, [k]:v }));
   // Per-vertical wording for the form (QA-2, 2026-07-04)
   const NOUN = getTerm(vertical, "production");
-  const EX = {theatre:"The Wiz", music:"Winter Concert", dance:"Spring Showcase", art:"Student Art Show", org:"Fall Fundraiser"}[vertical] || "Spring Event";
+  const EX = {theatre:"The Wiz", music:"Winter Concert", dance:"Spring Showcase", art:"Student Art Show", booster:"Fall Fundraiser"}[vertical] || "Spring Event";
   const TITLE_LABEL = vertical === "theatre" ? "Show Title" : "Title";
   const NOTES_PH = vertical === "theatre"
     ? "Budget notes, director's vision, special requirements…"

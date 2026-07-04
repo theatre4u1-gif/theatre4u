@@ -33,6 +33,9 @@ export async function uploadPhoto(file, userId) {
 
 export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical="theatre",plan="free"}){
   const vConfig = getVertical(vertical);
+  // Per-vertical example text (QA-4, 2026-07-04)
+  const EX_ITEM = {theatre:"Victorian Ball Gown", music:"Yamaha Trumpet", dance:"Ballet Slippers (Pair)", art:"Acrylic Paint Set", booster:"Folding Table"}[vertical] || "Storage Bin";
+  const EX_LOC  = {theatre:"Costume Closet A", music:"Instrument Room, Shelf 2", dance:"Costume Rack B", art:"Supply Cabinet 3", booster:"Storage Room A"}[vertical] || "Storage Room A";
   const vCATS   = [...vConfig.categories, ...customCatsFor(vertical)];
   const vCONDS  = vConfig.conditions;
   const vSIZES  = vConfig.sizes;
@@ -122,7 +125,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
 
   return(
     <div className="fg2">
-      <div className="fg fu"><label className="fl">Item Name *</label><input className="fi" value={f.name} onChange={e=>upd("name",e.target.value)} placeholder="e.g. Victorian Ball Gown" autoFocus/></div>
+      <div className="fg fu"><label className="fl">Item Name *</label><input className="fi" value={f.name} onChange={e=>upd("name",e.target.value)} placeholder={"e.g. "+EX_ITEM} autoFocus/></div>
       <div className="fg"><label className="fl">Category</label><select className="fs" value={f.category} onChange={e=>upd("category",e.target.value)}>{vCATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</select></div>
       <div className="fg"><label className="fl">Condition</label><select className="fs" value={f.condition} onChange={e=>upd("condition",e.target.value)}>{vCONDS.map(c=><option key={c}>{c}</option>)}</select></div>
       <div className="fg"><label className="fl">Size</label><select className="fs" value={f.size} onChange={e=>upd("size",e.target.value)}>{vSIZES.map(s=><option key={s}>{s}</option>)}</select></div>
@@ -131,7 +134,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
         <div className="fg"><label className="fl">Low-stock alert at <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:10,color:"var(--muted)"}}>(0 = off)</span></label><input className="fi" type="number" min="0" step="1" placeholder="0" value={f.low_stock_threshold||""} onChange={e=>upd("low_stock_threshold",parseInt(e.target.value)||0)}/></div>
       )}
       <div className="fg"><label className="fl">Availability</label><select className="fs" value={f.avail} onChange={e=>upd("avail",e.target.value)}>{vAVAIL.map(a=><option key={a}>{a}</option>)}</select></div>
-      <div className="fg"><label className="fl">Location</label><input className="fi" value={f.location} onChange={e=>upd("location",e.target.value)} placeholder="e.g. Costume Closet A"/></div>
+      <div className="fg"><label className="fl">Location</label><input className="fi" value={f.location} onChange={e=>upd("location",e.target.value)} placeholder={"e.g. "+EX_LOC}/></div>
       <div className="fg fu">
         <label className="fl">Storage Location</label>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
@@ -203,7 +206,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
           <div style={{marginTop:8,padding:"12px 14px",background:"rgba(212,168,67,.07)",border:"1px solid rgba(212,168,67,.25)",borderRadius:8}}>
             <div style={{fontWeight:700,fontSize:12,color:"var(--goldink)",marginBottom:8}}>New Storage Location</div>
             <div style={{display:"flex",gap:6,marginBottom:6}}>
-              <input className="fi" style={{flex:1}} placeholder="Name (e.g. Costume Closet A)" value={qlocName}
+              <input className="fi" style={{flex:1}} placeholder={"Name (e.g. "+EX_LOC+")"} value={qlocName}
                 onChange={e=>setQlocName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addLocation()}/>
               <input className="fi" style={{width:80}} placeholder="Code" value={qlocCode}
                 onChange={e=>setQlocCode(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addLocation()}/>
