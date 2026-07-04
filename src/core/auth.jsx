@@ -209,7 +209,12 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
     try{ sessionStorage.setItem("t4u_oauth_flow","1"); }catch(e){}
     const{error}=await SB.auth.signInWithOAuth({
       provider:"google",
-      options:{ redirectTo: window.location.origin },
+      options:{
+        redirectTo: window.location.origin,
+        // Always show Google's account picker — teachers often share computers
+        // and Google otherwise silently reuses the remembered account.
+        queryParams:{ prompt:"select_account" },
+      },
     });
     if(error){ setErr("Couldn't start Google sign-in. Please try again."); }
     // On success the browser redirects to Google — nothing more to do here.
