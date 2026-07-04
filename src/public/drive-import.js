@@ -59,8 +59,9 @@
         .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
         .setCallback(async function (data) {
           if (data.action !== google.picker.Action.PICKED || !data.docs) return;
-          for (var i = 0; i < data.docs.length; i++) {
-            var doc = data.docs[i];
+          var failed = 0;
+          // Download all picked photos in parallel (much faster for a batch).
+          await Promise.all(data.docs.map(async function (doc) {
             try {
               var res = await fetch(
                 "https://www.googleapis.com/drive/v3/files/" + doc.id + "?alt=media",
@@ -72,9 +73,10 @@
               onFile(file);
             } catch (e) {
               console.error("Drive download failed", e);
-              alert("Couldn't download a photo from Google Drive (" + (e && e.message ? e.message : e) + "). Please try again.");
+              failed++;
             }
-          }
+          }));
+          if (failed) alert("Couldn't download " + failed + " photo" + (failed !== 1 ? "s" : "") + " from Google Drive. Please try those again.");
         })
         .build();
       picker.setVisible(true);

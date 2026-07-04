@@ -17,6 +17,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
   const[email,setEmail]=useState(()=>{ try { return sessionStorage.getItem("t4u_prefill_email")||""; } catch{return "";} });
   const[pass,setPass]=useState("");
   const[orgName,setOrgName]=useState(()=>{ try { return sessionStorage.getItem("t4u_prefill_org")||""; } catch{return "";} });
+  const[ownerName,setOwnerName]=useState("");
   const[err,setErr]=useState("");
   const[loading,setLoading]=useState(false);
   const[done,setDone]=useState(false);
@@ -72,6 +73,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
 
     try{
       if(mode==="signup"){
+        if(!ownerName.trim()){setErr("Please enter your name.");setLoading(false);return;}
         if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
         // All signups during beta get temp_pro — no access code needed
         const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName},emailRedirectTo:"https://theatre4u.org"}});
@@ -104,7 +106,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             referrer: document.referrer||null
           }).then(()=>{}).catch(()=>{}); // fire and forget
           await SB.from("orgs").upsert({
-            id:data.user.id, name:orgName, email,
+            id:data.user.id, name:orgName, email, director_name: ownerName.trim()||null,
             type:"", phone:"", location:"", bio:"",
             vertical: vertical, verticals_enabled: [vertical],
             signup_domain: (typeof window!=="undefined" && window.location && window.location.hostname.includes("artstracker")) ? "artstracker.org" : "theatre4u.org",
@@ -201,6 +203,18 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
     setErr("✓ Password reset email sent — check your inbox.");
   };
 
+  const googleSignIn=async()=>{
+    setErr("");
+    if(isDemoMode()){setErr("Google sign-in isn't available in the demo. Use the demo button instead.");return;}
+    try{ sessionStorage.setItem("t4u_oauth_flow","1"); }catch(e){}
+    const{error}=await SB.auth.signInWithOAuth({
+      provider:"google",
+      options:{ redirectTo: window.location.origin },
+    });
+    if(error){ setErr("Couldn't start Google sign-in. Please try again."); }
+    // On success the browser redirects to Google — nothing more to do here.
+  };
+
   const overlayStyle={position:"fixed",inset:0,background:"rgba(0,0,0,.82)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(4px)"};
   const cardStyle={background:"#15121b",border:"1px solid #282333",borderRadius:16,width:"100%",maxWidth:440,padding:"36px 36px 32px",boxShadow:"0 16px 56px rgba(0,0,0,.6)",animation:"lp-rise .2s ease",fontFamily:"'DM Sans',sans-serif",color:"#ede8df"};
   const inputStyle={width:"100%",background:"#110f18",border:"1px solid #282333",borderRadius:6,padding:"10px 12px",color:"#ede8df",fontSize:14,fontFamily:"'DM Sans',sans-serif",outline:"none",boxSizing:"border-box"};
@@ -253,6 +267,25 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             </button>
           ))}
         </div>
+        {/* Continue with Google */}
+        <button onClick={googleSignIn} disabled={loading}
+          style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:10,
+            background:"#fff",color:"#1f1f1f",border:"1px solid #282333",borderRadius:6,
+            padding:"11px",fontSize:14,fontWeight:600,cursor:loading?"not-allowed":"pointer",
+            fontFamily:"'DM Sans',sans-serif",marginBottom:16,opacity:loading?.7:1}}>
+          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
+          Continue with Google
+        </button>
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+          <div style={{flex:1,height:1,background:"#282333"}}/>
+          <span style={{fontSize:11,color:"#685f76",textTransform:"uppercase",letterSpacing:1}}>or</span>
+          <div style={{flex:1,height:1,background:"#282333"}}/>
+        </div>
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
           {mode==="signup"&&(<>
             {IS_ARTSTRACKER&&(
@@ -262,6 +295,9 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
                 </select>
               </div>
             )}
+            <div><label style={labelStyle}>Your Name *</label>
+              <input value={ownerName} onChange={e=>setOwnerName(e.target.value)} placeholder="e.g. Jane Smith" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
+            </div>
             <div><label style={labelStyle}>Program / Organization Name *</label>
               <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High School Drama" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
             </div>
@@ -333,6 +369,155 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             Full Pro access during beta · No credit card required · Cancel anytime
           </p>
         )}
+      </div>
+      {legal==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegal(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
+      {legal==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegal(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
+    </div>
+  );
+}
+
+// ── Post-OAuth profile completion ─────────────────────────────────────────────
+// Shown when a signed-in user (Google sign-in) has no org row, no org_members
+// membership, and isn't a team member / facilitator. Collects the same required
+// info as normal signup (name, program, vertical on ArtsTracker, 13+ confirm)
+// and creates the org exactly like the email/password signup path.
+export function GoogleProfileSetup({user, onDone}){
+  const[ownerName,setOwnerName]=useState(user?.user_metadata?.full_name||user?.user_metadata?.name||"");
+  const[orgName,setOrgName]=useState("");
+  const[vertical,setVertical]=useState("theatre");
+  const[ageConfirmed,setAgeConfirmed]=useState(false);
+  const[err,setErr]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[legal,setLegal]=useState(null);
+  const[checkingInvite,setCheckingInvite]=useState(true);
+
+  // A pending team-invite code means this user joins an EXISTING org — no new org.
+  useEffect(()=>{
+    (async()=>{
+      try{
+        const pendingCode = localStorage.getItem("t4u_pending_join_code");
+        if(pendingCode){
+          localStorage.removeItem("t4u_pending_join_code");
+          const{error}=await SB.rpc("accept_team_invite_by_code",{p_code:pendingCode});
+          if(!error){ onDone(); return; }
+        }
+      }catch(e){}
+      setCheckingInvite(false);
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+
+  const submit=async()=>{
+    setErr("");
+    if(!ownerName.trim()){setErr("Please enter your name.");return;}
+    if(!orgName.trim()){setErr("Please enter your program or organization name.");return;}
+    if(!ageConfirmed){setErr("Please confirm you are 13 years of age or older.");return;}
+    setLoading(true);
+    try{
+      const email = user?.email || "";
+      await SB.from("orgs").upsert({
+        id:user.id, name:orgName, email, director_name: ownerName.trim()||null,
+        type:"", phone:"", location:"", bio:"",
+        vertical: vertical, verticals_enabled: [vertical],
+        signup_domain: (typeof window!=="undefined" && window.location && window.location.hostname.includes("artstracker")) ? "artstracker.org" : "theatre4u.org",
+        temp_pro: true,
+        temp_pro_granted_at: new Date().toISOString(),
+        temp_pro_note: "Beta signup — auto-granted (Google sign-in)",
+      },{onConflict:"id",ignoreDuplicates:false});
+      // Track signup conversion with UTM attribution (same as password signup)
+      const _sid = window.__t4u_sid || sessionStorage.getItem("t4u_sid") || null;
+      const _utm = window.__t4u_utm || JSON.parse(sessionStorage.getItem("t4u_utm")||"{}");
+      await SB.from("signup_events").insert({
+        session_id:_sid, org_id:user.id,
+        utm_source:_utm.source||null, utm_medium:_utm.medium||null, utm_campaign:_utm.campaign||null,
+        referrer:document.referrer||null
+      }).then(()=>{}).catch(()=>{});
+      // Notify admin of new signup
+      try{
+        fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/signup-notify",{
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({org_id:user.id, org_email:email, is_team_member:false}),
+        }).catch(()=>{});
+      }catch(e){}
+      // Referral link-up (same as password signup)
+      const refCode = getRefCode();
+      if(refCode){
+        const{data:referrer}=await SB.from("orgs").select("id").eq("referral_code",refCode).single();
+        if(referrer?.id && referrer.id!==user.id){
+          await SB.from("orgs").update({referred_by_org:referrer.id}).eq("id",user.id);
+          await SB.rpc("award_referral_points",{p_new_org_id:user.id});
+          try{ sessionStorage.removeItem("t4u_ref"); }catch(e){}
+        }
+      }
+      // Auto-generate label prefix
+      try{
+        const{data:pfxData}=await SB.rpc("generate_label_prefix",{p_name:orgName});
+        if(pfxData) await SB.from("orgs").update({label_prefix:pfxData}).eq("id",user.id);
+      }catch(e){ /* non-fatal */ }
+      try{ sessionStorage.removeItem("t4u_oauth_flow"); }catch(e){}
+      onDone();
+    }catch(e){
+      console.error("Profile setup failed",e);
+      setErr("Something went wrong saving your program. Please try again.");
+    }
+    setLoading(false);
+  };
+
+  const useDifferentAccount=async()=>{ try{ await SB.auth.signOut(); }catch(e){} };
+
+  const overlayStyle={position:"fixed",inset:0,background:"rgba(0,0,0,.82)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(4px)"};
+  const cardStyle={background:"#15121b",border:"1px solid #282333",borderRadius:16,width:"100%",maxWidth:440,padding:"36px 36px 32px",boxShadow:"0 16px 56px rgba(0,0,0,.6)",fontFamily:"'DM Sans',sans-serif",color:"#ede8df"};
+  const inputStyle={width:"100%",background:"#110f18",border:"1px solid #282333",borderRadius:6,padding:"10px 12px",color:"#ede8df",fontSize:14,fontFamily:"'DM Sans',sans-serif",outline:"none",boxSizing:"border-box"};
+  const labelStyle={fontSize:11,fontWeight:600,color:"#9b93a8",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4};
+
+  if(checkingInvite) return(
+    <div style={overlayStyle}><div style={{...cardStyle,textAlign:"center",color:"#9b93a8",fontSize:14}}>One moment…</div></div>
+  );
+
+  return(
+    <div style={overlayStyle}>
+      <div style={cardStyle}>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:"#ede8df"}}>Almost there!</div>
+        <div style={{fontSize:12.5,color:"#9b93a8",marginTop:4,marginBottom:22,lineHeight:1.6}}>
+          You&apos;re signed in as <strong style={{color:"#ede8df"}}>{user?.email}</strong>. Tell us about your program to finish setting up your free {APP_NAME} account.
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          {IS_ARTSTRACKER&&(
+            <div><label style={labelStyle}>Program Type *</label>
+              <select value={vertical} onChange={e=>setVertical(e.target.value)} style={inputStyle}>
+                {VERTICALS_LIST.map(v=><option key={v.id} value={v.id}>{v.icon} {v.label}</option>)}
+              </select>
+            </div>
+          )}
+          <div><label style={labelStyle}>Your Name *</label>
+            <input value={ownerName} onChange={e=>setOwnerName(e.target.value)} placeholder="e.g. Jane Smith" style={inputStyle}/>
+          </div>
+          <div><label style={labelStyle}>Program / Organization Name *</label>
+            <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High School Drama" style={inputStyle} onKeyDown={e=>e.key==="Enter"&&submit()}/>
+          </div>
+        </div>
+        {err&&<div style={{marginTop:12,padding:"9px 12px",background:"rgba(194,24,91,.1)",border:"1px solid rgba(194,24,91,.25)",borderRadius:7,fontSize:13,color:"#e57373"}}>{err}</div>}
+        <label style={{display:"flex",alignItems:"flex-start",gap:8,marginTop:14,cursor:"pointer"}}>
+          <input type="checkbox" checked={ageConfirmed} onChange={e=>setAgeConfirmed(e.target.checked)}
+            style={{marginTop:2,accentColor:"#d4a843",flexShrink:0,width:15,height:15}}/>
+          <span style={{fontSize:12,color:"rgba(255,255,255,.55)",lineHeight:1.5}}>
+            I confirm I am <strong style={{color:"rgba(255,255,255,.75)"}}>13 years of age or older</strong>.
+            If you are under 13, please have a parent or guardian create this account on your behalf.
+          </span>
+        </label>
+        <p style={{fontSize:11,color:"rgba(255,255,255,.4)",textAlign:"center",marginTop:16,lineHeight:1.6}}>
+          By continuing you agree to our{" "}
+          <span style={{color:"var(--goldink)",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setLegal("terms")}>Terms of Service</span>
+          {" "}and{" "}
+          <span style={{color:"var(--goldink)",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setLegal("privacy")}>Privacy Policy</span>,
+          including the grant of a perpetual license to content you upload.
+        </p>
+        <button onClick={submit} disabled={loading} style={{marginTop:12,width:"100%",background:"linear-gradient(135deg,#d4a843,#a37f2c)",color:"#1a0f00",border:"none",borderRadius:6,padding:"12px",fontSize:15,fontWeight:700,cursor:loading?"not-allowed":"pointer",fontFamily:"'DM Sans',sans-serif",opacity:loading?.7:1}}>
+          {loading?"Setting up…":"Finish Setup →"}
+        </button>
+        <button onClick={useDifferentAccount} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:"#685f76",fontSize:12.5,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textDecoration:"underline"}}>
+          Use a different account
+        </button>
       </div>
       {legal==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegal(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
       {legal==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegal(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}

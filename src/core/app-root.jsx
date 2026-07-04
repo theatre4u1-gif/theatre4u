@@ -8,7 +8,7 @@ import { CSS } from "./styles.js";
 import { EM } from "./messages.js";
 import { TERMS_CONTENT, PRIVACY_CONTENT } from "./legal.js";
 import { authErrKey, getRefCode, isDemoMode, fmt$, parseCSV, autoMatch, postShareText, resizeImg, fbShare, getPointsName, itemShareUrl, itemShareText, CSV_FIELDS, uid } from "./helpers.js";
-import { AuthOverlay } from "./auth.jsx";
+import { AuthOverlay, GoogleProfileSetup } from "./auth.jsx";
 import { STRIPE_LINKS, stripeLink, PLANS_DEF, UPGRADE_PLANS } from "./plans.js";
 import { UpgradePrompt, UpgradePlans } from "./billing.jsx";
 import { CAT_GFX, CATS, CAT, CAT_MAP, CONDS, SIZES, AVAIL, MKT, setCustomCats, customCatsFor, getCatsMerged } from "./inventory.js";
@@ -120,6 +120,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   const [facDistrict,setFacDistrict]= useState(null); // district this user facilitates (full-edit browse), or null
   const [facSchools, setFacSchools] = useState([]);   // schools in the facilitated district
   const [ownsDistrict,setOwnsDistrict] = useState(false); // true if this user owns a district — show District tab from any of their orgs
+  const [needsProfile,setNeedsProfile] = useState(false); // Google-OAuth signup with no org yet — show finish-setup step
   // Invite token from URL — persisted in localStorage so it survives
   // Supabase's email confirmation redirect (which strips query params)
   const [pendingInvite,setPendingInvite] = useState(() => {
@@ -169,7 +170,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       setUser(u);
       if(!session) {
         setItems([]); setOrg({name:"",type:"",email:"",phone:"",location:"",bio:""});
-        setLoaded(false);
+        setLoaded(false); setNeedsProfile(false);
       } else if(u) {
         setLoaded(false);
       }
@@ -271,6 +272,14 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       const memberRole  = realMembership ? realMembership.role : null;
 
       const{data:orgData}=await SB.from("orgs").select("*").eq("id",targetOrgId).single();
+      // Google-OAuth signups arrive authenticated but with NO org row and no
+      // memberships — send them to the finish-setup step instead of an empty app.
+      // (Password signups always create the org at signup, so they never hit this.)
+      if(!orgData && !realMembership && user.user_metadata?.is_team_member !== true){
+        const { count: facCount } = await SB.from("district_members")
+          .select("id",{count:"exact",head:true}).eq("user_id",user.id);
+        if(!facCount){ setNeedsProfile(true); setLoaded(true); return; }
+      }
       // Admin emails always get District plan regardless of what is stored
       // temp_pro = true gives Pro access during beta (no payment required)
       const effectivePlan = isAdminEmail(user?.email) ? "district"
@@ -287,6 +296,24 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
         const _savedV = (()=>{ try { return localStorage.getItem("t4u_active_vertical_"+targetOrgId); } catch(e){ return null; } })();
         setActiveVertical(_enabled.includes(_savedV) ? _savedV : (orgData.vertical || _enabled[0] || "theatre"));
       } else { setPlanState(effectivePlan); }
+      // OAuth (Google) login tracking — the password path logs login_events at
+      // sign-in; OAuth redirects skip it, so log here once per OAuth round-trip.
+      // Owner-only (org_id FK), same rule as the password path.
+      try{
+        if(sessionStorage.getItem("t4u_oauth_flow")==="1"){
+          sessionStorage.removeItem("t4u_oauth_flow");
+          if(orgData && orgData.id===user.id){
+            const sid = window.__t4u_sid || sessionStorage.getItem("t4u_sid") || "";
+            await SB.from("login_events").insert({
+              org_id: user.id, org_name: orgData.name||null, email: user.email,
+              plan: orgData.plan||null, session_id: sid,
+              user_agent: navigator.userAgent, referrer: document.referrer||null,
+              utm_source: window.__t4u_utm?.source||null,
+            });
+            await SB.from("orgs").update({ last_seen: new Date().toISOString() }).eq("id", user.id);
+          }
+        }
+      }catch(_){}
       const{data:itemData}=await SB.from("items").select("*").eq("org_id",targetOrgId).order("added",{ascending:false}).limit(2000);
       if(itemData) setItems(itemData);
       // Facilitator detection — if this user facilitates a district, load it + its schools (full-edit browse)
@@ -973,6 +1000,10 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       {legalPage==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegalPage(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
       {legalPage==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegalPage(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
       {user && !isDemo && <AIHelpBubble user={user} />}
+      {/* ── Google-OAuth finish-setup ─ new social signups with no org yet ── */}
+      {user && needsProfile && !isDemo && (
+        <GoogleProfileSetup user={user} onDone={()=>{ setNeedsProfile(false); setLoaded(false); }}/>
+      )}
       {/* ── Onboarding overlay ─ shown once to new users ── */}
       {user && onboardingStep !== null && onboardingStep < 4 && (
         (onboardingStep === 0 ||
