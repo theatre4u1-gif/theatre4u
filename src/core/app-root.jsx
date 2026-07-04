@@ -700,8 +700,8 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   if(!authChk) return(
     <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexDirection:"column"}}>
       <style>{CSS}</style>
-      <div style={{fontSize:52}}>🎭</div>
-      <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--goldink)"}}>Loading Theatre4u™…</div>
+      <img src={LOGO_ICON} alt="" style={{width:64,height:64,objectFit:"contain",display:"block"}}/>
+      <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--goldink)"}}>{"Loading "+APP_NAME+"…"}</div>
       <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
     </div>
   );
@@ -931,7 +931,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
             )}
             {!loaded
               ? <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:18,color:"var(--faint)"}}>
-                  <div style={{fontSize:52}}>🎭</div>
+                  <img src={LOGO_ICON} alt="" style={{width:64,height:64,objectFit:"contain",display:"block"}}/>
                   <div style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:"var(--muted)"}}>Loading your collection…</div>
                   <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
                 </div>
