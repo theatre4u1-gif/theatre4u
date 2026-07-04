@@ -106,8 +106,14 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
           <div aria-hidden="true" style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:"min(640px,92vw)",height:330,borderRadius:"50%",pointerEvents:"none",background:"radial-gradient(ellipse at 50% 50%, rgba(250,244,232,.97) 0%, rgba(249,242,227,.95) 70%, rgba(243,221,165,.45) 82%, rgba(234,193,108,.15) 89%, transparent 94%)",filter:"blur(2px)"}}/>
           <img src={LOGO_FULL} alt={APP_NAME} style={{position:"relative",zIndex:1,width:"min(270px,62vw)",height:"auto",display:"block"}}/>
         </div>
-        <div style={{display:"inline-flex",alignItems:"center",gap:7,padding:"4px 14px",background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.3)",borderRadius:20,fontSize:12,fontWeight:700,color:"var(--gold)",textTransform:"uppercase",letterSpacing:1,marginBottom:20}}>
+        <div style={{display:"inline-flex",alignItems:"center",gap:7,padding:"4px 14px",background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.3)",borderRadius:20,fontSize:12,fontWeight:700,color:"var(--gold)",textTransform:"uppercase",letterSpacing:1,marginBottom:14}}>
           {IS_ARTSTRACKER ? "🎨 The Platform for Arts & Activity Programs" : "🎭 The Platform for Theatre Programs"}
+        </div>
+        {/* Beta ribbon — remove at Sept 1 launch */}
+        <div style={{marginBottom:20}}>
+          <span style={{display:"inline-flex",alignItems:"center",gap:8,padding:"7px 18px",background:"rgba(76,175,80,.13)",border:"1px solid rgba(76,175,80,.4)",borderRadius:22,fontSize:13.5,fontWeight:700,color:"#82d68c"}}>
+            ⭐ Free during our beta — paid plans begin September 1
+          </span>
         </div>
         <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(42px,7vw,76px)",lineHeight:1.05,marginBottom:20,color:"#fff"}}>
           {IS_ARTSTRACKER ? "Everything your program needs —" : "Everything your theatre program needs —"}{" "}
@@ -200,6 +206,11 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
       <div style={{textAlign:"center",marginBottom:48}}>
         <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>Simple, honest pricing</div>
         <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(28px,4vw,42px)",color:"#fff"}}>Plans for every program</h2>
+        <div style={{marginTop:14,marginBottom:4}}>
+          <span style={{display:"inline-flex",alignItems:"center",gap:8,padding:"7px 18px",background:"rgba(76,175,80,.13)",border:"1px solid rgba(76,175,80,.4)",borderRadius:22,fontSize:13.5,fontWeight:700,color:"#82d68c"}}>
+            ⭐ Everything is free during our beta — these prices begin September 1
+          </span>
+        </div>
         <p style={{fontSize:14,color:"rgba(255,255,255,.45)",marginTop:10}}>Annual plans available — save up to 2 months free</p>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:20}}>
