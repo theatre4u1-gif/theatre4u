@@ -130,7 +130,7 @@ export function AddToProductionPicker({ item, userId, onClose }) {
         </div>
         <div style={{ padding:"10px 14px", borderTop:"1px solid var(--border)",
           textAlign:"center", fontSize:12, color:"var(--muted)" }}>
-          Click a production to add or remove this item
+          Click one to add or remove this item
         </div>
       </div>
     </div>
@@ -144,19 +144,26 @@ function ProductionForm({ prod, onSave, onCancel, vertical="theatre" }) {
     notes:"", color:PROD_COLORS[0], status:"planning"
   });
   const s = (k,v) => setF(p => ({ ...p, [k]:v }));
+  // Per-vertical wording for the form (QA-2, 2026-07-04)
+  const NOUN = getTerm(vertical, "production");
+  const EX = {theatre:"The Wiz", music:"Winter Concert", dance:"Spring Showcase", art:"Student Art Show", org:"Fall Fundraiser"}[vertical] || "Spring Event";
+  const TITLE_LABEL = vertical === "theatre" ? "Show Title" : "Title";
+  const NOTES_PH = vertical === "theatre"
+    ? "Budget notes, director's vision, special requirements…"
+    : "Budget notes, goals, special requirements…";
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
       <div className="fg2">
         <div className="fg fu">
-          <label className="fl">Production Name *</label>
+          <label className="fl">{NOUN} Name *</label>
           <input className="fi" value={f.name} onChange={e=>s("name",e.target.value)}
-            placeholder="e.g. The Wiz — Spring 2026" autoFocus/>
+            placeholder={"e.g. "+EX+" — Spring 2026"} autoFocus/>
         </div>
         <div className="fg">
-          <label className="fl">Show Title</label>
+          <label className="fl">{TITLE_LABEL}</label>
           <input className="fi" value={f.show_title||""} onChange={e=>s("show_title",e.target.value)}
-            placeholder="The Wiz"/>
+            placeholder={EX}/>
         </div>
         <div className="fg">
           <label className="fl">Status</label>
@@ -189,7 +196,7 @@ function ProductionForm({ prod, onSave, onCancel, vertical="theatre" }) {
         <div className="fg fu">
           <label className="fl">Notes</label>
           <textarea className="ft" value={f.notes||""} onChange={e=>s("notes",e.target.value)}
-            placeholder="Budget notes, director's vision, special requirements…"/>
+            placeholder={NOTES_PH}/>
         </div>
       </div>
       <div style={{ display:"flex", gap:8, justifyContent:"flex-end", paddingTop:10,
@@ -1475,7 +1482,7 @@ export function Productions({ userId, allItems, org, onNavigateTo }) {
           <div style={{ marginLeft:"auto" }}>
             <button className="btn btn-g" onClick={()=>{ setActive(null); setModal("new"); }}>
               <span style={{ width:15, height:15, display:"flex" }}>{Ic.plus}</span>
-              New Production
+              New {getTerm(org?.vertical, "production")}
             </button>
           </div>
         </div>
