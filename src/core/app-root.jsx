@@ -678,7 +678,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       { id:"inventory",   label:"Inventory",   ico:Ic.box     },
       ...(!isCrew && org?.marketplace_enabled ? [{ id:"marketplace", label:getExchangeName(curVertical), ico:Ic.store   }] : []),
       ...(!isCrew && org?.community_enabled   ? [{ id:"community",   label:"Community",   ico:"🎪", community:true }] : []),
-      { id:"productions", label:getTerm(curVertical,"productions"), ico:"🎭"       },
+      { id:"productions", label:getTerm(curVertical,"productions"), ico:getVertical(curVertical)?.icon || "🎭" },
       ...(!isMember? [{ id:"reports",     label:"Reports",     ico:Ic.chart   }] : []),
       ...(!isMember? [{ id:"funding",     label:"Funding Tracker", ico:"💰"  }] : []),
       // Prop 28 nav hidden — legacy data accessible via Funding Tracker migration banner
@@ -844,7 +844,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                     {n.id==="requests"   && pendingReqCount>0 && <span className="sb-badge" style={{background:"var(--red)",color:"#fff"}}>{pendingReqCount}</span>}
                     {n.id==="inventory"  && items.length>0 && <span className="sb-badge">{activeSchool ? schoolItems.length : items.length}</span>}
                     {n.id==="marketplace"&& listed>0       && <span className="sb-badge">{listed}</span>}
-                    {n.id==="productions"&& <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--goldink)"}}>🎭</span>}
+                    {n.id==="productions"&& <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--goldink)"}}>{getVertical(curVertical)?.icon || "🎭"}</span>}
                     
                     {n.id==="points"    && creditBalance>0 && <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--goldink)"}}>{creditBalance}</span>}
                   </div>

@@ -9,7 +9,7 @@ import { CATS, CAT } from "./inventory.js";
 import { Ic } from "./icons.jsx";
 import { parseCSV } from "./helpers.js";
 import { usp } from "../lib/backgrounds.js";
-import { getTerm } from "../lib/verticals.js";
+import { getTerm, getVertical } from "../lib/verticals.js";
 
 // ══════════════════════════════════════════════════════════════════════════════
 // PRODUCTIONS  (Show Folders)
@@ -94,9 +94,9 @@ export function AddToProductionPicker({ item, userId, onClose }) {
             <div style={{ textAlign:"center", padding:24, color:"var(--muted)" }}>Loading…</div>
           ) : productions.length === 0 ? (
             <div style={{ textAlign:"center", padding:24 }}>
-              <div style={{ fontSize:32, marginBottom:8 }}>🎭</div>
+              <div style={{ fontSize:32, marginBottom:8 }}>{getVertical(item?.vertical)?.icon || "🎭"}</div>
               <p style={{ color:"var(--muted)", fontSize:13, marginBottom:12 }}>
-                No active productions yet. Create one on the Productions page first.
+                No active {getTerm(item?.vertical,"productions").toLowerCase()} yet. Create one on the {getTerm(item?.vertical,"productions")} page first.
               </p>
             </div>
           ) : (
@@ -1229,7 +1229,7 @@ function ProductionDetail({ prod, allItems, userId, onEdit, onDelete, onClose, o
       <div style={{ display:"flex", alignItems:"flex-start", gap:14, marginBottom:20 }}>
         <div style={{ width:48, height:48, borderRadius:10, background:prod.color||"var(--gold)",
           flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center",
-          fontSize:24 }}>🎭</div>
+          fontSize:24 }}>{getVertical(org?.vertical)?.icon || "🎭"}</div>
         <div style={{ flex:1 }}>
           <div style={{ fontFamily:"var(--serif)", fontSize:20, fontWeight:700 }}>{prod.name}</div>
           {prod.show_title && <div style={{ fontSize:12, color:"var(--muted)" }}>{prod.show_title}</div>}
@@ -1462,7 +1462,7 @@ export function Productions({ userId, allItems, org, onNavigateTo }) {
           <img src={usp("photo-1503095396549-807759245b35", 1100, 280)} alt="Productions" loading="eager"/>
           <div className="hero-fade"/>
           <div className="hero-body">
-            <div className="hero-eyebrow">🎭 {getTerm(org?.vertical,"production")} Planning</div>
+            <div className="hero-eyebrow">{getVertical(org?.vertical)?.icon || "🎭"} {getTerm(org?.vertical,"production")} Planning</div>
             <h1 className="hero-title" style={{ fontSize:44 }}>{getTerm(org?.vertical,"productions")}</h1>
             <p className="hero-sub">{getTerm(org?.vertical,"productionsSub")}</p>
           </div>
@@ -1491,18 +1491,18 @@ export function Productions({ userId, allItems, org, onNavigateTo }) {
           <div style={{ textAlign:"center", padding:48, color:"var(--muted)" }}>Loading…</div>
         ) : visible.length === 0 ? (
           <div style={{ textAlign:"center", padding:56 }}>
-            <div style={{ fontSize:48, marginBottom:14 }}>🎭</div>
+            <div style={{ fontSize:48, marginBottom:14 }}>{getVertical(org?.vertical)?.icon || "🎭"}</div>
             <h3 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:8 }}>
               {filter==="all" ? ("No "+getTerm(org?.vertical,"productions")+" Yet") : ("No "+filter+" "+getTerm(org?.vertical,"productions").toLowerCase())}
             </h3>
             <p style={{ color:"var(--muted)", fontSize:13, maxWidth:380, margin:"0 auto 20px", lineHeight:1.6 }}>
               {filter==="all"
-                ? ("Create a "+getTerm(org?.vertical,"production").toLowerCase()+" folder. Save items from your inventory to track exactly what you need.")
+                ? ((/^[AEIOU]/.test(getTerm(org?.vertical,"production")) ? "Create an " : "Create a ")+getTerm(org?.vertical,"production").toLowerCase()+" folder. Save items from your inventory to track exactly what you need.")
                 : ("No "+getTerm(org?.vertical,"productions").toLowerCase()+" in "+filter+" status.")}
             </p>
             {filter==="all" && (
               <button className="btn btn-g" onClick={()=>{ setActive(null); setModal("new"); }}>
-                + Create First Production
+                + Create First {getTerm(org?.vertical,"production")}
               </button>
             )}
           </div>
