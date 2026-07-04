@@ -25,7 +25,7 @@
     <meta property="og:url" content="https://theatre4u.org/"/>
     <meta property="og:title" content="Theatre4u™ — Inventory & Backstage Exchange for Theatre Programs"/>
     <meta property="og:description" content="Finally know what's in your costume loft. Catalog every costume, prop, and set piece. Print QR labels for every bin. Share resources with nearby programs. Built by a theatre director, for theatre directors."/>
-    <meta property="og:image" content="https://theatre4u.org/og-image.png"/>
+    <meta property="og:image" content="https://theatre4u.org/og-theatre4u.png"/>
     <meta property="og:image:width" content="1200"/>
     <meta property="og:image:height" content="630"/>
     <meta property="og:image:alt" content="Theatre4u — Inventory management and Backstage Exchange for theatre programs"/>
@@ -37,7 +37,7 @@
     <meta name="twitter:site" content="@theatre4u"/>
     <meta name="twitter:title" content="Theatre4u™ — Inventory & Backstage Exchange for Theatre Programs"/>
     <meta name="twitter:description" content="Finally know what's in your costume loft. Catalog costumes, props, lighting, and sets. Print QR labels. Share resources with nearby programs. Free to start."/>
-    <meta name="twitter:image" content="https://theatre4u.org/og-image.png"/>
+    <meta name="twitter:image" content="https://theatre4u.org/og-theatre4u.png"/>
 
     <!-- ═══ STRUCTURED DATA — SoftwareApplication ════════════════════════ -->
     <script type="application/ld+json">
@@ -71,7 +71,7 @@
         "Team access for students and staff",
         "District-wide multi-school management"
       ],
-      "screenshot": "https://theatre4u.org/og-image.png",
+      "screenshot": "https://theatre4u.org/og-theatre4u.png",
       "aggregateRating": {
         "@type": "AggregateRating",
         "ratingValue": "5",
@@ -127,9 +127,20 @@
     <meta name="apple-mobile-web-app-capable" content="yes"/>
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
     <meta name="apple-mobile-web-app-title" content="Theatre4u™"/>
-    <link rel="apple-touch-icon" href="/icons/icon-192.png"/>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+    <link rel="apple-touch-icon" href="/apple-touch-icon-theatre4u.png"/>
+    <link rel="icon" type="image/svg+xml" href="/favicon-theatre4u.svg"/>
     <link rel="manifest" href="/manifest.json"/>
+    <script>
+      // Domain-aware branding: swap icons + manifest on artstracker.org
+      (function(){
+        if (location.hostname.indexOf("artstracker") === -1) return;
+        var set = function(sel, href){ var el = document.querySelector(sel); if (el) el.setAttribute("href", href); };
+        set('link[rel="apple-touch-icon"]', "/apple-touch-icon-artstracker.png");
+        set('link[rel="icon"]', "/favicon-artstracker.png");
+        var ic = document.querySelector('link[rel="icon"]'); if (ic) ic.setAttribute("type", "image/png");
+        set('link[rel="manifest"]', "/manifest-artstracker.json");
+      })();
+    </script>
 
     <!-- ═══ PERFORMANCE ════════════════════════════════════════════════════ -->
     <link rel="preconnect" href="https://fonts.googleapis.com"/>

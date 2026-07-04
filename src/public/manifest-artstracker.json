@@ -1,7 +1,7 @@
 {
-  "name": "Theatre4u™",
-  "short_name": "Theatre4u",
-  "description": "Inventory management and Backstage Exchange for theatre programs",
+  "name": "ArtsTracker",
+  "short_name": "ArtsTracker",
+  "description": "Inventory management for school arts programs — theatre, music, dance, visual art, and more",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0d0b11",
@@ -10,13 +10,13 @@
   "categories": ["education", "business", "productivity"],
   "icons": [
     {
-      "src": "/icon-192-theatre4u.png",
+      "src": "/icon-192-artstracker.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512-theatre4u.png",
+      "src": "/icon-512-artstracker.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
@@ -28,14 +28,14 @@
       "short_name": "Add",
       "description": "Add a new inventory item",
       "url": "/?action=add",
-      "icons": [{ "src": "/icon-192-theatre4u.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icon-192-artstracker.png", "sizes": "192x192" }]
     },
     {
-      "name": "Backstage Exchange",
+      "name": "Exchange",
       "short_name": "Exchange",
-      "description": "Browse Backstage Exchange listings",
+      "description": "Browse Exchange listings",
       "url": "/?page=marketplace",
-      "icons": [{ "src": "/icon-192-theatre4u.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icon-192-artstracker.png", "sizes": "192x192" }]
     }
   ]
 }
