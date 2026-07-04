@@ -10901,9 +10901,9 @@ function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
       <img src={usp("photo-1503095396549-807759245b35",1600,900)} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.2,pointerEvents:"none"}}/>
       <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,rgba(13,10,8,.7) 0%,rgba(13,10,8,.5) 50%,rgba(13,10,8,.95) 100%)",pointerEvents:"none"}}/>
       <div style={{position:"relative",zIndex:1,maxWidth:760}}>
-        <div style={{position:"relative",display:"flex",justifyContent:"center",alignItems:"center",margin:"0 auto 30px",minHeight:190}}>
-          <div aria-hidden="true" style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:"min(820px,100vw)",height:310,borderRadius:"50%",pointerEvents:"none",background:"radial-gradient(ellipse at 50% 50%, rgba(250,244,232,.98) 0%, rgba(249,242,227,.93) 46%, rgba(243,221,165,.5) 64%, rgba(234,193,108,.18) 76%, transparent 86%)",filter:"blur(3px)"}}/>
-          <img src={LOGO_FULL} alt={APP_NAME} style={{position:"relative",zIndex:1,width:"min(430px,80vw)",height:"auto",display:"block"}}/>
+        <div style={{position:"relative",display:"flex",justifyContent:"center",alignItems:"center",margin:"0 auto 68px",minHeight:250}}>
+          <div aria-hidden="true" style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:"min(640px,92vw)",height:330,borderRadius:"50%",pointerEvents:"none",background:"radial-gradient(ellipse at 50% 50%, rgba(250,244,232,.97) 0%, rgba(249,242,227,.95) 70%, rgba(243,221,165,.45) 82%, rgba(234,193,108,.15) 89%, transparent 94%)",filter:"blur(2px)"}}/>
+          <img src={LOGO_FULL} alt={APP_NAME} style={{position:"relative",zIndex:1,width:"min(270px,62vw)",height:"auto",display:"block"}}/>
         </div>
         <div style={{display:"inline-flex",alignItems:"center",gap:7,padding:"4px 14px",background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.3)",borderRadius:20,fontSize:12,fontWeight:700,color:"var(--gold)",textTransform:"uppercase",letterSpacing:1,marginBottom:20}}>
           🎭 The Platform for Theatre Programs
