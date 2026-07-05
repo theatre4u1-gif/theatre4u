@@ -274,7 +274,7 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
         <span style={{fontSize:13,color:atLimit?"var(--red)":"var(--gold)",fontWeight:600}}>
           {atLimit?"⚠️ Item limit reached — upgrade to add more items.":"⚡ "+items.length+"/25 items used on free plan."}
         </span>
-        <button className="btn btn-g" style={{padding:"5px 14px",fontSize:12}} onClick={()=>setUpgradeReason("Upgrade to Pro for unlimited inventory, Backstage Exchange access, Stage Points, and more.")}>Upgrade →</button>
+        <button className="btn btn-g" style={{padding:"5px 14px",fontSize:12}} onClick={()=>setUpgradeReason("Upgrade to Pro for unlimited inventory, full "+getExchangeName(org?.vertical)+" access, and more.")}>Upgrade →</button>
       </div>
     )}
     <div style={{position:"relative"}}>
