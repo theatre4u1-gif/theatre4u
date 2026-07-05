@@ -11317,7 +11317,7 @@ function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
   };
 
   const overlayStyle={position:"fixed",inset:0,background:"rgba(0,0,0,.82)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(4px)"};
-  const cardStyle={background:"#15121b",border:"1px solid #282333",borderRadius:16,width:"100%",maxWidth:440,padding:"36px 36px 32px",boxShadow:"0 16px 56px rgba(0,0,0,.6)",animation:"lp-rise .2s ease",fontFamily:"'DM Sans',sans-serif",color:"#ede8df"};
+  const cardStyle={background:"#15121b",border:"1px solid #282333",borderRadius:16,width:"100%",maxWidth:440,padding:"36px 36px 32px",boxShadow:"0 16px 56px rgba(0,0,0,.6)",animation:"lp-rise .2s ease",fontFamily:"'DM Sans',sans-serif",color:"#ede8df",maxHeight:"92vh",overflowY:"auto"};
   const inputStyle={width:"100%",background:"#110f18",border:"1px solid #282333",borderRadius:6,padding:"10px 12px",color:"#ede8df",fontSize:14,fontFamily:"'DM Sans',sans-serif",outline:"none",boxSizing:"border-box"};
   const labelStyle={fontSize:11,fontWeight:600,color:"#9b93a8",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4};
 
@@ -17680,7 +17680,7 @@ function GoogleProfileSetup({user, onDone}){
   const useDifferentAccount=async()=>{ try{ await SB.auth.signOut(); }catch(e){} };
 
   const overlayStyle={position:"fixed",inset:0,background:"rgba(0,0,0,.82)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(4px)"};
-  const cardStyle={background:"#15121b",border:"1px solid #282333",borderRadius:16,width:"100%",maxWidth:440,padding:"36px 36px 32px",boxShadow:"0 16px 56px rgba(0,0,0,.6)",fontFamily:"'DM Sans',sans-serif",color:"#ede8df"};
+  const cardStyle={background:"#15121b",border:"1px solid #282333",borderRadius:16,width:"100%",maxWidth:440,padding:"36px 36px 32px",boxShadow:"0 16px 56px rgba(0,0,0,.6)",fontFamily:"'DM Sans',sans-serif",color:"#ede8df",maxHeight:"92vh",overflowY:"auto"};
   const inputStyle={width:"100%",background:"#110f18",border:"1px solid #282333",borderRadius:6,padding:"10px 12px",color:"#ede8df",fontSize:14,fontFamily:"'DM Sans',sans-serif",outline:"none",boxSizing:"border-box"};
   const labelStyle={fontSize:11,fontWeight:600,color:"#9b93a8",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4};
 
