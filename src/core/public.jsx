@@ -61,14 +61,22 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
   ];
 
   // ArtsTracker door renames: "Backstage Exchange" → "The Exchange", "Stage Points" → "ArtsPoints".
-  // (Full two-track ArtsTracker pricing display is a tracked follow-up.)
   const XCHG = IS_ARTSTRACKER ? "The Exchange" : "Backstage Exchange";
   const PTS  = IS_ARTSTRACKER ? "ArtsPoints" : "Stage Points";
-  const plans=[
+  const singlePlans=[
     {name:"Free",price:"$0",period:"forever",color:"rgba(255,255,255,.15)",textColor:"rgba(255,255,255,.7)",features:["Up to 25 inventory items","QR labels & photos","Productions tracking","Browse "+XCHG,"Community Board"],cta:"Get Started",primary:false},
     {name:"Pro",price:"$15",period:"/month",annual:"$150/year",color:"linear-gradient(135deg,var(--gold),var(--goldd))",textColor:"#1a0f00",features:["Unlimited inventory","Full "+XCHG+" access",PTS,"Reports & CSV export","Funding Tracker","Mobile app","Messages & requests"],cta:"Start Pro",primary:true},
     {name:"District",price:"$49",period:"/month",annual:"$500/year",color:"linear-gradient(135deg,#1565c0,#0d47a1)",textColor:"#fff",features:["Everything in Pro","Up to 6 school sites","District dashboard","Shared "+XCHG,"District funding rollup","Priority support"],cta:"Start District",primary:false},
   ];
+  const atPlans=[
+    {name:"ArtsTracker Pro",price:"$59",period:"/month",annual:"$590/year",color:"linear-gradient(135deg,#841C56,#4C1035)",textColor:"#fff",features:["Every department — Theatre, Music, Dance, Art & Organizations","Unlimited inventory in each department","Full Exchange access + ArtsPoints","Per-department funding & storage","Reports, CSV export & mobile"],cta:"Go All-Departments",primary:false},
+    {name:"ArtsTracker District",price:"from $199",period:"/month",annual:"annual plans available",color:"linear-gradient(135deg,#4C1035,#2b0a1e)",textColor:"#fff",features:["All departments at every school","S — $199/mo (up to 6 schools)","M — $399/mo (up to 15) · L — $699/mo (up to 30)","District dashboards & funding rollup","Purchase orders accepted · Priority support"],cta:"Start District",primary:false},
+  ];
+  // ArtsTracker door shows both tracks; Theatre4u door keeps the single-department ladder.
+  const planGroups = IS_ARTSTRACKER
+    ? [{label:"One department — pick the program you run", plans:singlePlans},
+       {label:"All departments — the full ArtsTracker", plans:atPlans}]
+    : [{label:null, plans:singlePlans}];
 
   const steps = IS_ARTSTRACKER ? [
     {n:"1",title:"Create your free account",desc:"Sign up in 60 seconds. No credit card needed. Your first 25 items are always free."},
@@ -213,33 +221,45 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
         </div>
         <p style={{fontSize:14,color:"rgba(255,255,255,.45)",marginTop:10}}>Annual plans available — save up to 2 months free</p>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:20}}>
-        {plans.map(p=>(
-          <div key={p.name} style={{borderRadius:16,overflow:"hidden",border:p.primary?"1px solid rgba(212,168,67,.4)":"1px solid rgba(255,255,255,.1)",position:"relative",boxShadow:p.primary?"0 8px 40px rgba(212,168,67,.2)":"none"}}>
-            {p.primary&&<div style={{position:"absolute",top:14,right:14,background:"var(--gold)",color:"#1a0f00",fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:10,textTransform:"uppercase",letterSpacing:.5}}>Most Popular</div>}
-            <div style={{background:p.color,padding:"28px 24px 20px"}}>
-              <div style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:p.textColor,marginBottom:4}}>{p.name}</div>
-              <div style={{display:"flex",alignItems:"baseline",gap:4}}>
-                <span style={{fontFamily:"'Playfair Display',serif",fontSize:42,color:p.textColor}}>{p.price}</span>
-                <span style={{fontSize:14,color:p.textColor,opacity:.7}}>{p.period}</span>
-              </div>
-              {p.annual&&<div style={{fontSize:11,color:p.textColor,opacity:.6,marginTop:3}}>{p.annual} · save 2 months</div>}
-            </div>
-            <div style={{background:"rgba(255,255,255,.04)",padding:"20px 24px 24px"}}>
-              <div style={{display:"flex",flexDirection:"column",gap:9,marginBottom:20}}>
-                {p.features.map(f=>(
-                  <div key={f} style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:"rgba(255,255,255,.75)"}}>
-                    <span style={{color:"var(--gold)",fontWeight:800,flexShrink:0}}>✓</span>{f}
+      {planGroups.map((g,gi)=>(
+        <div key={gi} style={{marginBottom: gi<planGroups.length-1 ? 44 : 0}}>
+          {g.label&&<div style={{textAlign:"center",fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",margin:"0 0 18px"}}>{g.label}</div>}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:20,maxWidth:g.plans.length<3?700:undefined,margin:g.plans.length<3?"0 auto":undefined}}>
+            {g.plans.map(p=>(
+              <div key={p.name} style={{borderRadius:16,overflow:"hidden",border:p.primary?"1px solid rgba(212,168,67,.4)":"1px solid rgba(255,255,255,.1)",position:"relative",boxShadow:p.primary?"0 8px 40px rgba(212,168,67,.2)":"none"}}>
+                {p.primary&&<div style={{position:"absolute",top:14,right:14,background:"var(--gold)",color:"#1a0f00",fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:10,textTransform:"uppercase",letterSpacing:.5}}>Most Popular</div>}
+                <div style={{background:p.color,padding:"28px 24px 20px"}}>
+                  <div style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:p.textColor,marginBottom:4}}>{p.name}</div>
+                  <div style={{display:"flex",alignItems:"baseline",gap:4}}>
+                    <span style={{fontFamily:"'Playfair Display',serif",fontSize:42,color:p.textColor}}>{p.price}</span>
+                    <span style={{fontSize:14,color:p.textColor,opacity:.7}}>{p.period}</span>
                   </div>
-                ))}
+                  {p.annual&&<div style={{fontSize:11,color:p.textColor,opacity:.6,marginTop:3}}>{p.annual}{p.annual.includes("/year")?" · save 2 months":""}</div>}
+                </div>
+                <div style={{background:"rgba(255,255,255,.04)",padding:"20px 24px 24px"}}>
+                  <div style={{display:"flex",flexDirection:"column",gap:9,marginBottom:20}}>
+                    {p.features.map(f=>(
+                      <div key={f} style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:"rgba(255,255,255,.75)"}}>
+                        <span style={{color:"var(--gold)",fontWeight:800,flexShrink:0}}>✓</span>{f}
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={onSignUp} style={{width:"100%",padding:"11px",borderRadius:9,border:"none",background:p.primary?"linear-gradient(135deg,var(--gold),var(--goldd))":"rgba(255,255,255,.12)",color:p.primary?"#1a0f00":"rgba(255,255,255,.85)",fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>
+                    {p.cta} →
+                  </button>
+                </div>
               </div>
-              <button onClick={onSignUp} style={{width:"100%",padding:"11px",borderRadius:9,border:"none",background:p.primary?"linear-gradient(135deg,var(--gold),var(--goldd))":"rgba(255,255,255,.12)",color:p.primary?"#1a0f00":"rgba(255,255,255,.85)",fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>
-                {p.cta} →
-              </button>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
+      {!IS_ARTSTRACKER&&(
+        <p style={{textAlign:"center",fontSize:13,color:"rgba(255,255,255,.45)",marginTop:28}}>
+          Also running music, dance, or visual art?{" "}
+          <a href="https://artstracker.org" style={{color:"var(--gold)",textDecoration:"underline"}}>ArtsTracker</a>
+          {" "}unlocks every department — from $59/month.
+        </p>
+      )}
     </div>
 
     {/* ── Final CTA ── */}
