@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { STRIPE_LINKS, stripeLink, UPGRADE_PLANS } from "./plans.js";
-import { APP_NAME, APP_URL } from "./config.js";
+import { APP_NAME, APP_URL, APP_EMAIL } from "./config.js";
 
 // Billing UI: upgrade prompt, plans/pricing cards, invoice request — extracted from App.jsx.
 
@@ -38,9 +38,9 @@ export function InvoiceRequestForm({ orgName, userEmail }) {
       });
       const json = await res.json();
       if(json.success) setDone(true);
-      else setErr(json.error || "Something went wrong. Please email hello@theatre4u.org directly.");
+      else setErr(json.error || "Something went wrong. Please email "+APP_EMAIL+" directly.");
     } catch(e) {
-      setErr("Connection error. Please email hello@theatre4u.org directly.");
+      setErr("Connection error. Please email "+APP_EMAIL+" directly.");
     }
     setSending(false);
   };
@@ -49,7 +49,7 @@ export function InvoiceRequestForm({ orgName, userEmail }) {
     <div style={{marginTop:16,padding:16,background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.3)",borderRadius:10,textAlign:"center"}}>
       <div style={{fontSize:28,marginBottom:8}}>✅</div>
       <div style={{fontWeight:700,fontSize:15,color:"#ede8df",marginBottom:4}}>Invoice request sent!</div>
-      <div style={{fontSize:13,color:"#b0a8c0",lineHeight:1.6}}>Check your inbox — we sent a copy to <strong>{form.email}</strong> and will follow up within one business day. Questions? Email <a href="mailto:hello@theatre4u.org" style={{color:"var(--goldink)"}}>hello@theatre4u.org</a>.</div>
+      <div style={{fontSize:13,color:"#b0a8c0",lineHeight:1.6}}>Check your inbox — we sent a copy to <strong>{form.email}</strong> and will follow up within one business day. Questions? Email <a href={"mailto:"+APP_EMAIL} style={{color:"var(--goldink)"}}>{APP_EMAIL}</a>.</div>
     </div>
   );
 
@@ -115,7 +115,7 @@ export function InvoiceRequestForm({ orgName, userEmail }) {
         <button className="btn btn-g" style={{flex:1}} onClick={submit} disabled={sending}>
           {sending ? "Sending…" : "✉️ Send Me an Invoice"}
         </button>
-        <a href="mailto:hello@theatre4u.org?subject=District Enterprise Inquiry" className="btn btn-o" style={{flex:1,textDecoration:"none",display:"flex",justifyContent:"center"}}>
+        <a href={"mailto:"+APP_EMAIL+"?subject=District Enterprise Inquiry"} className="btn btn-o" style={{flex:1,textDecoration:"none",display:"flex",justifyContent:"center"}}>
           🏫 Enterprise / PO Inquiry
         </a>
       </div>
@@ -181,14 +181,14 @@ export function UpgradePlans({ compact = false, userId = null, userEmail = null,
                 : isFree
                 ? null
                 : p.id.endsWith("enterprise")
-                  ? <a href="mailto:hello@theatre4u.org?subject=Enterprise District Inquiry" className="btn btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",background:"linear-gradient(135deg,#1565c0,#0d47a1)",border:"1px solid rgba(66,133,244,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>Contact Us →</a>
+                  ? <a href={"mailto:"+APP_EMAIL+"?subject=Enterprise District Inquiry"} className="btn btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",background:"linear-gradient(135deg,#1565c0,#0d47a1)",border:"1px solid rgba(66,133,244,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>Contact Us →</a>
                   : billing === "invoice"
                     ? <button className="btn btn-full" onClick={()=>document.getElementById("t4u-invoice-form")?.scrollIntoView({behavior:"smooth",block:"start"})}
                         style={{background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                         🏛️ Request Invoice →
                       </button>
                     : (!link || link === "undefined" || link.endsWith("undefined"))
-                      ? <a href="mailto:hello@theatre4u.org?subject=District Plan Inquiry" className="btn btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>Contact Us →</a>
+                      ? <a href={"mailto:"+APP_EMAIL+"?subject=District Plan Inquiry"} className="btn btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>Contact Us →</a>
                       : <a href={link} target="_blank" rel="noreferrer" className={"btn btn-full "+(p.hot?"btn-g":"")} style={{textDecoration:"none",display:"flex",justifyContent:"center",alignItems:"center",marginTop:"auto",whiteSpace:"normal",textAlign:"center",lineHeight:1.25,...(!p.hot?{background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}:{})}}>
                         {"Get "+p.name.replace("ArtsTracker ","")+(billing==="annual"?" Annual":"")+" →"}
                       </a>
@@ -220,7 +220,7 @@ export function UpgradePlans({ compact = false, userId = null, userEmail = null,
           </div>
           <div style={{fontSize:12.5,color:"#b0a8c0",lineHeight:1.7,marginBottom:14}}>
             <strong style={{color:"#ede8df"}}>To get started:</strong> Email us at{" "}
-            <a href="mailto:hello@theatre4u.org?subject=Check/PO Subscription Request&body=Hi, I would like to subscribe to Theatre4u via check/purchase order.%0A%0AOrganization name:%0APlan requested (Pro / District):%0ABilling period (monthly / annual):%0AContact name:%0APO number (if applicable):%0AAccounts payable email:" style={{color:"var(--goldink)"}}>hello@theatre4u.org</a>
+            <a href={"mailto:"+APP_EMAIL+"?subject=Check/PO Subscription Request&body=Hi, I would like to subscribe to "+APP_NAME+" via check/purchase order.%0A%0AOrganization name:%0APlan requested (Pro / District):%0ABilling period (monthly / annual):%0AContact name:%0APO number (if applicable):%0AAccounts payable email:"} style={{color:"var(--goldink)"}}>{APP_EMAIL}</a>
             {" "}with your organization name, plan, and billing period. We will send a formal invoice within one business day.
           </div>
           <InvoiceRequestForm orgName={userId||""} userEmail={userEmail||""} />

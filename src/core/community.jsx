@@ -2,6 +2,7 @@
 // Components: CommunityPostForm, CommunityPostCard, CommunityPage, CommunityGate.
 // Constants: POST_TYPES, PT. Only CommunityGate is rendered by App.jsx.
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { APP_NAME } from "./config.js";
 import { SB } from "./supabase.js";
 import { Ic } from "./icons.jsx";
 import { resizeImg, postShareText } from "./helpers.js";
@@ -413,7 +414,7 @@ function CommunityPage({userId, org, plan}) {
                   </div>
                 </div>
               ))}
-              <div style={{marginTop:10,fontSize:11,color:"var(--muted)",lineHeight:1.5}}>Open to all Theatre4u™ members — free and Pro alike.</div>
+              <div style={{marginTop:10,fontSize:11,color:"var(--muted)",lineHeight:1.5}}>Open to all {APP_NAME} members — free and Pro alike.</div>
               <div style={{marginTop:8,fontSize:11,color:"var(--amber)",lineHeight:1.5,padding:"6px 8px",background:"rgba(212,168,67,.08)",borderRadius:6}}>
                 📍 Posts are sorted by proximity. Set your city in Profile for best results.
               </div>

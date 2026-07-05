@@ -588,7 +588,7 @@ export function ProgramImpactReport({ sources, exps, org }) {
     </style></head><body><div class="page">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
         <div>
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#d4a843;margin-bottom:6px">🎭 Theatre4u™</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#d4a843;margin-bottom:6px">${APP_NAME}</div>
           <h1>Program Impact Report</h1>
           <div class="meta">${orgName}${filterYear!=="all"?" · Fiscal Year "+filterYear:""} · Generated ${today}</div>
         </div>

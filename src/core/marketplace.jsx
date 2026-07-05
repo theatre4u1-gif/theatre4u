@@ -3,6 +3,7 @@
 // normalizeImageUrl), MarketplaceGate. Exports MarketplaceGate (router page)
 // and CSVImport (used by Inventory).
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { APP_NAME } from "./config.js";
 import { SB } from "./supabase.js";
 import { Modal, Pager, FbShareBtn, HeroImg, CatCard } from "./ui.jsx";
 import { Ic } from "./icons.jsx";
@@ -487,8 +488,8 @@ function NewConversationModal({ item, itemOrgId, itemOrgName, currentUserId, cur
             value={body}
             onChange={e=>setBody(e.target.value)}
             placeholder={item
-              ? `Hi! I saw your listing for "${item.name}" on Theatre4u. Is it available for our production running March 15–22?`
-              : `Hi! I found your organization on Theatre4u and wanted to reach out…`}
+              ? `Hi! I saw your listing for "${item.name}" on ${APP_NAME}. Is it available for our production running March 15–22?`
+              : `Hi! I found your organization on ${APP_NAME} and wanted to reach out…`}
             autoFocus
             rows={5}
             style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--border)",
@@ -569,7 +570,7 @@ export function CSVImport({ onImport, onClose, userId }) {
     const csv = [h,...ex].map(r=>r.join(",")).join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
-    a.download = "theatre4u_import_template.csv";
+    a.download = "inventory_import_template.csv";
     a.click();
   };
 
@@ -705,7 +706,7 @@ export function CSVImport({ onImport, onClose, userId }) {
             <div>
               <p style={{fontSize:13,color:"var(--muted)",marginBottom:16,lineHeight:1.5}}>
                 We found <strong style={{color:"var(--ink)"}}>{headers.length} columns</strong> and <strong style={{color:"var(--ink)"}}>{rows.length} rows</strong> in your file.
-                Match each column to a Theatre4u field. We've auto-detected what we can — check and adjust below.
+                Match each column to an inventory field. We've auto-detected what we can — check and adjust below.
               </p>
 
               <div style={{border:"1px solid var(--border)",borderRadius:10,overflow:"hidden",marginBottom:14}}>

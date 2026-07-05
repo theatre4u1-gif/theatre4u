@@ -3,7 +3,7 @@ import { Ic } from "./icons.jsx";
 import { fbShare } from "./helpers.js";
 import { getCatGfx } from "../lib/verticals.js";
 import { VERTICAL_BG_GRAD, usp } from "../lib/backgrounds.js";
-import { LOGO_ICON, APP_NAME } from "./config.js";
+import { LOGO_ICON, APP_NAME, APP_EMAIL } from "./config.js";
 
 // ── Logo Components — simple, reliable image mark ────────────────────────────
 export const LogoMarkDark = ({size=44}) => (
@@ -134,7 +134,7 @@ export class ErrorBoundary extends React.Component {
             padding:"10px 24px",borderRadius:8,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
           Reload App
         </button>
-        <a href="mailto:hello@theatre4u.org" style={{fontSize:12,color:"var(--t3,#9b93a8)"}}>
+        <a href={"mailto:"+APP_EMAIL} style={{fontSize:12,color:"var(--t3,#9b93a8)"}}>
           Contact support
         </a>
       </div>

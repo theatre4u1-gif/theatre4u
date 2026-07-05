@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { CAT } from "./inventory.js";
 import { QR } from "./qr.js";
-import { APP_NAME } from "./config.js";
+import { APP_NAME, APP_EMAIL, APP_HOST } from "./config.js";
 
 const LABEL_PACKS = [
   { qty:25,  type:"standard",    label:"25 Standard",     retail:1000, desc:"Indoor use · polyester matte · water-resistant" },
@@ -115,7 +115,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
           ${item.location?`<div class="lbl-loc">📍 ${item.location}</div>`:""}
           <div class="lbl-id">${dispId}</div>
           ${srcs[n]?`<img src="${srcs[n]}" class="lbl-qr"/>`:""}
-          <div class="lbl-brand">theatre4u.org</div>
+          <div class="lbl-brand">${APP_HOST}</div>
         </div>`;
       }).join("");
       w.document.write(`<!DOCTYPE html><html><head><title>QR Labels — ${org?.name||APP_NAME}</title>
@@ -525,7 +525,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
                   background:"var(--gold)",color:"#1a0f00"}}>
                 🖨 Print Labels Now
               </button>
-              <a href={"mailto:hello@theatre4u.org?subject=Label Ordering Interest"}
+              <a href={"mailto:"+APP_EMAIL+"?subject=Label Ordering Interest"}
                 style={{padding:"11px 24px",borderRadius:8,border:"1px solid var(--border)",
                   fontFamily:"inherit",fontSize:14,fontWeight:600,cursor:"pointer",
                   background:"transparent",color:"var(--text)",textDecoration:"none",
@@ -536,8 +536,8 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
             <div style={{marginTop:24,paddingTop:20,borderTop:"1px solid var(--border)",
               fontSize:13,color:"var(--muted)"}}>
               Questions? Email{" "}
-              <a href="mailto:hello@theatre4u.org" style={{color:"var(--goldink)",fontWeight:600}}>
-                hello@theatre4u.org
+              <a href={"mailto:"+APP_EMAIL} style={{color:"var(--goldink)",fontWeight:600}}>
+                {APP_EMAIL}
               </a>
             </div>
           </div>
@@ -620,7 +620,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
                           `• ${s.pool_blank} blank labels still available`,
                           `• Next blank codes start at: ${org?.label_prefix||"?"}-${String(s.next_blank_start).padStart(4,"0")}`,
                           ``,
-                          `To request a new order, email hello@theatre4u.org with:`,
+                          `To request a new order, email ${APP_EMAIL} with:`,
                           `  - How many assigned labels (for specific items)`,
                           `  - How many blank labels you want`,
                           `  - Shipping address`,

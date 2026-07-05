@@ -2,6 +2,7 @@
 // Extracted from App.jsx. LocationsPanel is the entry point (Inventory's
 // Locations tab); the other three are module-internal.
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { APP_NAME } from "./config.js";
 import { SB } from "./supabase.js";
 import { Modal } from "./ui.jsx";
 import { EM } from "./messages.js";
@@ -419,7 +420,7 @@ export function LocationsPanel({ userId, items, onEditItem, onDeleteItem, vertic
       ${loc.description ? `<p style="color:#888;font-style:italic">${loc.description}</p>` : ""}
       <p style="font-weight:700;color:#333">${itemCount} item${itemCount !== 1 ? "s" : ""}</p>
       <img src="${qrSrc}" width="180" height="180"/>
-      <p style="font-size:11px;margin-top:8px;color:#aaa">Theatre4u™ — Scan to view contents</p>
+      <p style="font-size:11px;margin-top:8px;color:#aaa">${APP_NAME} — Scan to view contents</p>
       <script>setTimeout(function(){window.print()},300)<\/script>
       </body></html>`);
     w.document.close();

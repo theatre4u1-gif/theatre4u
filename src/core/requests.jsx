@@ -3,6 +3,7 @@
 // (+ DOC_TYPES, NOTIFY_URL, printDocument). Exports the two App.jsx entry points:
 // RequestItemModal (rendered by Marketplace) and Requests (main router page).
 import React, { useState, useEffect, useCallback } from "react";
+import { APP_NAME, APP_HOST } from "./config.js";
 import { SB } from "./supabase.js";
 import { Modal } from "./ui.jsx";
 import { EM } from "./messages.js";
@@ -115,7 +116,7 @@ export function RequestItemModal({ item, currentUserId, currentOrgName, currentO
 
 [${creditAmt} Stage Points applied — cash due: $${finalPrice.toFixed(2)}]`:"") + (platformFee>0?`
 
-[8% platform fee: $${platformFee.toFixed(2)} payable to Theatre4u — instructions will follow by email]`:""),
+[8% platform fee: $${platformFee.toFixed(2)} payable to Artstracker LLC — instructions will follow by email]`:""),
       agreed_price:        finalPrice,
       platform_fee_cents:  platformFeeCents,
       status:              "pending",
@@ -142,7 +143,7 @@ export function RequestItemModal({ item, currentUserId, currentOrgName, currentO
 
   const paymentNote = type === "loan"
     ? null
-    : `By submitting this request, you agree that any agreed cash payment will be made directly to the item owner outside of Theatre4u. Artstracker LLC does not process or guarantee payments between organizations.`;
+    : `By submitting this request, you agree that any agreed cash payment will be made directly to the item owner outside of ${APP_NAME}. Artstracker LLC does not process or guarantee payments between organizations.`;
 
   const typeColor = { rent:"#1554a0", loan:"#00838f", buy:"#27723a" };
 
@@ -257,7 +258,7 @@ export function RequestItemModal({ item, currentUserId, currentOrgName, currentO
                 {type==="buy" &&item.sale>0&&<div>Sale price:  <strong style={{color:"var(--cog)"}}>{fmt$(item.sale)}</strong></div>}
                 {type==="loan"&&<div>Free loan{item.deposit>0?` · Deposit: ${fmt$(item.deposit)}`:""}</div>}
                 {type==="loan"&&item.loan_period&&<div style={{color:"var(--muted)",fontSize:12,marginTop:2}}>Loan period: {item.loan_period} days</div>}
-                {platformFee>0&&<div style={{marginTop:4,fontSize:12,color:"var(--muted)"}}>8% platform fee: <strong>{fmt$(platformFee)}</strong> payable to Theatre4u</div>}
+                {platformFee>0&&<div style={{marginTop:4,fontSize:12,color:"var(--muted)"}}>8% platform fee: <strong>{fmt$(platformFee)}</strong> payable to Artstracker LLC</div>}
               </div>
             )}
 
@@ -295,7 +296,7 @@ export function RequestItemModal({ item, currentUserId, currentOrgName, currentO
                       <span style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"var(--cog)",fontWeight:700}}>${Math.max(0,(type==="rent"?item.rent:item.sale)-creditAmt).toFixed(2)}</span>
                     </div>
                     <div style={{fontSize:12,color:"var(--red)",fontWeight:600,marginTop:8,padding:"7px 10px",background:"rgba(194,24,91,.06)",borderRadius:6}}>
-                      ⚠️ <strong>Payment responsibility:</strong> The cash balance above must be paid <strong>directly to the item owner</strong> outside of Theatre4u. Artstracker LLC does not process or guarantee payments between organizations.
+                      ⚠️ <strong>Payment responsibility:</strong> The cash balance above must be paid <strong>directly to the item owner</strong> outside of {APP_NAME}. Artstracker LLC does not process or guarantee payments between organizations.
                     </div>
                   </div>
                 )}
@@ -698,7 +699,7 @@ function printDocument(doc, req) {
   </head><body>
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
       <div>
-        <div style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px">Theatre4u™</div>
+        <div style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px">${APP_NAME}</div>
         <h1>${dt.icon} ${dt.label}</h1>
         <span class="badge">${doc.status === "finalized" ? "✓ Finalized" : "Draft"}</span>
       </div>
@@ -754,18 +755,18 @@ function printDocument(doc, req) {
           <div>3. Deposit will be returned within 7 business days of item return, less deductions for documented damage.</div>
           <div>4. Payment is due prior to or at the time of pickup unless otherwise agreed in writing by both parties.</div>
           <div>5. Late fees apply for each day the item is retained beyond the agreed return date.</div>
-          <div>6. This agreement is between the two organizations named above. Artstracker LLC (operating Theatre4u™) serves as the platform facilitating this agreement and is not a party to this transaction.</div>
+          <div>6. This agreement is between the two organizations named above. Artstracker LLC (operating ${APP_NAME}) serves as the platform facilitating this agreement and is not a party to this transaction.</div>
         ` : doc.type === "loan_agreement" ? `
           <div>1. The borrower agrees to return all item(s) in the same condition as received, reasonable wear excepted.</div>
           <div>2. The borrower is responsible for any damage, loss, or theft occurring during the loan period.</div>
           <div>3. This is a free loan between theatre organizations. No monetary exchange is required or implied.</div>
           <div>4. The borrower agrees to return all item(s) by the agreed return date.</div>
-          <div>5. This agreement is between the two organizations named above. Artstracker LLC (operating Theatre4u™) serves as the platform facilitating this agreement and is not a party to this transaction.</div>
+          <div>5. This agreement is between the two organizations named above. Artstracker LLC (operating ${APP_NAME}) serves as the platform facilitating this agreement and is not a party to this transaction.</div>
         ` : `
           <div>1. Item is sold in "as-is" condition as described above. No warranty is expressed or implied.</div>
           <div>2. Title and ownership transfer to the buyer upon receipt of full payment.</div>
           <div>3. All sales are final unless otherwise agreed in writing between both parties prior to sale.</div>
-          <div>4. This agreement is between the two organizations named above. Artstracker LLC (operating Theatre4u™) serves as the platform facilitating this agreement and is not a party to this transaction.</div>
+          <div>4. This agreement is between the two organizations named above. Artstracker LLC (operating ${APP_NAME}) serves as the platform facilitating this agreement and is not a party to this transaction.</div>
         `}
       </div>
     </div>` : `
@@ -784,7 +785,7 @@ function printDocument(doc, req) {
     </div>
 
     <div style="margin-top:32px;padding-top:14px;border-top:1px solid #eee;font-size:11px;color:#aaa;text-align:center">
-      Generated by Theatre4u™ · Inventory · Backstage Exchange · Community · theatre4u.org · ${today}
+      Generated by ${APP_NAME} · ${APP_HOST} · ${today}
     </div>
 
     <script>window.onload=function(){window.print();}</script>

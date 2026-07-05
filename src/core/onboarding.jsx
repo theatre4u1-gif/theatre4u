@@ -1,5 +1,6 @@
 // ONBOARDING OVERLAY — extracted from App.jsx (modularization).
 import React, { useState } from "react";
+import { APP_NAME } from "./config.js";
 import { SB } from "./supabase.js";
 
 export function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav }) {
@@ -98,7 +99,7 @@ export function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav })
         <div style={{...hdr, paddingTop:36}}>
           <div style={{fontSize:52, marginBottom:12}}>🎭</div>
           <h2 style={{fontFamily:"'Playfair Display',serif", fontSize:26, marginBottom:8, color:"var(--ink,#1a0f00)"}}>
-            Welcome to Theatre4u™
+            Welcome to {APP_NAME}
           </h2>
           <p style={{fontSize:14, color:"var(--muted,#685f76)", lineHeight:1.7, marginBottom:4}}>
             Your backstage command center is ready. Let's get your inventory started — pick how you'd like to begin:
@@ -109,7 +110,7 @@ export function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav })
             {[
               ["📝", "Add items one by one",    "Start with a few key pieces — costumes, props, lights.",    "inventory"],
               ["📥", "Import from a spreadsheet","Already have a list? Upload a CSV and we'll map the columns.","inventory-csv"],
-              ["🎪", "Load sample data",         "See how Theatre4u looks with a full inventory loaded in.",   "sample"],
+              ["🎪", "Load sample data",         "See how the app looks with a full inventory loaded in.",   "sample"],
             ].map(([ico, title, desc, action]) => (
               <button key={action} onClick={async () => {
                 await advance(1);
@@ -210,7 +211,7 @@ export function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav })
             Your inventory is live!
           </h2>
           <p style={{fontSize:14, color:"var(--muted,#685f76)", lineHeight:1.7}}>
-            {org?.name ? (org.name+" now has") : "You now have"} {items.length} item{items.length!==1?"s":""} in Theatre4u™. Here's what to do next:
+            {org?.name ? (org.name+" now has") : "You now have"} {items.length} item{items.length!==1?"s":""} in {APP_NAME}. Here's what to do next:
           </p>
         </div>
         <div style={bod}>
@@ -250,7 +251,7 @@ export function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav })
             Want to connect with other theatre programs?
           </h2>
           <p style={{fontSize:13, color:"var(--muted,#685f76)", lineHeight:1.65, marginBottom:0}}>
-            Theatre4u™ has two optional community features. Both are completely opt-in — nothing is shared until you say so.
+            {APP_NAME} has two optional community features. Both are completely opt-in — nothing is shared until you say so.
           </p>
         </div>
         <div style={bod}>

@@ -2,6 +2,7 @@
 // Tracks items borrowed from / lent to non-Theatre4u orgs. Rendered as a tab
 // inside Inventory and Backstage Exchange.
 import React, { useState, useEffect } from "react";
+import { APP_NAME } from "./config.js";
 import { SB } from "./supabase.js";
 
 export function ExternalLoans({ userId, org, items=[] }){
@@ -72,8 +73,8 @@ export function ExternalLoans({ userId, org, items=[] }){
   };
 
   const invite = (l) => {
-    const subject = encodeURIComponent("Join us on Theatre4u");
-    const body = encodeURIComponent(`Hi ${l.counterparty_name},\n\nWe use Theatre4u to track our theatre inventory and to borrow, lend, and rent items with other programs. It would make sharing between us much easier if you joined too — it's free to start.\n\nYou can sign up here: https://theatre4u.org\n\nThanks!\n${org?.name||""}`);
+    const subject = encodeURIComponent("Join us on "+APP_NAME.replace("™",""));
+    const body = encodeURIComponent(`Hi ${l.counterparty_name},\n\nWe use ${APP_NAME} to track our program's inventory and to borrow, lend, and rent items with other programs. It would make sharing between us much easier if you joined too — it's free to start.\n\nYou can sign up here: https://theatre4u.org\n\nThanks!\n${org?.name||""}`);
     const to = (l.counterparty_contact && l.counterparty_contact.includes("@")) ? l.counterparty_contact : "";
     window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
   };
@@ -99,7 +100,7 @@ export function ExternalLoans({ userId, org, items=[] }){
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20,flexWrap:"wrap",gap:10}}>
         <div>
           <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:4}}>Borrowed & Lent</h2>
-          <p style={{color:"var(--faint)",fontSize:13,maxWidth:560,lineHeight:1.5}}>Track items you've borrowed from or lent to schools and organizations that aren't on Theatre4u — so you always know who has what and when it's due back.</p>
+          <p style={{color:"var(--faint)",fontSize:13,maxWidth:560,lineHeight:1.5}}>Track items you've borrowed from or lent to schools and organizations that aren't on {APP_NAME} — so you always know who has what and when it's due back.</p>
         </div>
         <div style={{display:"flex",gap:8}}>
           <button onClick={()=>openAdd("out")} className="btn btn-g" style={{fontSize:12}}>＋ Lent out</button>
@@ -147,7 +148,7 @@ export function ExternalLoans({ userId, org, items=[] }){
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"stretch"}}>
                 {!l.returned ? <button onClick={()=>markReturned(l)} className="btn btn-g btn-sm" style={{fontSize:11}}>Mark returned</button> : <button onClick={()=>reopen(l)} className="btn btn-o btn-sm" style={{fontSize:11}}>Reopen</button>}
-                <button onClick={()=>invite(l)} className="btn btn-o btn-sm" style={{fontSize:11}}>✉️ Invite to Theatre4u</button>
+                <button onClick={()=>invite(l)} className="btn btn-o btn-sm" style={{fontSize:11}}>✉️ Invite to {APP_NAME}</button>
                 <button onClick={()=>openEdit(l)} className="btn btn-o btn-sm" style={{fontSize:11}}>Edit</button>
                 <button onClick={()=>remove(l)} className="btn btn-o btn-sm" style={{fontSize:11,color:"var(--red)"}}>Delete</button>
               </div>

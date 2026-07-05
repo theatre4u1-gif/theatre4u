@@ -7,7 +7,7 @@ import { SB, callEdgeFn } from "./supabase.js";
 import { EM } from "./messages.js";
 import { Ic } from "./icons.jsx";
 import { UpgradePlans } from "./billing.jsx";
-import { isAdminEmail } from "./config.js";
+import { isAdminEmail, APP_NAME, APP_EMAIL, APP_HOST } from "./config.js";
 import { setCustomCats } from "./inventory.js";
 import { VERTICALS_LIST } from "../lib/verticals.js";
 import { PLANS_DEF } from "./plans.js";
@@ -66,14 +66,14 @@ function TeamSettings({ userId, orgName, plan }) {
     const qrBlock = qrUrl
       ? `<p style="font-size:15px;color:#555;margin:0 0 24px">Scan with your phone camera to sign up as crew.</p>
          <img src="${qrUrl}" width="300" height="300" style="display:block;margin:0 auto"/>`
-      : `<p style="font-size:15px;color:#555;margin:0 0 24px">Enter this code at theatre4u.org to sign up as crew.</p>`;
-    w.document.write(`<!DOCTYPE html><html><head><title>Join ${orgName} on Theatre4u</title></head>
+      : `<p style="font-size:15px;color:#555;margin:0 0 24px">Enter this code at ${APP_HOST} to sign up as crew.</p>`;
+    w.document.write(`<!DOCTYPE html><html><head><title>Join ${orgName} on ${APP_NAME}</title></head>
       <body style="font-family:Arial,sans-serif;text-align:center;padding:48px 24px;color:#1a1200">
-        <div style="font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#d4a843">🎭 Theatre4u</div>
+        <div style="font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#d4a843">${APP_NAME}</div>
         <h1 style="font-size:26px;margin:10px 0 4px">Join the ${orgName} team</h1>
         ${qrBlock}
         <p style="font-size:22px;font-weight:800;letter-spacing:4px;margin:18px 0 2px">${joinCode}</p>
-        <p style="font-size:13px;color:#888;margin:0">Or visit theatre4u.org/invite.html?code=${joinCode}</p>
+        <p style="font-size:13px;color:#888;margin:0">Or visit ${APP_HOST}/invite.html?code=${joinCode}</p>
       </body></html>`);
     w.document.close();
     setTimeout(() => w.print(), 300);
@@ -193,7 +193,7 @@ function TeamSettings({ userId, orgName, plan }) {
     flash("✓ Role updated");
   };
 
-  const joinUrl = joinCode ? `theatre4u.org/invite.html?code=${joinCode}` : null;
+  const joinUrl = joinCode ? `${APP_HOST}/invite.html?code=${joinCode}` : null;
 
   return (
     <div className="card card-p" style={{ marginBottom: 20 }}>
@@ -337,7 +337,7 @@ function TeamSettings({ userId, orgName, plan }) {
               <div style={{ flex: 1, minWidth: 160 }}>
                 <div style={{ fontSize: 11, color: "var(--faint)", marginBottom: 4 }}>Or share this link</div>
                 <div style={{ fontSize: 12, color: "var(--muted)", wordBreak: "break-all" }}>
-                  theatre4u.org/invite.html?code={joinCode}
+                  {APP_HOST}/invite.html?code={joinCode}
                 </div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -483,7 +483,7 @@ function SelfServiceDeleteAccount({ user, org }) {
         A confirmation email has been sent to <strong>{org?.email}</strong>.</div>
       <div style={{ marginTop:8,color:"var(--muted)" }}>
         Your data will be permanently deleted in 30 days.
-        To restore your account before then, email <strong>hello@theatre4u.org</strong>.
+        To restore your account before then, email <strong>{APP_EMAIL}</strong>.
       </div>
     </div>
   );
@@ -509,7 +509,7 @@ function SelfServiceDeleteAccount({ user, org }) {
       // Sign out after a short delay
       setTimeout(() => SB.auth.signOut(), 3500);
     } else {
-      setErr(result?.error || "Something went wrong. Email hello@theatre4u.org for help.");
+      setErr(result?.error || "Something went wrong. Email "+APP_EMAIL+" for help.");
       setWorking(false);
     }
   };
@@ -743,16 +743,16 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
                   style={{fontSize:12}}>
                   💳 Manage Billing &amp; Cancel
                 </a>
-                <a href="mailto:hello@theatre4u.org?subject=Cancel Subscription" className="btn btn-o btn-sm" style={{fontSize:12}}>
+                <a href={"mailto:"+APP_EMAIL+"?subject=Cancel Subscription"} className="btn btn-o btn-sm" style={{fontSize:12}}>
                   ✉️ Email Us to Cancel
                 </a>
               </div>
               <div style={{fontSize:11,color:"var(--faint)",marginTop:8,lineHeight:1.6}}>
-                Need help? Email <a href="mailto:hello@theatre4u.org" style={{color:"var(--goldink)"}}>hello@theatre4u.org</a> — we respond personally.
+                Need help? Email <a href={"mailto:"+APP_EMAIL} style={{color:"var(--goldink)"}}>{APP_EMAIL}</a> — we respond personally.
               </div>
               <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid var(--bd)",fontSize:12,color:"var(--muted)",lineHeight:1.7}}>
                 <span style={{fontWeight:700,color:"var(--text)"}}>🏛️ Paying by check or PO?</span> Email{" "}
-                <a href="mailto:hello@theatre4u.org?subject=Check/PO Subscription Request" style={{color:"var(--goldink)"}}>hello@theatre4u.org</a>
+                <a href={"mailto:"+APP_EMAIL+"?subject=Check/PO Subscription Request"} style={{color:"var(--goldink)"}}>{APP_EMAIL}</a>
                 {" "}and we'll send a formal invoice. Payment made payable to <strong>Artstracker LLC</strong>. Net-30 available for districts.
               </div>
             </div>
@@ -793,7 +793,7 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
         <div className="card card-p">
           <div className="sh">
             <h2>Participation Settings</h2>
-            <p>Choose which Theatre4u features your program participates in. These settings are private and only visible to your account.</p>
+            <p>Choose which {APP_NAME} features your program participates in. These settings are private and only visible to your account.</p>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:14,marginTop:16}}>
             {[
@@ -874,8 +874,8 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
           <div className="sh">
             <h2 style={{ color:"var(--red)" }}>⚠️ Close My Account</h2>
             <p>
-              Permanently close your Theatre4u account. Your Stripe subscription will be canceled immediately.
-              Your data will be preserved for 30 days — email <strong>hello@theatre4u.org</strong> within
+              Permanently close your {APP_NAME} account. Your Stripe subscription will be canceled immediately.
+              Your data will be preserved for 30 days — email <strong>{APP_EMAIL}</strong> within
               30 days to restore your account. After 30 days, all data is permanently deleted.
             </p>
           </div>

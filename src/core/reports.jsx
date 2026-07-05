@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { APP_NAME, IS_ARTSTRACKER } from "./config.js";
 import { SB } from "./supabase.js";
 import { CAT, CATS, CONDS, AVAIL, MKT } from "./inventory.js";
 import { BG, usp } from "../lib/backgrounds.js";
@@ -34,12 +35,12 @@ export function Reports({ items, plan="free", org=null, userId=null, userEmail=n
     const h=["Name","Category","Condition","Size","Qty","Location","Availability","Market","Rent","Sale","Loan Period (wks)","Deposit","Tags","Image URL","Notes","ID","Added"];
     const rows=items.map(i=>[i.name,i.category,i.condition,i.size,i.qty,i.location,i.avail,i.mkt,i.rent,i.sale,i.loan_period||"",i.deposit||"",(i.tags||[]).join(";"),i.img||"",`"${(i.notes||"").replace(/"/g,'""')}"`,i.id,i.added]);
     const csv=[h,...rows].map(r=>r.join(",")).join("\n");
-    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="theatre4u_inventory.csv";a.click();
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=(IS_ARTSTRACKER?"artstracker":"theatre4u")+"_inventory.csv";a.click();
   };
 
   const printAllQR = async () => {
     const w=window.open("","_blank");if(!w)return;
-    w.document.write(`<html><head><title>Theatre4u™ QR Labels</title></head><body style="font-family:sans-serif;padding:16px"><h2 style="font-size:14px;margin-bottom:16px;color:#333">Theatre4u™ — QR Labels (${items.length} items)</h2><div id="lbl">Generating…</div></body></html>`);w.document.close();
+    w.document.write(`<html><head><title>${APP_NAME} QR Labels</title></head><body style="font-family:sans-serif;padding:16px"><h2 style="font-size:14px;margin-bottom:16px;color:#333">Theatre4u™ — QR Labels (${items.length} items)</h2><div id="lbl">Generating…</div></body></html>`);w.document.close();
     const srcs=await Promise.all(items.map(i=>QR.toDataURL("https://theatre4u.org/#/item/"+i.id,140)));
     const labels=items.map((i,n)=>`<div style="display:inline-block;text-align:center;padding:10px;border:1px dashed #ccc;margin:5px;width:160px;vertical-align:top"><img src="${srcs[n]||""}" width="100" height="100"/><div style="font-size:10px;font-weight:700;margin-top:5px;word-break:break-word">${i.name}</div><div style="font-size:8px;color:#888;margin-top:2px">${i.category} · ${i.id.slice(0,8)}</div></div>`).join("");
     const el=w.document.getElementById("lbl");if(el){el.outerHTML=labels;setTimeout(()=>w.print(),400);}
@@ -239,13 +240,13 @@ export function PlatformUsageReport({ items, org, plan }) {
     </style></head><body><div class="page">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
         <div>
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#d4a843;margin-bottom:6px">🎭 Theatre4u™</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#d4a843;margin-bottom:6px">${APP_NAME}</div>
           <h1>Platform Utilization Report</h1>
           <div class="meta">${orgName} · Generated ${today} · Member since ${memberSince}</div>
         </div>
         <button onclick="window.print()" style="padding:8px 18px;background:#1a0f00;color:#d4a843;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:700">🖨 Print / Save PDF</button>
       </div>
-      <div class="callout"><strong>${orgName}</strong> uses Theatre4u™ to manage, catalog, and share their theatre program's physical inventory — costumes, props, lighting, sound equipment, sets, and more. This report summarizes how the platform is being utilized to protect and maximize the value of district arts assets.</div>
+      <div class="callout"><strong>${orgName}</strong> uses ${APP_NAME} to manage, catalog, and share their program's physical inventory — costumes, props, lighting, sound equipment, sets, and more. This report summarizes how the platform is being utilized to protect and maximize the value of district arts assets.</div>
       <h2>Inventory Summary</h2>
       <div class="stat-grid">
         <div class="stat-box"><div class="stat-val">${totalItems}</div><div class="stat-lbl">Cataloged Items</div></div>
@@ -267,8 +268,8 @@ export function PlatformUsageReport({ items, org, plan }) {
       </tbody></table>
       <h2>Why This Matters</h2>
       <p style="font-size:13px;line-height:1.8;color:#444">Theatre programs typically manage hundreds of thousands of dollars in physical assets — costumes, lighting equipment, sound systems, and set materials — with no formal inventory system. Items go missing, get double-purchased, or sit unused while neighboring schools pay commercial rental rates for the same gear.</p>
-      <p style="font-size:13px;line-height:1.8;color:#444">Theatre4u™ gives <strong>${orgName}</strong> a permanent, searchable record of every item the program owns. QR labels allow any staff member to instantly look up any item with their phone camera. The Backstage Exchange enables schools within the district to share resources freely — reducing program expenses and maximizing the return on arts investment.</p>
-      <div style="margin-top:40px;padding-top:16px;border-top:1px solid #e0d5c0;font-size:10px;color:#aaa;text-align:center">Theatre4u™ — Artstracker LLC · theatre4u.org · Report generated ${today}</div>
+      <p style="font-size:13px;line-height:1.8;color:#444">${APP_NAME} gives <strong>${orgName}</strong> a permanent, searchable record of every item the program owns. QR labels allow any staff member to instantly look up any item with their phone camera. The Backstage Exchange enables schools within the district to share resources freely — reducing program expenses and maximizing the return on arts investment.</p>
+      <div style="margin-top:40px;padding-top:16px;border-top:1px solid #e0d5c0;font-size:10px;color:#aaa;text-align:center">${APP_NAME} — Artstracker LLC · theatre4u.org · Report generated ${today}</div>
     </div></body></html>`;
     w.document.write(html);
     w.document.close();
@@ -282,7 +283,7 @@ export function PlatformUsageReport({ items, org, plan }) {
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:10}}>
         <div>
           <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,marginBottom:3}}>Platform Utilization Report</div>
-          <div style={{fontSize:12,color:"var(--faint)"}}>A report for principals, arts directors, and board members showing how Theatre4u is being used to protect and maximize arts program assets.</div>
+          <div style={{fontSize:12,color:"var(--faint)"}}>A report for principals, arts directors, and board members showing how {APP_NAME} is being used to protect and maximize arts program assets.</div>
         </div>
         <button onClick={printReport} className="btn btn-g">🖨 Generate &amp; Print Report</button>
       </div>

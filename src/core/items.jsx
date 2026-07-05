@@ -3,6 +3,7 @@
 // item components rendered by Inventory and Marketplace. uploadPhoto moved in
 // (used only here).
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { APP_HOST, APP_URL, APP_NAME } from "./config.js";
 import { SB } from "./supabase.js";
 import { EM } from "./messages.js";
 import { Ic } from "./icons.jsx";
@@ -352,7 +353,7 @@ export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, ca
   const mktCls=item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="Rent or Sale"?"mb-both":item.mkt==="For Loan"?"mb-loan":"mb-none";
 
   useEffect(()=>{
-    QR.toDataURL("https://theatre4u.org/#/item/"+(item.display_id||item.id), 200).then(url=>{if(url)setQr(url);});
+    QR.toDataURL(APP_URL+"/#/item/"+(item.display_id||item.id), 200).then(url=>{if(url)setQr(url);});
   },[item.id, item.name]);
 
   const printQR=async()=>{
@@ -360,14 +361,14 @@ export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, ca
     // and the public-item edge function resolves it correctly.
     // Fall back to item.id for items that predate the display_id system.
     const qrIdentifier = item.display_id || item.id;
-    const qrUrl = "https://theatre4u.org/#/item/" + qrIdentifier;
+    const qrUrl = APP_URL+"/#/item/" + qrIdentifier;
     const qrSrc=await QR.toDataURL(qrUrl,200);
     if(!qrSrc)return;
     const w=window.open("","_blank","width=420,height=520");if(!w)return;
     const loc=item.location?"Location: "+item.location:"";
-    const itemUrl="theatre4u.org/#/item/"+qrIdentifier;
+    const itemUrl=APP_HOST+"/#/item/"+qrIdentifier;
     const numStr = item.display_id || (item.item_number != null ? itemNum(item.item_number) : "");
-    w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}.num{font-size:22px;font-weight:900;font-family:monospace;color:#c4761a;margin:2px 0 6px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2>${numStr?`<div class="num">${numStr}</div>`:""}<p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qrSrc}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${itemUrl}</p><p style="font-size:11px;color:#bbb">Theatre4u™ · theatre4u.org</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
+    w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}.num{font-size:22px;font-weight:900;font-family:monospace;color:#c4761a;margin:2px 0 6px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2>${numStr?`<div class="num">${numStr}</div>`:""}<p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qrSrc}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${itemUrl}</p><p style="font-size:11px;color:#bbb">${APP_NAME} · ${APP_HOST}</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
     w.document.close();
   };
 

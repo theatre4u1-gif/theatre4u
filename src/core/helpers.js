@@ -1,3 +1,4 @@
+import { APP_NAME, APP_HOST, IS_ARTSTRACKER } from "./config.js";
 // Small shared helpers — extracted from App.jsx.
 
 // Short unique-ish id generator (used for local item ids before DB insert).
@@ -71,7 +72,7 @@ export function autoMatch(header) {
 export function postShareText(post, orgName) {
   const body = post.body ? "\n\n"+post.body.slice(0,200)+(post.body.length>200?"…":"") : "";
   return "🎭 "+post.title+(orgName?" — "+orgName:"")+body+
-    "\n\nPosted on Theatre4u Community.\n\ntheatre4u.org #Theatre #TheatreEducation";
+    `\n\nPosted on ${APP_NAME} Community.\n\n${APP_HOST} ` + (IS_ARTSTRACKER ? "#ArtsEducation" : "#Theatre #TheatreEducation");
 }
 
 export function resizeImg(file,maxW=560,q=0.78){
@@ -112,7 +113,7 @@ export function itemShareText(item, orgName) {
     : item.sale>0 ? "$"+item.sale+" to buy" : "";
   return cat.icon+" "+item.name+(orgName?" — from "+orgName:"")+(price?" · "+price:"")+
     "\n\nAvailable on the Backstage Exchange — free resource sharing for theatre programs everywhere."+
-    "\n\ntheatre4u.org #Theatre #TheatreEducation #BackstageExchange #TheatreTeacher";
+    `\n\n${APP_HOST} ` + (IS_ARTSTRACKER ? "#ArtsEducation #ArtsTeacher" : "#Theatre #TheatreEducation #BackstageExchange #TheatreTeacher");
 }
 
 // shared currency formatter

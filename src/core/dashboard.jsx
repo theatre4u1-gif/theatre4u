@@ -1,6 +1,7 @@
 // DASHBOARD — extracted from App.jsx (modularization).
 // Dashboard page + its CommunitySpotlight widget (internal).
 import React, { useState, useEffect, useRef } from "react";
+import { APP_NAME } from "./config.js";
 import { SB } from "./supabase.js";
 import { Ic } from "./icons.jsx";
 import { CatCard, HeroImg } from "./ui.jsx";
@@ -216,10 +217,10 @@ export function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMa
                     You've earned the Founding Member Rate — $9.99/month!
                   </div>
                   <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
-                    You added 25+ items and shared your feedback during beta. When Theatre4u launches,
+                    You added 25+ items and shared your feedback during beta. When {APP_NAME} launches,
                     your rate is locked at <strong style={{color:"var(--text)"}}>$9.99/month</strong> for
                     as long as you subscribe — 33% less than the standard $15 rate. Thank you for being
-                    a founding member of Theatre4u.
+                    a founding member of {APP_NAME}.
                   </div>
                 </div>
               </div>
@@ -235,10 +236,10 @@ export function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMa
                 <span style={{fontSize:20,flexShrink:0}}>⭐</span>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:13,color:"var(--goldink)",marginBottom:3}}>
-                    Full Pro access — complimentary during Theatre4u beta
+                    Full Pro access — complimentary during the {APP_NAME} beta
                   </div>
                   <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
-                    When Theatre4u launches you'll have the option to subscribe.
+                    When {APP_NAME} launches you'll have the option to subscribe.
                     {" "}<strong style={{color:"var(--text)"}}>Add 25+ items and share feedback</strong>{" "}
                     to lock in the founding member rate of <strong style={{color:"var(--goldink)"}}>$9.99/month</strong> — 
                     instead of the standard $15 — for life.
@@ -305,7 +306,7 @@ export function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMa
           <div className="hero-fade"/>
           <div className="hero-body">
             <div className="hero-eyebrow">📦 Inventory · {getTerm(vVertical,"productions")} · Community</div>
-            <h1 className="hero-title">{org.name?`Welcome,\n${org.name}`:"Welcome to\nTheatre4u"}</h1>
+            <h1 className="hero-title">{org.name?`Welcome,\n${org.name}`:"Welcome to\n"+APP_NAME}</h1>
             <p className="hero-sub">Everything your program owns — cataloged, photographed, and organized. Your program's complete inventory, always at your fingertips.</p>
           </div>
           <div className="hero-bar"/>

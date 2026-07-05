@@ -586,7 +586,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
           } else if (msg.includes("expired")) {
             alert("This invite has expired. Ask the director to send a new invite.");
           } else {
-            alert(msg + " Please try again or contact hello@theatre4u.org.");
+            alert(msg + " Please try again or contact "+APP_EMAIL+".");
           }
           return;
         }
@@ -653,7 +653,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       // Reload org data to pick up new district_id
       const { data: updatedOrg } = await SB.from("orgs").select("*").eq("id", user.id).single();
       if (updatedOrg) setOrg(updatedOrg);
-      alert(`✓ You've joined ${invite.districts?.name || "the district"}! Your account and inventory are now linked. Welcome to Theatre4u™.`);
+      alert(`✓ You've joined ${invite.districts?.name || "the district"}! Your account and inventory are now linked. Welcome to ${APP_NAME}.`);
     })();
   }, [user, pendingInvite]);
 

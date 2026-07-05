@@ -253,14 +253,14 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
               <div>
                 <div style={{fontWeight:700,fontSize:13,color:"#d4a843",marginBottom:2}}>District Invite</div>
                 <div style={{fontSize:12.5,color:"#c8c0d4",lineHeight:1.5}}>
-                  {inviteInfo.district_name?<>Join <strong style={{color:"#ede8df"}}>{inviteInfo.district_name}</strong> on Theatre4u™.</>:"You've been invited to join a district on Theatre4u™."}
+                  {inviteInfo.district_name?<>Join <strong style={{color:"#ede8df"}}>{inviteInfo.district_name}</strong> on {APP_NAME}.</>:"You've been invited to join a district on Theatre4u™."}
                   {inviteInfo.school_name&&<> School: <strong style={{color:"#ede8df"}}>{inviteInfo.school_name}</strong>.</>}
                 </div>
               </div>
             </div>
             <div style={{background:"rgba(0,0,0,.25)",borderRadius:7,padding:"9px 11px",fontSize:12,color:"#9b93a8",lineHeight:1.6}}>
-              <strong style={{color:"#ede8df"}}>Already have a Theatre4u™ account?</strong> Sign in below — your existing inventory and data will be linked to the district automatically.<br/>
-              <strong style={{color:"#ede8df"}}>New to Theatre4u™?</strong> Switch to Create Account to set up a new school account.
+              <strong style={{color:"#ede8df"}}>Already have a {APP_NAME} account?</strong> Sign in below — your existing inventory and data will be linked to the district automatically.<br/>
+              <strong style={{color:"#ede8df"}}>New to {APP_NAME}?</strong> Switch to Create Account to set up a new school account.
             </div>
           </div>
         )}

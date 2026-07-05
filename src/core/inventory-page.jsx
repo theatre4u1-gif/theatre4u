@@ -1,5 +1,6 @@
 // INVENTORY PAGE — extracted from App.jsx (modularization).
 import React, { useState, useEffect, useMemo } from "react";
+import { APP_HOST } from "./config.js";
 import { SB } from "./supabase.js";
 import { Modal, Pager, HeroImg, CatCard, CatThumb } from "./ui.jsx";
 import { Ic } from "./icons.jsx";
@@ -195,7 +196,7 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
     setPrintingQR(true);
     try {
       const w = window.open("", "_blank", "width=950,height=720");
-      if (!w) { alert("Pop-up blocked — please allow pop-ups for theatre4u.org and try again."); setPrintingQR(false); return; }
+      if (!w) { alert("Pop-up blocked — please allow pop-ups for "+APP_HOST+" and try again."); setPrintingQR(false); return; }
       w.document.write(`<html><head><title>QR Labels</title>
       <style>
         *{margin:0;padding:0;box-sizing:border-box}
@@ -234,7 +235,7 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
           + "<div class=\"lbl-name\">" + item.name + "</div>"
           + (item.location ? "<div class=\"lbl-loc\">📍 " + item.location + "</div>" : "")
           + "<div class=\"lbl-id\">" + dispId + "</div>"
-          + "<div class=\"lbl-row\"><div><div class=\"lbl-brand\">theatre4u.org</div></div>"
+          + "<div class=\"lbl-row\"><div><div class=\"lbl-brand\">"+APP_HOST+"</div></div>"
           + (srcs[n] ? "<img class=\"lbl-qr\" src=\"" + srcs[n] + "\" alt=\"QR\"/>" : "")
           + "</div></div>";
       }).join("");

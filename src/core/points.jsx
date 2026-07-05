@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { APP_NAME, APP_EMAIL, APP_HOST, IS_ARTSTRACKER } from "./config.js";
 import { SB } from "./supabase.js";
 import { BG, usp } from "../lib/backgrounds.js";
 import { fbShare, getPointsName } from "./helpers.js";
@@ -191,7 +192,7 @@ export function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
                         {copied ? "✓ Copied!" : "Copy Link"}
                       </button>
                       <button onClick={()=>fbShare(refUrl,
-                        "🎭 I use Theatre4u to manage my theatre program's inventory and share resources with other programs through the Backstage Exchange. It's free right now — check it out!\n\ntheatre4u.org #Theatre #TheatreEducation")}
+                        `I use ${APP_NAME} to manage my program's inventory and share resources with other programs through the Exchange. It's free right now — check it out!\n\n${APP_HOST} ` + (IS_ARTSTRACKER ? "#ArtsEducation" : "#Theatre #TheatreEducation"))}
                         style={{ padding: "9px 14px", borderRadius: 8,
                           border: "1px solid rgba(24,119,242,.35)",
                           background: "rgba(24,119,242,.08)", color: "#4285f4",
@@ -267,7 +268,7 @@ export function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
                           p_description: "Redeemed 1,500 pts for free Pro month"
                         });
                         if (data?.success) {
-                          setRedeemMsg("✓ 1,500 points redeemed! Your free month credit will be applied. Contact hello@theatre4u.org to confirm.");
+                          setRedeemMsg("✓ 1,500 points redeemed! Your free month credit will be applied. Contact "+APP_EMAIL+" to confirm.");
                           load();
                         } else {
                           setRedeemMsg("⚠️ " + (data?.error || "Could not redeem — please try again."));
@@ -361,13 +362,13 @@ export function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
               { title: "Earning Credits",
                 body: "Credits are earned automatically when a transaction is marked returned by the owner. For free loans, the item must have been out for at least 3 days to qualify. For rentals, you earn 1 credit per $1 of rental value (minimum 5, maximum 500 per transaction)." },
               { title: "Spending Credits",
-                body: "When requesting a rental or purchase, you can apply credits to cover up to 50% of the price. The remaining cash balance must be paid directly to the item owner outside of Theatre4u — by check, Venmo, invoice, or any payment method agreed between your organizations. Theatre4u does not collect or transfer cash payments. Credits can also be used to cover 100% of a security deposit." },
+                body: "When requesting a rental or purchase, you can apply credits to cover up to 50% of the price. The remaining cash balance must be paid directly to the item owner outside of the platform — by check, Venmo, invoice, or any payment method agreed between your organizations. Artstracker LLC does not collect or transfer cash payments. Credits can also be used to cover 100% of a security deposit." },
               { title: "Credit Value",
                 body: "1 credit = $1 of discount toward a rental or purchase. Credits have no cash value and cannot be refunded, transferred to another organization, or exchanged for money." },
               { title: "Expiry & Forfeiture",
                 body: "Points expire 12 months after they are earned. Your maximum balance is 5,000 points. Points can be redeemed for Exchange discounts (up to 50% of transaction value) or traded for a free Pro month at 1,500 points. Points have no cash value and cannot be transferred between accounts." },
               { title: "Fair Use",
-                body: "Theatre4u reserves the right to adjust or revoke credits in cases of abuse, fraudulent transactions, or violations of the Terms of Service. The admin_adjust transaction type will appear in your history if a correction is made." },
+                body: "Artstracker LLC reserves the right to adjust or revoke credits in cases of abuse, fraudulent transactions, or violations of the Terms of Service. The admin_adjust transaction type will appear in your history if a correction is made." },
             ].map(r => (
               <div key={r.title} className="card card-p">
                 <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 17, marginBottom: 8 }}>{r.title}</h3>
