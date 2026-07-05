@@ -153,7 +153,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 
 /* ── Item detail ── */
 .detail-hero{width:100%;aspect-ratio:16/10;background:var(--card);position:relative;overflow:hidden}
-.detail-hero img{width:100%;height:100%;object-fit:cover}
+.detail-hero img{width:100%;height:100%;object-fit:contain;background:#141210}
 .detail-hero .hero-grad{position:absolute;inset:0;background:linear-gradient(to top,rgba(10,10,15,1) 0%,rgba(10,10,15,.4) 50%,transparent 100%)}
 .detail-hero .hero-cat{position:absolute;top:calc(var(--safe-top) + 12px);left:16px;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700;color:var(--gold);display:flex;align-items:center;gap:5px}
 .detail-hero .back-btn{position:absolute;top:calc(var(--safe-top) + 8px);right:16px;width:38px;height:38px;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);border-radius:50%;display:flex;align-items:center;justify-content:center;border:none;color:var(--text);cursor:pointer}
@@ -263,6 +263,12 @@ const IS_ARTSTRACKER = location.hostname.includes("artstracker");
 const APP_NAME = IS_ARTSTRACKER ? "ArtsTracker" : "Theatre4u™";
 const APP_TAGLINE = IS_ARTSTRACKER ? "Inventory · Exchange · Community for Arts Programs" : "Inventory · Backstage Exchange · Community";
 const APP_ICON = IS_ARTSTRACKER ? "🎨" : "🎭";
+document.title = APP_NAME;
+if (IS_ARTSTRACKER) {
+  const ic = document.querySelector('link[rel="icon"]'); if (ic){ ic.href = "/favicon-artstracker.png"; ic.type = "image/png"; }
+  const ti = document.querySelector('link[rel="apple-touch-icon"]'); if (ti) ti.href = "/apple-touch-icon-artstracker.png";
+  const mt = document.querySelector('meta[name="apple-mobile-web-app-title"]'); if (mt) mt.content = "ArtsTracker";
+}
 
 // ── QR Code generator ─────────────────────────────────────────────────────────
 let _qrMod = null;
@@ -308,20 +314,10 @@ async function uploadPhoto(file, userId) {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const CATS = [
-  {id:"costumes", label:"Costumes",    icon:"👗"},
-  {id:"props",    label:"Props",       icon:"🎭"},
-  {id:"sets",     label:"Sets",        icon:"🏛️"},
-  {id:"lighting", label:"Lighting",    icon:"💡"},
-  {id:"sound",    label:"Sound",       icon:"🔊"},
-  {id:"scripts",  label:"Scripts",     icon:"📜"},
-  {id:"makeup",   label:"Makeup",      icon:"💄"},
-  {id:"furniture",label:"Furniture",   icon:"🪑"},
-  {id:"fabrics",  label:"Fabrics",     icon:"🧵"},
-  {id:"tools",    label:"Tools",       icon:"🔧"},
-  {id:"effects",  label:"Effects",     icon:"✨"},
-  {id:"other",    label:"Other",       icon:"📦"},
-];
+// Per-department category sets (generated from src/lib/verticals.js — resync if that changes)
+const VCATS = {"theatre":[{"id":"costumes","label":"Costumes","icon":"👗"},{"id":"props","label":"Props","icon":"🎭"},{"id":"sets","label":"Sets & Scenery","icon":"🏛️"},{"id":"lighting","label":"Lighting","icon":"💡"},{"id":"sound","label":"Sound","icon":"🔊"},{"id":"scripts","label":"Scripts & Music","icon":"📜"},{"id":"makeup","label":"Makeup & Wigs","icon":"💄"},{"id":"furniture","label":"Stage Furniture","icon":"🪑"},{"id":"fabrics","label":"Fabrics & Drapes","icon":"🧵"},{"id":"tools","label":"Tools","icon":"🔧"},{"id":"effects","label":"Special Effects","icon":"✨"},{"id":"other","label":"Other","icon":"📦"}],"music":[{"id":"strings","label":"Strings","icon":"🎻"},{"id":"woodwinds","label":"Woodwinds","icon":"🎶"},{"id":"brass","label":"Brass","icon":"🎺"},{"id":"percussion","label":"Percussion","icon":"🥁"},{"id":"keyboard","label":"Keyboard","icon":"🎹"},{"id":"vocal","label":"Vocal","icon":"🎤"},{"id":"sheet_music","label":"Sheet Music","icon":"🎼"},{"id":"amplification","label":"Amplification","icon":"🔊"},{"id":"other","label":"Other","icon":"📦"}],"dance":[{"id":"costumes","label":"Costumes","icon":"👗"},{"id":"footwear","label":"Footwear","icon":"👠"},{"id":"props","label":"Props","icon":"🌂"},{"id":"sound","label":"Sound & Music","icon":"🎵"},{"id":"lighting","label":"Lighting","icon":"💡"},{"id":"mirrors","label":"Mirrors & Barres","icon":"🪞"},{"id":"other","label":"Other","icon":"📦"}],"art":[{"id":"painting","label":"Painting Supplies","icon":"🖌️"},{"id":"drawing","label":"Drawing","icon":"✏️"},{"id":"sculpture","label":"Sculpture","icon":"🗿"},{"id":"printmaking","label":"Printmaking","icon":"🖨️"},{"id":"ceramics","label":"Ceramics","icon":"🏺"},{"id":"digital","label":"Digital Media","icon":"💻"},{"id":"textiles","label":"Textiles","icon":"🧵"},{"id":"equipment","label":"Equipment","icon":"📷"},{"id":"other","label":"Other","icon":"📦"}],"booster":[{"id":"equipment","label":"Equipment","icon":"🎒"},{"id":"supplies","label":"Supplies","icon":"🧰"},{"id":"uniforms","label":"Apparel & Uniforms","icon":"👕"},{"id":"event_supplies","label":"Events","icon":"🎪"},{"id":"fundraising","label":"Fundraising","icon":"💰"},{"id":"storage","label":"Storage","icon":"🗄️"},{"id":"awards","label":"Awards","icon":"🏆"},{"id":"other","label":"Other","icon":"📦"}]};
+let CATS = VCATS.theatre; // reselected from the org's department after login
+
 const CAT = Object.fromEntries(CATS.map(c=>[c.id,c]));
 const CONDS = ["New","Excellent","Good","Fair","Poor","For Parts"];
 const AVAIL = ["In Stock","In Use","Checked Out","Being Repaired","Lost","Retired"];
@@ -747,7 +743,7 @@ function LocationPicker({value, onChange, userId}) {
 
 function AddSheet({onClose, onAdded, userId}) {
   const [step, setStep] = useState("photo"); // photo | details
-  const [f, setF] = useState({name:"",category:"costumes",condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,avail:"In Stock",tags:[],img:null});
+  const [f, setF] = useState({name:"",category:CATS[0].id,condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,avail:"In Stock",tags:[],img:null});
   const [saving, setSaving] = useState(false);
   const [uploading, setUpl] = useState(false);
   const fileRef = useRef();
@@ -1317,12 +1313,12 @@ function ProfileTab({user, org, onSignOut}) {
           saved?"✓ Saved!":"Save Changes"
         )
       ),
-      h(StorageLocationsManager,{userId:user?.id}),
+      h(StorageLocationsManager,{userId:org?.id||user?.id}),
 
       h("div",{className:"card card-p",style:{marginBottom:16}},
         h("div",{style:{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:14}},"Platform"),
         h("a",{href:"https://theatre4u.org",target:"_blank",rel:"noreferrer",style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid var(--border)",textDecoration:"none",color:"var(--text)",fontSize:14}},
-          h("span",null,"Open Theatre4u Web"),h("span",{style:{color:"var(--muted)"}},"→")
+          h("span",null,"Open "+APP_NAME.replace("™","")+" Web"),h("span",{style:{color:"var(--muted)"}},"→")
         ),
         h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid var(--border)",fontSize:14}},
           h("span",null,"App Version"),h("span",{style:{color:"var(--muted)"}},"1.0.0")
@@ -1572,7 +1568,7 @@ function App() {
       const targetOrgId = memberData ? memberData.org_id : user.id;
       const memberRole  = memberData ? memberData.role   : null;
       const{data:orgData}=await SB.from("orgs").select("*").eq("id",targetOrgId).single();
-      if(orgData) setOrg({...orgData, _memberRole:memberRole});
+      if(orgData){ setOrg({...orgData, _memberRole:memberRole}); CATS = VCATS[orgData.vertical] || VCATS.theatre; }
       const{data:itemData}=await SB.from("items").select("*").eq("org_id",targetOrgId).order("added",{ascending:false}).limit(300);
       if(itemData) setItems(itemData);
       // Load Stage Points balance
@@ -1622,7 +1618,7 @@ function App() {
     h("div",{style:{fontSize:64}},"📱"),
     h("div",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:32,fontWeight:700,color:"#d4a843"}},"Pro Feature"),
     h("p",{style:{fontSize:15,color:"var(--muted)",lineHeight:1.7,maxWidth:320}},
-      "The Theatre4u™ mobile app is included with Pro and District plans. Upgrade at theatre4u.org to unlock mobile inventory management, Funding Tracker, and QR scanning."
+      "The "+APP_NAME+" mobile app is included with Pro and District plans. Upgrade at "+(IS_ARTSTRACKER?"artstracker.org":"theatre4u.org")+" to unlock mobile inventory management, Funding Tracker, and QR scanning."
     ),
     h("a",{href:"https://theatre4u.org",style:{background:"linear-gradient(135deg,#d4a843,#8a6a20)",color:"#1a1000",padding:"14px 32px",borderRadius:10,fontWeight:700,fontSize:16,textDecoration:"none"}},"Upgrade at theatre4u.org →"),
     h("button",{onClick:signOut,style:{background:"none",border:"none",color:"var(--muted)",fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",marginTop:8}},"Sign out")
@@ -1641,13 +1637,13 @@ function App() {
     Toast&&h(Toast,{toast}),
     !online && h("div",{className:"offline-bar"},"⚡ Offline — some features may be unavailable"),
     // View item detail (full screen)
-    viewItem && h(ItemDetail,{item:viewItem,onBack:()=>setViewItem(null),onEdited:handleItemEdited,onDeleted:handleItemDeleted,userId:user.id}),
+    viewItem && h(ItemDetail,{item:viewItem,onBack:()=>setViewItem(null),onEdited:handleItemEdited,onDeleted:handleItemDeleted,userId:org?.id||user.id}),
     // Tab content
     !viewItem && h("div",{style:{flex:1,overflow:"hidden",display:"flex",flexDirection:"column"}},
       !isStandalone && h(InstallBanner,null),
       tab==="home"      && h(HomeTab,{items,org,pointBalance,onAddItem:()=>setAddOpen(true),onViewItem:handleViewItem}),
       tab==="inventory" && h(InventoryTab,{items,onViewItem:handleViewItem,onAddItem:()=>setAddOpen(true)}),
-      tab==="funding"   && h(FundingMobileTab,{userId:user.id}),
+      tab==="funding"   && h(FundingMobileTab,{userId:org?.id||user.id}),
       tab==="points"    && h(PointsTab,{userId:user?.id,pointBalance,setPointBalance}),
       tab==="profile"   && h(ProfileTab,{user,org,onSignOut:signOut})
     ),
@@ -1671,7 +1667,7 @@ createRoot(document.getElementById("root")).render(h(App,null));
 <!-- PWA Manifest inline -->
 <script>
 const manifest = {
-  name:"Theatre4u™",short_name:"Theatre4u™",description:"Inventory · Backstage Exchange · Community for Theatre Programs",
+  name:APP_NAME,short_name:APP_NAME,description:APP_TAGLINE,
   start_url:"/app",display:"standalone",background_color:"#0a0a0f",theme_color:"#0a0a0f",
   orientation:"portrait",
   icons:[
