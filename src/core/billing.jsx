@@ -231,7 +231,7 @@ export function UpgradePlans({ compact = false, userId = null, userEmail = null,
           </div>
         </div>
       ) : (
-        <p style={{textAlign:compact?"left":"center",marginTop:12,fontSize:11.5,color:"var(--faint)"}}>All paid plans include a 14-day free trial · No credit card required to start · Cancel any time</p>
+        <p style={{textAlign:compact?"left":"center",marginTop:12,fontSize:11.5,color:"var(--faint)"}}>Start free — your first 25 items are free forever, no credit card · Upgrade when you're ready · Cancel any time</p>
       )}
     </div>
   );
