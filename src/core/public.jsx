@@ -66,11 +66,11 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
   const singlePlans=[
     {name:"Free",price:"$0",period:"forever",color:"rgba(255,255,255,.15)",textColor:"rgba(255,255,255,.7)",features:["Up to 25 inventory items","QR labels & photos","Productions tracking","Browse "+XCHG,"Community Board"],cta:"Get Started",primary:false},
     {name:"Pro",price:"$15",period:"/month",annual:"$150/year",color:"linear-gradient(135deg,var(--gold),var(--goldd))",textColor:"#1a0f00",features:["Unlimited inventory","Full "+XCHG+" access",PTS,"Reports & CSV export","Funding Tracker","Mobile app","Messages & requests"],cta:"Start Pro",primary:true},
-    {name:"District",price:"$49",period:"/month",annual:"$500/year",color:"linear-gradient(135deg,#1565c0,#0d47a1)",textColor:"#fff",features:["Everything in Pro","Up to 6 school sites","District dashboard","Shared "+XCHG,"District funding rollup","Priority support"],cta:"Start District",primary:false},
+    {name:"District",price:"$49",period:"/month",annual:"$500/year",color:"linear-gradient(135deg,#1565c0,#0d47a1)",textColor:"#fff",features:["Everything in Pro","Up to 6 school sites","District dashboard","Shared "+XCHG,"District funding rollup","Email support"],cta:"Start District",primary:false},
   ];
   const atPlans=[
     {name:"ArtsTracker Pro",price:"$59",period:"/month",annual:"$590/year",color:"linear-gradient(135deg,#841C56,#4C1035)",textColor:"#fff",features:["Every department — Theatre, Music, Dance, Art & Organizations","Unlimited inventory in each department","Full Exchange access + ArtsPoints","Per-department funding & storage","Reports, CSV export & mobile"],cta:"Go All-Departments",primary:false},
-    {name:"ArtsTracker District",price:"from $199",period:"/month",annual:"annual plans available",color:"linear-gradient(135deg,#4C1035,#2b0a1e)",textColor:"#fff",features:["All departments at every school","S — $199/mo (up to 6 schools)","M — $399/mo (up to 15) · L — $699/mo (up to 30)","District dashboards & funding rollup","Purchase orders accepted · Priority support"],cta:"Start District",primary:false},
+    {name:"ArtsTracker District",price:"from $199",period:"/month",annual:"annual plans available",color:"linear-gradient(135deg,#4C1035,#2b0a1e)",textColor:"#fff",features:["All departments at every school","S — $199/mo (up to 6 schools)","M — $399/mo (up to 15) · L — $699/mo (up to 30)","District dashboards & funding rollup","Purchase orders accepted · Email support"],cta:"Start District",primary:false},
   ];
   // ArtsTracker door shows both tracks; Theatre4u door keeps the single-department ladder.
   const planGroups = IS_ARTSTRACKER
