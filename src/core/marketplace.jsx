@@ -337,7 +337,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
             Object.keys(merged).forEach(k=>{ if(k.startsWith('org_')||k==='orgs') delete merged[k]; });
             await onEdit(merged); setEditingItem(null);
           }
-        }} onCancel={()=>setEditingItem(null)} userId={org?.id} marketplaceEnabled={!!org?.marketplace_enabled}/>
+        }} onCancel={()=>setEditingItem(null)} userId={org?.id} marketplaceEnabled={!!org?.marketplace_enabled} plan={plan} vertical={editingItem?.vertical||org?.vertical||"theatre"}/>
       </Modal>}
       {contactItem&&<NewConversationModal
         item={contactItem}
