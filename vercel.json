@@ -36,7 +36,17 @@
       "has": [
         {
           "type": "host",
-          "value": "(www\\.)?artstracker\\.org"
+          "value": "artstracker.org"
+        }
+      ],
+      "destination": "/home-artstracker.html"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.artstracker.org"
         }
       ],
       "destination": "/home-artstracker.html"
@@ -58,7 +68,17 @@
       "has": [
         {
           "type": "host",
-          "value": "(www\\.)?artstracker\\.org"
+          "value": "artstracker.org"
+        }
+      ],
+      "destination": "/home-artstracker.html"
+    },
+    {
+      "source": "/((?!help.html|app.html|join.html|org-profile.html|assets/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.artstracker.org"
         }
       ],
       "destination": "/home-artstracker.html"
