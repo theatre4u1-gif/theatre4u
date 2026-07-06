@@ -1031,7 +1031,19 @@ window.addEventListener('scroll', () => {
 
 // ── Domain-aware branding: on artstracker.org show ArtsTracker, not Theatre4u ──
 (function(){
-  if (!location.hostname.includes("artstracker")) return;
+  // Mirrors src/core/config.js: previews default to ArtsTracker; ?brand= override (previews only)
+  var host = location.hostname, ov = null;
+  try {
+    var isPreview = host.endsWith(".vercel.app") || host === "localhost" || host === "127.0.0.1";
+    if (isPreview) {
+      var p = new URLSearchParams(location.search).get("brand");
+      if (p === "off") sessionStorage.removeItem("t4u_brand_override");
+      else if (p === "theatre4u" || p === "artstracker") sessionStorage.setItem("t4u_brand_override", p);
+      ov = sessionStorage.getItem("t4u_brand_override");
+    }
+  } catch(e){}
+  var isT4u = ov ? ov === "theatre4u" : (host.includes("theatre4u.org") || host === "localhost");
+  if (isT4u) return;
   var NAME = "ArtsTracker";
   function walk(node){
     if (node.nodeType === 3) {

@@ -177,7 +177,7 @@ export function UpgradePlans({ compact = false, userId = null, userEmail = null,
                 ))}
               </ul>
               {isCurrentPlan
-                ? <button className="btn btn-full" style={{background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.5)",color:"var(--goldink)",cursor:"default",fontWeight:700,fontSize:13}} disabled>✓ Current Plan</button>
+                ? <button className="btn btn-full" style={{background:"rgba(212,168,67,.22)",border:"1.5px solid #d4a843",color:"#f5dd9b",cursor:"default",fontWeight:800,fontSize:13.5,letterSpacing:".02em"}} disabled>✓ Current Plan</button>
                 : isFree
                 ? null
                 : p.id.endsWith("enterprise")
