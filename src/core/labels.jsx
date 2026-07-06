@@ -276,7 +276,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
 
       {/* Tab bar */}
       <div style={{display:"flex",gap:3,marginBottom:22,borderBottom:"1px solid var(--border)",paddingBottom:10}}>
-        {[["print","🖨 Print Labels"],["assign","🔗 Assign a Label"],["order","📬 Order Physical Labels"]].filter(([id])=>id!=="order"||isAdmin).map(([id,lbl])=>(
+        {[["print","🖨 Print Labels"],["assign","🔗 Assign a Label"],["gear","🛒 Label Gear"],["order","📬 Orders"]].filter(([id])=>id!=="order"||isAdmin).map(([id,lbl])=>(
           <button key={id} onClick={()=>setTab(id)}
             style={{padding:"7px 16px",borderRadius:"8px 8px 0 0",border:"none",cursor:"pointer",fontSize:13,
               fontWeight:tab===id?700:500,background:tab===id?"var(--gold)":"transparent",
@@ -500,144 +500,54 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
         </div>
       )}
 
-      {/* ══ ORDER TAB ══ */}
-      {tab==="order"&&!isAdmin&&(
-        <div style={{maxWidth:560}}>
-          <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,
-            padding:"40px 32px",textAlign:"center"}}>
-            <div style={{fontSize:52,marginBottom:16}}>🏷</div>
-            <div style={{fontFamily:"var(--serif)",fontSize:22,marginBottom:10,fontWeight:700}}>
-              Physical Label Ordering — Coming Soon
-            </div>
-            <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.8,marginBottom:12,maxWidth:420,margin:"0 auto 12px"}}>
-              We are finalizing our label printing partnership. Soon you will be able to order
-              professional pre-coded QR label stickers — sticky vinyl for props and equipment,
-              iron-on for costumes — mailed directly to your school.
-            </p>
-            <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.8,marginBottom:24,maxWidth:420,margin:"0 auto 24px"}}>
-              In the meantime, use the <strong style={{color:"var(--text)"}}>Print Labels</strong> tab
-              to generate and print QR labels instantly from any printer.
-            </p>
-            <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
-              <button onClick={()=>setTab("print")}
-                style={{padding:"11px 24px",borderRadius:8,border:"none",fontFamily:"inherit",
-                  fontSize:14,fontWeight:700,cursor:"pointer",
-                  background:"var(--gold)",color:"#1a0f00"}}>
-                🖨 Print Labels Now
-              </button>
-              <a href={"mailto:"+APP_EMAIL+"?subject=Label Ordering Interest"}
-                style={{padding:"11px 24px",borderRadius:8,border:"1px solid var(--border)",
-                  fontFamily:"inherit",fontSize:14,fontWeight:600,cursor:"pointer",
-                  background:"transparent",color:"var(--text)",textDecoration:"none",
-                  display:"inline-flex",alignItems:"center"}}>
-                ✉ Notify Me When Ready
-              </a>
-            </div>
-            <div style={{marginTop:24,paddingTop:20,borderTop:"1px solid var(--border)",
-              fontSize:13,color:"var(--muted)"}}>
-              Questions? Email{" "}
-              <a href={"mailto:"+APP_EMAIL} style={{color:"var(--goldink)",fontWeight:600}}>
-                {APP_EMAIL}
-              </a>
-            </div>
-          </div>
-
-          {/* Show previous orders if any exist */}
-          {orders.length>0&&(
-            <div style={{marginTop:28}}>
-              <div style={{fontWeight:700,fontSize:14,marginBottom:10}}>Your Label Orders</div>
-              <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                {orders.map((o,i)=>(
-                  <div key={i} style={{background:"var(--parch)",border:"1px solid var(--border)",
-                    borderRadius:10,padding:"14px 16px"}}>
-                    {/* Header row */}
-                    <div style={{display:"flex",gap:10,alignItems:"flex-start",
-                      flexWrap:"wrap",marginBottom:8}}>
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:14,fontWeight:700}}>
-                          {o.item_count} labels
-                          {o.assigned_count>0&&o.blank_count>0
-                            ? ` (${o.assigned_count} assigned + ${o.blank_count} blank)`
-                            : o.assigned_count>0 ? ` (${o.assigned_count} assigned)`
-                            : o.blank_count>0    ? ` (${o.blank_count} blank)` : ""}
-                        </div>
-                        <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>
-                          {new Date(o.created_at).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}
-                          {o.vendor&&" · "+o.vendor}
-                        </div>
-                      </div>
-                      <span style={{fontSize:12,fontWeight:700,padding:"3px 10px",borderRadius:6,
-                        background:o.status==="delivered"?"rgba(76,175,80,.12)":
-                                   o.status==="shipped"?"rgba(66,165,245,.12)":
-                                   o.status==="processing"?"rgba(33,150,243,.12)":"rgba(212,168,67,.1)",
-                        color:o.status==="delivered"?"#4caf50":
-                              o.status==="shipped"?"#42a5f5":
-                              o.status==="processing"?"#2196f3":"var(--gold)"}}>
-                        {o.status==="pending"?"⏳ Pending":o.status==="processing"?"🔄 Processing":
-                         o.status==="shipped"?"✈️ Shipped":"✅ Delivered"}
-                      </span>
-                    </div>
-
-                    {/* Detail rows */}
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",
-                      gap:6,fontSize:12,color:"var(--muted)",marginBottom:o.tracking||o.vendor_order_ref?8:0}}>
-                      {o.code_start&&(
-                        <div>
-                          <span style={{fontFamily:"monospace",color:"var(--amber)"}}>
-                            {o.code_start}
-                          </span>
-                          {o.code_end&&o.code_end!==o.code_start&&(
-                            <span style={{fontFamily:"monospace",color:"var(--amber)"}}>
-                              {" → "+o.code_end}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {o.costume_count>0&&(
-                        <div>👗 {o.costume_count} iron-on (costumes)</div>
-                      )}
-                      {o.equipment_count>0&&(
-                        <div>🏷️ {o.equipment_count} polypropylene (equipment)</div>
-                      )}
-                    </div>
-
-                    {(o.tracking||o.vendor_order_ref)&&(
-                      <div style={{fontSize:12,color:"var(--muted)",marginBottom:8}}>
-                        {o.vendor_order_ref&&<div>📋 Order ref: <strong style={{color:"var(--text)"}}>{o.vendor_order_ref}</strong></div>}
-                        {o.tracking&&<div>📦 Tracking: <strong style={{color:"var(--text)"}}>{o.tracking}</strong></div>}
-                      </div>
+      {/* ══ LABEL GEAR TAB ══ */}
+      {tab==="gear"&&(
+        <div style={{maxWidth:640}}>
+          <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.8,marginBottom:18}}>
+            Any printer works with the <strong style={{color:"var(--text)"}}>Print Labels</strong> tab
+            and Avery-style sticker sheets. For labels that survive years of backstage handling,
+            these are the printers we recommend:
+          </p>
+          <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:18}}>
+            {[
+              ["🏷️","Brother QL-810W","Cheap, fast bulk labels for bins and shelves. Paper rolls run about 3\u00A2 per label (400-label roll \u2248 $14).","https://www.amazon.com/dp/B01MTWGMRR?tag=artstracker-20","Printer on Amazon","https://www.amazon.com/dp/B0002VS6HG?tag=artstracker-20","DK-1201 label rolls"],
+              ["🔧","Brother P-touch CUBE Plus (PT-P710BT)","Laminated tape that shrugs off water and handling \u2014 the right choice for equipment, cases, and anything touched every week.","https://www.amazon.com/dp/B07HB8LNSY?tag=artstracker-20","Printer on Amazon",null,null],
+              ["👗","Iron-on fabric tape (TZe-FA3)","For the same P-touch printer \u2014 fabric labels that survive 30+ washes. Note: it\u2019s \u00BD\u2033 tape, so print your program name + item ID inside the collar, and put the scannable QR on the hanger or bin.","https://www.amazon.com/dp/B0055FGLF8?tag=artstracker-20","Tape on Amazon",null,null],
+            ].map(([icon,name,desc,url,cta,url2,cta2],i)=>(
+              <div key={i} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,padding:"16px 18px",display:"flex",gap:14,alignItems:"flex-start"}}>
+                <div style={{fontSize:26,lineHeight:1}}>{icon}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>{name}</div>
+                  <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.7,marginBottom:10}}>{desc}</div>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                    <a href={url} target="_blank" rel="noreferrer sponsored"
+                      style={{fontSize:12,fontWeight:700,padding:"6px 14px",borderRadius:7,background:"var(--gold)",color:"#1a0f00",textDecoration:"none"}}>
+                      {cta} →
+                    </a>
+                    {url2&&(
+                      <a href={url2} target="_blank" rel="noreferrer sponsored"
+                        style={{fontSize:12,fontWeight:600,padding:"6px 14px",borderRadius:7,border:"1px solid var(--border)",color:"var(--text)",textDecoration:"none"}}>
+                        {cta2} →
+                      </a>
                     )}
-
-                    {/* Reorder button */}
-                    <button
-                      onClick={async()=>{
-                        const sum = await SB.rpc("get_label_order_summary",{p_org_id:userId});
-                        const s = sum?.data;
-                        if(!s)return;
-                        const msg = [
-                          `Based on your current inventory:`,
-                          `• ${s.unlabeled_items} items need labels`,
-                          `• ${s.pool_blank} blank labels still available`,
-                          `• Next blank codes start at: ${org?.label_prefix||"?"}-${String(s.next_blank_start).padStart(4,"0")}`,
-                          ``,
-                          `To request a new order, email ${APP_EMAIL} with:`,
-                          `  - How many assigned labels (for specific items)`,
-                          `  - How many blank labels you want`,
-                          `  - Shipping address`,
-                        ].join("\n");
-                        alert(msg);
-                      }}
-                      style={{fontSize:12,fontWeight:600,padding:"5px 12px",borderRadius:6,
-                        border:"1px solid var(--border)",background:"var(--parch)",
-                        color:"var(--muted)",cursor:"pointer",fontFamily:"inherit",
-                        marginTop:4}}>
-                      🔄 Reorder / Request New Labels
-                    </button>
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
-          )}
+            ))}
+          </div>
+          <div style={{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap",marginBottom:14}}>
+            <button onClick={()=>setTab("print")}
+              style={{padding:"10px 20px",borderRadius:8,border:"none",fontFamily:"inherit",fontSize:13,fontWeight:700,cursor:"pointer",background:"var(--gold)",color:"#1a0f00"}}>
+              🖨 Print Labels Now
+            </button>
+            <a href="/help.html#qr" target="_blank" rel="noreferrer"
+              style={{fontSize:13,fontWeight:600,color:"var(--goldink)",textDecoration:"none"}}>
+              Full printing guide in Help →
+            </a>
+          </div>
+          <div style={{fontSize:11,color:"var(--faint)",lineHeight:1.6}}>
+            As an Amazon Associate, we earn from qualifying purchases.
+          </div>
         </div>
       )}
 
