@@ -17,6 +17,8 @@ export const VERTICALS = {
     color: "#b5174f",
     appName: "Theatre4u™",
     exchangeName: "Backstage Exchange",
+    terms: { productions:"Productions", production:"Production", addToProduction:"Add to Production", productionPhotos:"Production Photos", upcomingShow:"Upcoming Show", auditionNotice:"Audition Notice", showAnnouncement:"Show Announcement", crewRole:"Crew", tagline:"Every Costume Found. Every Prop Accounted For.", taglineSub:"Theatre4u™ keeps your complete inventory organized — from the costume closet to the lighting rig.", inventorySub:"Every costume, prop, set piece and piece of gear — all in one place.", productionsSub:"Create a folder for each show. Track every costume, prop, and piece of gear from wishlist to opening night.", communityIntro:"Upcoming shows, audition notices, production photos, and wanted items — from theatre programs near you." },
+    fundingCats: ["Equipment","Costumes","Sets & Scenery","Lighting & Sound","Props","Scripts & Royalties","Supplies","Travel","Personnel","Other"],
     categories: [
       { id:"costumes",  label:"Costumes",        icon:"👗", color:"#b5174f", grad:"linear-gradient(135deg,#7b1560,#c2185b,#e91e8c)" },
       { id:"props",     label:"Props",            icon:"🎭", color:"#6a1b8a", grad:"linear-gradient(135deg,#4a148c,#7b1fa2,#9c27b0)" },
@@ -45,6 +47,8 @@ export const VERTICALS = {
     color: "#1554a0",
     appName: "ArtsTracker",
     exchangeName: "Instrument Exchange",
+    terms: { productions:"Concerts", production:"Concert", addToProduction:"Add to Concert", productionPhotos:"Concert Photos", upcomingShow:"Upcoming Concert", auditionNotice:"Audition Notice", showAnnouncement:"Concert Announcement", crewRole:"Aide", tagline:"Every Instrument Tracked. Every Score Accounted For.", taglineSub:"ArtsTracker keeps your program organized — from the instrument room to the sheet-music library.", inventorySub:"Every instrument, accessory, and piece of gear — all in one place.", productionsSub:"Create a folder for each concert. Track every instrument and piece of gear from first rehearsal to performance night.", communityIntro:"Upcoming concerts, audition notices, performance photos, and wanted items — from music programs near you." },
+    fundingCats: ["Instruments","Sheet Music","Equipment","Uniforms","Instruction","Travel","Personnel","Technology","Other"],
     categories: [
       { id:"strings",       label:"Strings",        icon:"🎻", color:"#6a1b8a", grad:"linear-gradient(135deg,#4a148c,#7b1fa2,#9c27b0)" },
       { id:"woodwinds",     label:"Woodwinds",       icon:"🎶", color:"#0d5e2a", grad:"linear-gradient(135deg,#1b5e20,#2e7d32,#43a047)" },
@@ -70,6 +74,8 @@ export const VERTICALS = {
     color: "#c2185b",
     appName: "ArtsTracker",
     exchangeName: "Dance Exchange",
+    terms: { productions:"Performances", production:"Performance", addToProduction:"Add to Performance", productionPhotos:"Performance Photos", upcomingShow:"Upcoming Performance", auditionNotice:"Audition Notice", showAnnouncement:"Performance Announcement", crewRole:"Aide", tagline:"Every Costume Ready. Every Prop in Its Place.", taglineSub:"ArtsTracker keeps your program organized — from the costume racks to the studio and stage.", inventorySub:"Every costume, prop, and piece of gear — all in one place.", productionsSub:"Create a folder for each performance. Track every costume and prop from first rehearsal to performance night.", communityIntro:"Upcoming performances, audition notices, performance photos, and wanted items — from dance programs near you." },
+    fundingCats: ["Costumes","Footwear","Equipment","Sound & Music","Studio Supplies","Travel","Personnel","Other"],
     categories: [
       { id:"costumes", label:"Costumes",        icon:"👗", color:"#b5174f", grad:"linear-gradient(135deg,#7b1560,#c2185b,#e91e8c)" },
       { id:"footwear", label:"Footwear",         icon:"👠", color:"#a0144e", grad:"linear-gradient(135deg,#880e4f,#ad1457,#e91e63)" },
@@ -93,6 +99,8 @@ export const VERTICALS = {
     color: "#1554a0",
     appName: "ArtsTracker",
     exchangeName: "Materials Exchange",
+    terms: { productions:"Exhibitions", production:"Exhibition", addToProduction:"Add to Exhibition", productionPhotos:"Exhibition Photos", upcomingShow:"Upcoming Exhibition", auditionNotice:"Call for Artists", showAnnouncement:"Exhibition Announcement", crewRole:"Aide", tagline:"Every Supply Stocked. Every Tool Accounted For.", taglineSub:"ArtsTracker keeps your program organized — from the supply closet to the kiln and gallery.", inventorySub:"Every supply, tool, and piece of equipment — all in one place.", productionsSub:"Create a folder for each exhibition. Track every piece and material from concept to opening.", communityIntro:"Upcoming exhibitions, calls for artists, show photos, and wanted items — from art programs near you." },
+    fundingCats: ["Art Supplies","Equipment","Kiln & Tools","Framing & Display","Instruction","Travel","Personnel","Other"],
     categories: [
       { id:"painting",    label:"Painting Supplies", icon:"🖌️", color:"#b5174f", grad:"linear-gradient(135deg,#7b1560,#c2185b,#e91e8c)" },
       { id:"drawing",     label:"Drawing",           icon:"✏️", color:"#374549", grad:"linear-gradient(135deg,#263238,#37474f,#546e7a)" },
@@ -113,22 +121,22 @@ export const VERTICALS = {
   // ── BOOSTER / PTA ─────────────────────────────────────────────────────────
   booster: {
     id: "booster",
-    label: "Booster / PTA",
-    icon: "🏆",
+    label: "Organization",
+    icon: "🏢",
     color: "#7b1fa2",
     appName: "ArtsTracker",
     exchangeName: "Resource Exchange",
+    terms: { productions:"Events", production:"Event", addToProduction:"Add to Event", productionPhotos:"Event Photos", upcomingShow:"Upcoming Event", auditionNotice:"Volunteer Call", showAnnouncement:"Event Announcement", crewRole:"Volunteer", tagline:"Every Item Tracked. Every Dollar Accounted For.", taglineSub:"ArtsTracker keeps your organization organized — from equipment and supplies to events and fundraising.", inventorySub:"Every item, supply, and piece of equipment — all in one place.", productionsSub:"Create a folder for each event. Track everything you need from planning to event day.", communityIntro:"Upcoming events, volunteer calls, event photos, and wanted items — from organizations near you." },
+    fundingCats: ["Equipment","Supplies","Apparel","Events","Fundraising","Travel","Awards","Other"],
     categories: [
-      { id:"uniforms",      label:"Uniforms",              icon:"👕", color:"#1554a0", grad:"linear-gradient(135deg,#0d2b6e,#1565c0,#1976d2)" },
-      { id:"equipment",     label:"Equipment",             icon:"🎒", color:"#374549", grad:"linear-gradient(135deg,#263238,#37474f,#546e7a)" },
-      { id:"fundraising",   label:"Fundraising Items",     icon:"🏛️", color:"#7b1fa2", grad:"linear-gradient(135deg,#4a148c,#7b1fa2,#9c27b0)" },
-      { id:"spirit_gear",   label:"Spirit Gear",           icon:"📣", color:"#b83208", grad:"linear-gradient(135deg,#bf360c,#d84315,#e64a19)" },
-      { id:"event_supplies",label:"Event Supplies",        icon:"🎪", color:"#c2185b", grad:"linear-gradient(135deg,#880e4f,#ad1457,#e91e63)" },
-      { id:"canteen",       label:"Canteen / Concessions", icon:"🍕", color:"#d35400", grad:"linear-gradient(135deg,#7f4800,#e65100,#ff9800)" },
-      { id:"storage",       label:"Storage",               icon:"📦", color:"#4a2e1a", grad:"linear-gradient(135deg,#37474f,#546e7a,#78909c)" },
-      { id:"office",        label:"Office Supplies",       icon:"📋", color:"#374549", grad:"linear-gradient(135deg,#263238,#37474f,#546e7a)" },
-      { id:"awards",        label:"Awards & Recognition",  icon:"🏆", color:"#b06800", grad:"linear-gradient(135deg,#7f4800,#e65100,#ff9800)" },
-      { id:"other",         label:"Other",                 icon:"📦", color:"#4a2e1a", grad:"linear-gradient(135deg,#37474f,#546e7a,#78909c)" },
+      { id:"equipment",     label:"Equipment",          icon:"🎒", color:"#374549", grad:"linear-gradient(135deg,#263238,#37474f,#546e7a)" },
+      { id:"supplies",      label:"Supplies",           icon:"🧰", color:"#0d5e2a", grad:"linear-gradient(135deg,#1b5e20,#2e7d32,#43a047)" },
+      { id:"uniforms",      label:"Apparel & Uniforms", icon:"👕", color:"#1554a0", grad:"linear-gradient(135deg,#0d2b6e,#1565c0,#1976d2)" },
+      { id:"event_supplies",label:"Events",             icon:"🎪", color:"#c2185b", grad:"linear-gradient(135deg,#880e4f,#ad1457,#e91e63)" },
+      { id:"fundraising",   label:"Fundraising",        icon:"💰", color:"#7b1fa2", grad:"linear-gradient(135deg,#4a148c,#7b1fa2,#9c27b0)" },
+      { id:"storage",       label:"Storage",            icon:"🗄️", color:"#b06800", grad:"linear-gradient(135deg,#7f4800,#e65100,#ff9800)" },
+      { id:"awards",        label:"Awards",             icon:"🏆", color:"#5d3a1a", grad:"linear-gradient(135deg,#3e2723,#5d4037,#795548)" },
+      { id:"other",         label:"Other",              icon:"📦", color:"#4a2e1a", grad:"linear-gradient(135deg,#37474f,#546e7a,#78909c)" },
     ],
     conditions:    ["New","Excellent","Good","Fair","Poor","For Parts"],
     sizes:         ["XS","S","M","L","XL","XXL","One Size","N/A","Custom"],
@@ -163,6 +171,19 @@ export const getCats = (verticalId) => getVertical(verticalId).categories;
 // already used by CatCard and CatThumb in App.jsx.
 // Pass vertical="theatre" (or omit) for full Theatre4u backwards-compatibility.
 export const getExchangeName = (verticalId) => getVertical(verticalId).exchangeName || "Resource Exchange";
+
+// Per-vertical UI terminology. Falls back to the theatre wording, then the raw key.
+// e.g. getTerm("music","productions") === "Concerts"
+export const getTerm = (verticalId, key) => {
+  const t = getVertical(verticalId).terms || {};
+  if (t[key] != null) return t[key];
+  const th = VERTICALS.theatre.terms || {};
+  return th[key] != null ? th[key] : key;
+};
+
+// Per-vertical funding categories (falls back to theatre's list).
+export const getFundingCats = (verticalId) =>
+  getVertical(verticalId).fundingCats || VERTICALS.theatre.fundingCats || [];
 
 export const getCatGfx = (verticalId, catId) => {
   const cat = getCat(verticalId, catId);

@@ -104,6 +104,10 @@ footer{text-align:center;padding:24px;font-size:12px;color:var(--t3);border-top:
       </div>
       <div id="form">
         <div class="field">
+          <label>Your Name</label>
+          <input type="text" id="ownerName" placeholder="e.g. Jane Smith" autocomplete="name">
+        </div>
+        <div class="field">
           <label>Program Name</label>
           <input type="text" id="orgName" placeholder="Lincoln High School Drama" autocomplete="organization">
         </div>
@@ -207,6 +211,7 @@ fetch('https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/track-visit', {
 }).catch(()=>{});
 
 async function handleSignup() {
+  const ownerName = document.getElementById('ownerName').value.trim();
   const orgName = document.getElementById('orgName').value.trim();
   const email   = document.getElementById('email').value.trim();
   const pass    = document.getElementById('pass').value;
@@ -214,6 +219,7 @@ async function handleSignup() {
   const success = document.getElementById('success');
 
   err.style.display = 'none';
+  if(!ownerName){ showErr('Please enter your name.'); return; }
   if(!orgName){ showErr('Please enter your program name.'); return; }
   if(!email || !email.includes('@')){ showErr('Please enter a valid email address.'); return; }
   if(!pass || pass.length < 6){ showErr('Password must be at least 6 characters.'); return; }
@@ -228,9 +234,17 @@ async function handleSignup() {
 
   if(error){ showErr(error.message); return; }
 
+  // Already-registered email: Supabase returns success with a user that has no
+  // identities (anti-enumeration) and no usable id. Catch it so the button never
+  // hangs on "Creating your account…".
+  if(!data || !data.user || (Array.isArray(data.user.identities) && data.user.identities.length === 0)){
+    showErr('This email is already registered. Please sign in at theatre4u.org instead (or use “Forgot password”).');
+    return;
+  }
+
   // Create org
   await SB.from('orgs').upsert({
-    id: data.user.id, name: orgName, email,
+    id: data.user.id, name: orgName, email, director_name: ownerName || null,
     type:'', phone:'', location:'', bio:'',
     temp_pro: true, temp_pro_granted_at: new Date().toISOString(),
     temp_pro_note: 'Beta signup via join.html landing page',

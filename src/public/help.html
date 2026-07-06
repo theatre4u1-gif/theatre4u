@@ -191,7 +191,7 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
 <div class="hero">
   <div class="hero-eyebrow">Documentation & Tutorials</div>
   <h1>How to use <span>Theatre4u™</span></h1>
-  <p>Step-by-step guides for every feature — inventory, Backstage Exchange, community board, Theatre Credits, Funding Tracker, and more.</p>
+  <p>Step-by-step guides for every feature — inventory, Backstage Exchange, community board, Stage Points, Funding Tracker, and more.</p>
   <div class="hero-search">
     <input type="text" id="searchInput" placeholder="Search guides… e.g. 'add item', 'QR code', 'stage points'" oninput="doSearch(this.value)"/>
     <button onclick="doSearch(document.getElementById('searchInput').value)">Search</button>
@@ -207,7 +207,7 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
       <a href="#inventory" class="quick-card"><div class="qi">📦</div><h4>Inventory</h4><p>Adding & managing items</p></a>
       <a href="#marketplace" class="quick-card"><div class="qi">🏪</div><h4>Backstage Exchange</h4><p>Share, rent &amp; borrow items</p></a>
       <a href="#requests" class="quick-card"><div class="qi">📋</div><h4>Requests</h4><p>Borrowing & lending flow</p></a>
-      <a href="#credits" class="quick-card"><div class="qi">🪙</div><h4>Theatre Credits</h4><p>Earn & spend credits</p></a>
+      <a href="#credits" class="quick-card"><div class="qi">🪙</div><h4>Stage Points</h4><p>Earn & spend credits</p></a>
       <a href="#qr" class="quick-card"><div class="qi">🔲</div><h4>QR Labels</h4><p>Print & scan item tags</p></a>
       <a href="#productions" class="quick-card"><div class="qi">🎭</div><h4>Productions</h4><p>Track shows & props</p></a>
       <a href="#funding" class="quick-card"><div class="qi">💰</div><h4>Funding Tracker</h4><p>Track grants &amp; expenditures</p></a>
@@ -238,6 +238,7 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
       <a href="#mobile"><span class="nav-icon">📱</span>Mobile App</a>
       <a href="#district"><span class="nav-icon">🏢</span>District</a>
       <a href="#multiprogram"><span class="nav-icon">🔀</span>Multiple Programs</a>
+      <a href="#departments"><span class="nav-icon">🎨</span>Departments</a>
       <a href="#csv"><span class="nav-icon">📊</span>CSV Import</a>
       <a href="#plans"><span class="nav-icon">⭐</span>Plans & Pricing</a>
       <a href="#faq"><span class="nav-icon">❓</span>FAQ</a>
@@ -258,9 +259,9 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
           <div class="card-hd"><div class="step-num">1</div><h3>Create Your Account</h3></div>
           <div class="card-bd">
             <div class="steps">
-              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Go to theatre4u.org</h4><p>Click <strong>Get Started Free</strong> on the landing page. Enter your email address and create a password.</p></div></div>
-              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Enter your organization name</h4><p>This is the name other programs will see in Backstage Exchange — use your school or theatre program's full name (e.g. "Lincoln High Drama Dept.").</p></div></div>
-              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Confirm your email</h4><p>Check your inbox for a confirmation email from <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ed8588818182ad9985888c999f88d998c3829f8a">[email&#160;protected]</a>. Click the link to activate your account.</p><div class="tip">💡 Check your spam folder if you don't see it within 2 minutes.</div></div></div>
+              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Go to theatre4u.org</h4><p>Click <strong>Get Started Free</strong> on the landing page. Enter your name, email address, and a password — or click <strong>Continue with Google</strong> to sign up with your Google account (no password to remember).</p></div></div>
+              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Enter your name and organization name</h4><p>Your name saves as the program director on the account. The organization name is what other programs will see in Backstage Exchange — use your school or theatre program's full name (e.g. "Lincoln High Drama Dept.").</p></div></div>
+              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Confirm your email</h4><p>Check your inbox for a confirmation email from <a href="mailto:hello@theatre4u.org">hello@theatre4u.org</a>. Click the link to activate your account.</p><div class="tip">💡 Check your spam folder if you don't see it within 2 minutes.</div></div></div>
               <div class="step"><div class="step-n">4</div><div class="step-body"><h4>You're in!</h4><p>You'll land on the Dashboard. Your account starts on the free plan — you can explore inventory and basic features immediately.</p></div></div>
             </div>
           </div>
@@ -279,7 +280,19 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
         </div>
 
         <div class="callout gold"><div class="ci">🪙</div><div>Once you're on a Pro plan, you'll automatically receive <strong>25 welcome credits</strong> — enough to cover half the cost of your first rental from another program.</div></div>
-      </section>
+      
+        <div class="card">
+          <div class="card-hd"><div class="step-num">3</div><h3>Signing In &amp; Password Reset</h3></div>
+          <div class="card-bd">
+            <div class="steps">
+              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Sign in with email or Google</h4><p>Click <strong>Sign In</strong> and use your email + password, or click <strong>Continue with Google</strong>. If your Google account uses the same email as your existing account, they connect automatically — same account, same data.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Forgot your password?</h4><p>On the Sign In screen, click <strong>Forgot password?</strong> and enter your email. You'll receive a reset link — clicking it opens a page where you set a new password, then you're signed in.</p><div class="tip">💡 The reset link expires after a short time. If it stops working, just request a new one.</div></div></div>
+              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Shared computers</h4><p>Google sign-in always shows an account picker, so on a shared classroom computer each person can choose their own account. Remember to sign out when you're done.</p></div></div>
+            </div>
+          </div>
+        </div>
+
+</section>
 
       <!-- ═══════════════ INVENTORY ═══════════════ -->
       <section class="section" id="inventory">
@@ -297,7 +310,7 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
               <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Enter the item name</h4><p>Be specific — instead of "Dress" use "Victorian Ball Gown — Blue, Size M". This makes it searchable by other programs in Backstage Exchange.</p></div></div>
               <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Choose a category</h4><p>Pick from Costumes, Props, Sets & Scenery, Lighting, Sound Equipment, Scripts & Music, Makeup & Wigs, Stage Furniture, Fabrics & Drapes, Tools & Hardware, Special Effects, or Other.</p></div></div>
               <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Set condition, size, and quantity</h4><p>Condition options: New, Excellent, Good, Fair, Poor, For Parts. Be honest — inaccurate condition leads to disputes when items are exchanged.</p></div></div>
-              <div class="step"><div class="step-n">5</div><div class="step-body"><h4>Add photos (highly recommended)</h4><p>Upload up to 5 photos per item. Items with photos receive significantly more Exchange requests. Drag photos from your computer or tap to browse.</p><div class="tip">📸 After 10 items with photos, you earn <strong>50 Stage Points</strong> automatically.</div></div></div>
+              <div class="step"><div class="step-n">5</div><div class="step-body"><h4>Add photos (highly recommended)</h4><p>Upload 1 photo per item on the free plan, or up to 5 on Pro — the first photo is the cover, and you can reorder or change it any time. Items with photos receive significantly more Exchange requests. Drag photos from your computer or tap to browse.</p><div class="tip">📸 After 10 items with photos, you earn <strong>50 Stage Points</strong> automatically.</div></div></div>
               <div class="step"><div class="step-n">6</div><div class="step-body"><h4>Set availability and location</h4><p>Location is where the item physically lives (e.g. "Costume Closet B", "Scene Shop"). Availability status helps you track what's in use.</p></div></div>
               <div class="step"><div class="step-n">7</div><div class="step-body"><h4>Set Backstage Exchange status (optional)</h4><p>Choose Not Listed, For Rent, For Sale, Rent or Sale, or For Loan. If listing, enter the price. See the Backstage Exchange section for more detail.</p></div></div>
             </div>
@@ -328,7 +341,28 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
             </div>
           </div>
         </div>
-      </section>
+      
+        <div class="card">
+          <div class="card-hd"><h3>Bulk Photo Add — many items at once</h3></div>
+          <div class="card-bd">
+            <p style="font-size:14px;color:var(--muted);margin-bottom:14px">Have a camera roll full of inventory photos? Turn them all into items in one pass.</p>
+            <div class="steps">
+              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Click 📸 Bulk Photos on the Inventory page</h4><p>Choose many photos at once — from your device or straight from Google Drive.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Each photo becomes a draft item</h4><p>You'll see a grid of your photos. Give each one a name and category — condition and details can come later.</p></div></div>
+              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Save all</h4><p>Every draft becomes a real inventory item with its photo attached. A whole shelf can be cataloged in minutes.</p></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hd"><h3>Custom Categories</h3></div>
+          <div class="card-bd">
+            <p style="font-size:14px;color:var(--muted);margin-bottom:10px">Need a category we didn't think of? Owners and directors can add their own — they appear alongside the built-in categories everywhere: the item form, filters, and the dashboard.</p>
+            <p style="font-size:14px;color:var(--muted)">Go to <strong>Settings → Custom Categories</strong>, type a name, and it's available immediately. Custom categories belong to your program and each department keeps its own set.</p>
+          </div>
+        </div>
+
+</section>
 
       <!-- ═══════════════ MARKETPLACE ═══════════════ -->
       <section class="section" id="marketplace">
@@ -355,7 +389,7 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
                 <tr><td><strong>For Loan</strong></td><td>Free to borrow — no charge</td><td>Optional deposit & loan period</td></tr>
               </tbody>
             </table>
-            <div class="callout gold" style="margin-top:12px"><div class="ci">🪙</div><div>Listing items For Loan is one of the best ways to earn Theatre Credits, even if you never charge cash for your items.</div></div>
+            <div class="callout gold" style="margin-top:12px"><div class="ci">🪙</div><div>Listing items For Loan is one of the best ways to earn Stage Points, even if you never charge cash for your items.</div></div>
           </div>
         </div>
 
@@ -385,7 +419,7 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
           <div class="card-hd"><h3>Handling an Incoming Request (Owner)</h3></div>
           <div class="card-bd">
             <div class="steps">
-              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>You receive an email notification</h4><p>When someone requests one of your items, you get an email from <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="09616c656566497d616c687d7b6c3d7c27667b6e">[email&#160;protected]</a> with the details.</p></div></div>
+              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>You receive an email notification</h4><p>When someone requests one of your items, you get an email from <a href="mailto:hello@theatre4u.org">hello@theatre4u.org</a> with the details.</p></div></div>
               <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Open Requests in the sidebar</h4><p>The red badge shows how many pending requests are waiting. Click Requests to see all incoming and outgoing requests.</p></div></div>
               <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Review the request</h4><p>Check the dates, quantity, message from the requester, and agreed price. Click the request to see full details.</p></div></div>
               <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Approve or Decline</h4><p>Click <strong>Approve</strong> to accept. The requester is notified and the dates are blocked on the item's calendar. Click <strong>Decline</strong> (and optionally provide a reason) to reject it.</p></div></div>
@@ -521,6 +555,19 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
           </div>
           <div class="callout tip" style="margin-top:14px"><div class="ci">✅</div><div>In Reports, click <strong>Print All QR Labels</strong> to generate a single printable page with labels for every item in your inventory — perfect for labeling day.</div></div>
         </div></div>
+
+        <div class="card">
+          <div class="card-hd"><h3>Printing your labels — paper &amp; hardware</h3></div>
+          <div class="card-bd">
+            <p style="font-size:14px;color:var(--muted);margin-bottom:12px"><strong>Any printer works.</strong> The print pages are sized for standard letter paper and Avery-style sticker sheets — most programs start exactly this way.</p>
+            <p style="font-size:14px;color:var(--muted);margin-bottom:12px"><strong>For durable labels</strong> that live for years on bins, cases, and equipment, a dedicated label printer is a great upgrade:</p>
+            <ul style="font-size:14px;color:var(--muted);line-height:1.8;padding-left:20px;margin-bottom:12px">
+              <li><a href="https://www.amazon.com/dp/B01MTWGMRR?tag=artstracker-20" target="_blank" rel="noreferrer sponsored">Brother QL-810W</a> — fast, wireless, inexpensive paper label rolls (<a href="https://www.amazon.com/dp/B0002VS6HG?tag=artstracker-20" target="_blank" rel="noreferrer sponsored">DK-1201, 400 labels ≈ $14</a>). Great for bins and shelves.</li>
+              <li><a href="https://www.amazon.com/dp/B07HB8LNSY?tag=artstracker-20" target="_blank" rel="noreferrer sponsored">Brother P-touch CUBE Plus (PT-P710BT)</a> — laminated tape that survives handling, water, and years of use. It also prints <a href="https://www.amazon.com/dp/B0055FGLF8?tag=artstracker-20" target="_blank" rel="noreferrer sponsored">iron-on fabric labels</a> for costumes that survive 30+ washes.</li>
+            </ul>
+            <p style="font-size:12px;color:var(--faint);margin-bottom:0">💡 Iron-on tape is ½" wide — perfect for a program name + item ID inside a collar; put the scannable QR on the hanger or bin. <em>As an Amazon Associate, we earn from qualifying purchases.</em></p>
+          </div>
+        </div>
       </section>
 
       <!-- ═══════════════ PRODUCTIONS ═══════════════ -->
@@ -617,7 +664,7 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
           <div class="card-bd">
             <div class="steps">
               <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Open Funding Tracker in the sidebar</h4><p>Click 💰 Funding Tracker. You'll land on the Funding Sources tab.</p></div></div>
-              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Click + Add Funding Source</h4><p>Give the source a name (e.g. "Spring Grant 2025"), choose a type — Grant, District Allocation, Earned Income, Donation, Booster/PTA, or Other.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Click + Add Funding Source</h4><p>Give the source a name (e.g. "Spring Grant 2026"), choose a type — Grant, District Allocation, Earned Income, Donation, Booster/PTA, or Other.</p></div></div>
               <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Enter the total amount</h4><p>Add the total amount allocated, the funder name, and fiscal year. Start and end dates are optional but helpful for multi-year grants.</p></div></div>
               <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Save — the source appears in your tracker</h4><p>A progress bar shows spending vs. allocation as you log expenditures against it.</p></div></div>
             </div>
@@ -764,7 +811,25 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
             <div class="step"><div class="step-n">2</div><div class="step-body"><h4>A district connects them</h4><p>On the District plan, an administrator invites each program account into the district. From the District dashboard they can see every program's inventory together, or focus on one at a time.</p></div></div>
             <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Assign directors to each program</h4><p>Use <strong>👤 Directors</strong> on each school to give the right person access to the right program(s). One person can be assigned to several — they'll get the switcher described above.</p></div></div>
           </div>
-          <div class="callout"><div class="ci">💡</div><div><strong>Good to know:</strong> a single program account stays one program type. To run multiple program types, set them up as separate program accounts connected under a district — that's what keeps each program's inventory separate while giving administrators the full picture.</div></div>
+          <div class="callout"><div class="ci">💡</div><div><strong>Good to know:</strong> one account can now run <strong>multiple departments</strong> (Theatre, Music, Dance, Visual Art, Organizations) with an ArtsTracker all-departments plan — see the Departments section below. Districts remain the way to connect separate school accounts under one dashboard.</div></div>
+        </div></div>
+      </section>
+
+
+      <!-- ═══════════════ DEPARTMENTS ═══════════════ -->
+      <section class="section" id="departments">
+        <div class="sec-hero" data-emoji="🎨">
+          <h2>Departments</h2>
+          <p>One account, every arts program — Theatre, Music, Dance, Visual Art, and Organizations, each with its own space.</p>
+        </div>
+        <div class="card"><div class="card-bd">
+          <div class="steps">
+            <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Switch departments from the sidebar</h4><p>If your account has more than one department enabled, a department picker appears at the top of the left sidebar. Everything on screen — inventory, categories, events, funding, storage — follows the department you've selected.</p></div></div>
+            <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Each department keeps its own everything</h4><p>Items, categories, funding sources, storage locations, and event folders are separate per department. Your music inventory never mixes with your costume closet.</p></div></div>
+            <div class="step"><div class="step-n">3</div><div class="step-body"><h4>The words change with the department</h4><p>Theatre sees <strong>Productions</strong>, <strong>Backstage Exchange</strong>, and <strong>Stage Points</strong>. Music sees <strong>Concerts</strong>, Dance sees <strong>Performances</strong>, Art sees <strong>Exhibitions</strong>, Organizations see <strong>Events</strong> — with <strong>The Exchange</strong> and <strong>Encore Points</strong>.</p></div></div>
+            <div class="step"><div class="step-n">4</div><div class="step-body"><h4>Directors can be scoped to one department</h4><p>When you assign a director, you can limit them to a single department — a band director sees music, nothing else. Assign directors without a department to give whole-account access.</p></div></div>
+          </div>
+          <div class="callout tip" style="margin-top:14px"><div class="ci">⭐</div><div>Departments beyond your first one are part of the <strong>ArtsTracker all-departments plans</strong>. Manage which departments are on in <strong>Settings → Departments</strong>.</div></div>
         </div></div>
       </section>
 
@@ -824,13 +889,13 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
             <thead><tr><th>Feature</th><th><span class="plan-badge pb-free">Free</span></th><th><span class="plan-badge pb-pro">Pro — $15/mo</span></th><th><span class="plan-badge pb-district">District — $49/mo</span></th></tr></thead>
             <tbody>
               <tr><td>Inventory items</td><td>Up to 25</td><td>Unlimited</td><td>Unlimited</td></tr>
-              <tr><td>Photos per item</td><td>Up to 5</td><td>Up to 5</td><td>Up to 5</td></tr>
+              <tr><td>Photos per item</td><td>1</td><td>Up to 5</td><td>Up to 5</td></tr>
               <tr><td>QR labels</td><td>✓</td><td>✓</td><td>✓</td></tr>
               <tr><td>Backstage Exchange</td><td>—</td><td>✓ Full access</td><td>✓ Full access</td></tr>
               <tr><td>Messaging</td><td>—</td><td>✓</td><td>✓</td></tr>
               <tr><td>Productions tracking</td><td>✓</td><td>✓</td><td>✓</td></tr>
               <tr><td>Reports & CSV export</td><td>—</td><td>✓</td><td>✓</td></tr>
-              <tr><td>Theatre Credits</td><td>—</td><td>✓</td><td>✓</td></tr>
+              <tr><td>Stage Points</td><td>—</td><td>✓</td><td>✓</td></tr>
               <tr><td>Funding Tracker</td><td>—</td><td>✓</td><td>✓</td></tr>
               <tr><td>Mobile app</td><td>—</td><td>✓</td><td>✓</td></tr>
               <tr><td>CSV import</td><td>—</td><td>✓</td><td>✓</td></tr>
@@ -838,6 +903,7 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
               <tr><td>District dashboard</td><td>—</td><td>—</td><td>✓</td></tr>
             </tbody>
           </table>
+          <div class="callout tip" style="margin-top:16px"><div class="ci">🎨</div><div><strong>Running more than one arts department?</strong> ArtsTracker all-departments plans unlock Theatre, Music, Dance, Visual Art &amp; Organizations in one account — <strong>ArtsTracker Pro $59/mo</strong> (one school) and <strong>District plans from $199/mo</strong> (S up to 6 schools · M $399 up to 15 · L $699 up to 30). Purchase orders accepted for districts.</div></div>
           <div style="text-align:center;margin-top:20px">
             <a href="https://theatre4u.org" style="display:inline-block;background:var(--gold);color:var(--ink);padding:12px 28px;border-radius:10px;font-weight:700;font-size:15px">Upgrade Your Plan →</a>
           </div>
@@ -852,7 +918,7 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
         <div class="faq">
           <details class="faq-item">
             <summary><span>Can I use Theatre4u without upgrading to Pro?</span><span class="arr">›</span></summary>
-            <div class="faq-a">Yes. The free plan lets you catalog up to 50 items, create productions, print QR labels, and browse Backstage Exchange. To post items to Backstage Exchange or send requests to other programs, you'll need a Pro plan.</div>
+            <div class="faq-a">Yes. The free plan lets you catalog up to 25 items, create productions, print QR labels, and browse Backstage Exchange. To post items to Backstage Exchange or send requests to other programs, you'll need a Pro plan.</div>
           </details>
           <details class="faq-item">
             <summary><span>How does payment work between programs?</span><span class="arr">›</span></summary>
@@ -888,7 +954,7 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
           </details>
           <details class="faq-item">
             <summary><span>How do I get my school's IT department to whitelist Theatre4u emails?</span><span class="arr">›</span></summary>
-            <div class="faq-a">Ask your IT administrator to whitelist the domain <strong>theatre4u.org</strong> and the sending address <strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c9a1aca5a5a689bda1aca8bdbbacfdbce7a6bbae">[email&#160;protected]</a></strong>. Emails are sent via Resend using the domain theatre4u.org. If invite emails aren't arriving, this is almost always the cause.</div>
+            <div class="faq-a">Ask your IT administrator to whitelist the domain <strong>theatre4u.org</strong> and the sending address <strong><a href="mailto:hello@theatre4u.org">hello@theatre4u.org</a></strong>. Emails are sent via Resend using the domain theatre4u.org. If invite emails aren't arriving, this is almost always the cause.</div>
           </details>
         </div>
       </section>
@@ -905,7 +971,7 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
   </div><!-- /page-body -->
 </div><!-- /wrap -->
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script>
 // ── FAQ toggles ──
 function toggleFaq(el) {
   el.classList.toggle('open');
@@ -965,7 +1031,19 @@ window.addEventListener('scroll', () => {
 
 // ── Domain-aware branding: on artstracker.org show ArtsTracker, not Theatre4u ──
 (function(){
-  if (!location.hostname.includes("artstracker")) return;
+  // Mirrors src/core/config.js: previews default to ArtsTracker; ?brand= override (previews only)
+  var host = location.hostname, ov = null;
+  try {
+    var isPreview = host.endsWith(".vercel.app") || host === "localhost" || host === "127.0.0.1";
+    if (isPreview) {
+      var p = new URLSearchParams(location.search).get("brand");
+      if (p === "off") sessionStorage.removeItem("t4u_brand_override");
+      else if (p === "theatre4u" || p === "artstracker") sessionStorage.setItem("t4u_brand_override", p);
+      ov = sessionStorage.getItem("t4u_brand_override");
+    }
+  } catch(e){}
+  var isT4u = ov ? ov === "theatre4u" : (host.includes("theatre4u.org") || host === "localhost");
+  if (isT4u) return;
   var NAME = "ArtsTracker";
   function walk(node){
     if (node.nodeType === 3) {
