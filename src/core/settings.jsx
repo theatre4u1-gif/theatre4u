@@ -743,12 +743,9 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
                   style={{fontSize:12}}>
                   💳 Manage Billing &amp; Cancel
                 </a>
-                <a href={"mailto:"+APP_EMAIL+"?subject=Cancel Subscription"} className="btn btn-o btn-sm" style={{fontSize:12}}>
-                  ✉️ Email Us to Cancel
-                </a>
               </div>
               <div style={{fontSize:11,color:"var(--faint)",marginTop:8,lineHeight:1.6}}>
-                Need help? Email <a href={"mailto:"+APP_EMAIL} style={{color:"var(--goldink)"}}>{APP_EMAIL}</a> — we respond personally.
+                Paying by check/PO, or having trouble with the billing portal? Email <a href={"mailto:"+APP_EMAIL+"?subject=Cancel Subscription"} style={{color:"var(--goldink)"}}>{APP_EMAIL}</a> and we'll take care of it personally.
               </div>
               <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid var(--bd)",fontSize:12,color:"var(--muted)",lineHeight:1.7}}>
                 <span style={{fontWeight:700,color:"var(--text)"}}>🏛️ Paying by check or PO?</span> Email{" "}
