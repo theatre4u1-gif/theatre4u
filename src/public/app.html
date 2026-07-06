@@ -136,6 +136,21 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 .photo-area .pa-txt{font-size:13px;color:var(--muted);font-weight:500}
 .photo-area .pa-rm{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.75);border:none;color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px}
 
+/* ── Photo gallery ── */
+.pgal{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.pgal .pth{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;border:1px solid var(--border);background:var(--card)}
+.pgal .pth img{width:100%;height:100%;object-fit:cover;display:block}
+.pgal .pth .rm{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.75);border:none;color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;line-height:1}
+.pgal .pth .cov{position:absolute;bottom:4px;left:4px;background:rgba(212,168,67,.92);color:#1a1408;font-size:9px;font-weight:800;padding:1px 6px;border-radius:6px;letter-spacing:.4px}
+.pgal .padd{aspect-ratio:1;border:2px dashed var(--border);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--muted);font-size:11px;cursor:pointer;background:var(--card)}
+.pgal .spin{width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite}
+.hero-swipe{display:flex;width:100%;height:100%;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.hero-swipe::-webkit-scrollbar{display:none}
+.hero-swipe img{flex:0 0 100%;scroll-snap-align:center}
+.hero-dots{position:absolute;bottom:10px;left:0;right:0;display:flex;justify-content:center;gap:6px;z-index:2;pointer-events:none}
+.hero-dots span{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.35)}
+.hero-dots span.on{background:#fff}
+
 /* ── Camera view ── */
 .cam-view{flex:1;position:relative;background:#000;overflow:hidden}
 .cam-view video{width:100%;height:100%;object-fit:cover}
@@ -154,7 +169,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 /* ── Item detail ── */
 .detail-hero{width:100%;aspect-ratio:16/10;background:var(--card);position:relative;overflow:hidden}
 .detail-hero img{width:100%;height:100%;object-fit:contain;background:#141210}
-.detail-hero .hero-grad{position:absolute;inset:0;background:linear-gradient(to top,rgba(10,10,15,1) 0%,rgba(10,10,15,.4) 50%,transparent 100%)}
+.detail-hero .hero-grad{pointer-events:none;position:absolute;inset:0;background:linear-gradient(to top,rgba(10,10,15,1) 0%,rgba(10,10,15,.4) 50%,transparent 100%)}
 .detail-hero .hero-cat{position:absolute;top:calc(var(--safe-top) + 12px);left:16px;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700;color:var(--gold);display:flex;align-items:center;gap:5px}
 .detail-hero .back-btn{position:absolute;top:calc(var(--safe-top) + 8px);right:16px;width:38px;height:38px;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);border-radius:50%;display:flex;align-items:center;justify-content:center;border:none;color:var(--text);cursor:pointer}
 .detail-title{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;line-height:1.2;margin-bottom:6px}
@@ -311,6 +326,31 @@ async function uploadPhoto(file, userId) {
   if (error) { console.error(error); return null; }
   const { data } = SB.storage.from("item-photos").getPublicUrl(path);
   return data.publicUrl;
+}
+
+// ── Multi-photo helpers (mirrors src/core/items.jsx) ────────────────────────
+const imgsOf = it => (it && it.images && it.images.length ? it.images : (it && it.img ? [it.img] : []));
+const maxImgFor = plan => (plan || "free") === "free" ? 1 : 5;
+
+function PhotoGallery({imgs, max, uploading, onAdd, onRemove, onCover}) {
+  return h("div", null,
+    h("div",{className:"fl",style:{marginBottom:8}},"\ud83d\udcf7 Photos ",
+      h("span",{style:{fontWeight:400,color:"var(--muted)"}},"("+imgs.length+"/"+max+")")),
+    h("div",{className:"pgal"},
+      imgs.map((u,i)=>h("div",{key:u+i,className:"pth",onClick:()=>i>0&&onCover&&onCover(i)},
+        h("img",{src:u,alt:""}),
+        i===0&&h("span",{key:"c",className:"cov"},"COVER"),
+        h("button",{key:"r",className:"rm",onClick:e=>{e.stopPropagation();onRemove(i);}},"\u00d7")
+      )),
+      imgs.length<max&&h("label",{className:"padd"},
+        uploading?h("div",{className:"spin"}):h("span",{style:{fontSize:20}},"\ud83d\udcf7"),
+        h("span",null,uploading?"Uploading\u2026":"Add Photo"),
+        h("input",{type:"file",accept:"image/*",capture:"environment",hidden:true,disabled:uploading,onChange:onAdd})
+      )
+    ),
+    imgs.length>1&&h("div",{style:{fontSize:11,color:"var(--muted)",marginTop:-8,marginBottom:12}},"Tap a photo to make it the cover."),
+    max===1&&imgs.length>=1&&h("div",{style:{fontSize:11,color:"var(--muted)",marginTop:-8,marginBottom:12}},"Free plan: 1 photo per item. Upgrade to Pro for up to 5.")
+  );
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -479,12 +519,14 @@ function AuthScreen({onAuth}) {
 // ── ══════════════════════════════════════════
 // ── ITEM DETAIL SCREEN
 // ── ══════════════════════════════════════════
-function ItemDetail({item, onBack, onEdited, onDeleted, userId}) {
+function ItemDetail({item, onBack, onEdited, onDeleted, userId, plan}) {
   const cat = CAT[item.category] || CAT.other;
   const [qr, setQr]     = useState(null);
   const [editing, setEd]= useState(false);
   const [delConf, setDC]= useState(false);
   const [toast, showT]  = useToast();
+  const imgs = imgsOf(item);
+  const [heroIdx, setHI] = useState(0);
   const mktCls = item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="For Loan"?"mb-loan":item.mkt==="Rent or Sale"?"mb-both":"mb-none";
 
   useEffect(()=>{ genQR("https://theatre4u.org/#/item/"+item.id, 160).then(setQr); },[item.id]);
@@ -498,9 +540,13 @@ function ItemDetail({item, onBack, onEdited, onDeleted, userId}) {
     h(Toast,{toast}),
     // Hero
     h("div",{className:"detail-hero"},
-      item.img
-        ? h("img",{src:item.img,alt:item.name})
-        : h("div",{style:{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:72,opacity:.3}},cat.icon),
+      imgs.length>1
+        ? [h("div",{key:"sw",className:"hero-swipe",onScroll:e=>{const el=e.currentTarget;setHI(Math.round(el.scrollLeft/el.clientWidth));}},
+             imgs.map((u,i)=>h("img",{key:i,src:u,alt:item.name}))),
+           h("div",{key:"d",className:"hero-dots"},imgs.map((_,i)=>h("span",{key:i,className:i===heroIdx?"on":""})))]
+        : imgs.length===1
+          ? h("img",{src:imgs[0],alt:item.name})
+          : h("div",{style:{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:72,opacity:.3}},cat.icon),
       h("div",{className:"hero-grad"}),
       h("div",{className:"hero-cat"},h("span",null,cat.icon)," ",cat.label),
       h("button",{className:"back-btn",onClick:onBack},Ic.back(20))
@@ -563,7 +609,7 @@ function ItemDetail({item, onBack, onEdited, onDeleted, userId}) {
         ? h("button",{className:"btn btn-danger",style:{flex:1},onClick:deleteItem},"Confirm Delete")
         : h("button",{className:"btn btn-ghost",style:{flex:1,color:"var(--red)",borderColor:"rgba(224,82,82,.3)"},onClick:()=>setDC(true)},Ic.trash(16)," Delete")
     ),
-    editing && h(EditSheet,{item,onClose:()=>setEd(false),onSaved:updated=>{setEd(false);onEdited(updated);showT("✓ Saved");},userId})
+    editing && h(EditSheet,{item,onClose:()=>setEd(false),onSaved:updated=>{setEd(false);onEdited(updated);showT("✓ Saved");},userId,plan})
   );
 }
 
@@ -571,20 +617,26 @@ function ItemDetail({item, onBack, onEdited, onDeleted, userId}) {
 // ── ══════════════════════════════════════════
 // ── EDIT SHEET
 // ── ══════════════════════════════════════════
-function EditSheet({item, onClose, onSaved, userId}) {
+function EditSheet({item, onClose, onSaved, userId, plan}) {
   const [f, setF] = useState({...item});
   const [saving, setSaving] = useState(false);
   const [uploading, setUpl] = useState(false);
   const upd = (k,v) => setF(p=>({...p,[k]:v}));
   const fileRef = useRef();
 
+  const maxImg = maxImgFor(plan);
   const handlePhoto = async e => {
     const file = e.target.files?.[0]; if(!file) return;
+    const cur = imgsOf(f);
+    if(cur.length>=maxImg){ alert(maxImg===1?"The free plan includes 1 photo per item. Upgrade to Pro for up to 5 photos.":"You can add up to "+maxImg+" photos per item."); e.target.value=""; return; }
     setUpl(true);
     const url = await uploadPhoto(file, userId);
-    if(url) upd("img", url);
+    if(url){ const next=[...cur,url]; setF(p=>({...p,images:next,img:next[0]})); }
     setUpl(false);
+    e.target.value="";
   };
+  const removeImage = idx => setF(p=>{const cur=imgsOf(p);const next=cur.filter((_,i)=>i!==idx);return {...p,images:next,img:next[0]||null};});
+  const makeCover  = idx => setF(p=>{const cur=imgsOf(p);if(idx<=0||idx>=cur.length)return p;const next=[cur[idx],...cur.filter((_,i)=>i!==idx)];return {...p,images:next,img:next[0]};});
 
   const save = async () => {
     setSaving(true);
@@ -601,14 +653,8 @@ function EditSheet({item, onClose, onSaved, userId}) {
         h("button",{style:{background:"none",border:"none",color:"var(--muted)",cursor:"pointer"},onClick:onClose},Ic.x(22))
       ),
       h("div",{className:"sheet-bd"},
-        // Photo
-        h("div",{className:"photo-area",style:{aspectRatio:"16/9"},onClick:()=>!uploading&&fileRef.current?.click()},
-          f.img
-            ? [h("img",{key:"img",src:f.img,alt:""}),
-               h("button",{key:"rm",className:"pa-rm",onClick:e=>{e.stopPropagation();upd("img",null)}},"×")]
-            : [h("div",{key:"i",className:"pa-icon"},"📷"),h("div",{key:"t",className:"pa-txt"},uploading?"Uploading…":"Tap to change photo")],
-          h("input",{ref:fileRef,type:"file",accept:"image/*",capture:"environment",hidden:true,onChange:handlePhoto})
-        ),
+        // Photos (gallery — cover first)
+        h(PhotoGallery,{imgs:imgsOf(f),max:maxImg,uploading,onAdd:handlePhoto,onRemove:removeImage,onCover:makeCover}),
         h("div",{className:"fg"},h("label",{className:"fl"},"Name"),h("input",{className:"fi",value:f.name||"",onChange:e=>upd("name",e.target.value)})),
         h("div",{className:"fg"},h("label",{className:"fl"},"Location"),h("input",{className:"fi",value:f.location||"",onChange:e=>upd("location",e.target.value),placeholder:"e.g. Costume Closet A"})),
         h("div",{className:"fg"},
@@ -741,22 +787,35 @@ function LocationPicker({value, onChange, userId}) {
   );
 }
 
-function AddSheet({onClose, onAdded, userId}) {
+function AddSheet({onClose, onAdded, userId, plan}) {
   const [step, setStep] = useState("photo"); // photo | details
-  const [f, setF] = useState({name:"",category:CATS[0].id,condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,avail:"In Stock",tags:[],img:null});
+  const [f, setF] = useState({name:"",category:CATS[0].id,condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,avail:"In Stock",tags:[],img:null,images:[]});
   const [saving, setSaving] = useState(false);
   const [uploading, setUpl] = useState(false);
   const fileRef = useRef();
   const upd = (k,v) => setF(p=>({...p,[k]:v}));
 
+  const maxImg = maxImgFor(plan);
   const handlePhoto = async e => {
     const file = e.target.files?.[0]; if(!file) return;
     setUpl(true);
     const url = await uploadPhoto(file, userId);
-    if(url) { upd("img", url); setStep("details"); }
+    if(url) { setF(p=>({...p,images:[url],img:url})); setStep("details"); }
     else setStep("details");
     setUpl(false);
   };
+  const handleMorePhoto = async e => {
+    const file = e.target.files?.[0]; if(!file) return;
+    const cur = imgsOf(f);
+    if(cur.length>=maxImg){ alert(maxImg===1?"The free plan includes 1 photo per item. Upgrade to Pro for up to 5 photos.":"You can add up to "+maxImg+" photos per item."); e.target.value=""; return; }
+    setUpl(true);
+    const url = await uploadPhoto(file, userId);
+    if(url){ const next=[...cur,url]; setF(p=>({...p,images:next,img:next[0]})); }
+    setUpl(false);
+    e.target.value="";
+  };
+  const removeImage = idx => setF(p=>{const cur=imgsOf(p);const next=cur.filter((_,i)=>i!==idx);return {...p,images:next,img:next[0]||null};});
+  const makeCover  = idx => setF(p=>{const cur=imgsOf(p);if(idx<=0||idx>=cur.length)return p;const next=[cur[idx],...cur.filter((_,i)=>i!==idx)];return {...p,images:next,img:next[0]};});
 
   const skipPhoto = () => setStep("details");
 
@@ -803,10 +862,7 @@ function AddSheet({onClose, onAdded, userId}) {
         h("button",{style:{background:"none",border:"none",color:"var(--muted)",cursor:"pointer"},onClick:()=>setStep("photo")},Ic.back(22))
       ),
       h("div",{className:"sheet-bd"},
-        f.img && h("div",{style:{marginBottom:14,borderRadius:10,overflow:"hidden",height:160,position:"relative"}},
-          h("img",{src:f.img,alt:"",style:{width:"100%",height:"100%",objectFit:"cover"}}),
-          h("button",{onClick:()=>upd("img",null),style:{position:"absolute",top:8,right:8,background:"rgba(0,0,0,.7)",border:"none",color:"#fff",borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:16}},"×")
-        ),
+        h(PhotoGallery,{imgs:imgsOf(f),max:maxImg,uploading,onAdd:handleMorePhoto,onRemove:removeImage,onCover:makeCover}),
         h("div",{className:"fg"},
           h("label",{className:"fl"},"Item Name *"),
           h("input",{className:"fi",value:f.name,onChange:e=>upd("name",e.target.value),placeholder:"e.g. Victorian Ball Gown",autoFocus:true})
@@ -1637,7 +1693,7 @@ function App() {
     Toast&&h(Toast,{toast}),
     !online && h("div",{className:"offline-bar"},"⚡ Offline — some features may be unavailable"),
     // View item detail (full screen)
-    viewItem && h(ItemDetail,{item:viewItem,onBack:()=>setViewItem(null),onEdited:handleItemEdited,onDeleted:handleItemDeleted,userId:org?.id||user.id}),
+    viewItem && h(ItemDetail,{item:viewItem,onBack:()=>setViewItem(null),onEdited:handleItemEdited,onDeleted:handleItemDeleted,userId:org?.id||user.id,plan:org?.plan||"free"}),
     // Tab content
     !viewItem && h("div",{style:{flex:1,overflow:"hidden",display:"flex",flexDirection:"column"}},
       !isStandalone && h(InstallBanner,null),
@@ -1657,7 +1713,7 @@ function App() {
     // FAB — only on home and inventory
     !viewItem && (tab==="home"||tab==="inventory") && org?._memberRole !== "house" && h("button",{className:"fab",onClick:()=>setAddOpen(true)},Ic.plus(26)),
     // Add sheet
-    addOpen && h(AddSheet,{onClose:()=>setAddOpen(false),onAdded:handleItemAdded,userId:org?.id||user.id})
+    addOpen && h(AddSheet,{onClose:()=>setAddOpen(false),onAdded:handleItemAdded,userId:org?.id||user.id,plan:org?.plan||"free"})
   );
 }
 
