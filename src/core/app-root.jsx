@@ -250,25 +250,28 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       const { data: memberRows } = await SB.from("org_members")
         .select("org_id, role, orgs(*)")
         .eq("user_id", user.id);
-      let memberList = memberRows || [];
-      // Always make the user's OWN org (id === user.id) selectable as owner, so a
-      // multi-program owner who is also a member elsewhere can still reach their
-      // own org. Appended (not prepended) to preserve the default-landing behavior.
-      if (!memberList.some(m => m.org_id === user.id)) {
-        const { data: ownOrg } = await SB.from("orgs").select("*").eq("id", user.id).single();
-        if (ownOrg) memberList = [...memberList, { org_id: user.id, role: null, orgs: ownOrg, _own: true }];
+      // Load EVERY org this user OWNS (owner_id-based, Phase 8) — a multi-program owner
+      // now sees all owned programs in the switcher, not just the one whose id === user.id.
+      // Owned entries take precedence over a membership on the same org (owner > member).
+      const { data: ownedOrgs } = await SB.from("orgs").select("*").eq("owner_id", user.id);
+      let memberList = (ownedOrgs || []).map(o => ({ org_id: o.id, role: null, orgs: o, _own: true }));
+      for (const m of (memberRows || [])) {
+        if (!memberList.some(e => e.org_id === m.org_id)) memberList = [...memberList, m];
       }
       setMemberships(memberList);
 
-      // Pick the active program: a saved preference if still valid, else the first
-      // REAL membership (preserves prior default), else the user's own org.
+      // Pick the active program: a saved preference if still valid, else the prior
+      // default (first REAL membership), else the first owned org.
       const savedId = (()=>{ try { return localStorage.getItem("t4u_active_program"); } catch(e){ return null; } })();
-      const firstReal = (memberRows && memberRows.length) ? memberRows[0] : (memberList[0] || null);
-      let activeMembership = memberList.find(m => m.org_id === savedId) || firstReal;
-      // The user's own org is owner access, NOT a membership — treat it like the
-      // old "0 memberships" path (memberRole=null, not a member).
-      const realMembership = (activeMembership && activeMembership.org_id !== user.id) ? activeMembership : null;
-      const targetOrgId = realMembership ? realMembership.org_id : user.id;
+      const firstRealRow = (memberRows && memberRows.length) ? memberRows[0] : null;
+      const defaultEntry = firstRealRow
+        ? (memberList.find(e => e.org_id === firstRealRow.org_id) || memberList[0] || null)
+        : (memberList[0] || null);
+      const activeEntry = memberList.find(e => e.org_id === savedId) || defaultEntry;
+      // Owned entries = owner access (memberRole null, not a member); real memberships keep their role.
+      const isOwned = !!(activeEntry && activeEntry._own);
+      const realMembership = (activeEntry && !isOwned) ? activeEntry : null;
+      const targetOrgId = activeEntry ? activeEntry.org_id : user.id;
       const memberRole  = realMembership ? realMembership.role : null;
 
       const{data:orgData}=await SB.from("orgs").select("*").eq("id",targetOrgId).single();
