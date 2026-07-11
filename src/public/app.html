@@ -332,7 +332,83 @@ async function uploadPhoto(file, userId) {
 const imgsOf = it => (it && it.images && it.images.length ? it.images : (it && it.img ? [it.img] : []));
 const maxImgFor = plan => (plan || "free") === "free" ? 1 : 5;
 
-function PhotoGallery({imgs, max, uploading, onAdd, onRemove, onCover}) {
+// Live in-app camera: opens the device camera, snap a SERIES of photos without
+// leaving the app, each uploaded in the background and attached to the item (up to cap).
+function CameraCapture({max, current, onCapture, onClose}) {
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const [facing, setFacing] = useState("environment");
+  const [err, setErr] = useState(false);
+  const [shots, setShots] = useState([]); // {id,url,status:'up'|'ok'|'err'}
+  const stopCam = () => { const s=streamRef.current; if(s){ s.getTracks().forEach(t=>t.stop()); streamRef.current=null; } };
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        stopCam();
+        if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ setErr(true); return; }
+        const s = await navigator.mediaDevices.getUserMedia({ video:{ facingMode: facing }, audio:false });
+        if(!active){ s.getTracks().forEach(t=>t.stop()); return; }
+        streamRef.current = s;
+        const v = videoRef.current;
+        if(v){ v.srcObject = s; v.play().catch(()=>{}); }
+      } catch(e){ setErr(true); }
+    })();
+    return () => { active=false; stopCam(); };
+  }, [facing]);
+  const okCount = shots.filter(s=>s.status!=="err").length;
+  const remaining = max - current - okCount;
+  const canSnap = remaining > 0 && !err;
+  const snap = () => {
+    const v = videoRef.current;
+    if(!v || !v.videoWidth || remaining<=0) return;
+    const cv = document.createElement("canvas");
+    cv.width = v.videoWidth; cv.height = v.videoHeight;
+    cv.getContext("2d").drawImage(v, 0, 0, cv.width, cv.height);
+    const id = String(Date.now()) + Math.random().toString(36).slice(2);
+    const preview = cv.toDataURL("image/jpeg", 0.5);
+    setShots(p => [...p, { id, url:preview, status:"up" }]);
+    cv.toBlob(async blob => {
+      if(!blob){ setShots(p=>p.map(s=>s.id===id?{...s,status:"err"}:s)); return; }
+      const file = new File([blob], "camera-"+id+".jpg", { type:"image/jpeg" });
+      let ok=false; try { ok = await onCapture(file); } catch(_){}
+      setShots(p=>p.map(s=>s.id===id?{...s,status: ok?"ok":"err"}:s));
+    }, "image/jpeg", 0.9);
+  };
+  const done = () => { stopCam(); onClose(); };
+  const ov = {position:"fixed",inset:0,zIndex:1200,background:"#000",display:"flex",flexDirection:"column"};
+  if(err) return h("div",{style:ov},
+    h("div",{style:{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",color:"#fff",padding:24,textAlign:"center",gap:12}},
+      h("div",{style:{fontSize:16,fontWeight:700}},"Camera unavailable"),
+      h("div",{style:{fontSize:13,opacity:.8,maxWidth:280,lineHeight:1.5}},"Allow camera access in your browser settings, or use Add Photo to pick from your library."),
+      h("button",{className:"btn btn-gold",style:{marginTop:8},onClick:done},"Close")
+    )
+  );
+  return h("div",{style:ov},
+    h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",color:"#fff"}},
+      h("span",{style:{fontSize:14,fontWeight:700}}, (current+okCount)+" / "+max+" photos"),
+      h("button",{style:{background:"none",border:"none",color:"#fff",cursor:"pointer"},onClick:done}, Ic.x(24))
+    ),
+    h("div",{style:{flex:1,position:"relative",overflow:"hidden"}},
+      h("video",{ref:videoRef,autoPlay:true,playsInline:true,muted:true,style:{width:"100%",height:"100%",objectFit:"cover"}}),
+      remaining<=0 && h("div",{style:{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,.55)",color:"#fff",fontWeight:700,fontSize:15,textAlign:"center",padding:20}}, "All "+max+" photo slots filled — tap Done.")
+    ),
+    shots.length>0 && h("div",{style:{display:"flex",gap:8,padding:"10px 12px",overflowX:"auto",background:"#111"}},
+      shots.map(s=>h("div",{key:s.id,style:{position:"relative",flex:"0 0 auto"}},
+        h("img",{src:s.url,alt:"",style:{width:52,height:52,objectFit:"cover",borderRadius:8,opacity:s.status==="up"?.5:1,border:s.status==="err"?"2px solid #e53935":"2px solid transparent"}}),
+        s.status==="up" && h("div",{style:{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}, h("div",{className:"spin"}))
+      ))
+    ),
+    h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 24px 28px",background:"#111"}},
+      h("button",{style:{background:"rgba(255,255,255,.15)",border:"none",color:"#fff",borderRadius:20,padding:"10px 14px",fontSize:13,fontWeight:700,cursor:"pointer"},onClick:()=>setFacing(f=>f==="environment"?"user":"environment")},"Flip"),
+      h("button",{disabled:!canSnap,"aria-label":"Take photo",onClick:snap,style:{width:72,height:72,borderRadius:"50%",border:"5px solid rgba(255,255,255,.5)",background:canSnap?"#fff":"rgba(255,255,255,.35)",cursor:canSnap?"pointer":"not-allowed"}}),
+      h("button",{className:"btn btn-gold",style:{minWidth:72},onClick:done},"Done")
+    )
+  );
+}
+
+function PhotoGallery({imgs, max, uploading, onAdd, onRemove, onCover, onCaptureFile}) {
+  const [showCam, setShowCam] = useState(false);
   return h("div", null,
     h("div",{className:"fl",style:{marginBottom:8}},"\ud83d\udcf7 Photos ",
       h("span",{style:{fontWeight:400,color:"var(--muted)"}},"("+imgs.length+"/"+max+")")),
@@ -346,10 +422,15 @@ function PhotoGallery({imgs, max, uploading, onAdd, onRemove, onCover}) {
         uploading?h("div",{className:"spin"}):h("span",{style:{fontSize:20}},"\ud83d\udcf7"),
         h("span",null,uploading?"Uploading\u2026":"Add Photo"),
         h("input",{type:"file",accept:"image/*",capture:"environment",hidden:true,disabled:uploading,onChange:onAdd})
+      ),
+      imgs.length<max&&onCaptureFile&&h("button",{key:"cam",className:"padd",style:{border:"none",cursor:"pointer",font:"inherit"},onClick:()=>setShowCam(true)},
+        h("span",{style:{fontSize:20}},"📸"),
+        h("span",null,"Camera")
       )
     ),
     imgs.length>1&&h("div",{style:{fontSize:11,color:"var(--muted)",marginTop:-8,marginBottom:12}},"Tap a photo to make it the cover."),
-    max===1&&imgs.length>=1&&h("div",{style:{fontSize:11,color:"var(--muted)",marginTop:-8,marginBottom:12}},"Free plan: 1 photo per item. Upgrade to Pro for up to 5.")
+    max===1&&imgs.length>=1&&h("div",{style:{fontSize:11,color:"var(--muted)",marginTop:-8,marginBottom:12}},"Free plan: 1 photo per item. Upgrade to Pro for up to 5."),
+    showCam&&onCaptureFile&&h(CameraCapture,{max,current:imgs.length,onCapture:onCaptureFile,onClose:()=>setShowCam(false)})
   );
 }
 
@@ -654,7 +735,7 @@ function EditSheet({item, onClose, onSaved, userId, plan}) {
       ),
       h("div",{className:"sheet-bd"},
         // Photos (gallery — cover first)
-        h(PhotoGallery,{imgs:imgsOf(f),max:maxImg,uploading,onAdd:handlePhoto,onRemove:removeImage,onCover:makeCover}),
+        h(PhotoGallery,{imgs:imgsOf(f),max:maxImg,uploading,onAdd:handlePhoto,onRemove:removeImage,onCover:makeCover,onCaptureFile:async file=>{ if(!file) return false; const url=await uploadPhoto(file,userId); if(!url) return false; setF(p=>{const cur=imgsOf(p); if(cur.length>=maxImg) return p; const next=[...cur,url]; return {...p,images:next,img:next[0]};}); return true; }}),
         h("div",{className:"fg"},h("label",{className:"fl"},"Name"),h("input",{className:"fi",value:f.name||"",onChange:e=>upd("name",e.target.value)})),
         h("div",{className:"fg"},h("label",{className:"fl"},"Location"),h("input",{className:"fi",value:f.location||"",onChange:e=>upd("location",e.target.value),placeholder:"e.g. Costume Closet A"})),
         h("div",{className:"fg"},
@@ -862,7 +943,7 @@ function AddSheet({onClose, onAdded, userId, plan}) {
         h("button",{style:{background:"none",border:"none",color:"var(--muted)",cursor:"pointer"},onClick:()=>setStep("photo")},Ic.back(22))
       ),
       h("div",{className:"sheet-bd"},
-        h(PhotoGallery,{imgs:imgsOf(f),max:maxImg,uploading,onAdd:handleMorePhoto,onRemove:removeImage,onCover:makeCover}),
+        h(PhotoGallery,{imgs:imgsOf(f),max:maxImg,uploading,onAdd:handleMorePhoto,onRemove:removeImage,onCover:makeCover,onCaptureFile:async file=>{ if(!file) return false; const url=await uploadPhoto(file,userId); if(!url) return false; setF(p=>{const cur=imgsOf(p); if(cur.length>=maxImg) return p; const next=[...cur,url]; return {...p,images:next,img:next[0]};}); return true; }}),
         h("div",{className:"fg"},
           h("label",{className:"fl"},"Item Name *"),
           h("input",{className:"fi",value:f.name,onChange:e=>upd("name",e.target.value),placeholder:"e.g. Victorian Ball Gown",autoFocus:true})

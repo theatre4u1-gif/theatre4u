@@ -18,6 +18,85 @@ import { getVertical, getExchangeName, getTerm } from "../lib/verticals.js";
 // Format an item number as "#0001" (moved from App.jsx — only ItemDetail uses it)
 const itemNum = n => n != null ? "#" + String(n).padStart(4, "0") : "";
 
+// Live in-app camera (desktop webcam): snap a series of photos, each uploaded and
+// attached to the item up to its cap. Falls back to Add Photo if the camera is blocked.
+function CameraCapture({ max, current, onCapture, onClose }) {
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const [err, setErr] = useState(false);
+  const [shots, setShots] = useState([]); // {id,url,status:'up'|'ok'|'err'}
+  const stopCam = () => { const s = streamRef.current; if (s) { s.getTracks().forEach(t => t.stop()); streamRef.current = null; } };
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { setErr(true); return; }
+        const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        if (!active) { s.getTracks().forEach(t => t.stop()); return; }
+        streamRef.current = s;
+        const v = videoRef.current;
+        if (v) { v.srcObject = s; v.play().catch(() => {}); }
+      } catch (e) { setErr(true); }
+    })();
+    return () => { active = false; stopCam(); };
+  }, []);
+  const okCount = shots.filter(s => s.status !== "err").length;
+  const remaining = max - current - okCount;
+  const canSnap = remaining > 0 && !err;
+  const snap = () => {
+    const v = videoRef.current;
+    if (!v || !v.videoWidth || remaining <= 0) return;
+    const cv = document.createElement("canvas");
+    cv.width = v.videoWidth; cv.height = v.videoHeight;
+    cv.getContext("2d").drawImage(v, 0, 0, cv.width, cv.height);
+    const id = String(Date.now()) + Math.random().toString(36).slice(2);
+    const preview = cv.toDataURL("image/jpeg", 0.5);
+    setShots(p => [...p, { id, url: preview, status: "up" }]);
+    cv.toBlob(async blob => {
+      if (!blob) { setShots(p => p.map(s => s.id === id ? { ...s, status: "err" } : s)); return; }
+      const file = new File([blob], "camera-" + id + ".jpg", { type: "image/jpeg" });
+      let ok = false; try { ok = await onCapture(file); } catch (_) {}
+      setShots(p => p.map(s => s.id === id ? { ...s, status: ok ? "ok" : "err" } : s));
+    }, "image/jpeg", 0.9);
+  };
+  const done = () => { stopCam(); onClose(); };
+  const ov = { position: "fixed", inset: 0, zIndex: 4000, background: "rgba(0,0,0,.92)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 };
+  const panel = { width: "min(640px,96vw)", background: "#0c0c0c", borderRadius: 14, overflow: "hidden", display: "flex", flexDirection: "column" };
+  if (err) return (
+    <div style={ov} onClick={e => e.target === e.currentTarget && done()}>
+      <div style={{ ...panel, padding: 28, alignItems: "center", textAlign: "center", color: "#fff", gap: 12 }}>
+        <div style={{ fontSize: 16, fontWeight: 700 }}>Camera unavailable</div>
+        <div style={{ fontSize: 13, opacity: .8, maxWidth: 320, lineHeight: 1.5 }}>Allow camera access in your browser, or use Add Photo / Google Drive instead.</div>
+        <button className="btn btn-g btn-sm" onClick={done} style={{ marginTop: 6 }}>Close</button>
+      </div>
+    </div>
+  );
+  return (
+    <div style={ov} onClick={e => e.target === e.currentTarget && done()}>
+      <div style={panel}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", color: "#fff" }}>
+          <span style={{ fontSize: 14, fontWeight: 700 }}>{current + okCount} / {max} photos</span>
+          <button type="button" onClick={done} style={{ background: "none", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
+        </div>
+        <div style={{ position: "relative", background: "#000", aspectRatio: "4 / 3" }}>
+          <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          {remaining <= 0 && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.55)", color: "#fff", fontWeight: 700, fontSize: 15, textAlign: "center", padding: 20 }}>All {max} photo slots filled — click Done.</div>}
+        </div>
+        {shots.length > 0 && <div style={{ display: "flex", gap: 8, padding: "10px 12px", overflowX: "auto", background: "#111" }}>
+          {shots.map(s => <div key={s.id} style={{ position: "relative", flex: "0 0 auto" }}>
+            <img src={s.url} alt="" style={{ width: 52, height: 52, objectFit: "cover", borderRadius: 8, opacity: s.status === "up" ? .5 : 1, border: s.status === "err" ? "2px solid #e53935" : "2px solid transparent" }} />
+          </div>)}
+        </div>}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px 20px", background: "#111" }}>
+          <span style={{ color: "#fff", opacity: .7, fontSize: 12 }}>{canSnap ? "Click the shutter for each shot" : ""}</span>
+          <button type="button" disabled={!canSnap} aria-label="Take photo" onClick={snap} style={{ width: 66, height: 66, borderRadius: "50%", border: "5px solid rgba(255,255,255,.5)", background: canSnap ? "#fff" : "rgba(255,255,255,.35)", cursor: canSnap ? "pointer" : "not-allowed" }} />
+          <button type="button" className="btn btn-g btn-sm" onClick={done} style={{ minWidth: 70 }}>Done</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Upload a file to Supabase Storage and return the public URL
 export async function uploadPhoto(file, userId) {
   try {
@@ -48,6 +127,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
   const[ti,setTi]=useState("");
   const[upl,setUpl]=useState(false);
   const[svng,setSvng]=useState(false);
+  const[showCam,setShowCam]=useState(false);
   const fr=useRef();
   const upd=(k,v)=>setF(p=>({...p,[k]:v}));
   // Keep a ref always pointing at latest form state so the footer button works
@@ -72,6 +152,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
   };
   const handlePhoto=e=>processPhoto(e.target.files?.[0]);
   const handleDrive=()=>{ if(window.t4uPickFromDrive){window.t4uPickFromDrive(processPhoto);} else {alert("Google Drive import isn't ready yet — please refresh the page and try again.");} };
+  const capturePhoto=async file=>{ if(!file) return false; const url = userId ? await uploadPhoto(file, userId) : await resizeImg(file); if(!url) return false; addImage(url); return true; };
   const addTag=()=>{const t=ti.trim().toLowerCase();if(t&&!(f.tags||[]).includes(t))upd("tags",[...(f.tags||[]),t]);setTi("");};
   // Load active funding sources for the "charge to fund" dropdown
   const[fundSources,setFundSources]=useState([]);
@@ -233,8 +314,9 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
             </div>
           ))}
           {imgsOf(f).length<maxImg&&<><label className="ph-add" style={{opacity:upl?.5:1}}>{Ic.cam}<span>{upl?"Uploading…":"Add Photo"}</span><input ref={fr} type="file" accept="image/*" hidden onChange={handlePhoto} disabled={upl}/></label>
-                <button type="button" className="ph-add" onClick={handleDrive} disabled={upl} style={{opacity:upl?.5:1,cursor:upl?"default":"pointer"}}><span>📁 Google Drive</span></button></>}
+                <button type="button" className="ph-add" onClick={handleDrive} disabled={upl} style={{opacity:upl?.5:1,cursor:upl?"default":"pointer"}}><span>📁 Google Drive</span></button><button type="button" className="ph-add" onClick={()=>setShowCam(true)} disabled={upl} style={{opacity:upl?.5:1,cursor:upl?"default":"pointer"}}><span>📸 Camera</span></button></>}
         </div>
+        {showCam&&<CameraCapture max={maxImg} current={imgsOf(f).length} onCapture={capturePhoto} onClose={()=>setShowCam(false)}/>}
         {maxImg===1&&<div style={{fontSize:11,color:"var(--muted)",marginTop:6}}>Free plan: 1 photo per item. Upgrade to Pro for up to 5 photos.</div>}
       </div>
       <div className="fg fu">
