@@ -20,7 +20,7 @@ const itemNum = n => n != null ? "#" + String(n).padStart(4, "0") : "";
 
 // Live in-app camera (desktop webcam): snap a series of photos, each uploaded and
 // attached to the item up to its cap. Falls back to Add Photo if the camera is blocked.
-function CameraCapture({ max, current, onCapture, onClose }) {
+export function CameraCapture({ max, current, onCapture, onClose, noun = "photos", unlimited = false }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [err, setErr] = useState(false);
@@ -41,7 +41,7 @@ function CameraCapture({ max, current, onCapture, onClose }) {
     return () => { active = false; stopCam(); };
   }, []);
   const okCount = shots.filter(s => s.status !== "err").length;
-  const remaining = max - current - okCount;
+  const remaining = unlimited ? 999 : (max - current - okCount);
   const canSnap = remaining > 0 && !err;
   const snap = () => {
     const v = videoRef.current;
@@ -75,12 +75,12 @@ function CameraCapture({ max, current, onCapture, onClose }) {
     <div style={ov} onClick={e => e.target === e.currentTarget && done()}>
       <div style={panel}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", color: "#fff" }}>
-          <span style={{ fontSize: 14, fontWeight: 700 }}>{current + okCount} / {max} photos</span>
+          <span style={{ fontSize: 14, fontWeight: 700 }}>{unlimited ? (current + okCount) + " " + noun + " added" : (current + okCount) + " / " + max + " " + noun}</span>
           <button type="button" onClick={done} style={{ background: "none", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
         </div>
         <div style={{ position: "relative", background: "#000", aspectRatio: "4 / 3" }}>
           <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          {remaining <= 0 && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.55)", color: "#fff", fontWeight: 700, fontSize: 15, textAlign: "center", padding: 20 }}>All {max} photo slots filled — click Done.</div>}
+          {!unlimited && remaining <= 0 && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.55)", color: "#fff", fontWeight: 700, fontSize: 15, textAlign: "center", padding: 20 }}>All {max} photo slots filled — click Done.</div>}
         </div>
         {shots.length > 0 && <div style={{ display: "flex", gap: 8, padding: "10px 12px", overflowX: "auto", background: "#111" }}>
           {shots.map(s => <div key={s.id} style={{ position: "relative", flex: "0 0 auto" }}>

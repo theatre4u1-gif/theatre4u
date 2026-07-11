@@ -4,12 +4,13 @@ import React, { useState, useRef } from "react";
 import { SB } from "./supabase.js";
 import { Modal } from "./ui.jsx";
 import { uid } from "./helpers.js";
-import { uploadPhoto } from "./items.jsx";
+import { uploadPhoto, CameraCapture } from "./items.jsx";
 
 export function BulkPhotoAdd({ userId, vertical = "theatre", cats = [], onClose, onImport }) {
   const defaultCat = cats[0]?.id || "costumes";
   const [rows, setRows] = useState([]); // {key, name, category, qty, img, uploading}
   const [saving, setSaving] = useState(false);
+  const [showCam, setShowCam] = useState(false);
   const fileRef = useRef();
 
   const baseName = (fn) =>
@@ -94,7 +95,9 @@ export function BulkPhotoAdd({ userId, vertical = "theatre", cats = [], onClose,
         <label className="btn btn-o" style={{ cursor: "pointer" }}>📷 From this device
           <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={fromDevice} />
         </label>
+        <button type="button" className="btn btn-o" onClick={() => setShowCam(true)}>📸 Camera (snap a series)</button>
       </div>
+      {showCam && <CameraCapture unlimited noun="items" max={99} current={rows.length} onCapture={async (file) => { await addFile(file); return true; }} onClose={() => setShowCam(false)} />}
       {rows.length === 0
         ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "24px 0", fontSize: 13 }}>No photos yet — add some above.</div>
         : <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
