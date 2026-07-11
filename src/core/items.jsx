@@ -382,6 +382,13 @@ export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, ca
           ?<img src={item.img} alt={item.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
           :<div style={{width:"100%",height:"100%",background:gfx.grad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:72,opacity:.85}}>{gfx.icon}</div>
         }
+        {/* Always-visible hint (not just hover cursor) so touch/mobile users know the
+            thumbnail is cropped and tapping opens the full, uncropped photo. */}
+        {item.img&&<div style={{position:"absolute",bottom:8,right:8,display:"flex",alignItems:"center",gap:5,
+          background:"rgba(18,6,0,.6)",color:"#fff",fontSize:11,fontWeight:700,padding:"4px 9px",
+          borderRadius:20,pointerEvents:"none",letterSpacing:.2}}>
+          <span style={{fontSize:12}}>⤢</span> View full photo
+        </div>}
       </div>
       {(item.images&&item.images.length>1)&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
         {item.images.map((u,i)=><img key={u+"_"+i} src={u} alt="" onClick={()=>window.open(u,"_blank")} title="Open full size" style={{width:52,height:52,objectFit:"cover",borderRadius:6,cursor:"pointer",border:u===item.img?"2px solid var(--gold)":"1px solid var(--border)"}}/>)}

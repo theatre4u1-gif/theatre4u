@@ -62,6 +62,9 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
   const[showImport,setShowImport]=useState(false);
   const[showBulk,setShowBulk]=useState(false);
   const[addMenu,setAddMenu]=useState(false);
+  const gsKey="t4u_gs_hide_"+(org?.id||"x");
+  const[gsHide,setGsHide]=useState(()=>{try{return localStorage.getItem(gsKey)==="1"}catch{return false}});
+  const dismissGs=()=>{try{localStorage.setItem(gsKey,"1")}catch(e){}setGsHide(true)};
   const[invView,setInvView]=useState("items"); // items | loans (Borrowed & Lent tab)
 
   // ── Bulk / mass edit state ───────────────────────────────────────────────
@@ -445,6 +448,50 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
             <div><label>Availability</label><select value={availF} onChange={e=>setAvailF(e.target.value)}><option value="all">All</option>{vAVAIL.map(a=><option key={a}>{a}</option>)}</select></div>
             <div><label>Exchange Status</label><select value={mktF} onChange={e=>setMktF(e.target.value)}><option value="all">All</option>{vMKT.map(s=><option key={s}>{s}</option>)}</select></div>
             <button className="btn btn-o btn-sm" onClick={()=>{setCatF("all");setCondF("all");setAvailF("all");setMktF("all")}}>Clear</button>
+          </div>
+        )}
+        {!gsHide&&invView==="items"&&view!=="locations"&&items.length<5&&(
+          <div style={{border:"1px solid var(--border)",borderRadius:14,padding:"18px 20px",marginBottom:16,
+            background:"linear-gradient(135deg,rgba(212,168,67,.10),rgba(212,168,67,.02))"}}>
+            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:14}}>
+              <div>
+                <div style={{fontSize:16,fontWeight:800,color:"var(--text)",marginBottom:3}}>👋 Getting started</div>
+                <div style={{fontSize:13,color:"var(--muted)"}}>Three quick steps to get your inventory organized. This guide hides once you have a few items.</div>
+              </div>
+              <button onClick={dismissGs} title="Hide this guide"
+                style={{border:"none",background:"transparent",color:"var(--faint)",fontSize:20,lineHeight:1,
+                  cursor:"pointer",padding:"0 2px",fontFamily:"inherit"}}>×</button>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))",gap:12}}>
+              <div style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 14px 16px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                  <span style={{width:22,height:22,borderRadius:"50%",background:"var(--gold)",color:"#1a0f00",fontSize:12,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>1</span>
+                  <span style={{fontSize:14,fontWeight:800,color:"var(--text)"}}>Add your items</span>
+                </div>
+                <div style={{fontSize:12.5,color:"var(--muted)",marginBottom:10,lineHeight:1.45}}>Snap or pick photos and each one becomes an item — fastest way to build your catalog. Start with one area, like a single rack or shelf.</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                  <button className="btn btn-g btn-sm" onClick={()=>setShowBulk(true)}>📸 Add from photos</button>
+                  <button className="btn btn-o btn-sm" onClick={()=>{setActive(null);setModal("a");}}>One at a time</button>
+                </div>
+              </div>
+              <div style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 14px 16px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                  <span style={{width:22,height:22,borderRadius:"50%",background:"var(--gold)",color:"#1a0f00",fontSize:12,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>2</span>
+                  <span style={{fontSize:14,fontWeight:800,color:"var(--text)"}}>Give each a home</span>
+                </div>
+                <div style={{fontSize:12.5,color:"var(--muted)",marginBottom:10,lineHeight:1.45}}>Set up storage locations (e.g. "Wig Cabinet," "Costume Closet A") so every item has a spot and you can find it later.</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                  <button className="btn btn-o btn-sm" onClick={()=>setView("locations")}>📦 Set up locations</button>
+                </div>
+              </div>
+              <div style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 14px 16px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                  <span style={{width:22,height:22,borderRadius:"50%",background:"var(--gold)",color:"#1a0f00",fontSize:12,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>3</span>
+                  <span style={{fontSize:14,fontWeight:800,color:"var(--text)"}}>Label &amp; find</span>
+                </div>
+                <div style={{fontSize:12.5,color:"var(--muted)",lineHeight:1.45}}>Print QR labels for your bins and racks from the <b>Labels</b> tab — scan with any phone to see what's inside. Then tag items by show as you pull them.</div>
+              </div>
+            </div>
           </div>
         )}
         <div style={{fontSize:13,fontWeight:700,color:"var(--faint)",marginBottom:12}}>{filtered.length} item{filtered.length!==1?"s":""}</div>
