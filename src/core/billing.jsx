@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { STRIPE_LINKS, stripeLink, UPGRADE_PLANS } from "./plans.js";
 import { APP_NAME, APP_URL, APP_EMAIL } from "./config.js";
+import { SB, callEdgeFn } from "./supabase.js";
 
 // Billing UI: upgrade prompt, plans/pricing cards, invoice request — extracted from App.jsx.
 
@@ -129,6 +130,29 @@ export function InvoiceRequestForm({ orgName, userEmail }) {
 export function UpgradePlans({ compact = false, userId = null, userEmail = null, plan = "free" }) {
   const [billing, setBilling] = useState("monthly");
   const [track, setTrack] = useState("single");
+  // Founding members (flagged in orgs.founding_member) get a one-click $9.99 Pro checkout
+  // with the forever coupon pre-applied (leak-proof server-side check in the founding-checkout fn).
+  const [founding, setFounding] = useState(false);
+  const [foundingBusy, setFoundingBusy] = useState(false);
+  useEffect(() => {
+    if (!userId) return;
+    let alive = true;
+    SB.from("orgs").select("founding_member").eq("id", userId).single()
+      .then(({ data }) => { if (alive && data?.founding_member) setFounding(true); });
+    return () => { alive = false; };
+  }, [userId]);
+  const claimFounding = async () => {
+    setFoundingBusy(true);
+    try {
+      const { data } = await SB.auth.getSession();
+      const r = await callEdgeFn("founding-checkout", { org_id: userId, origin: window.location.origin }, data?.session?.access_token);
+      if (r?.checkout_url) { window.location.href = r.checkout_url; return; }
+      alert(r?.error === "not_founding"
+        ? "This program isn't marked as a founding member yet."
+        : "Couldn't start founding checkout — please try again or email " + APP_EMAIL + ".");
+    } catch (e) { alert("Couldn't start founding checkout — please try again."); }
+    setFoundingBusy(false);
+  };
   return (
     <div>
       {/* Track toggle — one art area vs all-departments ArtsTracker */}
@@ -180,6 +204,8 @@ export function UpgradePlans({ compact = false, userId = null, userEmail = null,
                 ? <button className="btn btn-full" style={{background:"rgba(212,168,67,.22)",border:"1.5px solid #d4a843",color:"#f5dd9b",cursor:"default",fontWeight:800,fontSize:13.5,letterSpacing:".02em"}} disabled>✓ Current Plan</button>
                 : isFree
                 ? null
+                : (founding && p.id==="pro" && billing!=="invoice")
+                ? <button className="btn btn-full btn-g" onClick={claimFounding} disabled={foundingBusy} style={{marginTop:"auto",fontWeight:800,whiteSpace:"normal",textAlign:"center",lineHeight:1.25}}>{foundingBusy?"Starting…":"⭐ Claim your $9.99 founding rate →"}</button>
                 : p.id.endsWith("enterprise")
                   ? <a href={"mailto:"+APP_EMAIL+"?subject=Enterprise District Inquiry"} className="btn btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",background:"linear-gradient(135deg,#1565c0,#0d47a1)",border:"1px solid rgba(66,133,244,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>Contact Us →</a>
                   : billing === "invoice"
