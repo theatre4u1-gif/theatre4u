@@ -356,8 +356,10 @@ function CameraCapture({max, current, onCapture, onClose}) {
     })();
     return () => { active=false; stopCam(); };
   }, [facing]);
-  const okCount = shots.filter(s=>s.status!=="err").length;
-  const remaining = max - current - okCount;
+  // Only count shots still uploading; finished ones are already reflected in `current`
+  // (the item's attached photos), so counting both would double-count.
+  const pending = shots.filter(s=>s.status==="up").length;
+  const remaining = max - current - pending;
   const canSnap = remaining > 0 && !err;
   const snap = () => {
     const v = videoRef.current;
@@ -386,7 +388,7 @@ function CameraCapture({max, current, onCapture, onClose}) {
   );
   return h("div",{style:ov},
     h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",color:"#fff"}},
-      h("span",{style:{fontSize:14,fontWeight:700}}, (current+okCount)+" / "+max+" photos"),
+      h("span",{style:{fontSize:14,fontWeight:700}}, (current+pending)+" / "+max+" photos"),
       h("button",{style:{background:"none",border:"none",color:"#fff",cursor:"pointer"},onClick:done}, Ic.x(24))
     ),
     h("div",{style:{flex:1,position:"relative",overflow:"hidden"}},

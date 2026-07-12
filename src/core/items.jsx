@@ -40,8 +40,10 @@ export function CameraCapture({ max, current, onCapture, onClose, noun = "photos
     })();
     return () => { active = false; stopCam(); };
   }, []);
-  const okCount = shots.filter(s => s.status !== "err").length;
-  const remaining = unlimited ? 999 : (max - current - okCount);
+  // Only count shots still uploading; finished ones are already reflected in `current`
+  // (attached photos / bulk rows), so counting both would double-count.
+  const pending = shots.filter(s => s.status === "up").length;
+  const remaining = unlimited ? 999 : (max - current - pending);
   const canSnap = remaining > 0 && !err;
   const snap = () => {
     const v = videoRef.current;
@@ -75,7 +77,7 @@ export function CameraCapture({ max, current, onCapture, onClose, noun = "photos
     <div style={ov} onClick={e => e.target === e.currentTarget && done()}>
       <div style={panel}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", color: "#fff" }}>
-          <span style={{ fontSize: 14, fontWeight: 700 }}>{unlimited ? (current + okCount) + " " + noun + " added" : (current + okCount) + " / " + max + " " + noun}</span>
+          <span style={{ fontSize: 14, fontWeight: 700 }}>{unlimited ? current + " " + noun + " added" : (current + pending) + " / " + max + " " + noun}</span>
           <button type="button" onClick={done} style={{ background: "none", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", lineHeight: 1 }}>×</button>
         </div>
         <div style={{ position: "relative", background: "#000", aspectRatio: "4 / 3" }}>
