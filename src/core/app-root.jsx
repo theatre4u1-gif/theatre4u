@@ -468,6 +468,19 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
     await SB.from("orgs").update({plan:newPlan}).eq("id",user.id);
   },[user]);
 
+  // Founding members: one-click $9.99 checkout (forever coupon pre-applied, first charge Sept 1).
+  const [foundingBusy, setFoundingBusy] = useState(false);
+  const claimFounding = useCallback(async()=>{
+    setFoundingBusy(true);
+    try {
+      const { data } = await SB.auth.getSession();
+      const r = await callEdgeFn("founding-checkout", { org_id: org?.id || user?.id, origin: window.location.origin }, data?.session?.access_token);
+      if (r?.checkout_url) { window.location.href = r.checkout_url; return; }
+      alert(r?.error === "not_founding" ? "This program isn't marked as a founding member yet." : "Couldn't start founding checkout — please try again or email hello@theatre4u.org.");
+    } catch(e) { alert("Couldn't start founding checkout — please try again."); }
+    setFoundingBusy(false);
+  },[org,user]);
+
   const saveOrg = useCallback(async(o)=>{
     setOrg(o);
     let update = {...o, id:user.id};
@@ -876,16 +889,24 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                   <button className="btn btn-o btn-sm btn-full" style={{color:"rgba(255,255,255,.85)",borderColor:"rgba(255,255,255,.28)",fontSize:13,padding:"8px 12px"}} onClick={()=>nav("settings")}>
                     <span style={{width:13,height:13,display:"flex"}}>{Ic.settings}</span>Settings
                   </button>
-                  {/* Subscribe button — shown for temp_pro users who haven't paid yet, not in demo */}
+                  {/* Subscribe / founding-claim button — temp_pro users who haven't paid yet, not in demo */}
                   {org?.temp_pro && !org?.stripe_subscription_id && !isAdmin && !isDemoMode() && (
-                    <a href={stripeLink(STRIPE_LINKS.pro?.monthly, user?.id, user?.email)}
-                      target="_blank" rel="noreferrer"
-                      style={{display:"flex",alignItems:"center",justifyContent:"center",
-                        gap:7,padding:"9px 12px",borderRadius:8,fontSize:13,fontWeight:700,
-                        background:"linear-gradient(135deg,var(--gold),#a37f2c)",color:"#1a0f00",
-                        textDecoration:"none",border:"none",cursor:"pointer",marginBottom:0}}>
-                      ⭐ Subscribe — $15/mo
-                    </a>
+                    org?.founding_member
+                    ? <button onClick={claimFounding} disabled={foundingBusy}
+                        style={{display:"flex",alignItems:"center",justifyContent:"center",
+                          gap:7,padding:"9px 12px",borderRadius:8,fontSize:13,fontWeight:800,
+                          background:"linear-gradient(135deg,var(--gold),#a37f2c)",color:"#1a0f00",
+                          border:"none",cursor:foundingBusy?"default":"pointer",marginBottom:0,width:"100%",fontFamily:"inherit"}}>
+                        {foundingBusy ? "Starting…" : "⭐ Claim your $9.99 founding rate"}
+                      </button>
+                    : <a href={stripeLink(STRIPE_LINKS.pro?.monthly, user?.id, user?.email)}
+                        target="_blank" rel="noreferrer"
+                        style={{display:"flex",alignItems:"center",justifyContent:"center",
+                          gap:7,padding:"9px 12px",borderRadius:8,fontSize:13,fontWeight:700,
+                          background:"linear-gradient(135deg,var(--gold),#a37f2c)",color:"#1a0f00",
+                          textDecoration:"none",border:"none",cursor:"pointer",marginBottom:0}}>
+                        ⭐ Subscribe — $15/mo
+                      </a>
                   )}
                   <button className="btn btn-sm btn-full" style={{background:"rgba(139,26,42,.22)",border:"1px solid rgba(139,26,42,.38)",color:"rgba(255,255,255,.85)",fontSize:13,padding:"8px 12px"}} onClick={signOut}>
                     Sign Out
