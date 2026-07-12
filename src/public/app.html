@@ -423,7 +423,7 @@ function PhotoGallery({imgs, max, uploading, onAdd, onRemove, onCover, onCapture
       imgs.length<max&&h("label",{className:"padd"},
         uploading?h("div",{className:"spin"}):h("span",{style:{fontSize:20}},"\ud83d\udcf7"),
         h("span",null,uploading?"Uploading\u2026":"Add Photo"),
-        h("input",{type:"file",accept:"image/*",capture:"environment",hidden:true,disabled:uploading,onChange:onAdd})
+        h("input",{type:"file",accept:"image/*",multiple:true,hidden:true,disabled:uploading,onChange:onAdd})
       ),
       imgs.length<max&&onCaptureFile&&h("button",{key:"cam",className:"padd",style:{border:"none",cursor:"pointer",font:"inherit"},onClick:()=>setShowCam(true)},
         h("span",{style:{fontSize:20}},"📸"),
@@ -709,14 +709,17 @@ function EditSheet({item, onClose, onSaved, userId, plan}) {
 
   const maxImg = maxImgFor(plan);
   const handlePhoto = async e => {
-    const file = e.target.files?.[0]; if(!file) return;
-    const cur = imgsOf(f);
-    if(cur.length>=maxImg){ alert(maxImg===1?"The free plan includes 1 photo per item. Upgrade to Pro for up to 5 photos.":"You can add up to "+maxImg+" photos per item."); e.target.value=""; return; }
+    const files = Array.from(e.target.files||[]); if(!files.length) return;
+    const room = maxImg - imgsOf(f).length;
+    if(room<=0){ alert(maxImg===1?"The free plan includes 1 photo per item. Upgrade to Pro for up to 5 photos.":"You can add up to "+maxImg+" photos per item."); e.target.value=""; return; }
     setUpl(true);
-    const url = await uploadPhoto(file, userId);
-    if(url){ const next=[...cur,url]; setF(p=>({...p,images:next,img:next[0]})); }
+    for(const file of files.slice(0,room)){
+      const url = await uploadPhoto(file, userId);
+      if(url) setF(p=>{ const cur=imgsOf(p); if(cur.length>=maxImg) return p; const next=[...cur,url]; return {...p,images:next,img:next[0]}; });
+    }
     setUpl(false);
     e.target.value="";
+    if(files.length>room) alert("Added "+room+" photo"+(room!==1?"s":"")+" — this item is now at its "+maxImg+"-photo limit.");
   };
   const removeImage = idx => setF(p=>{const cur=imgsOf(p);const next=cur.filter((_,i)=>i!==idx);return {...p,images:next,img:next[0]||null};});
   const makeCover  = idx => setF(p=>{const cur=imgsOf(p);if(idx<=0||idx>=cur.length)return p;const next=[cur[idx],...cur.filter((_,i)=>i!==idx)];return {...p,images:next,img:next[0]};});
@@ -888,14 +891,17 @@ function AddSheet({onClose, onAdded, userId, plan}) {
     setUpl(false);
   };
   const handleMorePhoto = async e => {
-    const file = e.target.files?.[0]; if(!file) return;
-    const cur = imgsOf(f);
-    if(cur.length>=maxImg){ alert(maxImg===1?"The free plan includes 1 photo per item. Upgrade to Pro for up to 5 photos.":"You can add up to "+maxImg+" photos per item."); e.target.value=""; return; }
+    const files = Array.from(e.target.files||[]); if(!files.length) return;
+    const room = maxImg - imgsOf(f).length;
+    if(room<=0){ alert(maxImg===1?"The free plan includes 1 photo per item. Upgrade to Pro for up to 5 photos.":"You can add up to "+maxImg+" photos per item."); e.target.value=""; return; }
     setUpl(true);
-    const url = await uploadPhoto(file, userId);
-    if(url){ const next=[...cur,url]; setF(p=>({...p,images:next,img:next[0]})); }
+    for(const file of files.slice(0,room)){
+      const url = await uploadPhoto(file, userId);
+      if(url) setF(p=>{ const cur=imgsOf(p); if(cur.length>=maxImg) return p; const next=[...cur,url]; return {...p,images:next,img:next[0]}; });
+    }
     setUpl(false);
     e.target.value="";
+    if(files.length>room) alert("Added "+room+" photo"+(room!==1?"s":"")+" — this item is now at its "+maxImg+"-photo limit.");
   };
   const removeImage = idx => setF(p=>{const cur=imgsOf(p);const next=cur.filter((_,i)=>i!==idx);return {...p,images:next,img:next[0]||null};});
   const makeCover  = idx => setF(p=>{const cur=imgsOf(p);if(idx<=0||idx>=cur.length)return p;const next=[cur[idx],...cur.filter((_,i)=>i!==idx)];return {...p,images:next,img:next[0]};});
