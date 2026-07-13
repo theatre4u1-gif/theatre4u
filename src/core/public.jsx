@@ -285,13 +285,13 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     {/* ── Final CTA ── */}
     <div style={{textAlign:"center",padding:"72px 32px 96px",borderTop:"1px solid rgba(255,255,255,.06)"}}>
       <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(28px,5vw,52px)",color:"#fff",marginBottom:16,lineHeight:1.15}}>
-        Ready to get your<br/><span style={{color:"var(--gold)"}}>{IS_ARTSTRACKER ? "program organized?" : "theatre organized?"}</span>
+        {c("landing.cta.headline1","Ready to get your")}<br/><span style={{color:"var(--gold)"}}>{c("landing.cta.headline2", IS_ARTSTRACKER ? "program organized?" : "theatre organized?")}</span>
       </h2>
-      <p style={{fontSize:16,color:"rgba(255,255,255,.5)",marginBottom:32,maxWidth:440,margin:"0 auto 32px"}}>{IS_ARTSTRACKER ? "Join programs already using ArtsTracker to get their inventory under control, track their events, and connect with their community." : "Join theatre programs already using Theatre4u™ to get their inventory under control, track their shows, and connect with their community."}</p>
+      <p style={{fontSize:16,color:"rgba(255,255,255,.5)",marginBottom:32,maxWidth:440,margin:"0 auto 32px"}}>{c("landing.cta.subtext", IS_ARTSTRACKER ? "Join programs already using ArtsTracker to get their inventory under control, track their events, and connect with their community." : "Join theatre programs already using Theatre4u™ to get their inventory under control, track their shows, and connect with their community.")}</p>
       <button onClick={onSignUp} style={{background:"linear-gradient(135deg,var(--gold),var(--goldd))",border:"none",color:"#1a0f00",padding:"16px 40px",borderRadius:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:18,fontWeight:800,boxShadow:"0 4px 32px rgba(212,168,67,.45)"}}>
-        Start Free — No credit card required →
+        {c("landing.cta.button","Start Free — No credit card required →")}
       </button>
-      <div style={{marginTop:14,fontSize:12,color:"rgba(255,255,255,.3)"}}>Free plan · No contracts · Cancel anytime</div>
+      <div style={{marginTop:14,fontSize:12,color:"rgba(255,255,255,.3)"}}>{c("landing.cta.fineprint","Free plan · No contracts · Cancel anytime")}</div>
     </div>
 
     {/* Our Story */}

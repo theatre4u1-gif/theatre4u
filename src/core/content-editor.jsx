@@ -20,6 +20,11 @@ const DOOR_DEFAULTS = {
     "landing.hero.subhead":     "Know what you have. Find what you need. Built specifically for theatre programs of every size.",
     "landing.hero.cta_label":   "Get Started Free — No credit card →",
     "landing.announcement.text": "⭐ Free during our beta — paid plans begin September 1",
+    "landing.cta.headline1":    "Ready to get your",
+    "landing.cta.headline2":    "theatre organized?",
+    "landing.cta.subtext":      "Join theatre programs already using Theatre4u™ to get their inventory under control, track their shows, and connect with their community.",
+    "landing.cta.button":       "Start Free — No credit card required →",
+    "landing.cta.fineprint":    "Free plan · No contracts · Cancel anytime",
   },
   artstracker: {
     logo: "/logo-artstracker.png",
@@ -28,6 +33,11 @@ const DOOR_DEFAULTS = {
     "landing.hero.subhead":     "For theatre, music, dance, and visual arts — and any program that needs to keep track of what it owns. Know what you have, find what you need, and share with programs near you.",
     "landing.hero.cta_label":   "Get Started Free — No credit card →",
     "landing.announcement.text": "⭐ Free during our beta — paid plans begin September 1",
+    "landing.cta.headline1":    "Ready to get your",
+    "landing.cta.headline2":    "program organized?",
+    "landing.cta.subtext":      "Join programs already using ArtsTracker to get their inventory under control, track their events, and connect with their community.",
+    "landing.cta.button":       "Start Free — No credit card required →",
+    "landing.cta.fineprint":    "Free plan · No contracts · Cancel anytime",
   },
 };
 
@@ -41,6 +51,13 @@ const SECTIONS = [
   { title: "Announcement bar", fields: [
     { key: "landing.announcement.show", label: "Show the announcement bar", type: "checkbox" },
     { key: "landing.announcement.text", label: "Announcement text",         type: "text" },
+  ] },
+  { title: "Closing call-to-action", fields: [
+    { key: "landing.cta.headline1", label: "Closing headline — line 1",        type: "text" },
+    { key: "landing.cta.headline2", label: "Closing headline — line 2 (gold)", type: "text" },
+    { key: "landing.cta.subtext",   label: "Closing sub-text",                 type: "textarea" },
+    { key: "landing.cta.button",    label: "Closing button label",             type: "text" },
+    { key: "landing.cta.fineprint", label: "Fine print under the button",      type: "text" },
   ] },
 ];
 const CONTENT_FIELDS = SECTIONS.flatMap(s => s.fields);
@@ -95,6 +112,23 @@ function HeroPreview({ vals, theme, def }) {
       <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 30, lineHeight: 1.06, color: "#fff", marginBottom: 12, fontWeight: 700 }}>{headline}</div>
       <div style={{ fontSize: 13, color: "rgba(255,255,255,.7)", lineHeight: 1.65, maxWidth: 380, margin: "0 auto 18px" }}>{v("landing.hero.subhead")}</div>
       <span style={{ display: "inline-block", background: "linear-gradient(135deg," + gold + "," + deep + ")", color: "#1a0f00", padding: "11px 24px", borderRadius: 10, fontSize: 13.5, fontWeight: 800, boxShadow: "0 4px 20px rgba(212,168,67,.35)" }}>{v("landing.hero.cta_label")}</span>
+    </div>
+  );
+}
+
+// Preview of the closing call-to-action band at the bottom of the landing page.
+function CtaPreview({ vals, theme, def }) {
+  const gold = theme.accent || "#e8b85d";
+  const deep = theme.primary || "#a37f2c";
+  const v = (k) => ((vals[k] || "").trim() || def[k]);
+  return (
+    <div style={{ background: "#160b06", borderRadius: 12, padding: "30px 22px", textAlign: "center", borderTop: "1px solid rgba(255,255,255,.06)", fontFamily: "'DM Sans',-apple-system,sans-serif" }}>
+      <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 26, lineHeight: 1.15, color: "#fff", marginBottom: 12, fontWeight: 700 }}>
+        {v("landing.cta.headline1")}<br /><span style={{ color: gold }}>{v("landing.cta.headline2")}</span>
+      </div>
+      <div style={{ fontSize: 12.5, color: "rgba(255,255,255,.5)", lineHeight: 1.6, maxWidth: 340, margin: "0 auto 18px" }}>{v("landing.cta.subtext")}</div>
+      <span style={{ display: "inline-block", background: "linear-gradient(135deg," + gold + "," + deep + ")", color: "#1a0f00", padding: "12px 26px", borderRadius: 11, fontSize: 14, fontWeight: 800, boxShadow: "0 4px 24px rgba(212,168,67,.4)" }}>{v("landing.cta.button")}</span>
+      <div style={{ marginTop: 12, fontSize: 11, color: "rgba(255,255,255,.3)" }}>{v("landing.cta.fineprint")}</div>
     </div>
   );
 }
@@ -225,8 +259,15 @@ export function ContentBrandEditor({ userId }) {
             <span style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: .5, color: "#888" }}>Live preview</span>
             <span style={{ fontSize: 12, fontWeight: 700, color: dirty ? "#c07a00" : "#1a7f37" }}>{dirty ? "● Unpublished changes" : "✓ Live version"}</span>
           </div>
-          <HeroPreview vals={CONTENT_FIELDS.reduce((o, f) => (o[f.key] = dc(f.key), o), {})} theme={draftThemeObj} def={defs} />
-          <div style={S.note}>Preview only — visible to you, not the public.</div>
+          {(() => {
+            const pv = CONTENT_FIELDS.reduce((o, f) => (o[f.key] = dc(f.key), o), {});
+            return (<>
+              <HeroPreview vals={pv} theme={draftThemeObj} def={defs} />
+              <div style={{ ...S.note, marginBottom: 14 }}>Top of the page (hero).</div>
+              <CtaPreview vals={pv} theme={draftThemeObj} def={defs} />
+              <div style={S.note}>Bottom of the page (closing call-to-action). Preview only — visible to you, not the public.</div>
+            </>);
+          })()}
         </div>
       </div>
 
