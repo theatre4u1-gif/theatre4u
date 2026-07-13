@@ -124,7 +124,7 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     {/* ── Hero ── */}
     <div style={{position:"relative",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",padding:"120px 24px 80px",overflow:"hidden"}}>
       {/* Background image */}
-      <img src={usp("photo-1503095396549-807759245b35",1600,900)} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.2,pointerEvents:"none"}}/>
+      <img src={c("landing.hero.bg_image", usp("photo-1503095396549-807759245b35",1600,900))} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.2,pointerEvents:"none"}}/>
       <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,rgba(13,10,8,.7) 0%,rgba(13,10,8,.5) 50%,rgba(13,10,8,.95) 100%)",pointerEvents:"none"}}/>
       <div style={{position:"relative",zIndex:1,maxWidth:760}}>
         <div style={{position:"relative",display:"flex",justifyContent:"center",alignItems:"center",margin:"0 auto 56px",minHeight:210}}>

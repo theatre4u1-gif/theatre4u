@@ -19,6 +19,7 @@ const DOOR_DEFAULTS = {
     "landing.hero.headline":    "Everything your theatre program needs — in one place",
     "landing.hero.subhead":     "Know what you have. Find what you need. Built specifically for theatre programs of every size.",
     "landing.hero.cta_label":   "Get Started Free — No credit card →",
+    "landing.hero.bg_image":    "https://images.unsplash.com/photo-1503095396549-807759245b35?w=1600&h=900&fit=crop&auto=format&q=82",
     "landing.announcement.text": "⭐ Free during our beta — paid plans begin September 1",
     "landing.cta.headline1":    "Ready to get your",
     "landing.cta.headline2":    "theatre organized?",
@@ -32,6 +33,7 @@ const DOOR_DEFAULTS = {
     "landing.hero.headline":    "Everything your program needs — in one place",
     "landing.hero.subhead":     "For theatre, music, dance, and visual arts — and any program that needs to keep track of what it owns. Know what you have, find what you need, and share with programs near you.",
     "landing.hero.cta_label":   "Get Started Free — No credit card →",
+    "landing.hero.bg_image":    "https://images.unsplash.com/photo-1503095396549-807759245b35?w=1600&h=900&fit=crop&auto=format&q=82",
     "landing.announcement.text": "⭐ Free during our beta — paid plans begin September 1",
     "landing.cta.headline1":    "Ready to get your",
     "landing.cta.headline2":    "program organized?",
@@ -47,6 +49,7 @@ const SECTIONS = [
     { key: "landing.hero.headline",  label: "Hero headline",        type: "text" },
     { key: "landing.hero.subhead",   label: "Hero sub-headline",    type: "textarea" },
     { key: "landing.hero.cta_label", label: "Primary button label", type: "text" },
+    { key: "landing.hero.bg_image",  label: "Background photo",     type: "image" },
   ] },
   { title: "Announcement bar", fields: [
     { key: "landing.announcement.show", label: "Show the announcement bar", type: "checkbox" },
@@ -92,8 +95,13 @@ function HeroPreview({ vals, theme, def }) {
   const headline = customHeadline
     ? <span>{customHeadline}</span>
     : <span>{def["landing.hero.headline"].slice(0, -GOLD_TAIL.length)}<span style={{ color: gold }}>{GOLD_TAIL}</span></span>;
+  const bg = v("landing.hero.bg_image");
   return (
     <div style={{ position: "relative", background: "radial-gradient(ellipse 90% 60% at 50% 30%, #241009, #150a05 70%, #0d0705)", borderRadius: 12, padding: "26px 22px 30px", textAlign: "center", overflow: "hidden", color: "#fff", fontFamily: "'DM Sans',-apple-system,sans-serif" }}>
+      {/* background photo (faint, like the live hero) */}
+      {bg && <div aria-hidden="true" style={{ position: "absolute", inset: 0, backgroundImage: 'url("' + bg + '")', backgroundSize: "cover", backgroundPosition: "center", opacity: .2, pointerEvents: "none" }} />}
+      {bg && <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom,rgba(13,10,8,.7),rgba(13,10,8,.5) 50%,rgba(13,10,8,.95))", pointerEvents: "none" }} />}
+      <div style={{ position: "relative", zIndex: 1 }}>
       {/* logo in a cream oval glow */}
       <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", height: 96, marginBottom: 10 }}>
         <div aria-hidden="true" style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: "94%", height: 118, borderRadius: "50%", background: "radial-gradient(ellipse at 50% 50%, rgba(250,244,232,.97) 0%, rgba(249,242,227,.95) 62%, rgba(243,221,165,.45) 80%, rgba(234,193,108,.14) 89%, transparent 94%)", filter: "blur(1px)" }} />
@@ -112,6 +120,7 @@ function HeroPreview({ vals, theme, def }) {
       <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 30, lineHeight: 1.06, color: "#fff", marginBottom: 12, fontWeight: 700 }}>{headline}</div>
       <div style={{ fontSize: 13, color: "rgba(255,255,255,.7)", lineHeight: 1.65, maxWidth: 380, margin: "0 auto 18px" }}>{v("landing.hero.subhead")}</div>
       <span style={{ display: "inline-block", background: "linear-gradient(135deg," + gold + "," + deep + ")", color: "#1a0f00", padding: "11px 24px", borderRadius: 10, fontSize: 13.5, fontWeight: 800, boxShadow: "0 4px 20px rgba(212,168,67,.35)" }}>{v("landing.hero.cta_label")}</span>
+      </div>
     </div>
   );
 }
@@ -140,6 +149,7 @@ export function ContentBrandEditor({ userId }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");   // "" | "draft" | "publish"
   const [msg, setMsg] = useState("");
+  const [uploading, setUploading] = useState(""); // field key currently uploading
 
   useEffect(() => {
     let alive = true;
@@ -173,6 +183,19 @@ export function ContentBrandEditor({ userId }) {
 
   const finish = (err, okMsg) => { setBusy(""); setMsg(err ? ("Error: " + err.message) : okMsg); setTimeout(() => setMsg(""), 4000); };
 
+  const uploadImage = async (key, file) => {
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) { setMsg("Error: image is over 8 MB — please use a smaller file."); setTimeout(() => setMsg(""), 5000); return; }
+    setUploading(key); setMsg("");
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const path = door + "/" + key.replace(/[^a-z0-9]+/gi, "-") + "-" + Date.now() + "." + ext;
+    const { error } = await SB.storage.from("site-assets").upload(path, file, { cacheControl: "3600", upsert: true, contentType: file.type || undefined });
+    if (error) { setUploading(""); setMsg("Upload error: " + error.message); setTimeout(() => setMsg(""), 5000); return; }
+    const { data } = SB.storage.from("site-assets").getPublicUrl(path);
+    setDC(key, data.publicUrl);
+    setUploading(""); setMsg("Image uploaded — remember to Publish to go live."); setTimeout(() => setMsg(""), 4000);
+  };
+
   const saveDraft = async () => {
     setBusy("draft"); setMsg("");
     const now = new Date().toISOString();
@@ -200,6 +223,28 @@ export function ContentBrandEditor({ userId }) {
   if (loading) return <div style={{ padding: 24, color: "#888" }}>Loading content…</div>;
 
   const renderField = (f) => {
+    if (f.type === "image") {
+      const val = dc(f.key);
+      const shown = val || defs[f.key];
+      return (
+        <>
+          <label style={S.label}>{f.label}</label>
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+            <div style={{ width: 104, height: 62, borderRadius: 8, border: "1px solid #d5cfc4", backgroundImage: shown ? 'url("' + shown + '")' : "none", backgroundSize: "cover", backgroundPosition: "center", backgroundColor: "#efe9de", flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                <label style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid #c4922a", background: "#c4922a", color: "#fff", fontWeight: 700, fontSize: 13, cursor: uploading === f.key ? "default" : "pointer", fontFamily: "inherit" }}>
+                  {uploading === f.key ? "Uploading…" : "Upload image"}
+                  <input type="file" accept="image/*" disabled={uploading === f.key} style={{ display: "none" }} onChange={e => { const file = e.target.files && e.target.files[0]; uploadImage(f.key, file); e.target.value = ""; }} />
+                </label>
+                {val && <button onClick={() => setDC(f.key, "")} style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid #d5cfc4", background: "#fff", color: "#666", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Reset to default</button>}
+              </div>
+              <input style={S.input} value={val} onChange={e => setDC(f.key, e.target.value)} placeholder="…or paste an image URL" />
+            </div>
+          </div>
+        </>
+      );
+    }
     if (f.type === "checkbox") {
       const on = isShown(dc(f.key));
       return (
