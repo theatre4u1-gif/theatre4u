@@ -10,16 +10,34 @@ const DOORS = [
   { id: "artstracker", label: "ArtsTracker" },
 ];
 
+// The REAL live defaults per door (mirror src/core/public.jsx). Empty fields fall back to these,
+// so an unedited door shows its true current copy — and switching doors actually changes the preview.
+const DOOR_DEFAULTS = {
+  theatre4u: {
+    badge: "🎭 The Platform for Theatre Programs",
+    logo:  "/logo-theatre4u.svg",
+    "landing.hero.headline":  "Everything your theatre program needs — in one place",
+    "landing.hero.subhead":   "Know what you have. Find what you need. Built specifically for theatre programs of every size.",
+    "landing.hero.cta_label": "Get Started Free — No credit card →",
+  },
+  artstracker: {
+    badge: "🎨 The Platform for Arts & Activity Programs",
+    logo:  "/logo-artstracker.png",
+    "landing.hero.headline":  "Everything your program needs — in one place",
+    "landing.hero.subhead":   "For theatre, music, dance, and visual arts — and any program that needs to keep track of what it owns. Know what you have, find what you need, and share with programs near you.",
+    "landing.hero.cta_label": "Get Started Free — No credit card →",
+  },
+};
+
 const CONTENT_FIELDS = [
-  { key: "landing.hero.headline",  label: "Hero headline",        type: "text",     ph: "Everything your theatre program needs — in one place" },
-  { key: "landing.hero.subhead",   label: "Hero sub-headline",    type: "textarea", ph: "Know what you have. Find what you need." },
-  { key: "landing.hero.cta_label", label: "Primary button label", type: "text",     ph: "Get Started Free — No credit card →" },
+  { key: "landing.hero.headline",  label: "Hero headline",     type: "text" },
+  { key: "landing.hero.subhead",   label: "Hero sub-headline", type: "textarea" },
+  { key: "landing.hero.cta_label", label: "Primary button label", type: "text" },
 ];
 
 const THEME_FIELDS = [
-  { key: "primary",  label: "Primary color",  type: "color", def: "#c4922a" },
-  { key: "accent",   label: "Accent color",   type: "color", def: "#e8b85d" },
-  { key: "logo_url", label: "Logo image URL", type: "text",  def: "" },
+  { key: "primary", label: "Primary color", def: "#c4922a" },
+  { key: "accent",  label: "Accent color",  def: "#e8b85d" },
 ];
 
 const S = {
@@ -30,24 +48,23 @@ const S = {
   row:   { marginBottom: 13 },
   tab:   (on) => ({ padding: "8px 18px", borderRadius: 8, border: "1px solid " + (on ? "#c4922a" : "#dcd6cc"), background: on ? "#c4922a" : "#fff", color: on ? "#fff" : "#555", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 14 }),
   btn:   (bg, dis) => ({ padding: "10px 22px", borderRadius: 9, border: "none", background: bg, color: "#fff", fontWeight: 800, fontSize: 14, cursor: dis ? "default" : "pointer", fontFamily: "inherit", opacity: dis ? .7 : 1 }),
+  note:  { fontSize: 11.5, color: "#999", marginTop: 8, lineHeight: 1.5 },
 };
 
-// Live preview of the landing hero, using the current draft values + theme.
-function HeroPreview({ vals, theme }) {
+// Live preview of the landing hero, using current draft values + theme + this door's real defaults.
+function HeroPreview({ vals, theme, def }) {
   const gold = theme.accent || "#e8b85d";
   const primary = theme.primary || "#c4922a";
-  const headline = (vals["landing.hero.headline"] || "").trim() || "Everything your theatre program needs — in one place";
-  const sub = (vals["landing.hero.subhead"] || "").trim() || "Know what you have. Find what you need. Built for theatre programs of every size.";
-  const cta = (vals["landing.hero.cta_label"] || "").trim() || "Get Started Free — No credit card →";
+  const v = (k) => ((vals[k] || "").trim() || def[k]);
   return (
-    <div style={{ background: "linear-gradient(160deg,#1a0f06,#2a1a0c)", borderRadius: 12, padding: "36px 26px", textAlign: "center", overflow: "hidden" }}>
-      {theme.logo_url ? <img src={theme.logo_url} alt="" style={{ maxHeight: 40, marginBottom: 18, objectFit: "contain" }} /> : null}
-      <div style={{ display: "inline-block", padding: "5px 14px", background: "rgba(76,175,80,.13)", border: "1px solid rgba(76,175,80,.4)", borderRadius: 20, fontSize: 11, fontWeight: 700, color: "#82d68c", marginBottom: 16 }}>
-        ⭐ Free during our beta — paid plans begin September 1
+    <div style={{ background: "linear-gradient(160deg,#1a0f06,#2a1a0c)", borderRadius: 12, padding: "34px 26px", textAlign: "center", overflow: "hidden" }}>
+      <img src={def.logo} alt="" style={{ maxHeight: 44, maxWidth: "70%", objectFit: "contain", marginBottom: 16 }} />
+      <div style={{ display: "block", marginBottom: 14 }}>
+        <span style={{ display: "inline-block", padding: "5px 14px", background: "rgba(200,150,40,.14)", border: "1px solid " + gold + "55", borderRadius: 20, fontSize: 11, fontWeight: 700, color: gold }}>{def.badge}</span>
       </div>
-      <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 30, lineHeight: 1.1, color: "#fff", marginBottom: 12, fontWeight: 700 }}>{headline}</div>
-      <div style={{ fontSize: 14, color: "rgba(255,255,255,.72)", lineHeight: 1.6, maxWidth: 420, margin: "0 auto 20px" }}>{sub}</div>
-      <span style={{ display: "inline-block", background: "linear-gradient(135deg," + gold + "," + primary + ")", color: "#1a0f00", padding: "11px 24px", borderRadius: 9, fontSize: 14, fontWeight: 800 }}>{cta}</span>
+      <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 28, lineHeight: 1.12, color: "#fff", marginBottom: 12, fontWeight: 700 }}>{v("landing.hero.headline")}</div>
+      <div style={{ fontSize: 13.5, color: "rgba(255,255,255,.72)", lineHeight: 1.6, maxWidth: 430, margin: "0 auto 20px" }}>{v("landing.hero.subhead")}</div>
+      <span style={{ display: "inline-block", background: "linear-gradient(135deg," + gold + "," + primary + ")", color: "#1a0f00", padding: "11px 24px", borderRadius: 9, fontSize: 14, fontWeight: 800 }}>{v("landing.hero.cta_label")}</span>
     </div>
   );
 }
@@ -81,6 +98,7 @@ export function ContentBrandEditor({ userId }) {
   const dt  = (k, def) => (draft.theme[door] || {})[k] ?? def ?? "";
   const setDT = (k, v) => setDraft(p => ({ ...p, theme: { ...p.theme, [door]: { ...(p.theme[door] || {}), [k]: v } } }));
   const draftThemeObj = draft.theme[door] || {};
+  const defs = DOOR_DEFAULTS[door];
 
   const dirty = (() => {
     for (const f of CONTENT_FIELDS) if ((draft.content[door + "||" + f.key] ?? "") !== (pub.content[door + "||" + f.key] ?? "")) return true;
@@ -123,37 +141,36 @@ export function ContentBrandEditor({ userId }) {
         {DOORS.map(d => <button key={d.id} style={S.tab(door === d.id)} onClick={() => setDoor(d.id)}>{d.label}</button>)}
       </div>
       <p style={{ color: "#777", fontSize: 13, lineHeight: 1.6, margin: "0 0 16px" }}>
-        Edits are a private <strong>draft</strong> — the preview updates as you type, but nothing changes on the public site until you click <strong>Publish</strong>. Editing price copy here does not change what customers are charged (that's in Stripe).
+        Editing <strong>{DOORS.find(d => d.id === door)?.label}</strong>. Fields left blank use the site's current copy (shown as grey placeholder text). Edits are a private <strong>draft</strong> — the preview updates as you type, but nothing changes on the public site until you click <strong>Publish</strong>. Editing price copy here does not change what customers are charged (that's in Stripe).
       </p>
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(300px,1fr) minmax(300px,1fr)", gap: 20, alignItems: "start" }}>
         {/* ── Editor form ── */}
         <div>
           <div style={S.card}>
-            <h3 style={S.h3}>Brand — {DOORS.find(d => d.id === door)?.label}</h3>
-            {THEME_FIELDS.map(f => (
-              <div key={f.key} style={S.row}>
-                <label style={S.label}>{f.label}</label>
-                {f.type === "color"
-                  ? <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <input type="color" value={dt(f.key, f.def) || f.def} onChange={e => setDT(f.key, e.target.value)} style={{ width: 46, height: 34, padding: 0, border: "1px solid #d5cfc4", borderRadius: 6, cursor: "pointer" }} />
-                      <input style={{ ...S.input, width: 120 }} value={dt(f.key, f.def)} onChange={e => setDT(f.key, e.target.value)} placeholder={f.def} />
-                    </div>
-                  : <input style={S.input} value={dt(f.key, f.def)} onChange={e => setDT(f.key, e.target.value)} placeholder="https://… (paste an image URL)" />}
-              </div>
-            ))}
-          </div>
-          <div style={S.card}>
             <h3 style={S.h3}>Landing page — hero</h3>
             {CONTENT_FIELDS.map(f => (
               <div key={f.key} style={S.row}>
                 <label style={S.label}>{f.label}</label>
                 {f.type === "textarea"
-                  ? <textarea style={{ ...S.input, minHeight: 66, resize: "vertical" }} value={dc(f.key)} onChange={e => setDC(f.key, e.target.value)} placeholder={f.ph} />
-                  : <input style={S.input} value={dc(f.key)} onChange={e => setDC(f.key, e.target.value)} placeholder={f.ph} />}
+                  ? <textarea style={{ ...S.input, minHeight: 70, resize: "vertical" }} value={dc(f.key)} onChange={e => setDC(f.key, e.target.value)} placeholder={defs[f.key]} />
+                  : <input style={S.input} value={dc(f.key)} onChange={e => setDC(f.key, e.target.value)} placeholder={defs[f.key]} />}
               </div>
             ))}
-            <div style={{ fontSize: 11.5, color: "#999" }}>More sections (feature cards, pricing display, etc.) are coming to this editor.</div>
+            <div style={S.note}>Each door already shows its own logo automatically — no need to add one.</div>
+          </div>
+          <div style={S.card}>
+            <h3 style={S.h3}>Brand colors — {DOORS.find(d => d.id === door)?.label}</h3>
+            {THEME_FIELDS.map(f => (
+              <div key={f.key} style={S.row}>
+                <label style={S.label}>{f.label}</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input type="color" value={dt(f.key, f.def) || f.def} onChange={e => setDT(f.key, e.target.value)} style={{ width: 46, height: 34, padding: 0, border: "1px solid #d5cfc4", borderRadius: 6, cursor: "pointer" }} />
+                  <input style={{ ...S.input, width: 120 }} value={dt(f.key, f.def)} onChange={e => setDT(f.key, e.target.value)} placeholder={f.def} />
+                </div>
+              </div>
+            ))}
+            <div style={S.note}>Colors change the preview now. Applying them to the live site is the next step — for the moment, publishing colors won't change the public pages yet.</div>
           </div>
         </div>
 
@@ -163,8 +180,8 @@ export function ContentBrandEditor({ userId }) {
             <span style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: .5, color: "#888" }}>Live preview</span>
             <span style={{ fontSize: 12, fontWeight: 700, color: dirty ? "#c07a00" : "#1a7f37" }}>{dirty ? "● Unpublished changes" : "✓ Live version"}</span>
           </div>
-          <HeroPreview vals={CONTENT_FIELDS.reduce((o, f) => (o[f.key] = dc(f.key), o), {})} theme={draftThemeObj} />
-          <div style={{ fontSize: 11.5, color: "#999", marginTop: 8 }}>This is a preview only — visible to you, not the public.</div>
+          <HeroPreview vals={CONTENT_FIELDS.reduce((o, f) => (o[f.key] = dc(f.key), o), {})} theme={draftThemeObj} def={defs} />
+          <div style={S.note}>Preview only — visible to you, not the public.</div>
         </div>
       </div>
 
