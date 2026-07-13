@@ -43,6 +43,15 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     trackVisit("landing");
     return()=>window.removeEventListener("scroll",h);
   },[]);
+  // Editable marketing content (site_content) for this door — falls back to defaults if unset.
+  const[content,setContent]=useState({});
+  useEffect(()=>{
+    const vertical = IS_ARTSTRACKER ? "artstracker" : "theatre4u";
+    SB.from("site_content").select("ckey,cvalue").eq("vertical",vertical)
+      .then(({data})=>{ if(data){ const m={}; data.forEach(r=>{ m[r.ckey]=r.cvalue||""; }); setContent(m); } })
+      .catch(()=>{});
+  },[]);
+  const c=(k,fb)=>{ const v=content[k]; return (v&&String(v).trim())?v:fb; };
 
   const features = IS_ARTSTRACKER ? [
     {icon:"📦",title:"Inventory That Actually Works",desc:"Catalog every costume, instrument, prop, light, art supply, uniform, or piece of equipment your program owns. Add photos, tag by show or unit, print QR labels for storage. Always know exactly what you have and where it lives."},
@@ -124,15 +133,16 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
           </span>
         </div>
         <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(42px,7vw,76px)",lineHeight:1.05,marginBottom:20,color:"#fff"}}>
-          {IS_ARTSTRACKER ? "Everything your program needs —" : "Everything your theatre program needs —"}{" "}
-          <span style={{color:"var(--gold)"}}>in one place</span>
+          {content["landing.hero.headline"]&&String(content["landing.hero.headline"]).trim()
+            ? content["landing.hero.headline"]
+            : <>{IS_ARTSTRACKER ? "Everything your program needs —" : "Everything your theatre program needs —"}{" "}<span style={{color:"var(--gold)"}}>in one place</span></>}
         </h1>
         <p style={{fontSize:"clamp(16px,2.5vw,20px)",color:"rgba(255,255,255,.7)",lineHeight:1.7,marginBottom:36,maxWidth:600,margin:"0 auto 36px"}}>
-          {IS_ARTSTRACKER ? "For theatre, music, dance, and visual arts — and any program that needs to keep track of what it owns. Know what you have, find what you need, and share with programs near you." : "Know what you have. Find what you need. Built specifically for theatre programs of every size."}
+          {c("landing.hero.subhead", IS_ARTSTRACKER ? "For theatre, music, dance, and visual arts — and any program that needs to keep track of what it owns. Know what you have, find what you need, and share with programs near you." : "Know what you have. Find what you need. Built specifically for theatre programs of every size.")}
         </p>
         <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
           <button onClick={onSignUp} style={{background:"linear-gradient(135deg,var(--gold),var(--goldd))",border:"none",color:"#1a0f00",padding:"14px 32px",borderRadius:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:16,fontWeight:800,boxShadow:"0 4px 24px rgba(212,168,67,.4)"}}>
-            Get Started Free — No credit card →
+            {c("landing.hero.cta_label", "Get Started Free — No credit card →")}
           </button>
           <button onClick={onSignIn} style={{background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.2)",color:"#fff",padding:"14px 24px",borderRadius:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:15,fontWeight:600}}>
             Sign In
