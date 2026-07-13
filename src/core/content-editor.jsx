@@ -4,7 +4,7 @@
 // Tables: site_content (cvalue = published, draft = working) + site_theme (theme / draft_theme).
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
-import { DEFAULT_FEATURES, parseFeatures } from "../lib/landing-defaults.js";
+import { DEFAULT_FEATURES, DEFAULT_STEPS, parseFeatures } from "../lib/landing-defaults.js";
 
 const DOORS = [
   { id: "theatre4u",   label: "Theatre4u" },
@@ -30,6 +30,16 @@ const DOOR_DEFAULTS = {
     "landing.cta.subtext":      "Join theatre programs already using Theatre4u™ to get their inventory under control, track their shows, and connect with their community.",
     "landing.cta.button":       "Start Free — No credit card required →",
     "landing.cta.fineprint":    "Free plan · No contracts · Cancel anytime",
+    "landing.howitworks.eyebrow": "Get started in minutes",
+    "landing.howitworks.heading": "How it works",
+    "landing.story.badge":      "Our Story",
+    "landing.story.heading1":   "Built by a Theatre Person,",
+    "landing.story.heading2":   "For Theatre People.",
+    "landing.story.para1":      "After spending over 30 years in the theatre and 18+ years in the classroom, I know how quickly props and costumes can seem to explode out of control. As theatre artists moving from one production to the next, we need to know which box that magic wand for Puffs lives in.",
+    "landing.story.para2":      "And we need a chance to connect with other theatre programs that may have something we need, or need something we have. This is why Theatre4u was started.",
+    "landing.story.para3":      "Theatre4u™ keeps track of everything your program owns — and opens the door to a community of programs ready to share resources, collaborate, and support each other.",
+    "landing.story.founder_name":  "Robert Zick",
+    "landing.story.founder_title": "Founder, Theatre4u™ & Artstracker · 18+ years in the classroom",
   },
   artstracker: {
     logo: "/logo-artstracker.png",
@@ -47,6 +57,16 @@ const DOOR_DEFAULTS = {
     "landing.cta.subtext":      "Join programs already using ArtsTracker to get their inventory under control, track their events, and connect with their community.",
     "landing.cta.button":       "Start Free — No credit card required →",
     "landing.cta.fineprint":    "Free plan · No contracts · Cancel anytime",
+    "landing.howitworks.eyebrow": "Get started in minutes",
+    "landing.howitworks.heading": "How it works",
+    "landing.story.badge":      "Our Story",
+    "landing.story.heading1":   "Built by an Arts Educator,",
+    "landing.story.heading2":   "For Arts Programs.",
+    "landing.story.para1":      "After spending over 30 years in the theatre and 18+ years in the classroom, I know how quickly props and costumes can seem to explode out of control. As theatre artists moving from one production to the next, we need to know which box that magic wand for Puffs lives in.",
+    "landing.story.para2":      "And we need a chance to connect with other programs that may have something we need, or need something we have. This is why this platform was started.",
+    "landing.story.para3":      "ArtsTracker keeps track of everything your program owns — and opens the door to a community of programs ready to share resources, collaborate, and support each other.",
+    "landing.story.founder_name":  "Robert Zick",
+    "landing.story.founder_title": "Founder, Theatre4u™ & Artstracker · 18+ years in the classroom",
   },
 };
 
@@ -67,6 +87,21 @@ const SECTIONS = [
     { key: "landing.features.heading", label: "Section heading",         type: "text" },
     { key: "landing.features.subhead", label: "Section sub-text",        type: "textarea" },
     { key: "landing.features.items",   label: "Feature cards",           type: "features" },
+  ] },
+  { title: "How it works", fields: [
+    { key: "landing.howitworks.eyebrow", label: "Eyebrow (small heading)", type: "text" },
+    { key: "landing.howitworks.heading", label: "Section heading",         type: "text" },
+    { key: "landing.steps.items",        label: "Steps",                   type: "steps" },
+  ] },
+  { title: "Our Story", fields: [
+    { key: "landing.story.badge",        label: "Badge",                type: "text" },
+    { key: "landing.story.heading1",     label: "Heading — line 1",     type: "text" },
+    { key: "landing.story.heading2",     label: "Heading — line 2 (gold)", type: "text" },
+    { key: "landing.story.para1",        label: "Paragraph 1 (left)",   type: "textarea" },
+    { key: "landing.story.para2",        label: "Paragraph 2 (left)",   type: "textarea" },
+    { key: "landing.story.para3",        label: "Paragraph 3 (right)",  type: "textarea" },
+    { key: "landing.story.founder_name", label: "Founder name",         type: "text" },
+    { key: "landing.story.founder_title",label: "Founder title",        type: "text" },
   ] },
   { title: "Closing call-to-action", fields: [
     { key: "landing.cta.headline1", label: "Closing headline — line 1",        type: "text" },
@@ -202,15 +237,16 @@ function MiniFeatures({ gold, items, eyebrow, heading }) {
     </div>
   );
 }
-function MiniSteps({ gold, deep }) {
+function MiniSteps({ gold, deep, items, heading }) {
+  const steps = (items && items.length ? items : []).slice(0, 6);
   return (
     <div style={{ background: "#120a05", padding: "18px 16px" }}>
-      <div style={{ textAlign: "center", fontFamily: "'Playfair Display',Georgia,serif", fontSize: 15, color: "#fff", marginBottom: 12 }}>How it works</div>
-      <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
-        {[1, 2, 3, 4].map(n => (
-          <div key={n} style={{ textAlign: "center" }}>
-            <div style={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg," + gold + "," + deep + ")", color: "#1a0f00", fontWeight: 800, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 6px" }}>{n}</div>
-            <div style={{ height: 4, width: 34, background: "rgba(255,255,255,.14)", borderRadius: 2, margin: "0 auto" }} />
+      <div style={{ textAlign: "center", fontFamily: "'Playfair Display',Georgia,serif", fontSize: 15, color: "#fff", marginBottom: 12 }}>{heading}</div>
+      <div style={{ display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
+        {steps.map((st, i) => (
+          <div key={i} style={{ textAlign: "center", width: 68 }}>
+            <div style={{ width: 26, height: 26, borderRadius: "50%", background: "linear-gradient(135deg," + gold + "," + deep + ")", color: "#1a0f00", fontWeight: 800, fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 5px" }}>{i + 1}</div>
+            <div style={{ fontSize: 9, color: "rgba(255,255,255,.7)", fontWeight: 600, lineHeight: 1.2 }}>{st.title}</div>
           </div>
         ))}
       </div>
@@ -236,11 +272,11 @@ function MiniPricing({ gold, deep }) {
     </div>
   );
 }
-function MiniStory({ gold }) {
+function MiniStory({ gold, badge, heading1, heading2 }) {
   return (
     <div style={{ background: "#160b06", padding: "18px 16px", textAlign: "center" }}>
-      <div style={{ display: "inline-block", padding: "3px 10px", border: "1px solid " + gold + "44", borderRadius: 12, fontSize: 8, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", color: gold, marginBottom: 8 }}>Our Story</div>
-      <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 15, color: "#fff", marginBottom: 10 }}>Built by a Theatre Person</div>
+      <div style={{ display: "inline-block", padding: "3px 10px", border: "1px solid " + gold + "44", borderRadius: 12, fontSize: 8, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", color: gold, marginBottom: 8 }}>{badge}</div>
+      <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 15, color: "#fff", marginBottom: 10 }}>{heading1} <span style={{ color: gold }}>{heading2}</span></div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, textAlign: "left" }}>
         {[0, 1].map(col => <div key={col}>{[0, 1, 2, 3].map(r => <div key={r} style={bar((95 - r * 8) + "%")} />)}</div>)}
       </div>
@@ -302,6 +338,14 @@ export function ContentBrandEditor({ userId }) {
   const moveCard = (i, dir) => { const a = featureItems.slice(); const j = i + dir; if (j < 0 || j >= a.length) return; const t = a[i]; a[i] = a[j]; a[j] = t; setFeatures(a); };
   const removeCard = (i) => setFeatures(featureItems.filter((_, idx) => idx !== i));
   const addCard = () => setFeatures([...featureItems, { icon: "✨", title: "New feature", desc: "Describe this feature." }]);
+
+  // "How it works" steps (JSON array under landing.steps.items; numbered automatically).
+  const stepItems = parseFeatures(dc("landing.steps.items")) || DEFAULT_STEPS[door];
+  const setSteps = (arr) => setDC("landing.steps.items", JSON.stringify(arr));
+  const updateStep = (i, k, val) => setSteps(stepItems.map((st, idx) => idx === i ? { ...st, [k]: val } : st));
+  const moveStep = (i, dir) => { const a = stepItems.slice(); const j = i + dir; if (j < 0 || j >= a.length) return; const t = a[i]; a[i] = a[j]; a[j] = t; setSteps(a); };
+  const removeStep = (i) => setSteps(stepItems.filter((_, idx) => idx !== i));
+  const addStep = () => setSteps([...stepItems, { title: "New step", desc: "Describe this step." }]);
 
   const dirty = (() => {
     for (const k of ALL_CONTENT_KEYS) if ((draft.content[door + "||" + k] ?? "") !== (pub.content[door + "||" + k] ?? "")) return true;
@@ -371,6 +415,28 @@ export function ContentBrandEditor({ userId }) {
             </div>
           ))}
           <button onClick={addCard} style={{ padding: "8px 14px", borderRadius: 8, border: "1px dashed #c4922a", background: "#fff", color: "#a5731f", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>+ Add a card</button>
+        </>
+      );
+    }
+    if (f.type === "steps") {
+      return (
+        <>
+          <label style={S.label}>{f.label}</label>
+          {stepItems.map((st, i) => (
+            <div key={i} style={{ border: "1px solid #e6e0d6", borderRadius: 10, padding: 12, marginBottom: 10, background: "#faf7f1" }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                <span style={{ width: 26, height: 26, borderRadius: "50%", background: "#c4922a", color: "#fff", fontWeight: 800, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</span>
+                <input value={st.title || ""} onChange={e => updateStep(i, "title", e.target.value)} placeholder="Step title" style={{ ...S.input, flex: 1, minWidth: 0 }} />
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <button onClick={() => moveStep(i, -1)} disabled={i === 0} style={arrowBtn(i === 0)}>▲</button>
+                  <button onClick={() => moveStep(i, 1)} disabled={i === stepItems.length - 1} style={arrowBtn(i === stepItems.length - 1)}>▼</button>
+                </div>
+                <button onClick={() => removeStep(i)} title="Remove step" style={{ width: 28, height: 38, borderRadius: 6, border: "1px solid #e2b6b6", background: "#fff", color: "#c0392b", cursor: "pointer", fontSize: 16, fontFamily: "inherit", flexShrink: 0 }}>×</button>
+              </div>
+              <textarea value={st.desc || ""} onChange={e => updateStep(i, "desc", e.target.value)} placeholder="Step description" style={{ ...S.input, minHeight: 50, resize: "vertical" }} />
+            </div>
+          ))}
+          <button onClick={addStep} style={{ padding: "8px 14px", borderRadius: 8, border: "1px dashed #c4922a", background: "#fff", color: "#a5731f", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>+ Add a step</button>
         </>
       );
     }
@@ -486,10 +552,10 @@ export function ContentBrandEditor({ userId }) {
                   case "hero":       return <HeroPreview vals={pv} theme={draftThemeObj} def={defs} />;
                   case "social":     return <MiniSocial />;
                   case "features":   return <MiniFeatures gold={gold} items={featureItems} eyebrow={pv["landing.features.eyebrow"] || defs["landing.features.eyebrow"]} heading={pv["landing.features.heading"] || defs["landing.features.heading"]} />;
-                  case "howitworks": return <MiniSteps gold={gold} deep={deep} />;
+                  case "howitworks": return <MiniSteps gold={gold} deep={deep} items={stepItems} heading={pv["landing.howitworks.heading"] || defs["landing.howitworks.heading"]} />;
                   case "pricing":    return <MiniPricing gold={gold} deep={deep} />;
                   case "finalcta":   return <CtaPreview vals={pv} theme={draftThemeObj} def={defs} />;
-                  case "story":      return <MiniStory gold={gold} />;
+                  case "story":      return <MiniStory gold={gold} badge={pv["landing.story.badge"] || defs["landing.story.badge"]} heading1={pv["landing.story.heading1"] || defs["landing.story.heading1"]} heading2={pv["landing.story.heading2"] || defs["landing.story.heading2"]} />;
                   default:           return null;
                 }
               };

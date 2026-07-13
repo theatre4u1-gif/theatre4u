@@ -21,6 +21,21 @@ export const DEFAULT_FEATURES = {
   ],
 };
 
+export const DEFAULT_STEPS = {
+  theatre4u: [
+    { title: "Create your free account", desc: "Sign up in 60 seconds. No credit card needed. Your first 25 items are always free." },
+    { title: "Build your inventory", desc: "Take photos on your phone or upload from your computer. Add name, category, condition, and location. Print QR labels for bins and racks." },
+    { title: "Track your productions", desc: "Create a show folder and pull items straight from your inventory. See what's assigned, what's checked out, and what you still need." },
+    { title: "Optionally join Backstage Exchange", desc: "When you're ready, opt in to Backstage Exchange. Post selected items for rent, loan, or sale. Browse what other programs near you have available." },
+  ],
+  artstracker: [
+    { title: "Create your free account", desc: "Sign up in 60 seconds. No credit card needed. Your first 25 items are always free." },
+    { title: "Build your inventory", desc: "Photograph costumes, instruments, props, or supplies on your phone, or upload from your computer. Add name, category, condition, and location. Print QR labels." },
+    { title: "Track your shows, concerts & events", desc: "Create a folder and pull items straight from your inventory. See what's assigned, checked out, and still needed." },
+    { title: "Optionally join the Exchange", desc: "Share items for rent, loan, or sale, and browse what other programs near you have available." },
+  ],
+};
+
 // Safely parse an admin-saved features array; returns null if empty/invalid so callers fall back.
 export function parseFeatures(raw) {
   try {

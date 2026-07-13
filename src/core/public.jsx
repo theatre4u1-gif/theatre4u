@@ -8,7 +8,7 @@ import { CAT_MAP } from "./inventory.js";
 import { QR } from "./qr.js";
 import { CSS } from "./styles.js";
 import { usp } from "../lib/backgrounds.js";
-import { DEFAULT_FEATURES, parseFeatures } from "../lib/landing-defaults.js";
+import { DEFAULT_FEATURES, DEFAULT_STEPS, parseFeatures } from "../lib/landing-defaults.js";
 
 // ── Visit tracking (used by the public landing page) ─────────────────────────
 const TRACK_URL = "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/track-visit";
@@ -89,17 +89,8 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
        {label:"All departments — the full ArtsTracker", plans:atPlans}]
     : [{label:null, plans:singlePlans}];
 
-  const steps = IS_ARTSTRACKER ? [
-    {n:"1",title:"Create your free account",desc:"Sign up in 60 seconds. No credit card needed. Your first 25 items are always free."},
-    {n:"2",title:"Build your inventory",desc:"Photograph costumes, instruments, props, or supplies on your phone, or upload from your computer. Add name, category, condition, and location. Print QR labels."},
-    {n:"3",title:"Track your shows, concerts & events",desc:"Create a folder and pull items straight from your inventory. See what's assigned, checked out, and still needed."},
-    {n:"4",title:"Optionally join the Exchange",desc:"Share items for rent, loan, or sale, and browse what other programs near you have available."},
-  ] : [
-    {n:"1",title:"Create your free account",desc:"Sign up in 60 seconds. No credit card needed. Your first 25 items are always free."},
-    {n:"2",title:"Build your inventory",desc:"Take photos on your phone or upload from your computer. Add name, category, condition, and location. Print QR labels for bins and racks."},
-    {n:"3",title:"Track your productions",desc:"Create a show folder and pull items straight from your inventory. See what's assigned, what's checked out, and what you still need."},
-    {n:"4",title:"Optionally join Backstage Exchange",desc:"When you're ready, opt in to Backstage Exchange. Post selected items for rent, loan, or sale. Browse what other programs near you have available."},
-  ];
+  // Steps: admin override (site_content) or the shared defaults for this door.
+  const steps = parseFeatures(content["landing.steps.items"]) || DEFAULT_STEPS[IS_ARTSTRACKER?"artstracker":"theatre4u"];
 
   return(<div style={{background:"var(--ink)",minHeight:"100vh",color:"var(--linen)",fontFamily:"'DM Sans',sans-serif",...themeVars}}>
     
@@ -211,13 +202,13 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     <div style={{order:ord("howitworks"),display:vis("howitworks")?"block":"none",background:"rgba(255,255,255,.03)",borderTop:"1px solid rgba(255,255,255,.06)",borderBottom:"1px solid rgba(255,255,255,.06)",padding:"72px 32px"}}>
       <div style={{maxWidth:900,margin:"0 auto"}}>
         <div style={{textAlign:"center",marginBottom:48}}>
-          <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>Get started in minutes</div>
-          <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(28px,4vw,42px)",color:"#fff"}}>How it works</h2>
+          <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>{c("landing.howitworks.eyebrow","Get started in minutes")}</div>
+          <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(28px,4vw,42px)",color:"#fff"}}>{c("landing.howitworks.heading","How it works")}</h2>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:24}}>
-          {steps.map(s=>(
-            <div key={s.n} style={{textAlign:"center"}}>
-              <div style={{width:48,height:48,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),var(--goldd))",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontSize:22,color:"#1a0f00",margin:"0 auto 14px"}}>{s.n}</div>
+          {steps.map((s,i)=>(
+            <div key={i} style={{textAlign:"center"}}>
+              <div style={{width:48,height:48,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),var(--goldd))",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Playfair Display',serif",fontSize:22,color:"#1a0f00",margin:"0 auto 14px"}}>{s.n||(i+1)}</div>
               <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:16,color:"#fff",marginBottom:7}}>{s.title}</h3>
               <p style={{fontSize:13,color:"rgba(255,255,255,.5)",lineHeight:1.6}}>{s.desc}</p>
             </div>
@@ -294,23 +285,23 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     {/* Our Story */}
     <div style={{order:ord("story"),display:vis("story")?"block":"none",padding:"80px 32px",maxWidth:900,margin:"0 auto",textAlign:"center",width:"100%"}}>
       <div style={{display:"inline-block",padding:"4px 14px",background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.2)",borderRadius:20,fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:20}}>
-        Our Story
+        {c("landing.story.badge","Our Story")}
       </div>
       <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(26px,4vw,40px)",marginBottom:24,lineHeight:1.2}}>
-        {IS_ARTSTRACKER ? <>Built by an Arts Educator,<br/><span style={{color:"var(--gold)"}}>For Arts Programs.</span></> : <>Built by a Theatre Person,<br/><span style={{color:"var(--gold)"}}>For Theatre People.</span></>}
+        {c("landing.story.heading1", IS_ARTSTRACKER ? "Built by an Arts Educator," : "Built by a Theatre Person,")}<br/><span style={{color:"var(--gold)"}}>{c("landing.story.heading2", IS_ARTSTRACKER ? "For Arts Programs." : "For Theatre People.")}</span>
       </h2>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,textAlign:"left",marginBottom:48}}>
         <div>
           <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)",marginBottom:16}}>
-            After spending over 30 years in the theatre and 18+ years in the classroom, I know how quickly props and costumes can seem to explode out of control. As theatre artists moving from one production to the next, we need to know which box that magic wand for Puffs lives in.
+            {c("landing.story.para1","After spending over 30 years in the theatre and 18+ years in the classroom, I know how quickly props and costumes can seem to explode out of control. As theatre artists moving from one production to the next, we need to know which box that magic wand for Puffs lives in.")}
           </p>
           <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)"}}>
-            And we need a chance to connect with other {IS_ARTSTRACKER ? "programs" : "theatre programs"} that may have something we need, or need something we have. This is why {IS_ARTSTRACKER ? "this platform" : "Theatre4u"} was started.
+            {c("landing.story.para2", IS_ARTSTRACKER ? "And we need a chance to connect with other programs that may have something we need, or need something we have. This is why this platform was started." : "And we need a chance to connect with other theatre programs that may have something we need, or need something we have. This is why Theatre4u was started.")}
           </p>
         </div>
         <div>
           <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)",marginBottom:16}}>
-            {APP_NAME} keeps track of everything your program owns — and opens the door to a community of programs ready to share resources, collaborate, and support each other.
+            {c("landing.story.para3", APP_NAME+" keeps track of everything your program owns — and opens the door to a community of programs ready to share resources, collaborate, and support each other.")}
           </p>
           <p style={{fontSize:16,lineHeight:1.85,color:"rgba(255,255,255,.75)"}}>
             <strong style={{color:"#fff"}}>{IS_ARTSTRACKER ? "The arts are always better together." : "Theatre is always better together."}</strong> This platform was built to help make that connection easier — {IS_ARTSTRACKER ? "from the classroom to the whole community." : "from the wings to the whole community."}
@@ -320,8 +311,8 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1000" strokeWidth="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
             </div>
             <div>
-              <div style={{fontWeight:700,fontSize:14,color:"#fff"}}>Robert Zick</div>
-              <div style={{fontSize:12,color:"rgba(255,255,255,.45)"}}>Founder, Theatre4u™ &amp; Artstracker · 18+ years in the classroom</div>
+              <div style={{fontWeight:700,fontSize:14,color:"#fff"}}>{c("landing.story.founder_name","Robert Zick")}</div>
+              <div style={{fontSize:12,color:"rgba(255,255,255,.45)"}}>{c("landing.story.founder_title","Founder, Theatre4u™ & Artstracker · 18+ years in the classroom")}</div>
             </div>
           </div>
         </div>
