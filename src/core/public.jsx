@@ -60,6 +60,12 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
   const themeVars={};
   if(theme.accent&&String(theme.accent).trim()) themeVars["--gold"]=theme.accent;
   if(theme.primary&&String(theme.primary).trim()) themeVars["--goldd"]=theme.primary;
+  // Landing section order + visibility (set in the admin Content editor → Page layout).
+  const DEFAULT_SECTION_ORDER=["hero","social","features","howitworks","pricing","finalcta","story"];
+  const savedOrder=(content["landing.layout.order"]||"").split(",").map(s=>s.trim()).filter(Boolean);
+  const sectionOrder=[...savedOrder.filter(id=>DEFAULT_SECTION_ORDER.includes(id)), ...DEFAULT_SECTION_ORDER.filter(id=>!savedOrder.includes(id))];
+  const ord=(id)=>{const i=sectionOrder.indexOf(id);return i<0?90:i;};
+  const vis=(id)=>content["landing.section."+id+".show"]!=="0";
 
   const features = IS_ARTSTRACKER ? [
     {icon:"📦",title:"Inventory That Actually Works",desc:"Catalog every costume, instrument, prop, light, art supply, uniform, or piece of equipment your program owns. Add photos, tag by show or unit, print QR labels for storage. Always know exactly what you have and where it lives."},
@@ -121,8 +127,11 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
       </div>
     </nav>
 
+    {/* ── Reorderable / hideable sections (order + visibility from admin Page-layout) ── */}
+    <div style={{display:"flex",flexDirection:"column"}}>
+
     {/* ── Hero ── */}
-    <div style={{position:"relative",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",padding:"120px 24px 80px",overflow:"hidden"}}>
+    <div style={{order:ord("hero"),position:"relative",minHeight:"100vh",display:vis("hero")?"flex":"none",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",padding:"120px 24px 80px",overflow:"hidden"}}>
       {/* Background image */}
       <img src={c("landing.hero.bg_image", usp("photo-1503095396549-807759245b35",1600,900))} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.2,pointerEvents:"none"}}/>
       <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,rgba(13,10,8,.7) 0%,rgba(13,10,8,.5) 50%,rgba(13,10,8,.95) 100%)",pointerEvents:"none"}}/>
@@ -182,7 +191,7 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     </div>
 
     {/* ── Social proof strip ── */}
-    <div style={{background:"rgba(212,168,67,.08)",borderTop:"1px solid rgba(212,168,67,.15)",borderBottom:"1px solid rgba(212,168,67,.15)",padding:"16px 32px",display:"flex",flexWrap:"wrap",gap:24,justifyContent:"center",alignItems:"center"}}>
+    <div style={{order:ord("social"),background:"rgba(212,168,67,.08)",borderTop:"1px solid rgba(212,168,67,.15)",borderBottom:"1px solid rgba(212,168,67,.15)",padding:"16px 32px",display:vis("social")?"flex":"none",flexWrap:"wrap",gap:24,justifyContent:"center",alignItems:"center"}}>
       {(IS_ARTSTRACKER ? [["📦","Inventory management"],["🎭","Productions & events"],["📱","Mobile-ready"],["💰","Funding Tracker"],["🔄","The Exchange"],["🎪","Community board"]] : [["📦","Inventory management"],["🎭","Productions tracker"],["📱","Mobile-ready"],["💰","Funding Tracker"],["🏪","Backstage Exchange"],["🎪","Community board"]]).map(([ico,lbl])=>(
         <div key={lbl} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,fontWeight:600,color:"rgba(255,255,255,.7)"}}>
           <span style={{fontSize:16}}>{ico}</span>{lbl}
@@ -191,7 +200,7 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     </div>
 
     {/* ── Features ── */}
-    <div style={{padding:"80px 32px",maxWidth:1100,margin:"0 auto"}}>
+    <div style={{order:ord("features"),display:vis("features")?"block":"none",padding:"80px 32px",maxWidth:1100,margin:"0 auto",width:"100%"}}>
       <div style={{textAlign:"center",marginBottom:52}}>
         <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>What {APP_NAME} does</div>
         <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(32px,5vw,48px)",color:"#fff",lineHeight:1.15}}>{IS_ARTSTRACKER ? "Built for busy program directors" : "Built for busy drama directors"}</h2>
@@ -211,7 +220,7 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     </div>
 
     {/* ── How it works ── */}
-    <div style={{background:"rgba(255,255,255,.03)",borderTop:"1px solid rgba(255,255,255,.06)",borderBottom:"1px solid rgba(255,255,255,.06)",padding:"72px 32px"}}>
+    <div style={{order:ord("howitworks"),display:vis("howitworks")?"block":"none",background:"rgba(255,255,255,.03)",borderTop:"1px solid rgba(255,255,255,.06)",borderBottom:"1px solid rgba(255,255,255,.06)",padding:"72px 32px"}}>
       <div style={{maxWidth:900,margin:"0 auto"}}>
         <div style={{textAlign:"center",marginBottom:48}}>
           <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>Get started in minutes</div>
@@ -230,7 +239,7 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     </div>
 
     {/* ── Pricing ── */}
-    <div style={{padding:"80px 32px",maxWidth:1000,margin:"0 auto"}}>
+    <div style={{order:ord("pricing"),display:vis("pricing")?"block":"none",padding:"80px 32px",maxWidth:1000,margin:"0 auto",width:"100%"}}>
       <div style={{textAlign:"center",marginBottom:48}}>
         <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>Simple, honest pricing</div>
         <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(28px,4vw,42px)",color:"#fff"}}>Plans for every program</h2>
@@ -283,7 +292,7 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     </div>
 
     {/* ── Final CTA ── */}
-    <div style={{textAlign:"center",padding:"72px 32px 96px",borderTop:"1px solid rgba(255,255,255,.06)"}}>
+    <div style={{order:ord("finalcta"),display:vis("finalcta")?"block":"none",textAlign:"center",padding:"72px 32px 96px",borderTop:"1px solid rgba(255,255,255,.06)"}}>
       <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(28px,5vw,52px)",color:"#fff",marginBottom:16,lineHeight:1.15}}>
         {c("landing.cta.headline1","Ready to get your")}<br/><span style={{color:"var(--gold)"}}>{c("landing.cta.headline2", IS_ARTSTRACKER ? "program organized?" : "theatre organized?")}</span>
       </h2>
@@ -295,7 +304,7 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     </div>
 
     {/* Our Story */}
-    <div style={{padding:"80px 32px",maxWidth:900,margin:"0 auto",textAlign:"center"}}>
+    <div style={{order:ord("story"),display:vis("story")?"block":"none",padding:"80px 32px",maxWidth:900,margin:"0 auto",textAlign:"center",width:"100%"}}>
       <div style={{display:"inline-block",padding:"4px 14px",background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.2)",borderRadius:20,fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:20}}>
         Our Story
       </div>
@@ -344,6 +353,8 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
         ))}
       </div>
     </div>
+
+    </div>{/* ── end reorderable sections ── */}
 
     {/* Footer */}
     <div style={{borderTop:"1px solid rgba(255,255,255,.06)",padding:"24px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>

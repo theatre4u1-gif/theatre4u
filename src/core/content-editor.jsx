@@ -70,6 +70,23 @@ const THEME_FIELDS = [
   { key: "primary", label: "Deep gold (button gradient)",     def: "#a37f2c" },
 ];
 
+// Reorderable / hideable landing-page sections (must match the ids used in src/core/public.jsx).
+const LAYOUT_SECTIONS = [
+  { id: "hero",       label: "Hero" },
+  { id: "social",     label: "Feature strip" },
+  { id: "features",   label: "Features" },
+  { id: "howitworks", label: "How it works" },
+  { id: "pricing",    label: "Pricing" },
+  { id: "finalcta",   label: "Closing call-to-action" },
+  { id: "story",      label: "Our Story" },
+];
+const DEFAULT_ORDER = LAYOUT_SECTIONS.map(s => s.id);
+const LAYOUT_KEYS = ["landing.layout.order", ...LAYOUT_SECTIONS.map(s => "landing.section." + s.id + ".show")];
+// Every content key the editor saves (text fields + layout).
+const ALL_CONTENT_KEYS = [...CONTENT_FIELDS.map(f => f.key), ...LAYOUT_KEYS];
+
+const arrowBtn = (dis) => ({ width: 26, height: 18, lineHeight: "16px", padding: 0, borderRadius: 4, border: "1px solid #d5cfc4", background: dis ? "#f0ece3" : "#fff", color: dis ? "#c3bbab" : "#6b6459", cursor: dis ? "default" : "pointer", fontSize: 10, fontFamily: "inherit" });
+
 const S = {
   label: { display: "block", fontSize: 12, fontWeight: 700, color: "#666", marginBottom: 5, textTransform: "uppercase", letterSpacing: .5 },
   input: { width: "100%", padding: "9px 11px", borderRadius: 8, border: "1px solid #d5cfc4", fontSize: 14, fontFamily: "inherit", boxSizing: "border-box", outline: "none" },
@@ -174,8 +191,23 @@ export function ContentBrandEditor({ userId }) {
   const draftThemeObj = draft.theme[door] || {};
   const defs = DOOR_DEFAULTS[door];
 
+  // Landing-page section order + visibility (stored as content).
+  const layoutOrder = (() => {
+    const saved = (dc("landing.layout.order") || "").split(",").map(s => s.trim()).filter(Boolean);
+    const valid = saved.filter(id => DEFAULT_ORDER.includes(id));
+    return [...valid, ...DEFAULT_ORDER.filter(id => !valid.includes(id))];
+  })();
+  const sectionShown = (id) => (dc("landing.section." + id + ".show") || "1") !== "0";
+  const moveSection = (id, dir) => {
+    const arr = layoutOrder.slice(); const i = arr.indexOf(id); const j = i + dir;
+    if (j < 0 || j >= arr.length) return;
+    const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    setDC("landing.layout.order", arr.join(","));
+  };
+  const toggleSection = (id) => setDC("landing.section." + id + ".show", sectionShown(id) ? "0" : "1");
+
   const dirty = (() => {
-    for (const f of CONTENT_FIELDS) if ((draft.content[door + "||" + f.key] ?? "") !== (pub.content[door + "||" + f.key] ?? "")) return true;
+    for (const k of ALL_CONTENT_KEYS) if ((draft.content[door + "||" + k] ?? "") !== (pub.content[door + "||" + k] ?? "")) return true;
     const pth = pub.theme[door] || {}, dth = draft.theme[door] || {};
     for (const f of THEME_FIELDS) if ((dth[f.key] ?? "") !== (pth[f.key] ?? "")) return true;
     return false;
@@ -199,7 +231,7 @@ export function ContentBrandEditor({ userId }) {
   const saveDraft = async () => {
     setBusy("draft"); setMsg("");
     const now = new Date().toISOString();
-    const rows = CONTENT_FIELDS.map(f => ({ vertical: door, ckey: f.key, draft: draft.content[door + "||" + f.key] ?? "", updated_by: userId || null, updated_at: now }));
+    const rows = ALL_CONTENT_KEYS.map(k => ({ vertical: door, ckey: k, draft: draft.content[door + "||" + k] ?? "", updated_by: userId || null, updated_at: now }));
     const { error: e1 } = await SB.from("site_content").upsert(rows, { onConflict: "vertical,ckey" });
     const { error: e2 } = await SB.from("site_theme").upsert({ vertical: door, draft_theme: draftThemeObj, updated_by: userId || null, updated_at: now }, { onConflict: "vertical" });
     finish(e1 || e2, "Draft saved — not public yet");
@@ -208,12 +240,12 @@ export function ContentBrandEditor({ userId }) {
   const publish = async () => {
     setBusy("publish"); setMsg("");
     const now = new Date().toISOString();
-    const rows = CONTENT_FIELDS.map(f => { const v = draft.content[door + "||" + f.key] ?? ""; return { vertical: door, ckey: f.key, cvalue: v, draft: v, updated_by: userId || null, updated_at: now }; });
+    const rows = ALL_CONTENT_KEYS.map(k => { const v = draft.content[door + "||" + k] ?? ""; return { vertical: door, ckey: k, cvalue: v, draft: v, updated_by: userId || null, updated_at: now }; });
     const { error: e1 } = await SB.from("site_content").upsert(rows, { onConflict: "vertical,ckey" });
     const { error: e2 } = await SB.from("site_theme").upsert({ vertical: door, theme: draftThemeObj, draft_theme: draftThemeObj, updated_by: userId || null, updated_at: now }, { onConflict: "vertical" });
     if (!(e1 || e2)) {
       setPub(p => {
-        const nc = { ...p.content }; CONTENT_FIELDS.forEach(f => { nc[door + "||" + f.key] = draft.content[door + "||" + f.key] ?? ""; });
+        const nc = { ...p.content }; ALL_CONTENT_KEYS.forEach(k => { nc[door + "||" + k] = draft.content[door + "||" + k] ?? ""; });
         return { content: nc, theme: { ...p.theme, [door]: draftThemeObj } };
       });
     }
@@ -296,6 +328,27 @@ export function ContentBrandEditor({ userId }) {
             ))}
             <div style={S.note}>These recolor the gold accents on this door's landing page once published.</div>
           </div>
+          <div style={S.card}>
+            <h3 style={S.h3}>Page layout — order & visibility</h3>
+            {layoutOrder.map((id, idx) => {
+              const sec = LAYOUT_SECTIONS.find(s => s.id === id);
+              const on = sectionShown(id);
+              return (
+                <div key={id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 10px", border: "1px solid #e6e0d6", borderRadius: 8, marginBottom: 7, background: on ? "#fff" : "#f3efe7" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <button onClick={() => moveSection(id, -1)} disabled={idx === 0} style={arrowBtn(idx === 0)}>▲</button>
+                    <button onClick={() => moveSection(id, 1)} disabled={idx === layoutOrder.length - 1} style={arrowBtn(idx === layoutOrder.length - 1)}>▼</button>
+                  </div>
+                  <span style={{ flex: 1, fontWeight: 700, fontSize: 14, color: on ? "#333" : "#9a9284" }}>{sec ? sec.label : id}</span>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "#666", cursor: "pointer" }}>
+                    <input type="checkbox" checked={on} onChange={() => toggleSection(id)} style={{ width: 16, height: 16, cursor: "pointer" }} />
+                    {on ? "Shown" : "Hidden"}
+                  </label>
+                </div>
+              );
+            })}
+            <div style={S.note}>Use ▲ ▼ to reorder sections, or untick to hide one. The hero works best kept first. Changes go live when you Publish.</div>
+          </div>
         </div>
 
         {/* ── Live preview ── */}
@@ -306,10 +359,16 @@ export function ContentBrandEditor({ userId }) {
           </div>
           {(() => {
             const pv = CONTENT_FIELDS.reduce((o, f) => (o[f.key] = dc(f.key), o), {});
+            const wrap = (id, node) => (
+              <div style={{ position: "relative", opacity: sectionShown(id) ? 1 : .4 }}>
+                {node}
+                {!sectionShown(id) && <span style={{ position: "absolute", top: 8, right: 8, background: "#6b6459", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 6, textTransform: "uppercase", letterSpacing: .5 }}>Hidden</span>}
+              </div>
+            );
             return (<>
-              <HeroPreview vals={pv} theme={draftThemeObj} def={defs} />
+              {wrap("hero", <HeroPreview vals={pv} theme={draftThemeObj} def={defs} />)}
               <div style={{ ...S.note, marginBottom: 14 }}>Top of the page (hero).</div>
-              <CtaPreview vals={pv} theme={draftThemeObj} def={defs} />
+              {wrap("finalcta", <CtaPreview vals={pv} theme={draftThemeObj} def={defs} />)}
               <div style={S.note}>Bottom of the page (closing call-to-action). Preview only — visible to you, not the public.</div>
             </>);
           })()}
