@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { ContentBrandEditor } from "./content-editor.jsx";
+import { OverviewDashboard } from "./admin-overview.jsx";
 
 const PAGE_BG = "#f4f1ea";
 
@@ -61,14 +62,15 @@ function Login({ onSignedIn }) {
 }
 
 const MODULES = [
+  { id: "overview", label: "Overview" },
   { id: "content", label: "Content & Brand" },
-  // future: { id:"billing", label:"Billing" }, { id:"finance", label:"Business Finance" }, ...
+  // future: { id:"usage", label:"Usage" }, { id:"billing", label:"Billing" }, { id:"finance", label:"Business Finance" }, ...
 ];
 
 export function AdminApp() {
   const [phase, setPhase] = useState("loading"); // loading | login | denied | ok
   const [user, setUser] = useState(null);
-  const [mod, setMod] = useState("content");
+  const [mod, setMod] = useState("overview");
 
   const check = async () => {
     const { data: { session } } = await SB.auth.getSession();
@@ -120,6 +122,7 @@ export function AdminApp() {
         </div>
       </header>
       <main style={{ padding: "26px 20px 60px" }}>
+        {mod === "overview" && <OverviewDashboard />}
         {mod === "content" && <ContentBrandEditor userId={user?.id} />}
       </main>
     </div>

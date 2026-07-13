@@ -358,6 +358,30 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   // or the org a team member belongs to). NEVER user.id directly — a crew member's
   // uid is not an orgs row, which violates items_org_id_fkey. (Coppell fix 2026-06-15)
   const activeOrgId = org?.id || user?.id;
+
+  // ── Session heartbeat (time-spent analytics) ──────────────────────────────
+  // While a logged-in user has the app open and visible, bump app_sessions ~every 60s so the
+  // admin can measure real session length. One row per browser session (reuses t4u_sid).
+  useEffect(() => {
+    if (!user?.id) return;
+    const sid = window.__t4u_sid || (typeof sessionStorage !== "undefined" && sessionStorage.getItem("t4u_sid"));
+    if (!sid) return;
+    let stopped = false;
+    const nowIso = () => new Date().toISOString();
+    // Create the session row once; no-op if it already exists (preserves started_at).
+    SB.from("app_sessions").upsert(
+      { session_id: sid, org_id: activeOrgId || user.id, email: user?.email || null, plan: org?.plan || null, vertical: org?.vertical || null, user_agent: navigator.userAgent, started_at: nowIso(), last_seen_at: nowIso() },
+      { onConflict: "session_id", ignoreDuplicates: true }
+    ).then(() => {}, () => {});
+    const beat = () => {
+      if (stopped || (typeof document !== "undefined" && document.visibilityState !== "visible")) return;
+      SB.from("app_sessions").update({ last_seen_at: nowIso(), org_id: activeOrgId || user.id, plan: org?.plan || null }).eq("session_id", sid).then(() => {}, () => {});
+    };
+    const iv = setInterval(beat, 60000);
+    const onVis = () => { if (document.visibilityState === "visible") beat(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { stopped = true; clearInterval(iv); document.removeEventListener("visibilitychange", onVis); };
+  }, [user?.id, activeOrgId, org?.plan, org?.vertical]);
   // Multi-vertical view state: the enabled departments, the active one, and a view-org +
   // filtered items for working-context pages. Single-vertical accounts are unaffected
   // (multiVertical=false → viewOrg=org, vItems=items, no switcher shown).
