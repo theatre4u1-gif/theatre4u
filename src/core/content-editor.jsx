@@ -4,6 +4,7 @@
 // Tables: site_content (cvalue = published, draft = working) + site_theme (theme / draft_theme).
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
+import { DEFAULT_FEATURES, parseFeatures } from "../lib/landing-defaults.js";
 
 const DOORS = [
   { id: "theatre4u",   label: "Theatre4u" },
@@ -20,6 +21,9 @@ const DOOR_DEFAULTS = {
     "landing.hero.subhead":     "Know what you have. Find what you need. Built specifically for theatre programs of every size.",
     "landing.hero.cta_label":   "Get Started Free — No credit card →",
     "landing.hero.bg_image":    "https://images.unsplash.com/photo-1503095396549-807759245b35?w=1600&h=900&fit=crop&auto=format&q=82",
+    "landing.features.eyebrow": "What Theatre4u™ does",
+    "landing.features.heading": "Built for busy drama directors",
+    "landing.features.subhead": "Not a generic inventory app. Built specifically for theatre programs, schools, and the broader performing arts community — by someone who has lived it.",
     "landing.announcement.text": "⭐ Free during our beta — paid plans begin September 1",
     "landing.cta.headline1":    "Ready to get your",
     "landing.cta.headline2":    "theatre organized?",
@@ -34,6 +38,9 @@ const DOOR_DEFAULTS = {
     "landing.hero.subhead":     "For theatre, music, dance, and visual arts — and any program that needs to keep track of what it owns. Know what you have, find what you need, and share with programs near you.",
     "landing.hero.cta_label":   "Get Started Free — No credit card →",
     "landing.hero.bg_image":    "https://images.unsplash.com/photo-1503095396549-807759245b35?w=1600&h=900&fit=crop&auto=format&q=82",
+    "landing.features.eyebrow": "What ArtsTracker does",
+    "landing.features.heading": "Built for busy program directors",
+    "landing.features.subhead": "Not a generic inventory app. Built for theatre, music, dance, and visual arts programs — and any group with equipment to track — by someone who has lived it.",
     "landing.announcement.text": "⭐ Free during our beta — paid plans begin September 1",
     "landing.cta.headline1":    "Ready to get your",
     "landing.cta.headline2":    "program organized?",
@@ -54,6 +61,12 @@ const SECTIONS = [
   { title: "Announcement bar", fields: [
     { key: "landing.announcement.show", label: "Show the announcement bar", type: "checkbox" },
     { key: "landing.announcement.text", label: "Announcement text",         type: "text" },
+  ] },
+  { title: "Features section", fields: [
+    { key: "landing.features.eyebrow", label: "Eyebrow (small heading)", type: "text" },
+    { key: "landing.features.heading", label: "Section heading",         type: "text" },
+    { key: "landing.features.subhead", label: "Section sub-text",        type: "textarea" },
+    { key: "landing.features.items",   label: "Feature cards",           type: "features" },
   ] },
   { title: "Closing call-to-action", fields: [
     { key: "landing.cta.headline1", label: "Closing headline — line 1",        type: "text" },
@@ -169,18 +182,20 @@ function MiniSocial() {
     </div>
   );
 }
-function MiniFeatures({ gold }) {
+function MiniFeatures({ gold, items, eyebrow, heading }) {
+  const cards = (items && items.length ? items : []).slice(0, 6);
   return (
     <div style={{ background: "#140b06", padding: "18px 16px" }}>
       <div style={{ textAlign: "center", marginBottom: 12 }}>
-        <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", color: gold, marginBottom: 4 }}>What it does</div>
-        <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 16, color: "#fff" }}>Built for busy directors</div>
+        <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", color: gold, marginBottom: 4 }}>{eyebrow}</div>
+        <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 16, color: "#fff" }}>{heading}</div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-        {["📦", "🎭", "📱"].map((ic, i) => (
-          <div key={i} style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 8, padding: "12px 10px" }}>
-            <div style={{ fontSize: 18, marginBottom: 6 }}>{ic}</div>
-            <div style={bar("70%", .22)} /><div style={bar("100%")} /><div style={{ ...bar("85%"), marginBottom: 0 }} />
+        {cards.map((cd, i) => (
+          <div key={i} style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 8, padding: "10px 9px" }}>
+            <div style={{ fontSize: 17, marginBottom: 5 }}>{cd.icon}</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#fff", lineHeight: 1.2, marginBottom: 4 }}>{cd.title}</div>
+            <div style={bar("100%", .09)} /><div style={{ ...bar("80%", .09), marginBottom: 0 }} />
           </div>
         ))}
       </div>
@@ -280,6 +295,14 @@ export function ContentBrandEditor({ userId }) {
   };
   const toggleSection = (id) => setDC("landing.section." + id + ".show", sectionShown(id) ? "0" : "1");
 
+  // Feature cards (stored as a JSON array under landing.features.items).
+  const featureItems = parseFeatures(dc("landing.features.items")) || DEFAULT_FEATURES[door];
+  const setFeatures = (arr) => setDC("landing.features.items", JSON.stringify(arr));
+  const updateCard = (i, k, val) => setFeatures(featureItems.map((cd, idx) => idx === i ? { ...cd, [k]: val } : cd));
+  const moveCard = (i, dir) => { const a = featureItems.slice(); const j = i + dir; if (j < 0 || j >= a.length) return; const t = a[i]; a[i] = a[j]; a[j] = t; setFeatures(a); };
+  const removeCard = (i) => setFeatures(featureItems.filter((_, idx) => idx !== i));
+  const addCard = () => setFeatures([...featureItems, { icon: "✨", title: "New feature", desc: "Describe this feature." }]);
+
   const dirty = (() => {
     for (const k of ALL_CONTENT_KEYS) if ((draft.content[door + "||" + k] ?? "") !== (pub.content[door + "||" + k] ?? "")) return true;
     const pth = pub.theme[door] || {}, dth = draft.theme[door] || {};
@@ -329,6 +352,28 @@ export function ContentBrandEditor({ userId }) {
   if (loading) return <div style={{ padding: 24, color: "#888" }}>Loading content…</div>;
 
   const renderField = (f) => {
+    if (f.type === "features") {
+      return (
+        <>
+          <label style={S.label}>{f.label}</label>
+          {featureItems.map((card, i) => (
+            <div key={i} style={{ border: "1px solid #e6e0d6", borderRadius: 10, padding: 12, marginBottom: 10, background: "#faf7f1" }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                <input value={card.icon || ""} onChange={e => updateCard(i, "icon", e.target.value)} placeholder="🎭" style={{ ...S.input, width: 54, textAlign: "center", fontSize: 18, padding: "6px" }} />
+                <input value={card.title || ""} onChange={e => updateCard(i, "title", e.target.value)} placeholder="Card title" style={{ ...S.input, flex: 1, minWidth: 0 }} />
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <button onClick={() => moveCard(i, -1)} disabled={i === 0} style={arrowBtn(i === 0)}>▲</button>
+                  <button onClick={() => moveCard(i, 1)} disabled={i === featureItems.length - 1} style={arrowBtn(i === featureItems.length - 1)}>▼</button>
+                </div>
+                <button onClick={() => removeCard(i)} title="Remove card" style={{ width: 28, height: 38, borderRadius: 6, border: "1px solid #e2b6b6", background: "#fff", color: "#c0392b", cursor: "pointer", fontSize: 16, fontFamily: "inherit", flexShrink: 0 }}>×</button>
+              </div>
+              <textarea value={card.desc || ""} onChange={e => updateCard(i, "desc", e.target.value)} placeholder="Card description" style={{ ...S.input, minHeight: 54, resize: "vertical" }} />
+            </div>
+          ))}
+          <button onClick={addCard} style={{ padding: "8px 14px", borderRadius: 8, border: "1px dashed #c4922a", background: "#fff", color: "#a5731f", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>+ Add a card</button>
+        </>
+      );
+    }
     if (f.type === "image") {
       const val = dc(f.key);
       const shown = val || defs[f.key];
@@ -440,7 +485,7 @@ export function ContentBrandEditor({ userId }) {
                 switch (id) {
                   case "hero":       return <HeroPreview vals={pv} theme={draftThemeObj} def={defs} />;
                   case "social":     return <MiniSocial />;
-                  case "features":   return <MiniFeatures gold={gold} />;
+                  case "features":   return <MiniFeatures gold={gold} items={featureItems} eyebrow={pv["landing.features.eyebrow"] || defs["landing.features.eyebrow"]} heading={pv["landing.features.heading"] || defs["landing.features.heading"]} />;
                   case "howitworks": return <MiniSteps gold={gold} deep={deep} />;
                   case "pricing":    return <MiniPricing gold={gold} deep={deep} />;
                   case "finalcta":   return <CtaPreview vals={pv} theme={draftThemeObj} def={defs} />;

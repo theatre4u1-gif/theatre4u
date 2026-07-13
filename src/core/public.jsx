@@ -8,6 +8,7 @@ import { CAT_MAP } from "./inventory.js";
 import { QR } from "./qr.js";
 import { CSS } from "./styles.js";
 import { usp } from "../lib/backgrounds.js";
+import { DEFAULT_FEATURES, parseFeatures } from "../lib/landing-defaults.js";
 
 // ── Visit tracking (used by the public landing page) ─────────────────────────
 const TRACK_URL = "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/track-visit";
@@ -67,21 +68,8 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
   const ord=(id)=>{const i=sectionOrder.indexOf(id);return i<0?90:i;};
   const vis=(id)=>content["landing.section."+id+".show"]!=="0";
 
-  const features = IS_ARTSTRACKER ? [
-    {icon:"📦",title:"Inventory That Actually Works",desc:"Catalog every costume, instrument, prop, light, art supply, uniform, or piece of equipment your program owns. Add photos, tag by show or unit, print QR labels for storage. Always know exactly what you have and where it lives."},
-    {icon:"🎭",title:"Productions & Events",desc:"Create a folder for each show, concert, exhibition, or event. Pull items straight from your inventory, track what's checked out, and see what each one still needs."},
-    {icon:"📱",title:"Mobile-Ready",desc:"Add items by taking a photo. Scan QR labels with your phone's camera — instantly. Works on iPhone and Android — no app store required."},
-    {icon:"💰",title:"Funding Tracker",desc:"Track grants, district allocations, booster funds, and donations. Log expenditures against each source, generate reports, and export to CSV. California programs can track Prop 28 spending here too."},
-    {icon:"🔄",title:"The Exchange",desc:"Opt in to share selected items with other programs — across theatre, music, dance, and art. You choose exactly what to post; your full inventory stays private. Browse what others near you have, then rent, buy, or borrow."},
-    {icon:"🎪",title:"Community Board",desc:"Post calls and auditions, share upcoming dates, upload event photos, and find what you need. A regional bulletin board for the whole arts community."},
-  ] : [
-    {icon:"📦",title:"Inventory That Actually Works",desc:"Catalog every costume, prop, light, and sound item your program owns. Add photos, tag by production, print QR labels for storage bins. Always know exactly what you have and where it lives."},
-    {icon:"🎭",title:"Productions Tracker",desc:"Create a folder for each show. Assign items from your inventory, track what's checked out, and see at a glance what every production needs from wishlist to opening night."},
-    {icon:"📱",title:"Mobile-Ready Backstage",desc:"Add items by taking a photo. Scan QR labels with your phone's camera — the iPhone Camera app reads Theatre4u labels instantly. Available on iPhone and Android — no app store required."},
-    {icon:"💰",title:"Funding Tracker",desc:"Track grants, district allocations, booster funds, earned income, and donations. Log expenditures against each source, generate reports, and export to CSV — for your records."},
-    {icon:"🏪",title:"Backstage Exchange",desc:"When you're ready, opt in to share selected items with other programs. You choose exactly which items to post — your full inventory stays completely private. Browse what others near you have available, rent, purchase, or arrange a loan."},
-    {icon:"🎪",title:"Community Board",desc:"Post audition notices, share upcoming show dates, upload production photos, and find items you need. A regional bulletin board for the performing arts community."},
-  ];
+  // Feature cards: admin override (site_content) or the shared defaults for this door.
+  const features = parseFeatures(content["landing.features.items"]) || DEFAULT_FEATURES[IS_ARTSTRACKER?"artstracker":"theatre4u"];
 
   // ArtsTracker door renames: "Backstage Exchange" → "The Exchange", "Stage Points" → "ArtsPoints".
   const XCHG = IS_ARTSTRACKER ? "The Exchange" : "Backstage Exchange";
@@ -202,9 +190,9 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     {/* ── Features ── */}
     <div style={{order:ord("features"),display:vis("features")?"block":"none",padding:"80px 32px",maxWidth:1100,margin:"0 auto",width:"100%"}}>
       <div style={{textAlign:"center",marginBottom:52}}>
-        <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>What {APP_NAME} does</div>
-        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(32px,5vw,48px)",color:"#fff",lineHeight:1.15}}>{IS_ARTSTRACKER ? "Built for busy program directors" : "Built for busy drama directors"}</h2>
-        <p style={{fontSize:16,color:"rgba(255,255,255,.55)",marginTop:12,maxWidth:520,margin:"12px auto 0"}}>{IS_ARTSTRACKER ? "Not a generic inventory app. Built for theatre, music, dance, and visual arts programs — and any group with equipment to track — by someone who has lived it." : "Not a generic inventory app. Built specifically for theatre programs, schools, and the broader performing arts community — by someone who has lived it."}</p>
+        <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>{c("landing.features.eyebrow", "What "+APP_NAME+" does")}</div>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(32px,5vw,48px)",color:"#fff",lineHeight:1.15}}>{c("landing.features.heading", IS_ARTSTRACKER ? "Built for busy program directors" : "Built for busy drama directors")}</h2>
+        <p style={{fontSize:16,color:"rgba(255,255,255,.55)",marginTop:12,maxWidth:520,margin:"12px auto 0"}}>{c("landing.features.subhead", IS_ARTSTRACKER ? "Not a generic inventory app. Built for theatre, music, dance, and visual arts programs — and any group with equipment to track — by someone who has lived it." : "Not a generic inventory app. Built specifically for theatre programs, schools, and the broader performing arts community — by someone who has lived it.")}</p>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:20}}>
         {features.map(f=>(
