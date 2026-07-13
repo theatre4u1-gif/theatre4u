@@ -14,30 +14,40 @@ const DOORS = [
 // so an unedited door shows its true current copy — and switching doors actually changes the preview.
 const DOOR_DEFAULTS = {
   theatre4u: {
-    badge: "🎭 The Platform for Theatre Programs",
-    logo:  "/logo-theatre4u.svg",
-    "landing.hero.headline":  "Everything your theatre program needs — in one place",
-    "landing.hero.subhead":   "Know what you have. Find what you need. Built specifically for theatre programs of every size.",
-    "landing.hero.cta_label": "Get Started Free — No credit card →",
+    logo: "/logo-theatre4u.svg",
+    "landing.hero.eyebrow":     "🎭 The Platform for Theatre Programs",
+    "landing.hero.headline":    "Everything your theatre program needs — in one place",
+    "landing.hero.subhead":     "Know what you have. Find what you need. Built specifically for theatre programs of every size.",
+    "landing.hero.cta_label":   "Get Started Free — No credit card →",
+    "landing.announcement.text": "⭐ Free during our beta — paid plans begin September 1",
   },
   artstracker: {
-    badge: "🎨 The Platform for Arts & Activity Programs",
-    logo:  "/logo-artstracker.png",
-    "landing.hero.headline":  "Everything your program needs — in one place",
-    "landing.hero.subhead":   "For theatre, music, dance, and visual arts — and any program that needs to keep track of what it owns. Know what you have, find what you need, and share with programs near you.",
-    "landing.hero.cta_label": "Get Started Free — No credit card →",
+    logo: "/logo-artstracker.png",
+    "landing.hero.eyebrow":     "🎨 The Platform for Arts & Activity Programs",
+    "landing.hero.headline":    "Everything your program needs — in one place",
+    "landing.hero.subhead":     "For theatre, music, dance, and visual arts — and any program that needs to keep track of what it owns. Know what you have, find what you need, and share with programs near you.",
+    "landing.hero.cta_label":   "Get Started Free — No credit card →",
+    "landing.announcement.text": "⭐ Free during our beta — paid plans begin September 1",
   },
 };
 
-const CONTENT_FIELDS = [
-  { key: "landing.hero.headline",  label: "Hero headline",     type: "text" },
-  { key: "landing.hero.subhead",   label: "Hero sub-headline", type: "textarea" },
-  { key: "landing.hero.cta_label", label: "Primary button label", type: "text" },
+const SECTIONS = [
+  { title: "Landing page — hero", fields: [
+    { key: "landing.hero.eyebrow",   label: "Eyebrow badge",        type: "text" },
+    { key: "landing.hero.headline",  label: "Hero headline",        type: "text" },
+    { key: "landing.hero.subhead",   label: "Hero sub-headline",    type: "textarea" },
+    { key: "landing.hero.cta_label", label: "Primary button label", type: "text" },
+  ] },
+  { title: "Announcement bar", fields: [
+    { key: "landing.announcement.show", label: "Show the announcement bar", type: "checkbox" },
+    { key: "landing.announcement.text", label: "Announcement text",         type: "text" },
+  ] },
 ];
+const CONTENT_FIELDS = SECTIONS.flatMap(s => s.fields);
 
 const THEME_FIELDS = [
-  { key: "primary", label: "Primary color", def: "#c4922a" },
-  { key: "accent",  label: "Accent color",  def: "#e8b85d" },
+  { key: "accent",  label: "Accent gold (text & highlights)", def: "#e8b85d" },
+  { key: "primary", label: "Deep gold (button gradient)",     def: "#a37f2c" },
 ];
 
 const S = {
@@ -51,20 +61,40 @@ const S = {
   note:  { fontSize: 11.5, color: "#999", marginTop: 8, lineHeight: 1.5 },
 };
 
-// Live preview of the landing hero, using current draft values + theme + this door's real defaults.
+const isShown = (v) => (v || "1") !== "0"; // announcement bar defaults to shown when unset
+const GOLD_TAIL = "in one place"; // default headlines end with this; the live site renders it in gold
+
+// Live preview of the landing hero — mirrors the real landing (src/core/public.jsx) as closely as
+// possible so edits show true-to-life. Uses the draft values + theme + this door's real defaults.
 function HeroPreview({ vals, theme, def }) {
   const gold = theme.accent || "#e8b85d";
-  const primary = theme.primary || "#c4922a";
+  const deep = theme.primary || "#a37f2c";
   const v = (k) => ((vals[k] || "").trim() || def[k]);
+  const customHeadline = (vals["landing.hero.headline"] || "").trim();
+  // Match the live site: default headline puts the trailing "in one place" in gold; a custom one is plain white.
+  const headline = customHeadline
+    ? <span>{customHeadline}</span>
+    : <span>{def["landing.hero.headline"].slice(0, -GOLD_TAIL.length)}<span style={{ color: gold }}>{GOLD_TAIL}</span></span>;
   return (
-    <div style={{ background: "linear-gradient(160deg,#1a0f06,#2a1a0c)", borderRadius: 12, padding: "34px 26px", textAlign: "center", overflow: "hidden" }}>
-      <img src={def.logo} alt="" style={{ maxHeight: 44, maxWidth: "70%", objectFit: "contain", marginBottom: 16 }} />
-      <div style={{ display: "block", marginBottom: 14 }}>
-        <span style={{ display: "inline-block", padding: "5px 14px", background: "rgba(200,150,40,.14)", border: "1px solid " + gold + "55", borderRadius: 20, fontSize: 11, fontWeight: 700, color: gold }}>{def.badge}</span>
+    <div style={{ position: "relative", background: "radial-gradient(ellipse 90% 60% at 50% 30%, #241009, #150a05 70%, #0d0705)", borderRadius: 12, padding: "26px 22px 30px", textAlign: "center", overflow: "hidden", color: "#fff", fontFamily: "'DM Sans',-apple-system,sans-serif" }}>
+      {/* logo in a cream oval glow */}
+      <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", height: 96, marginBottom: 10 }}>
+        <div aria-hidden="true" style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: "94%", height: 118, borderRadius: "50%", background: "radial-gradient(ellipse at 50% 50%, rgba(250,244,232,.97) 0%, rgba(249,242,227,.95) 62%, rgba(243,221,165,.45) 80%, rgba(234,193,108,.14) 89%, transparent 94%)", filter: "blur(1px)" }} />
+        <img src={def.logo} alt="" style={{ position: "relative", zIndex: 1, maxWidth: "74%", maxHeight: 82, objectFit: "contain" }} />
       </div>
-      <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 28, lineHeight: 1.12, color: "#fff", marginBottom: 12, fontWeight: 700 }}>{v("landing.hero.headline")}</div>
-      <div style={{ fontSize: 13.5, color: "rgba(255,255,255,.72)", lineHeight: 1.6, maxWidth: 430, margin: "0 auto 20px" }}>{v("landing.hero.subhead")}</div>
-      <span style={{ display: "inline-block", background: "linear-gradient(135deg," + gold + "," + primary + ")", color: "#1a0f00", padding: "11px 24px", borderRadius: 9, fontSize: 14, fontWeight: 800 }}>{v("landing.hero.cta_label")}</span>
+      {/* eyebrow pill */}
+      <div style={{ marginBottom: 9 }}>
+        <span style={{ display: "inline-block", padding: "4px 13px", background: "rgba(212,168,67,.15)", border: "1px solid rgba(212,168,67,.3)", borderRadius: 20, fontSize: 10, fontWeight: 700, color: gold, textTransform: "uppercase", letterSpacing: 1 }}>{v("landing.hero.eyebrow")}</span>
+      </div>
+      {/* announcement (beta) ribbon */}
+      {isShown(vals["landing.announcement.show"]) && (
+        <div style={{ marginBottom: 14 }}>
+          <span style={{ display: "inline-block", padding: "5px 14px", background: "rgba(76,175,80,.13)", border: "1px solid rgba(76,175,80,.4)", borderRadius: 20, fontSize: 11.5, fontWeight: 700, color: "#82d68c" }}>{v("landing.announcement.text")}</span>
+        </div>
+      )}
+      <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 30, lineHeight: 1.06, color: "#fff", marginBottom: 12, fontWeight: 700 }}>{headline}</div>
+      <div style={{ fontSize: 13, color: "rgba(255,255,255,.7)", lineHeight: 1.65, maxWidth: 380, margin: "0 auto 18px" }}>{v("landing.hero.subhead")}</div>
+      <span style={{ display: "inline-block", background: "linear-gradient(135deg," + gold + "," + deep + ")", color: "#1a0f00", padding: "11px 24px", borderRadius: 10, fontSize: 13.5, fontWeight: 800, boxShadow: "0 4px 20px rgba(212,168,67,.35)" }}>{v("landing.hero.cta_label")}</span>
     </div>
   );
 }
@@ -135,6 +165,26 @@ export function ContentBrandEditor({ userId }) {
 
   if (loading) return <div style={{ padding: 24, color: "#888" }}>Loading content…</div>;
 
+  const renderField = (f) => {
+    if (f.type === "checkbox") {
+      const on = isShown(dc(f.key));
+      return (
+        <label style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer", fontSize: 14, fontWeight: 600, color: "#444" }}>
+          <input type="checkbox" checked={on} onChange={e => setDC(f.key, e.target.checked ? "1" : "0")} style={{ width: 17, height: 17, cursor: "pointer" }} />
+          {f.label}
+        </label>
+      );
+    }
+    return (
+      <>
+        <label style={S.label}>{f.label}</label>
+        {f.type === "textarea"
+          ? <textarea style={{ ...S.input, minHeight: 70, resize: "vertical" }} value={dc(f.key)} onChange={e => setDC(f.key, e.target.value)} placeholder={defs[f.key]} />
+          : <input style={S.input} value={dc(f.key)} onChange={e => setDC(f.key, e.target.value)} placeholder={defs[f.key]} />}
+      </>
+    );
+  };
+
   return (
     <div style={{ maxWidth: 1080, margin: "0 auto" }}>
       <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
@@ -147,18 +197,13 @@ export function ContentBrandEditor({ userId }) {
       <div style={{ display: "grid", gridTemplateColumns: "minmax(300px,1fr) minmax(300px,1fr)", gap: 20, alignItems: "start" }}>
         {/* ── Editor form ── */}
         <div>
-          <div style={S.card}>
-            <h3 style={S.h3}>Landing page — hero</h3>
-            {CONTENT_FIELDS.map(f => (
-              <div key={f.key} style={S.row}>
-                <label style={S.label}>{f.label}</label>
-                {f.type === "textarea"
-                  ? <textarea style={{ ...S.input, minHeight: 70, resize: "vertical" }} value={dc(f.key)} onChange={e => setDC(f.key, e.target.value)} placeholder={defs[f.key]} />
-                  : <input style={S.input} value={dc(f.key)} onChange={e => setDC(f.key, e.target.value)} placeholder={defs[f.key]} />}
-              </div>
-            ))}
-            <div style={S.note}>Each door already shows its own logo automatically — no need to add one.</div>
-          </div>
+          {SECTIONS.map(sec => (
+            <div key={sec.title} style={S.card}>
+              <h3 style={S.h3}>{sec.title}</h3>
+              {sec.fields.map(f => <div key={f.key} style={S.row}>{renderField(f)}</div>)}
+              {sec.title.startsWith("Landing") && <div style={S.note}>Each door already shows its own logo automatically — no need to add one.</div>}
+            </div>
+          ))}
           <div style={S.card}>
             <h3 style={S.h3}>Brand colors — {DOORS.find(d => d.id === door)?.label}</h3>
             {THEME_FIELDS.map(f => (
@@ -170,7 +215,7 @@ export function ContentBrandEditor({ userId }) {
                 </div>
               </div>
             ))}
-            <div style={S.note}>Colors change the preview now. Applying them to the live site is the next step — for the moment, publishing colors won't change the public pages yet.</div>
+            <div style={S.note}>These recolor the gold accents on this door's landing page once published.</div>
           </div>
         </div>
 

@@ -43,15 +43,23 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     trackVisit("landing");
     return()=>window.removeEventListener("scroll",h);
   },[]);
-  // Editable marketing content (site_content) for this door — falls back to defaults if unset.
+  // Editable marketing content (site_content) + brand theme (site_theme) for this door — falls back to defaults if unset.
   const[content,setContent]=useState({});
+  const[theme,setTheme]=useState({});
   useEffect(()=>{
     const vertical = IS_ARTSTRACKER ? "artstracker" : "theatre4u";
     SB.from("site_content").select("ckey,cvalue").eq("vertical",vertical)
       .then(({data})=>{ if(data){ const m={}; data.forEach(r=>{ m[r.ckey]=r.cvalue||""; }); setContent(m); } })
       .catch(()=>{});
+    SB.from("site_theme").select("theme").eq("vertical",vertical).maybeSingle()
+      .then(({data})=>{ if(data&&data.theme) setTheme(data.theme); })
+      .catch(()=>{});
   },[]);
   const c=(k,fb)=>{ const v=content[k]; return (v&&String(v).trim())?v:fb; };
+  // Brand color overrides — only set the CSS var when the admin has published a value; else the defaults apply.
+  const themeVars={};
+  if(theme.accent&&String(theme.accent).trim()) themeVars["--gold"]=theme.accent;
+  if(theme.primary&&String(theme.primary).trim()) themeVars["--goldd"]=theme.primary;
 
   const features = IS_ARTSTRACKER ? [
     {icon:"📦",title:"Inventory That Actually Works",desc:"Catalog every costume, instrument, prop, light, art supply, uniform, or piece of equipment your program owns. Add photos, tag by show or unit, print QR labels for storage. Always know exactly what you have and where it lives."},
@@ -99,7 +107,7 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     {n:"4",title:"Optionally join Backstage Exchange",desc:"When you're ready, opt in to Backstage Exchange. Post selected items for rent, loan, or sale. Browse what other programs near you have available."},
   ];
 
-  return(<div style={{background:"var(--ink)",minHeight:"100vh",color:"var(--linen)",fontFamily:"'DM Sans',sans-serif"}}>
+  return(<div style={{background:"var(--ink)",minHeight:"100vh",color:"var(--linen)",fontFamily:"'DM Sans',sans-serif",...themeVars}}>
     
     {/* ── Sticky Nav ── */}
     <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:1000,padding:"0 32px",height:64,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?"rgba(13,10,8,.97)":"transparent",borderBottom:scrolled?"1px solid rgba(255,255,255,.08)":"none",backdropFilter:scrolled?"blur(12px)":"none",transition:"all .3s"}}>
@@ -124,14 +132,16 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
           <img src={LOGO_FULL} alt={APP_NAME} style={{position:"relative",zIndex:1,width:"min(520px,88vw)",height:"auto",display:"block"}}/>
         </div>
         <div style={{display:"inline-flex",alignItems:"center",gap:7,padding:"4px 14px",background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.3)",borderRadius:20,fontSize:12,fontWeight:700,color:"var(--gold)",textTransform:"uppercase",letterSpacing:1,marginBottom:14}}>
-          {IS_ARTSTRACKER ? "🎨 The Platform for Arts & Activity Programs" : "🎭 The Platform for Theatre Programs"}
+          {c("landing.hero.eyebrow", IS_ARTSTRACKER ? "🎨 The Platform for Arts & Activity Programs" : "🎭 The Platform for Theatre Programs")}
         </div>
-        {/* Beta ribbon — remove at Sept 1 launch */}
+        {/* Announcement (beta) ribbon — editable in the admin Content editor; clear the "Show" toggle to hide it (e.g. at Sept 1 launch). */}
+        {content["landing.announcement.show"]!=="0" && (
         <div style={{marginBottom:20}}>
           <span style={{display:"inline-flex",alignItems:"center",gap:8,padding:"7px 18px",background:"rgba(76,175,80,.13)",border:"1px solid rgba(76,175,80,.4)",borderRadius:22,fontSize:13.5,fontWeight:700,color:"#82d68c"}}>
-            ⭐ Free during our beta — paid plans begin September 1
+            {c("landing.announcement.text", "⭐ Free during our beta — paid plans begin September 1")}
           </span>
         </div>
+        )}
         <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(42px,7vw,76px)",lineHeight:1.05,marginBottom:20,color:"#fff"}}>
           {content["landing.hero.headline"]&&String(content["landing.hero.headline"]).trim()
             ? content["landing.hero.headline"]
