@@ -159,6 +159,80 @@ function CtaPreview({ vals, theme, def }) {
   );
 }
 
+// Compact, representative previews for the sections that aren't text-editable yet — enough to make
+// reordering and show/hide visible in the preview stack. Gold accents follow the draft theme.
+const bar = (w, o) => ({ height: 4, width: w, background: "rgba(255,255,255," + (o || .1) + ")", borderRadius: 2, marginBottom: 4 });
+function MiniSocial() {
+  return (
+    <div style={{ background: "#1a0f06", borderTop: "1px solid rgba(212,168,67,.15)", borderBottom: "1px solid rgba(212,168,67,.15)", padding: "12px 14px", display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
+      {["📦 Inventory", "🎭 Productions", "📱 Mobile", "💰 Funding", "🔄 Exchange", "🎪 Community"].map(t => <span key={t} style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,.7)" }}>{t}</span>)}
+    </div>
+  );
+}
+function MiniFeatures({ gold }) {
+  return (
+    <div style={{ background: "#140b06", padding: "18px 16px" }}>
+      <div style={{ textAlign: "center", marginBottom: 12 }}>
+        <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", color: gold, marginBottom: 4 }}>What it does</div>
+        <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 16, color: "#fff" }}>Built for busy directors</div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+        {["📦", "🎭", "📱"].map((ic, i) => (
+          <div key={i} style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 8, padding: "12px 10px" }}>
+            <div style={{ fontSize: 18, marginBottom: 6 }}>{ic}</div>
+            <div style={bar("70%", .22)} /><div style={bar("100%")} /><div style={{ ...bar("85%"), marginBottom: 0 }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+function MiniSteps({ gold, deep }) {
+  return (
+    <div style={{ background: "#120a05", padding: "18px 16px" }}>
+      <div style={{ textAlign: "center", fontFamily: "'Playfair Display',Georgia,serif", fontSize: 15, color: "#fff", marginBottom: 12 }}>How it works</div>
+      <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
+        {[1, 2, 3, 4].map(n => (
+          <div key={n} style={{ textAlign: "center" }}>
+            <div style={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg," + gold + "," + deep + ")", color: "#1a0f00", fontWeight: 800, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 6px" }}>{n}</div>
+            <div style={{ height: 4, width: 34, background: "rgba(255,255,255,.14)", borderRadius: 2, margin: "0 auto" }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+function MiniPricing({ gold, deep }) {
+  const cols = [["Free", "$0"], ["Pro", "$15"], ["District", "$49"]];
+  return (
+    <div style={{ background: "#140b06", padding: "18px 16px" }}>
+      <div style={{ textAlign: "center", fontFamily: "'Playfair Display',Georgia,serif", fontSize: 15, color: "#fff", marginBottom: 12 }}>Pricing</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+        {cols.map(([n, pr], i) => (
+          <div key={n} style={{ border: i === 1 ? "1px solid " + gold + "88" : "1px solid rgba(255,255,255,.1)", borderRadius: 8, overflow: "hidden" }}>
+            <div style={{ background: i === 1 ? "linear-gradient(135deg," + gold + "," + deep + ")" : "rgba(255,255,255,.06)", padding: 8, color: i === 1 ? "#1a0f00" : "#fff" }}>
+              <div style={{ fontSize: 10, fontWeight: 700 }}>{n}</div>
+              <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Playfair Display',Georgia,serif" }}>{pr}</div>
+            </div>
+            <div style={{ padding: 8 }}>{[0, 1, 2].map(j => <div key={j} style={bar((90 - j * 12) + "%")} />)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+function MiniStory({ gold }) {
+  return (
+    <div style={{ background: "#160b06", padding: "18px 16px", textAlign: "center" }}>
+      <div style={{ display: "inline-block", padding: "3px 10px", border: "1px solid " + gold + "44", borderRadius: 12, fontSize: 8, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", color: gold, marginBottom: 8 }}>Our Story</div>
+      <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 15, color: "#fff", marginBottom: 10 }}>Built by a Theatre Person</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, textAlign: "left" }}>
+        {[0, 1].map(col => <div key={col}>{[0, 1, 2, 3].map(r => <div key={r} style={bar((95 - r * 8) + "%")} />)}</div>)}
+      </div>
+    </div>
+  );
+}
+
 export function ContentBrandEditor({ userId }) {
   const [door, setDoor] = useState("theatre4u");
   const [pub, setPub] = useState({ content: {}, theme: {} });     // published: content "v||k"->cvalue, theme v->{}
@@ -351,27 +425,41 @@ export function ContentBrandEditor({ userId }) {
           </div>
         </div>
 
-        {/* ── Live preview ── */}
-        <div style={{ position: "sticky", top: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: .5, color: "#888" }}>Live preview</span>
+        {/* ── Live preview — full page in current order ── */}
+        <div style={{ position: "sticky", top: 16, maxHeight: "calc(100vh - 40px)", display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, flexShrink: 0 }}>
+            <span style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: .5, color: "#888" }}>Live preview — full page</span>
             <span style={{ fontSize: 12, fontWeight: 700, color: dirty ? "#c07a00" : "#1a7f37" }}>{dirty ? "● Unpublished changes" : "✓ Live version"}</span>
           </div>
-          {(() => {
-            const pv = CONTENT_FIELDS.reduce((o, f) => (o[f.key] = dc(f.key), o), {});
-            const wrap = (id, node) => (
-              <div style={{ position: "relative", opacity: sectionShown(id) ? 1 : .4 }}>
-                {node}
-                {!sectionShown(id) && <span style={{ position: "absolute", top: 8, right: 8, background: "#6b6459", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 6, textTransform: "uppercase", letterSpacing: .5 }}>Hidden</span>}
-              </div>
-            );
-            return (<>
-              {wrap("hero", <HeroPreview vals={pv} theme={draftThemeObj} def={defs} />)}
-              <div style={{ ...S.note, marginBottom: 14 }}>Top of the page (hero).</div>
-              {wrap("finalcta", <CtaPreview vals={pv} theme={draftThemeObj} def={defs} />)}
-              <div style={S.note}>Bottom of the page (closing call-to-action). Preview only — visible to you, not the public.</div>
-            </>);
-          })()}
+          <div style={{ overflowY: "auto", borderRadius: 12, border: "1px solid #e6e0d6" }}>
+            {(() => {
+              const pv = CONTENT_FIELDS.reduce((o, f) => (o[f.key] = dc(f.key), o), {});
+              const gold = draftThemeObj.accent || "#e8b85d";
+              const deep = draftThemeObj.primary || "#a37f2c";
+              const render = (id) => {
+                switch (id) {
+                  case "hero":       return <HeroPreview vals={pv} theme={draftThemeObj} def={defs} />;
+                  case "social":     return <MiniSocial />;
+                  case "features":   return <MiniFeatures gold={gold} />;
+                  case "howitworks": return <MiniSteps gold={gold} deep={deep} />;
+                  case "pricing":    return <MiniPricing gold={gold} deep={deep} />;
+                  case "finalcta":   return <CtaPreview vals={pv} theme={draftThemeObj} def={defs} />;
+                  case "story":      return <MiniStory gold={gold} />;
+                  default:           return null;
+                }
+              };
+              return layoutOrder.map(id => {
+                const shown = sectionShown(id);
+                return (
+                  <div key={id} style={{ position: "relative", opacity: shown ? 1 : .4 }}>
+                    {render(id)}
+                    {!shown && <span style={{ position: "absolute", top: 8, right: 8, background: "#6b6459", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 7px", borderRadius: 5, textTransform: "uppercase", letterSpacing: .5 }}>Hidden</span>}
+                  </div>
+                );
+              });
+            })()}
+          </div>
+          <div style={{ ...S.note, flexShrink: 0 }}>Full page in your current order — reorder or hide sections at left and watch it change. Preview only.</div>
         </div>
       </div>
 
