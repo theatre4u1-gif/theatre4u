@@ -4,8 +4,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import React from "react";
 import { isDemoMode } from "./core/helpers.js";
-import { IS_THEATRE4U, FAVICON, TOUCH_ICON } from "./core/config.js";
+import { IS_THEATRE4U, IS_ADMIN_HOST, FAVICON, TOUCH_ICON } from "./core/config.js";
 import { AppRoot } from "./core/app-root.jsx";
+import { AdminApp } from "./core/admin-app.jsx";
 import { DemoApp } from "./core/demo.jsx";
 import { ErrorBoundary } from "./core/ui.jsx";
 
@@ -30,8 +31,10 @@ if (typeof document !== "undefined") {
   } catch { /* no-op */ }
 })();
 
-// Entry: demo mode renders the sandbox; otherwise the real app inside an error boundary.
-const AppWithBoundary = () => isDemoMode()
+// Entry: admin host → the standalone admin app; demo mode → the sandbox; otherwise the real app.
+const AppWithBoundary = () => IS_ADMIN_HOST
+  ? <ErrorBoundary><AdminApp/></ErrorBoundary>
+  : isDemoMode()
   ? <DemoApp/>
   : <ErrorBoundary><AppRoot/></ErrorBoundary>;
 

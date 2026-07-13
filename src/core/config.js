@@ -24,6 +24,15 @@ export const APP_EMAIL      = IS_THEATRE4U ? "hello@theatre4u.org" : "hello@arts
 export const APP_URL        = IS_THEATRE4U ? "https://theatre4u.org" : "https://artstracker.org";
 export const APP_HOST       = IS_THEATRE4U ? "theatre4u.org" : "artstracker.org";
 
+// Standalone admin app host (admin.artstracker.org). On previews/localhost, ?admin=1 forces it (for testing pre-DNS).
+export const IS_ADMIN_HOST = (() => {
+  if (HOSTNAME.startsWith("admin.")) return true;
+  try {
+    const isPreview = HOSTNAME.endsWith(".vercel.app") || HOSTNAME === "localhost" || HOSTNAME === "127.0.0.1";
+    return isPreview && new URLSearchParams(window.location.search).get("admin") === "1";
+  } catch (e) { return false; }
+})();
+
 // Brand assets, switched by domain (files live in src/public/)
 export const LOGO_ICON  = IS_THEATRE4U ? "/favicon-theatre4u.svg"          : "/icon-192-artstracker.png";
 export const FAVICON    = IS_THEATRE4U ? "/favicon-theatre4u.svg"          : "/favicon-artstracker.png";
