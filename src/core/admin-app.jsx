@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { ContentBrandEditor } from "./content-editor.jsx";
 import { OverviewDashboard } from "./admin-overview.jsx";
+import { UsageDashboard } from "./admin-usage.jsx";
 
 const PAGE_BG = "#f4f1ea";
 
@@ -63,8 +64,9 @@ function Login({ onSignedIn }) {
 
 const MODULES = [
   { id: "overview", label: "Overview" },
+  { id: "usage", label: "Usage" },
   { id: "content", label: "Content & Brand" },
-  // future: { id:"usage", label:"Usage" }, { id:"billing", label:"Billing" }, { id:"finance", label:"Business Finance" }, ...
+  // future: { id:"billing", label:"Billing" }, { id:"finance", label:"Business Finance" }, ...
 ];
 
 export function AdminApp() {
@@ -123,6 +125,7 @@ export function AdminApp() {
       </header>
       <main style={{ padding: "26px 20px 60px" }}>
         {mod === "overview" && <OverviewDashboard />}
+        {mod === "usage" && <UsageDashboard />}
         {mod === "content" && <ContentBrandEditor userId={user?.id} />}
       </main>
     </div>

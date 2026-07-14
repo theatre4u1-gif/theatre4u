@@ -3,6 +3,7 @@
 // into a filtered, actionable detail view (programs list, payments, traffic, sessions).
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
+import { ProgramDetail } from "./admin-program.jsx";
 
 const DAY = 86400000;
 const fmtMoney = (cents) => "$" + ((cents || 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -28,7 +29,7 @@ const th = { textAlign: "left", fontSize: 11, fontWeight: 800, color: "#8a8272",
 const td = { fontSize: 13, color: "#3a3a3a", padding: "9px 10px", borderBottom: "1px solid #f0ece3", verticalAlign: "middle" };
 const badge = (color) => ({ display: "inline-block", padding: "2px 9px", borderRadius: 20, fontSize: 11, fontWeight: 700, color, background: color + "1a" });
 
-function ProgramsTable({ rows, onToggleBeta, busyId }) {
+function ProgramsTable({ rows, onToggleBeta, busyId, onOpen }) {
   const [q, setQ] = useState("");
   const filtered = rows.filter(o => { const s = (o.name || "") + " " + (o.email || "") + " " + (o.location || o.city || ""); return s.toLowerCase().includes(q.toLowerCase()); });
   return (
@@ -43,18 +44,19 @@ function ProgramsTable({ rows, onToggleBeta, busyId }) {
           <tbody>
             {filtered.map(o => (
               <tr key={o.id}>
-                <td style={td}><div style={{ fontWeight: 700 }}>{o.name || "(no name)"}</div><div style={{ fontSize: 11.5, color: "#9a9284" }}>{o.email || ""}</div></td>
+                <td style={td}><div onClick={() => onOpen && onOpen(o)} style={{ fontWeight: 700, color: "#a5731f", cursor: "pointer", textDecoration: "underline" }}>{o.name || "(no name)"}</div><div style={{ fontSize: 11.5, color: "#9a9284" }}>{o.email || ""}</div></td>
                 <td style={td}><span style={badge(planColor(o))}>{planLabel(o)}</span></td>
                 <td style={td}>{o.location || o.city || "—"}</td>
                 <td style={td}>{agoDays(o.last_seen)}</td>
                 <td style={td}>{fmtDate(o.created_at)}</td>
-                <td style={{ ...td, textAlign: "right" }}>
+                <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>
                   {!o.stripe_subscription_id && !o.founding_member && (
                     <button onClick={() => onToggleBeta(o)} disabled={busyId === o.id}
-                      style={{ padding: "5px 11px", borderRadius: 7, border: "1px solid " + (o.temp_pro ? "#c4922a" : "#d5cfc4"), background: o.temp_pro ? "rgba(212,168,67,.12)" : "#fff", color: o.temp_pro ? "#a5731f" : "#666", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                      style={{ padding: "5px 11px", borderRadius: 7, border: "1px solid " + (o.temp_pro ? "#c4922a" : "#d5cfc4"), background: o.temp_pro ? "rgba(212,168,67,.12)" : "#fff", color: o.temp_pro ? "#a5731f" : "#666", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", marginRight: 6 }}>
                       {busyId === o.id ? "…" : o.temp_pro ? "⭐ Beta Pro on" : "Grant Beta Pro"}
                     </button>
                   )}
+                  <button onClick={() => onOpen && onOpen(o)} style={{ padding: "5px 11px", borderRadius: 7, border: "1px solid #d5cfc4", background: "#fff", color: "#555", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Manage →</button>
                 </td>
               </tr>
             ))}
@@ -132,6 +134,7 @@ export function OverviewDashboard() {
   const [rev, setRev] = useState(0);
   const [err, setErr] = useState("");
   const [drill, setDrill] = useState(null); // {type, filter, label}
+  const [detailOrg, setDetailOrg] = useState(null); // program support console
   const [busyId, setBusyId] = useState("");
   const [flash, setFlash] = useState("");
 
@@ -194,11 +197,17 @@ export function OverviewDashboard() {
 
   const openProg = (filter, label) => setDrill({ type: "programs", filter, label });
 
+  // ── Program support console (opened from a programs list) ──
+  if (detailOrg) {
+    return <ProgramDetail org={detailOrg} onBack={() => setDetailOrg(null)}
+      onChanged={(id, p) => setOrgs(prev => prev.map(x => x.id === id ? { ...x, ...p } : x))} />;
+  }
+
   // ── Drill-down views ──
   if (drill) {
     const back = <button onClick={() => setDrill(null)} style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid #d5cfc4", background: "#fff", color: "#555", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", marginBottom: 16 }}>← Back to overview</button>;
     let body = null, title = drill.label;
-    if (drill.type === "programs") body = <ProgramsTable rows={seg[drill.filter] || []} onToggleBeta={toggleBeta} busyId={busyId} />;
+    if (drill.type === "programs") body = <ProgramsTable rows={seg[drill.filter] || []} onToggleBeta={toggleBeta} busyId={busyId} onOpen={setDetailOrg} />;
     else if (drill.type === "payments") { title = "Payments this month"; body = <PaymentsTable rows={payments} />; }
     else if (drill.type === "sessions") { title = "Recent sessions (last 30 days)"; body = <SessionsTable rows={sessions.slice(0, 200)} />; }
     else if (drill.type === "traffic") {
