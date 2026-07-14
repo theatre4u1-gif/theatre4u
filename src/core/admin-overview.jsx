@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { ProgramDetail } from "./admin-program.jsx";
+import { lastActiveTs, activeBucket } from "../lib/admin-metrics.js";
 
 const DAY = 86400000;
 const fmtMoney = (cents) => "$" + ((cents || 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -128,6 +129,7 @@ function SessionsTable({ rows }) {
 
 export function OverviewDashboard() {
   const [orgs, setOrgs] = useState(null);
+  const [usageMap, setUsageMap] = useState({});
   const [pv, setPv] = useState([]);
   const [payments, setPayments] = useState([]);
   const [sessions, setSessions] = useState([]);
@@ -146,8 +148,9 @@ export function OverviewDashboard() {
         const weekAgo = new Date(Date.now() - 7 * DAY).toISOString();
         const d30 = new Date(Date.now() - 30 * DAY).toISOString();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-        const [orgsRes, pvRes, revRes, payRes, sessRes] = await Promise.all([
+        const [orgsRes, usageRes, pvRes, revRes, payRes, sessRes] = await Promise.all([
           SB.from("orgs").select("id,name,email,plan,temp_pro,founding_member,stripe_subscription_id,created_at,last_seen,deleted_at,location,city"),
+          SB.from("org_platform_usage").select("org_id,last_item_added,last_exchange_activity").limit(20000),
           SB.from("page_views").select("page,utm_source,referrer,session_id").gte("created_at", weekAgo).limit(20000),
           SB.from("stripe_revenue_summary").select("month,revenue_cents,refunded_cents"),
           SB.from("stripe_payments_current").select("org_name,customer_name,customer_email,amount_cents,plan,status,refunded,stripe_created_at,created_at").gte("stripe_created_at", monthStart).order("stripe_created_at", { ascending: false }).limit(2000),
@@ -155,6 +158,8 @@ export function OverviewDashboard() {
         ]);
         if (!alive) return;
         if (orgsRes.error) throw orgsRes.error;
+        const um = {}; (usageRes.data || []).forEach(u => { um[u.org_id] = u; });
+        setUsageMap(um);
         setOrgs((orgsRes.data || []).filter(o => !o.deleted_at));
         setPv(pvRes.data || []);
         setPayments(payRes.data || []);
@@ -179,12 +184,12 @@ export function OverviewDashboard() {
   if (!orgs) return <div style={{ padding: 24, color: "#888" }}>Loading overview…</div>;
 
   const weekAgo = new Date(Date.now() - 7 * DAY).toISOString();
-  const d30 = new Date(Date.now() - 30 * DAY).toISOString();
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+  const bucketOf = (o) => activeBucket(lastActiveTs(o, usageMap[o.id]));
   const seg = {
     all: orgs,
-    active7: orgs.filter(o => o.last_seen && o.last_seen >= weekAgo),
-    active30: orgs.filter(o => o.last_seen && o.last_seen >= d30),
+    active7: orgs.filter(o => bucketOf(o) === "a7"),
+    active30: orgs.filter(o => ["a7", "a30"].includes(bucketOf(o))),
     new: orgs.filter(o => o.created_at >= weekAgo),
     newMonth: orgs.filter(o => o.created_at >= monthStart),
     paying: orgs.filter(o => o.stripe_subscription_id),

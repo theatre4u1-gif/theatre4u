@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { ProgramDetail } from "./admin-program.jsx";
+import { lastActiveTs, activeBucket } from "../lib/admin-metrics.js";
 
 const DAY = 86400000;
 const dayKey = (d) => new Date(d).toISOString().slice(0, 10);
@@ -55,12 +56,14 @@ export function UsageDashboard() {
         if (!alive) return;
         if (orgsRes.error) throw orgsRes.error;
         const orgs = orgsRes.data || [];
-        const seenMap = {}; orgs.forEach(o => { seenMap[o.id] = o.last_seen; });
+        const orgById = {}; orgs.forEach(o => { orgById[o.id] = o; });
+        const usageMap = {}; (usageRes.data || []).forEach(u => { usageMap[u.org_id] = u; });
 
         const now = Date.now();
-        const bucket = (o) => { if (!o.last_seen) return "never"; const n = (now - new Date(o.last_seen)) / DAY; return n <= 7 ? "a7" : n <= 30 ? "a30" : n <= 90 ? "dormant" : "inactive"; };
+        // Consistent "last active" = most recent of sign-in / last item added / last exchange.
+        const lastActive = (o) => lastActiveTs(o, usageMap[o.id]);
         const counts = { a7: 0, a30: 0, dormant: 0, inactive: 0, never: 0 };
-        orgs.forEach(o => { counts[bucket(o)]++; });
+        orgs.forEach(o => { counts[activeBucket(lastActive(o), now)]++; });
 
         // logins per day (30d)
         const logins = loginRes.data || [];
@@ -74,10 +77,10 @@ export function UsageDashboard() {
         const sessSeries = []; for (let i = 13; i >= 0; i--) { const day = new Date(now - i * DAY); const k = dayKey(day); sessSeries.push({ n: smap[k] || 0, title: k + ": " + (smap[k] || 0) }); }
         const avgMin = sess.length ? Math.round(sess.reduce((a, s) => a + s.mins, 0) / sess.length) : null;
 
-        // usage merge
-        const usage = (usageRes.data || []).map(u => ({ ...u, _score: score(u), _lastSeen: seenMap[u.org_id] }));
+        // usage merge — attach a consistent "last active" timestamp to each row
+        const usage = (usageRes.data || []).map(u => ({ ...u, _score: score(u), _active: lastActiveTs(orgById[u.org_id], u) }));
         const mostActive = usage.slice().sort((a, b) => b._score - a._score).filter(u => u._score > 0).slice(0, 12);
-        const needsAttention = usage.filter(u => (u.total_items || 0) > 0 && u._lastSeen && (now - new Date(u._lastSeen)) / DAY > 30)
+        const needsAttention = usage.filter(u => (u.total_items || 0) > 0 && u._active && (now - u._active) / DAY > 30)
           .sort((a, b) => (b.total_items || 0) - (a.total_items || 0)).slice(0, 12);
 
         setD({ counts, total: orgs.length, loginSeries, distinctLogins, totalLogins: logins.length, sessSeries, avgMin, sessCount: sess.length, mostActive, needsAttention });
@@ -129,11 +132,11 @@ export function UsageDashboard() {
       <H>Most active programs</H>
       <div style={{ overflowX: "auto", border: "1px solid #e6e0d6", borderRadius: 10 }}>
         <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff" }}>
-          <thead><tr><th style={th}>Program</th><th style={th}>Items</th><th style={th}>Productions</th><th style={th}>Exchanges</th><th style={th}>Last seen</th></tr></thead>
+          <thead><tr><th style={th}>Program</th><th style={th}>Items</th><th style={th}>Productions</th><th style={th}>Exchanges</th><th style={th}>Last active</th></tr></thead>
           <tbody>
             {d.mostActive.length === 0 && <tr><td style={td} colSpan={5}>No activity yet.</td></tr>}
             {d.mostActive.map((u, i) => (
-              <tr key={i}><td style={td}>{nameLink(setDetailOrg, { id: u.org_id, name: u.org_name })}</td><td style={td}>{u.total_items || 0}</td><td style={td}>{u.productions_tracked || 0}</td><td style={td}>{u.exchanges_completed || 0}</td><td style={td}>{agoDays(u._lastSeen)}</td></tr>
+              <tr key={i}><td style={td}>{nameLink(setDetailOrg, { id: u.org_id, name: u.org_name })}</td><td style={td}>{u.total_items || 0}</td><td style={td}>{u.productions_tracked || 0}</td><td style={td}>{u.exchanges_completed || 0}</td><td style={td}>{agoDays(u._active)}</td></tr>
             ))}
           </tbody>
         </table>
@@ -142,11 +145,11 @@ export function UsageDashboard() {
       <H>Needs attention — had activity, now quiet (30d+)</H>
       <div style={{ overflowX: "auto", border: "1px solid #e6e0d6", borderRadius: 10 }}>
         <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff" }}>
-          <thead><tr><th style={th}>Program</th><th style={th}>Items</th><th style={th}>Productions</th><th style={th}>Last seen</th></tr></thead>
+          <thead><tr><th style={th}>Program</th><th style={th}>Items</th><th style={th}>Productions</th><th style={th}>Last active</th></tr></thead>
           <tbody>
             {d.needsAttention.length === 0 && <tr><td style={td} colSpan={4}>Nobody's gone quiet — nice.</td></tr>}
             {d.needsAttention.map((u, i) => (
-              <tr key={i}><td style={td}>{nameLink(setDetailOrg, { id: u.org_id, name: u.org_name })}</td><td style={td}>{u.total_items || 0}</td><td style={td}>{u.productions_tracked || 0}</td><td style={{ ...td, color: "#c07a00", fontWeight: 600 }}>{agoDays(u._lastSeen)}</td></tr>
+              <tr key={i}><td style={td}>{nameLink(setDetailOrg, { id: u.org_id, name: u.org_name })}</td><td style={td}>{u.total_items || 0}</td><td style={td}>{u.productions_tracked || 0}</td><td style={{ ...td, color: "#c07a00", fontWeight: 600 }}>{agoDays(u._active)}</td></tr>
             ))}
           </tbody>
         </table>

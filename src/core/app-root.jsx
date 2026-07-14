@@ -299,22 +299,13 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
         const _savedV = (()=>{ try { return localStorage.getItem("t4u_active_vertical_"+targetOrgId); } catch(e){ return null; } })();
         setActiveVertical(_enabled.includes(_savedV) ? _savedV : (orgData.vertical || _enabled[0] || "theatre"));
       } else { setPlanState(effectivePlan); }
-      // OAuth (Google) login tracking — the password path logs login_events at
-      // sign-in; OAuth redirects skip it, so log here once per OAuth round-trip.
-      // Owner-only (org_id FK), same rule as the password path.
+      // OAuth (Google) login tracking — the password path logs at sign-in; OAuth redirects skip
+      // it, so log here once per OAuth round-trip. Uses the same record_login RPC (owners + members).
       try{
         if(sessionStorage.getItem("t4u_oauth_flow")==="1"){
           sessionStorage.removeItem("t4u_oauth_flow");
-          if(orgData && orgData.id===user.id){
-            const sid = window.__t4u_sid || sessionStorage.getItem("t4u_sid") || "";
-            await SB.from("login_events").insert({
-              org_id: user.id, org_name: orgData.name||null, email: user.email,
-              plan: orgData.plan||null, session_id: sid,
-              user_agent: navigator.userAgent, referrer: document.referrer||null,
-              utm_source: window.__t4u_utm?.source||null,
-            });
-            await SB.from("orgs").update({ last_seen: new Date().toISOString() }).eq("id", user.id);
-          }
+          const sid = window.__t4u_sid || sessionStorage.getItem("t4u_sid") || "";
+          await SB.rpc("record_login", { p_session: sid, p_user_agent: navigator.userAgent, p_referrer: document.referrer||null, p_utm_source: window.__t4u_utm?.source||null });
         }
       }catch(_){}
       const{data:itemData}=await SB.from("items").select("*").eq("org_id",targetOrgId).order("added",{ascending:false}).limit(2000);

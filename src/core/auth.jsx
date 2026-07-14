@@ -167,27 +167,12 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
           }
           throw error;
         }
-        // Track login event
+        // Track login — one consistent path for owners AND members (see record_login RPC).
+        // Stamps last_seen on the owner's org and every org the user is a member of, and logs
+        // a login_event, so districts / multi-member programs are counted correctly.
         try {
           const sid = window.__t4u_sid || sessionStorage.getItem("t4u_sid") || "";
-          const { data:orgData } = await SB.from("orgs").select("name,plan").eq("id",data.user.id).single();
-          // Only log + stamp last_seen for account OWNERS (org.id === user.id). Team
-          // members have no own org row, so org_id=user.id would violate the
-          // login_events/orgs FK. (Member-login analytics is a future enhancement.)
-          if (orgData) {
-            await SB.from("login_events").insert({
-              org_id:     data.user.id,
-              org_name:   orgData?.name || null,
-              email:      data.user.email,
-              plan:       orgData?.plan || null,
-              session_id: sid,
-              user_agent: navigator.userAgent,
-              referrer:   document.referrer || null,
-              utm_source: window.__t4u_utm?.source || null,
-            });
-            // Record last activity so the admin dashboard reflects real usage
-            await SB.from("orgs").update({ last_seen: new Date().toISOString() }).eq("id", data.user.id);
-          }
+          await SB.rpc("record_login", { p_session: sid, p_user_agent: navigator.userAgent, p_referrer: document.referrer || null, p_utm_source: window.__t4u_utm?.source || null });
         } catch(_) {}
         onAuth(data.user);
         close();
