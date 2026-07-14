@@ -7,6 +7,7 @@ import { ContentBrandEditor } from "./content-editor.jsx";
 import { OverviewDashboard } from "./admin-overview.jsx";
 import { UsageDashboard } from "./admin-usage.jsx";
 import { DataHealthDashboard } from "./admin-health.jsx";
+import { BillingDashboard } from "./admin-billing.jsx";
 
 const PAGE_BG = "#f4f1ea";
 
@@ -66,6 +67,7 @@ function Login({ onSignedIn }) {
 const MODULES = [
   { id: "overview", label: "Overview" },
   { id: "usage", label: "Usage" },
+  { id: "billing", label: "Billing" },
   { id: "health", label: "Data health" },
   { id: "content", label: "Content & Brand" },
   // future: { id:"billing", label:"Billing" }, { id:"finance", label:"Business Finance" }, ...
@@ -128,6 +130,7 @@ export function AdminApp() {
       <main style={{ padding: "26px 20px 60px" }}>
         {mod === "overview" && <OverviewDashboard />}
         {mod === "usage" && <UsageDashboard />}
+        {mod === "billing" && <BillingDashboard />}
         {mod === "health" && <DataHealthDashboard />}
         {mod === "content" && <ContentBrandEditor userId={user?.id} />}
       </main>
