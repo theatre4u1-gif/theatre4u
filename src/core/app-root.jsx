@@ -349,6 +349,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   // or the org a team member belongs to). NEVER user.id directly — a crew member's
   // uid is not an orgs row, which violates items_org_id_fkey. (Coppell fix 2026-06-15)
   const activeOrgId = org?.id || user?.id;
+  const beforeLaunch = Date.now() < Date.parse("2026-09-01T07:00:00Z"); // billing begins Sept 1 (PT) — gate early charges
 
   // ── Session heartbeat (time-spent analytics) ──────────────────────────────
   // While a logged-in user has the app open and visible, bump app_sessions ~every 60s so the
@@ -914,6 +915,12 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                           border:"none",cursor:foundingBusy?"default":"pointer",marginBottom:0,width:"100%",fontFamily:"inherit"}}>
                         {foundingBusy ? "Starting…" : "⭐ Claim your $9.99 founding rate"}
                       </button>
+                    : beforeLaunch
+                    ? <div style={{display:"flex",alignItems:"center",justifyContent:"center",textAlign:"center",
+                        gap:6,padding:"9px 12px",borderRadius:8,fontSize:12,fontWeight:700,lineHeight:1.3,
+                        background:"rgba(212,168,67,.14)",border:"1px solid rgba(212,168,67,.35)",color:"rgba(240,230,211,.85)"}}>
+                        Free during beta · billing begins Sept 1
+                      </div>
                     : <a href={stripeLink(STRIPE_LINKS.pro?.monthly, user?.id, user?.email)}
                         target="_blank" rel="noreferrer"
                         style={{display:"flex",alignItems:"center",justifyContent:"center",

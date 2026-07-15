@@ -134,6 +134,10 @@ export function UpgradePlans({ compact = false, userId = null, userEmail = null,
   // with the forever coupon pre-applied (leak-proof server-side check in the founding-checkout fn).
   const [founding, setFounding] = useState(false);
   const [foundingBusy, setFoundingBusy] = useState(false);
+  // Billing begins Sept 1, 2026 (midnight PT). Until then, no standard credit-card charge — the
+  // paid subscribe buttons are gated so no beta program can be billed early. The deferred founding
+  // claim and Check/PO path stay available. After Sept 1 this auto-lifts and the links work normally.
+  const beforeLaunch = Date.now() < Date.parse("2026-09-01T07:00:00Z");
   useEffect(() => {
     if (!userId) return;
     let alive = true;
@@ -213,6 +217,8 @@ export function UpgradePlans({ compact = false, userId = null, userEmail = null,
                         style={{background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                         🏛️ Request Invoice →
                       </button>
+                    : beforeLaunch
+                      ? <button className="btn btn-full" disabled title="Billing begins September 1, 2026" style={{marginTop:"auto",background:"rgba(240,230,211,.08)",border:"1px solid rgba(212,168,67,.35)",color:"rgba(240,230,211,.72)",fontWeight:700,cursor:"default",fontFamily:"inherit",whiteSpace:"normal",textAlign:"center",lineHeight:1.3,fontSize:12.5}}>Free during beta · billing begins Sept 1</button>
                     : (!link || link === "undefined" || link.endsWith("undefined"))
                       ? <a href={"mailto:"+APP_EMAIL+"?subject=District Plan Inquiry"} className="btn btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>Contact Us →</a>
                       : <a href={link} target="_blank" rel="noreferrer" className={"btn btn-full "+(p.hot?"btn-g":"")} style={{textDecoration:"none",display:"flex",justifyContent:"center",alignItems:"center",marginTop:"auto",whiteSpace:"normal",textAlign:"center",lineHeight:1.25,...(!p.hot?{background:"linear-gradient(135deg,#b8952a,#8a6e1e)",border:"1px solid rgba(212,168,67,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}:{})}}>
