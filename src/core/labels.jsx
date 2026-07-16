@@ -35,6 +35,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
   const [search, setSearch]     = useState("");
   const [selected, setSelected] = useState([]);
   const [printing, setPrinting] = useState(false);
+  const [withPhoto, setWithPhoto] = useState(false);
 
   // Assign tab state
   const [assignCode, setAssignCode] = useState("");
@@ -62,7 +63,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
     (async()=>{
       setLoadingItems(true);
       const {data} = await SB.from("items")
-        .select("id,name,category,location,display_id,added,condition,qty")
+        .select("id,name,category,location,display_id,added,condition,qty,img")
         .eq("org_id",userId).order("added",{ascending:false}).limit(500);
 
       // Also load claimed labels so we know which items already have a physical label
@@ -109,6 +110,23 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
       const labels = toPrint.map((item,n)=>{
         const cat = CAT[item.category]||CAT.other;
         const dispId = item.display_id||item.id.slice(0,8).toUpperCase();
+        if(withPhoto){
+          const photo = item.img
+            ? `<img src="${item.img}" class="pc-img"/>`
+            : `<div class="pc-noimg">${cat.icon}</div>`;
+          return `<div class="pcard">
+            ${photo}
+            <div class="pc-body">
+              <div class="pc-cat" style="color:${cat.color||"#888"}">${cat.icon} ${cat.label}</div>
+              <div class="pc-name">${item.name}</div>
+              ${item.location?`<div class="pc-loc">📍 ${item.location}</div>`:""}
+              <div class="pc-foot">
+                <div class="pc-id">${dispId}</div>
+                ${srcs[n]?`<img src="${srcs[n]}" class="pc-qr"/>`:""}
+              </div>
+            </div>
+          </div>`;
+        }
         return `<div class="lbl">
           <div class="lbl-cat" style="color:${cat.color||"#888"}">${cat.icon} ${cat.label}</div>
           <div class="lbl-name">${item.name}</div>
@@ -118,7 +136,8 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
           <div class="lbl-brand">${APP_HOST}</div>
         </div>`;
       }).join("");
-      w.document.write(`<!DOCTYPE html><html><head><title>QR Labels — ${org?.name||APP_NAME}</title>
+      const noun = withPhoto ? "card" : "label";
+      w.document.write(`<!DOCTYPE html><html><head><title>${withPhoto?"Photo Cards":"QR Labels"} — ${org?.name||APP_NAME}</title>
       <style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:Arial,sans-serif;background:#fff;padding:12px}
@@ -132,10 +151,21 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
         .lbl-id{font-size:9px;font-weight:800;color:#c4761a;font-family:monospace;letter-spacing:.5px}
         .lbl-qr{width:56px;height:56px;margin-top:auto}
         .lbl-brand{font-size:7px;color:#aaa}
+        .pcard{width:200px;height:272px;border:1.5px solid #222;border-radius:8px;overflow:hidden;
+          display:flex;flex-direction:column;page-break-inside:avoid;background:#fff}
+        .pc-img{width:100%;height:150px;object-fit:cover;display:block;background:#f2f2f2}
+        .pc-noimg{width:100%;height:150px;display:flex;align-items:center;justify-content:center;font-size:52px;background:#f2f2f2}
+        .pc-body{padding:8px 10px;display:flex;flex-direction:column;gap:3px;flex:1}
+        .pc-cat{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+        .pc-name{font-size:13px;font-weight:700;color:#111;line-height:1.2;flex:1;overflow:hidden;word-break:break-word}
+        .pc-loc{font-size:9px;color:#555}
+        .pc-foot{display:flex;align-items:flex-end;justify-content:space-between;margin-top:auto}
+        .pc-id{font-size:11px;font-weight:800;color:#c4761a;font-family:monospace;letter-spacing:.5px}
+        .pc-qr{width:52px;height:52px}
         @media print{.controls{display:none}.grid{gap:6px}.lbl{width:150px;height:150px}}
       </style></head><body>
       <div class="controls">
-        <strong>${org?.name||APP_NAME}</strong> — ${toPrint.length} label${toPrint.length!==1?"s":""}
+        <strong>${org?.name||APP_NAME}</strong> — ${toPrint.length} ${noun}${toPrint.length!==1?"s":""}
         <button onclick="window.print()" style="margin-left:16px;padding:5px 14px;background:#d4a843;border:none;border-radius:5px;font-weight:700;cursor:pointer">🖨 Print</button>
         <button onclick="window.close()" style="margin-left:6px;padding:5px 14px;border:1px solid #ccc;border-radius:5px;cursor:pointer">Close</button>
         <span style="margin-left:12px;color:#888;font-size:12px">Tip: In print dialog choose "Fit to page" or "No scaling" for best results</span>
@@ -293,10 +323,19 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
             Select items and click Print — your browser generates QR code labels you can print on any printer.
             Each label includes the item name, category, location, ID code, and scannable QR code.
             Any phone camera (no app needed) scans the code and pulls up the item instantly.
+            Flip on <strong>Photo card</strong> to print a larger card with the item&rsquo;s photo on top — handy to tape on a storage bag or bin so you can see what&rsquo;s inside without opening it.
           </p>
           <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
             <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search items, locations, codes…"
               style={{flex:1,minWidth:200,...inputStyle,width:"auto"}}/>
+            <button onClick={()=>setWithPhoto(v=>!v)} title="Print a larger card with the item photo on top"
+              style={{padding:"7px 13px",borderRadius:7,border:"1px solid",
+                borderColor:withPhoto?"var(--gold)":"var(--border)",
+                background:withPhoto?"rgba(212,168,67,.12)":"transparent",
+                color:withPhoto?"var(--goldink)":"var(--muted)",fontSize:12,fontWeight:withPhoto?700:500,
+                cursor:"pointer",fontFamily:"inherit"}}>
+              🖼 Photo card: {withPhoto?"On":"Off"}
+            </button>
             <button onClick={selAll} style={{padding:"7px 13px",borderRadius:7,border:"1px solid var(--border)",
               background:"transparent",color:"var(--muted)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
               Select All ({filtered.length})
