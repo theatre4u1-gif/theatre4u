@@ -14,5 +14,7 @@ export default function middleware(request) {
   if (path === '/join' || path.startsWith('/org/')) return next();
   const host = (request.headers.get('host') || '').toLowerCase();
   const file = host.includes('artstracker') ? '/home-artstracker.html' : '/home-theatre4u.html';
-  return rewrite(new URL(file, request.url));
+  // The admin host (admin.artstracker.org) must never be indexed by search engines.
+  const init = host.startsWith('admin.') ? { headers: { 'x-robots-tag': 'noindex, nofollow' } } : undefined;
+  return rewrite(new URL(file, request.url), init);
 }

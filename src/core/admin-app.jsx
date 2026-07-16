@@ -78,6 +78,14 @@ export function AdminApp() {
   const [user, setUser] = useState(null);
   const [mod, setMod] = useState("overview");
 
+  // Keep the admin app out of search engines (belt-and-suspenders to the X-Robots-Tag header in middleware.js).
+  useEffect(() => {
+    let m = document.querySelector('meta[name="robots"]');
+    if (!m) { m = document.createElement("meta"); m.setAttribute("name", "robots"); document.head.appendChild(m); }
+    m.setAttribute("content", "noindex, nofollow");
+    document.title = "Admin — Theatre4u / ArtsTracker";
+  }, []);
+
   const check = async () => {
     const { data: { session } } = await SB.auth.getSession();
     const u = session?.user || null;
