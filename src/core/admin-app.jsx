@@ -8,6 +8,7 @@ import { OverviewDashboard } from "./admin-overview.jsx";
 import { UsageDashboard } from "./admin-usage.jsx";
 import { DataHealthDashboard } from "./admin-health.jsx";
 import { BillingDashboard } from "./admin-billing.jsx";
+import { BusinessFinance } from "./admin-finance.jsx";
 
 const PAGE_BG = "#f4f1ea";
 
@@ -68,6 +69,7 @@ const MODULES = [
   { id: "overview", label: "Overview" },
   { id: "usage", label: "Usage" },
   { id: "billing", label: "Billing" },
+  { id: "finance", label: "Finance" },
   { id: "health", label: "Data health" },
   { id: "content", label: "Content & Brand" },
   // future: { id:"billing", label:"Billing" }, { id:"finance", label:"Business Finance" }, ...
@@ -139,6 +141,7 @@ export function AdminApp() {
         {mod === "overview" && <OverviewDashboard />}
         {mod === "usage" && <UsageDashboard />}
         {mod === "billing" && <BillingDashboard />}
+        {mod === "finance" && <BusinessFinance userId={user?.id} />}
         {mod === "health" && <DataHealthDashboard />}
         {mod === "content" && <ContentBrandEditor userId={user?.id} />}
       </main>
