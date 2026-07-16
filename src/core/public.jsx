@@ -8,7 +8,7 @@ import { CAT_MAP } from "./inventory.js";
 import { QR } from "./qr.js";
 import { CSS } from "./styles.js";
 import { usp } from "../lib/backgrounds.js";
-import { DEFAULT_FEATURES, DEFAULT_STEPS, DEFAULT_SOCIAL, parseFeatures } from "../lib/landing-defaults.js";
+import { DEFAULT_FEATURES, DEFAULT_STEPS, DEFAULT_SOCIAL, DEFAULT_STORY_STATS, parseFeatures } from "../lib/landing-defaults.js";
 
 // ── Visit tracking (used by the public landing page) ─────────────────────────
 const TRACK_URL = "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/track-visit";
@@ -320,16 +320,11 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
         </div>
       </div>
       <div style={{display:"flex",gap:24,justifyContent:"center",flexWrap:"wrap"}}>
-        {[
-          {ico:"🎭",val:"30+",lbl:"Years in theatre"},
-          {ico:"🎓",lbl:"Studied & performed theatre"},
-          {ico:"🏫",lbl:"Built for the classroom"},
-          {ico:"🤝",lbl:"Teacher to teacher"},
-        ].map(s=>(
-          <div key={s.lbl} style={{textAlign:"center",padding:"16px 20px",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,minWidth:130}}>
-            <div style={{fontSize:26,marginBottom:6}}>{s.ico}</div>
-            {s.val&&<div style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:"var(--gold)",marginBottom:2}}>{s.val}</div>}
-            <div style={{fontSize:12,color:"rgba(255,255,255,.5)",fontWeight:600}}>{s.lbl}</div>
+        {(parseFeatures(content["landing.story.stats"]) || DEFAULT_STORY_STATS).map((s,i)=>(
+          <div key={i} style={{textAlign:"center",padding:"16px 20px",background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,minWidth:130}}>
+            <div style={{fontSize:26,marginBottom:6}}>{s.icon}</div>
+            {s.value&&<div style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:"var(--gold)",marginBottom:2}}>{s.value}</div>}
+            <div style={{fontSize:12,color:"rgba(255,255,255,.5)",fontWeight:600}}>{s.label}</div>
           </div>
         ))}
       </div>

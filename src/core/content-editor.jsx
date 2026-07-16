@@ -4,7 +4,7 @@
 // Tables: site_content (cvalue = published, draft = working) + site_theme (theme / draft_theme).
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
-import { DEFAULT_FEATURES, DEFAULT_STEPS, DEFAULT_SOCIAL, parseFeatures } from "../lib/landing-defaults.js";
+import { DEFAULT_FEATURES, DEFAULT_STEPS, DEFAULT_SOCIAL, DEFAULT_STORY_STATS, parseFeatures } from "../lib/landing-defaults.js";
 
 const DOORS = [
   { id: "theatre4u",   label: "Theatre4u" },
@@ -112,6 +112,7 @@ const SECTIONS = [
     { key: "landing.story.para3",        label: "Paragraph 3 (right)",  type: "textarea" },
     { key: "landing.story.founder_name", label: "Founder name",         type: "text" },
     { key: "landing.story.founder_title",label: "Founder title",        type: "text" },
+    { key: "landing.story.stats",        label: "Stat cards",           type: "stats" },
   ] },
   { title: "Closing call-to-action", fields: [
     { key: "landing.cta.headline1", label: "Closing headline — line 1",        type: "text" },
@@ -379,6 +380,14 @@ export function ContentBrandEditor({ userId }) {
   const removeSocial = (i) => setSocial(socialItems.filter((_, idx) => idx !== i));
   const addSocial = () => setSocial([...socialItems, { icon: "✨", label: "New item" }]);
 
+  // Our Story stat cards (icon + optional value + label) under landing.story.stats.
+  const statItems = parseFeatures(dc("landing.story.stats")) || DEFAULT_STORY_STATS;
+  const setStats = (arr) => setDC("landing.story.stats", JSON.stringify(arr));
+  const updateStat = (i, k, val) => setStats(statItems.map((it, idx) => idx === i ? { ...it, [k]: val } : it));
+  const moveStat = (i, dir) => { const a = statItems.slice(); const j = i + dir; if (j < 0 || j >= a.length) return; const t = a[i]; a[i] = a[j]; a[j] = t; setStats(a); };
+  const removeStat = (i) => setStats(statItems.filter((_, idx) => idx !== i));
+  const addStat = () => setStats([...statItems, { icon: "⭐", value: "", label: "New stat" }]);
+
   const dirty = (() => {
     for (const k of ALL_CONTENT_KEYS) if ((draft.content[door + "||" + k] ?? "") !== (pub.content[door + "||" + k] ?? "")) return true;
     const pth = pub.theme[door] || {}, dth = draft.theme[door] || {};
@@ -447,6 +456,26 @@ export function ContentBrandEditor({ userId }) {
             </div>
           ))}
           <button onClick={addCard} style={{ padding: "8px 14px", borderRadius: 8, border: "1px dashed #c4922a", background: "#fff", color: "#a5731f", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>+ Add a card</button>
+        </>
+      );
+    }
+    if (f.type === "stats") {
+      return (
+        <>
+          <label style={S.label}>{f.label}</label>
+          {statItems.map((it, i) => (
+            <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+              <input value={it.icon || ""} onChange={e => updateStat(i, "icon", e.target.value)} placeholder="🎭" style={{ ...S.input, width: 52, textAlign: "center", fontSize: 18, padding: "6px" }} />
+              <input value={it.value || ""} onChange={e => updateStat(i, "value", e.target.value)} placeholder="30+ (optional)" style={{ ...S.input, width: 120 }} />
+              <input value={it.label || ""} onChange={e => updateStat(i, "label", e.target.value)} placeholder="Label" style={{ ...S.input, flex: 1, minWidth: 0 }} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <button onClick={() => moveStat(i, -1)} disabled={i === 0} style={arrowBtn(i === 0)}>▲</button>
+                <button onClick={() => moveStat(i, 1)} disabled={i === statItems.length - 1} style={arrowBtn(i === statItems.length - 1)}>▼</button>
+              </div>
+              <button onClick={() => removeStat(i)} title="Remove" style={{ width: 28, height: 34, borderRadius: 6, border: "1px solid #e2b6b6", background: "#fff", color: "#c0392b", cursor: "pointer", fontSize: 15, fontFamily: "inherit", flexShrink: 0 }}>×</button>
+            </div>
+          ))}
+          <button onClick={addStat} style={{ padding: "8px 14px", borderRadius: 8, border: "1px dashed #c4922a", background: "#fff", color: "#a5731f", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>+ Add stat</button>
         </>
       );
     }

@@ -47,7 +47,14 @@ export const DEFAULT_SOCIAL = {
   ],
 };
 
-// Safely parse an admin-saved JSON array (features/steps/social); returns null if empty/invalid so callers fall back.
+export const DEFAULT_STORY_STATS = [
+  { icon: "🎭", value: "30+", label: "Years in theatre" },
+  { icon: "🎓", value: "", label: "Studied & performed theatre" },
+  { icon: "🏫", value: "", label: "Built for the classroom" },
+  { icon: "🤝", value: "", label: "Teacher to teacher" },
+];
+
+// Safely parse an admin-saved JSON array (features/steps/social/stats); returns null if empty/invalid so callers fall back.
 export function parseFeatures(raw) {
   try {
     if (!raw) return null;
