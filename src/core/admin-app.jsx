@@ -79,6 +79,7 @@ export function AdminApp() {
   const [phase, setPhase] = useState("loading"); // loading | login | denied | ok
   const [user, setUser] = useState(null);
   const [mod, setMod] = useState("overview");
+  const [door, setDoor] = useState("all"); // all | theatre4u | artstracker — filters the org-based modules
 
   // Keep the admin app out of search engines (belt-and-suspenders to the X-Robots-Tag header in middleware.js).
   useEffect(() => {
@@ -137,10 +138,19 @@ export function AdminApp() {
           <button onClick={signOut} style={{ padding: "5px 12px", borderRadius: 7, border: "1px solid rgba(240,230,211,.25)", background: "transparent", color: "rgba(240,230,211,.85)", cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}>Sign out</button>
         </div>
       </header>
+      {["overview", "usage", "billing"].includes(mod) && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 24px", background: "#241608", borderBottom: "1px solid rgba(240,230,211,.08)" }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(240,230,211,.5)", textTransform: "uppercase", letterSpacing: .5, marginRight: 2 }}>Site</span>
+          {[["all", "Both"], ["theatre4u", "Theatre4u"], ["artstracker", "ArtsTracker"]].map(([id, label]) => (
+            <button key={id} onClick={() => setDoor(id)}
+              style={{ padding: "5px 14px", borderRadius: 7, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, fontWeight: 700, background: door === id ? "#c4922a" : "rgba(240,230,211,.08)", color: door === id ? "#1a0f06" : "rgba(240,230,211,.75)" }}>{label}</button>
+          ))}
+        </div>
+      )}
       <main style={{ padding: "26px 20px 60px" }}>
-        {mod === "overview" && <OverviewDashboard />}
-        {mod === "usage" && <UsageDashboard />}
-        {mod === "billing" && <BillingDashboard />}
+        {mod === "overview" && <OverviewDashboard door={door} />}
+        {mod === "usage" && <UsageDashboard door={door} />}
+        {mod === "billing" && <BillingDashboard door={door} />}
         {mod === "finance" && <BusinessFinance userId={user?.id} />}
         {mod === "health" && <DataHealthDashboard />}
         {mod === "content" && <ContentBrandEditor userId={user?.id} />}

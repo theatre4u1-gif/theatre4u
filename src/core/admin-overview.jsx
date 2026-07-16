@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { ProgramDetail } from "./admin-program.jsx";
-import { lastActiveTs, activeBucket } from "../lib/admin-metrics.js";
+import { lastActiveTs, activeBucket, doorOf, DOOR_LABEL } from "../lib/admin-metrics.js";
 
 const DAY = 86400000;
 const fmtMoney = (cents) => "$" + ((cents || 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -127,7 +127,7 @@ function SessionsTable({ rows }) {
   );
 }
 
-export function OverviewDashboard() {
+export function OverviewDashboard({ door = "all" }) {
   const [orgs, setOrgs] = useState(null);
   const [usageMap, setUsageMap] = useState({});
   const [pv, setPv] = useState([]);
@@ -149,7 +149,7 @@ export function OverviewDashboard() {
         const d30 = new Date(Date.now() - 30 * DAY).toISOString();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
         const [orgsRes, usageRes, pvRes, revRes, payRes, sessRes] = await Promise.all([
-          SB.from("orgs").select("id,name,email,plan,temp_pro,founding_member,stripe_subscription_id,created_at,last_seen,deleted_at,location,city"),
+          SB.from("orgs").select("id,name,email,plan,temp_pro,founding_member,stripe_subscription_id,created_at,last_seen,deleted_at,location,city,vertical,signup_domain"),
           SB.from("org_platform_usage").select("org_id,last_item_added,last_exchange_activity").limit(20000),
           SB.from("page_views").select("page,utm_source,referrer,session_id").gte("created_at", weekAgo).limit(20000),
           SB.from("stripe_revenue_summary").select("month,revenue_cents,refunded_cents"),
@@ -186,17 +186,23 @@ export function OverviewDashboard() {
   const weekAgo = new Date(Date.now() - 7 * DAY).toISOString();
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
   const bucketOf = (o) => activeBucket(lastActiveTs(o, usageMap[o.id]));
+  const doored = door === "all" ? orgs : orgs.filter(o => doorOf(o) === door);
   const seg = {
-    all: orgs,
-    active7: orgs.filter(o => bucketOf(o) === "a7"),
-    active30: orgs.filter(o => ["a7", "a30"].includes(bucketOf(o))),
-    new: orgs.filter(o => o.created_at >= weekAgo),
-    newMonth: orgs.filter(o => o.created_at >= monthStart),
-    paying: orgs.filter(o => o.stripe_subscription_id),
-    founding: orgs.filter(o => o.founding_member),
-    beta: orgs.filter(o => o.temp_pro && !o.founding_member && !o.stripe_subscription_id),
-    free: orgs.filter(o => o.plan === "free" && !o.temp_pro && !o.stripe_subscription_id),
+    all: doored,
+    active7: doored.filter(o => bucketOf(o) === "a7"),
+    active30: doored.filter(o => ["a7", "a30"].includes(bucketOf(o))),
+    new: doored.filter(o => o.created_at >= weekAgo),
+    newMonth: doored.filter(o => o.created_at >= monthStart),
+    paying: doored.filter(o => o.stripe_subscription_id),
+    founding: doored.filter(o => o.founding_member),
+    beta: doored.filter(o => o.temp_pro && !o.founding_member && !o.stripe_subscription_id),
+    free: doored.filter(o => o.plan === "free" && !o.temp_pro && !o.stripe_subscription_id),
   };
+  // Always-visible side-by-side split by door (independent of the filter).
+  const byDoor = ["theatre4u", "artstracker"].map(d => {
+    const list = orgs.filter(o => doorOf(o) === d);
+    return { d, total: list.length, active: list.filter(o => ["a7", "a30"].includes(bucketOf(o))).length, paying: list.filter(o => o.stripe_subscription_id).length, founding: list.filter(o => o.founding_member).length };
+  });
   const visitors7 = new Set(pv.map(r => r.session_id).filter(Boolean)).size;
   const avgMin = sessions.length ? Math.round(sessions.reduce((a, s) => a + s.mins, 0) / sessions.length) : null;
 
@@ -235,8 +241,25 @@ export function OverviewDashboard() {
   const H = ({ children }) => <h3 style={{ fontSize: 13, fontWeight: 800, color: "#6b6459", textTransform: "uppercase", letterSpacing: .5, margin: "26px 0 12px" }}>{children}</h3>;
   return (
     <div style={{ maxWidth: 1080, margin: "0 auto" }}>
-      <p style={{ color: "#777", fontSize: 13, margin: "0 0 4px" }}>A live snapshot across both doors. Click any card to drill in and manage. Numbers refresh when you reload.</p>
+      <p style={{ color: "#777", fontSize: 13, margin: "0 0 4px" }}>A live snapshot{door !== "all" ? " — showing " + DOOR_LABEL[door] + " only (use the Site filter above)" : ""}. Click any card to drill in and manage.</p>
       {flash && <div style={{ marginTop: 8, fontWeight: 700, fontSize: 13, color: flash.startsWith("Error") ? "#c0392b" : "#1a7f37" }}>{flash}</div>}
+
+      <div style={{ marginTop: 14, background: "#fff", border: "1px solid #e6e0d6", borderRadius: 12, padding: "14px 18px" }}>
+        <div style={{ fontSize: 12, fontWeight: 800, color: "#6b6459", textTransform: "uppercase", letterSpacing: .5, marginBottom: 10 }}>By site</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          {byDoor.map(b => (
+            <div key={b.d} style={{ border: "1px solid #eee6d9", borderRadius: 10, padding: "12px 14px" }}>
+              <div style={{ fontWeight: 800, color: b.d === "theatre4u" ? "#a5731f" : "#b06fc9", marginBottom: 8 }}>{DOOR_LABEL[b.d]}</div>
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 13, color: "#3a3a3a" }}>
+                <span><strong style={{ fontSize: 18 }}>{b.total}</strong> programs</span>
+                <span><strong style={{ fontSize: 18 }}>{b.active}</strong> active</span>
+                <span><strong style={{ fontSize: 18 }}>{b.paying}</strong> paying</span>
+                <span><strong style={{ fontSize: 18 }}>{b.founding}</strong> founding</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <H>Programs</H>
       <div style={grid}>
@@ -254,7 +277,7 @@ export function OverviewDashboard() {
         <Card label="Free" value={seg.free.length} onClick={() => openProg("free", "Free programs")} />
       </div>
 
-      <H>Money & traffic</H>
+      <H>Money & traffic{door !== "all" ? " (all sites)" : ""}</H>
       <div style={grid}>
         <Card label="Revenue this month" value={fmtMoney(rev)} sub="Stripe · click for payments" accent="#1a7f37" onClick={() => setDrill({ type: "payments" })} />
         <Card label="Visitors this week" value={visitors7} sub={pv.length.toLocaleString() + " page views"} onClick={() => setDrill({ type: "traffic" })} />

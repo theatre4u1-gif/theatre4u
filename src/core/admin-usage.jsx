@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { ProgramDetail } from "./admin-program.jsx";
-import { lastActiveTs, activeBucket } from "../lib/admin-metrics.js";
+import { lastActiveTs, activeBucket, doorOf } from "../lib/admin-metrics.js";
 
 const DAY = 86400000;
 const dayKey = (d) => new Date(d).toISOString().slice(0, 10);
@@ -36,7 +36,7 @@ const th = { textAlign: "left", fontSize: 11, fontWeight: 800, color: "#8a8272",
 const td = { fontSize: 13, color: "#3a3a3a", padding: "9px 10px", borderBottom: "1px solid #f0ece3" };
 const nameLink = (onOpen, o) => <span onClick={() => onOpen(o)} style={{ fontWeight: 700, color: "#a5731f", cursor: "pointer", textDecoration: "underline" }}>{o.org_name || o.name || "(no name)"}</span>;
 
-export function UsageDashboard() {
+export function UsageDashboard({ door = "all" }) {
   const [d, setD] = useState(null);
   const [err, setErr] = useState("");
   const [detailOrg, setDetailOrg] = useState(null);
@@ -49,15 +49,18 @@ export function UsageDashboard() {
         const sess14 = new Date(Date.now() - 14 * DAY).toISOString();
         const [loginRes, orgsRes, usageRes, sessRes] = await Promise.all([
           SB.from("login_events").select("org_id,created_at").gte("created_at", login30).limit(50000),
-          SB.from("orgs").select("id,name,plan,temp_pro,founding_member,stripe_subscription_id,last_seen,deleted_at").is("deleted_at", null),
+          SB.from("orgs").select("id,name,plan,temp_pro,founding_member,stripe_subscription_id,last_seen,deleted_at,vertical,signup_domain").is("deleted_at", null),
           SB.from("org_platform_usage").select("*").limit(20000),
-          SB.from("app_sessions").select("started_at,last_seen_at").gte("started_at", sess14).limit(20000),
+          SB.from("app_sessions").select("org_id,started_at,last_seen_at").gte("started_at", sess14).limit(20000),
         ]);
         if (!alive) return;
         if (orgsRes.error) throw orgsRes.error;
-        const orgs = orgsRes.data || [];
-        const orgById = {}; orgs.forEach(o => { orgById[o.id] = o; });
+        const orgsAll = orgsRes.data || [];
+        const orgById = {}; orgsAll.forEach(o => { orgById[o.id] = o; });
         const usageMap = {}; (usageRes.data || []).forEach(u => { usageMap[u.org_id] = u; });
+        // Door filter (same rule everywhere): keep only this door's programs/logins/sessions/usage.
+        const inDoor = (id) => door === "all" || (orgById[id] && doorOf(orgById[id]) === door);
+        const orgs = door === "all" ? orgsAll : orgsAll.filter(o => doorOf(o) === door);
 
         const now = Date.now();
         // Consistent "last active" = most recent of sign-in / last item added / last exchange.
@@ -66,19 +69,19 @@ export function UsageDashboard() {
         orgs.forEach(o => { counts[activeBucket(lastActive(o), now)]++; });
 
         // logins per day (30d)
-        const logins = loginRes.data || [];
+        const logins = (loginRes.data || []).filter(e => inDoor(e.org_id));
         const lmap = {}; logins.forEach(e => { const k = dayKey(e.created_at); lmap[k] = (lmap[k] || 0) + 1; });
         const loginSeries = []; for (let i = 29; i >= 0; i--) { const day = new Date(now - i * DAY); const k = dayKey(day); loginSeries.push({ n: lmap[k] || 0, title: k + ": " + (lmap[k] || 0) }); }
         const distinctLogins = new Set(logins.map(e => e.org_id)).size;
 
         // sessions per day (14d) + avg duration
-        const sess = (sessRes.data || []).map(s => ({ day: dayKey(s.started_at), mins: Math.max(0, (new Date(s.last_seen_at) - new Date(s.started_at)) / 60000) }));
+        const sess = (sessRes.data || []).filter(s => inDoor(s.org_id)).map(s => ({ day: dayKey(s.started_at), mins: Math.max(0, (new Date(s.last_seen_at) - new Date(s.started_at)) / 60000) }));
         const smap = {}; sess.forEach(s => { smap[s.day] = (smap[s.day] || 0) + 1; });
         const sessSeries = []; for (let i = 13; i >= 0; i--) { const day = new Date(now - i * DAY); const k = dayKey(day); sessSeries.push({ n: smap[k] || 0, title: k + ": " + (smap[k] || 0) }); }
         const avgMin = sess.length ? Math.round(sess.reduce((a, s) => a + s.mins, 0) / sess.length) : null;
 
         // usage merge — attach a consistent "last active" timestamp to each row
-        const usage = (usageRes.data || []).map(u => ({ ...u, _score: score(u), _active: lastActiveTs(orgById[u.org_id], u) }));
+        const usage = (usageRes.data || []).filter(u => inDoor(u.org_id)).map(u => ({ ...u, _score: score(u), _active: lastActiveTs(orgById[u.org_id], u) }));
         const mostActive = usage.slice().sort((a, b) => b._score - a._score).filter(u => u._score > 0).slice(0, 12);
         const needsAttention = usage.filter(u => (u.total_items || 0) > 0 && u._active && (now - u._active) / DAY > 30)
           .sort((a, b) => (b.total_items || 0) - (a.total_items || 0)).slice(0, 12);
@@ -87,7 +90,7 @@ export function UsageDashboard() {
       } catch (e) { if (alive) setErr(e.message || String(e)); }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [door]);
 
   if (detailOrg) return <ProgramDetail org={detailOrg} onBack={() => setDetailOrg(null)} onChanged={() => {}} />;
   if (err) return <div style={{ padding: 24, color: "#c0392b" }}>Couldn't load usage: {err}</div>;

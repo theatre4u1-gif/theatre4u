@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { ProgramDetail } from "./admin-program.jsx";
+import { doorOf } from "../lib/admin-metrics.js";
 
 const fmtC = (c) => "$" + ((c || 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 });
 const fmtN = (n) => "$" + (n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -28,7 +29,7 @@ function Card({ label, value, sub, accent, onClick }) {
 const th = { textAlign: "left", fontSize: 11, fontWeight: 800, color: "#8a8272", textTransform: "uppercase", letterSpacing: .5, padding: "8px 10px", borderBottom: "1px solid #e6e0d6" };
 const td = { fontSize: 13, color: "#3a3a3a", padding: "9px 10px", borderBottom: "1px solid #f0ece3" };
 
-export function BillingDashboard() {
+export function BillingDashboard({ door = "all" }) {
   const [orgs, setOrgs] = useState(null);
   const [rev, setRev] = useState([]);
   const [pays, setPays] = useState([]);
@@ -41,7 +42,7 @@ export function BillingDashboard() {
     (async () => {
       try {
         const [orgsRes, revRes, payRes] = await Promise.all([
-          SB.from("orgs").select("id,name,email,plan,vertical,temp_pro,founding_member,founding_rate_monthly,stripe_subscription_id,subscription_status,plan_expires_at,beta_end_date,account_status,deleted_at,created_at"),
+          SB.from("orgs").select("id,name,email,plan,vertical,signup_domain,temp_pro,founding_member,founding_rate_monthly,stripe_subscription_id,subscription_status,plan_expires_at,beta_end_date,account_status,deleted_at,created_at"),
           SB.from("stripe_revenue_summary").select("month,revenue_cents,refunded_cents,successful_payments,unique_customers"),
           SB.from("stripe_payments_current").select("org_name,customer_name,customer_email,amount_cents,plan,status,refunded,stripe_created_at").order("stripe_created_at", { ascending: false }).limit(100),
         ]);
@@ -63,10 +64,11 @@ export function BillingDashboard() {
   const curRow = rev.find(r => { const m = new Date(r.month); return m.getFullYear() === now.getFullYear() && m.getMonth() === now.getMonth(); });
   const revThisMonth = curRow ? (curRow.revenue_cents - (curRow.refunded_cents || 0)) : 0;
   const rev6 = rev.slice(-6).reduce((a, r) => a + (r.revenue_cents - (r.refunded_cents || 0)), 0);
-  const paying = orgs.filter(o => o.stripe_subscription_id);
-  const founding = orgs.filter(o => o.founding_member);
-  const betaExp = orgs.filter(o => o.beta_end_date);
-  const committed = orgs.reduce((a, o) => a + monthlyFor(o), 0);
+  const shown = door === "all" ? orgs : orgs.filter(o => doorOf(o) === door);
+  const paying = shown.filter(o => o.stripe_subscription_id);
+  const founding = shown.filter(o => o.founding_member);
+  const betaExp = shown.filter(o => o.beta_end_date);
+  const committed = shown.reduce((a, o) => a + monthlyFor(o), 0);
   const nearestBeta = betaExp.map(o => o.beta_end_date).sort()[0];
 
   const exportCsv = () => {
@@ -90,7 +92,7 @@ export function BillingDashboard() {
     <div style={{ maxWidth: 1080, margin: "0 auto" }}>
       <p style={{ color: "#777", fontSize: 13, margin: "0 0 4px" }}>Revenue and the money-relevant cohorts. Billing begins September 1, so revenue stays near zero until then and the recurring figure is an estimate. Click a program to open its console.</p>
 
-      <H>Revenue</H>
+      <H>Revenue{door !== "all" ? " (all sites — not split by door)" : ""}</H>
       <div style={grid}>
         <Card label="Revenue this month" value={fmtC(revThisMonth)} sub="net of refunds" accent="#1a7f37" />
         <Card label="Revenue (last 6 mo)" value={fmtC(rev6)} sub="net of refunds" />
@@ -102,7 +104,7 @@ export function BillingDashboard() {
       <div style={grid}>
         <Card label="Paying now" value={paying.length} sub="active Stripe subscription" accent="#1a7f37" onClick={() => setTab("money")} />
         <Card label="Founding members" value={founding.length} sub="$9.99 locked for life" accent="#c4922a" onClick={() => setTab("founding")} />
-        <Card label="Total programs" value={orgs.length} />
+        <Card label="Total programs" value={shown.length} />
       </div>
 
       {rev.length > 0 && <>

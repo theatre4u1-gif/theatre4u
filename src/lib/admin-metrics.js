@@ -13,6 +13,15 @@ export function lastActiveTs(org, usage) {
   return ts.length ? Math.max(...ts) : null;
 }
 
+// Which door a program belongs to — same rule as the email/branding logic:
+// non-theatre verticals (music/dance/art/booster) are ArtsTracker; theatre follows signup_domain.
+export function doorOf(org) {
+  const v = (org && org.vertical) || "theatre";
+  if (v !== "theatre") return "artstracker";
+  return ((org && org.signup_domain) || "").includes("artstracker") ? "artstracker" : "theatre4u";
+}
+export const DOOR_LABEL = { theatre4u: "Theatre4u", artstracker: "ArtsTracker" };
+
 // Bucket a "last active" timestamp into engagement tiers used across the admin.
 export function activeBucket(ts, now = Date.now()) {
   if (!ts) return "never";
