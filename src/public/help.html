@@ -1058,19 +1058,32 @@ window.addEventListener('scroll', () => {
   var isT4u = ov ? ov === "theatre4u" : (host.includes("theatre4u.org") || host === "localhost");
   if (isT4u) return;
   var NAME = "ArtsTracker";
+  // Brand-term swaps applied to visible text on the artstracker.org door.
+  function swapText(s){
+    return s
+      .replace(/Theatre4u\u2122?/g, NAME)
+      .replace(/theatre4u\.org/gi, "artstracker.org")
+      .replace(/Backstage Exchange/g, "The Exchange")
+      .replace(/Stage Points/g, "ArtsPoints")
+      .replace(/Backstage Team/g, "Team")
+      .replace(/\ud83c\udfad/g, "\ud83c\udfa8");
+  }
   function walk(node){
     if (node.nodeType === 3) {
-      if (node.nodeValue.indexOf("Theatre4u") !== -1)
-        node.nodeValue = node.nodeValue.replace(/Theatre4u\u2122?/g, NAME);
-    } else if (node.nodeType === 1) {
+      var v = swapText(node.nodeValue);
+      if (v !== node.nodeValue) node.nodeValue = v;
+    } else if (node.nodeType === 1 && node.nodeName !== "SCRIPT" && node.nodeName !== "STYLE") {
       for (var i=0;i<node.childNodes.length;i++) walk(node.childNodes[i]);
     }
   }
   walk(document.body);
   document.title = NAME + " Help Center";
   document.querySelectorAll('a[href*="theatre4u.org"]').forEach(function(a){
-    a.href = a.href.replace("theatre4u.org","artstracker.org");
+    a.href = a.href.replace(/theatre4u\.org/g, "artstracker.org");
   });
+  document.querySelectorAll('[data-emoji="\ud83c\udfad"]').forEach(function(el){ el.setAttribute("data-emoji", "\ud83c\udfa8"); });
+  var lg = document.querySelector('.logo img'); if (lg) lg.src = "/icon-192-artstracker.png";
+  var si = document.getElementById('searchInput'); if (si) si.placeholder = si.placeholder.replace(/stage points/gi, "ArtsPoints");
 })();
 </script>
 </body>
