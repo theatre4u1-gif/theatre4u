@@ -16,6 +16,15 @@ const LABEL_PACKS = [
 ];
 const LOGO_ADDON_CENTS = 500; // $5 to include program logo on labels
 
+// Photo-card print sizes (inches). Used only when "Photo card" is on.
+const PHOTO_SIZES = [
+  { id:"tag",    label:'Small tag · 2" x 3"',       w:2,   h:3   },
+  { id:"card",   label:'Card · 2.5" x 3.5"',        w:2.5, h:3.5 },  // default
+  { id:"square", label:'Square · 3" x 3"',          w:3,   h:3   },
+  { id:"index",  label:'Large · 3" x 4"',           w:3,   h:4   },
+  { id:"photo",  label:'Photo · 4" x 6"',           w:4,   h:6   },
+];
+
 
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -36,6 +45,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
   const [selected, setSelected] = useState([]);
   const [printing, setPrinting] = useState(false);
   const [withPhoto, setWithPhoto] = useState(false);
+  const [cardSize, setCardSize]   = useState(1); // index into PHOTO_SIZES (default: Card 2.5x3.5)
 
   // Assign tab state
   const [assignCode, setAssignCode] = useState("");
@@ -137,6 +147,14 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
         </div>`;
       }).join("");
       const noun = withPhoto ? "card" : "label";
+      const S   = PHOTO_SIZES[cardSize] || PHOTO_SIZES[1];
+      const cw  = Math.round(S.w*96), ch = Math.round(S.h*96);
+      const ph  = Math.round(ch*0.56);                       // photo height
+      const fName = Math.max(11, Math.round(cw*0.066));      // item name
+      const fCat  = Math.max(8,  Math.round(fName*0.62));    // category / location
+      const fId   = Math.max(9,  Math.round(fName*0.8));     // id code
+      const qrs   = Math.round(cw*0.27);                     // QR square
+      const pad   = Math.max(7,  Math.round(cw*0.045));      // body padding
       w.document.write(`<!DOCTYPE html><html><head><title>${withPhoto?"Photo Cards":"QR Labels"} — ${org?.name||APP_NAME}</title>
       <style>
         *{margin:0;padding:0;box-sizing:border-box}
@@ -151,21 +169,21 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
         .lbl-id{font-size:9px;font-weight:800;color:#c4761a;font-family:monospace;letter-spacing:.5px}
         .lbl-qr{width:56px;height:56px;margin-top:auto}
         .lbl-brand{font-size:7px;color:#aaa}
-        .pcard{width:200px;height:272px;border:1.5px solid #222;border-radius:8px;overflow:hidden;
+        .pcard{width:${cw}px;height:${ch}px;border:1.5px solid #222;border-radius:8px;overflow:hidden;
           display:flex;flex-direction:column;page-break-inside:avoid;background:#fff}
-        .pc-img{width:100%;height:150px;object-fit:cover;display:block;background:#f2f2f2}
-        .pc-noimg{width:100%;height:150px;display:flex;align-items:center;justify-content:center;font-size:52px;background:#f2f2f2}
-        .pc-body{padding:8px 10px;display:flex;flex-direction:column;gap:3px;flex:1}
-        .pc-cat{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-        .pc-name{font-size:13px;font-weight:700;color:#111;line-height:1.2;flex:1;overflow:hidden;word-break:break-word}
-        .pc-loc{font-size:9px;color:#555}
-        .pc-foot{display:flex;align-items:flex-end;justify-content:space-between;margin-top:auto}
-        .pc-id{font-size:11px;font-weight:800;color:#c4761a;font-family:monospace;letter-spacing:.5px}
-        .pc-qr{width:52px;height:52px}
+        .pc-img{width:100%;height:${ph}px;object-fit:cover;display:block;background:#f2f2f2}
+        .pc-noimg{width:100%;height:${ph}px;display:flex;align-items:center;justify-content:center;font-size:${Math.round(ph*0.34)}px;background:#f2f2f2}
+        .pc-body{padding:${pad}px ${pad+2}px;display:flex;flex-direction:column;gap:3px;flex:1;min-height:0}
+        .pc-cat{font-size:${fCat}px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+        .pc-name{font-size:${fName}px;font-weight:700;color:#111;line-height:1.2;flex:1;overflow:hidden;word-break:break-word}
+        .pc-loc{font-size:${fCat}px;color:#555}
+        .pc-foot{display:flex;align-items:flex-end;justify-content:space-between;margin-top:auto;gap:6px}
+        .pc-id{font-size:${fId}px;font-weight:800;color:#c4761a;font-family:monospace;letter-spacing:.5px}
+        .pc-qr{width:${qrs}px;height:${qrs}px;flex-shrink:0}
         @media print{.controls{display:none}.grid{gap:6px}.lbl{width:150px;height:150px}}
       </style></head><body>
       <div class="controls">
-        <strong>${org?.name||APP_NAME}</strong> — ${toPrint.length} ${noun}${toPrint.length!==1?"s":""}
+        <strong>${org?.name||APP_NAME}</strong> — ${toPrint.length} ${noun}${toPrint.length!==1?"s":""}${withPhoto?` · ${S.w}" x ${S.h}"`:""}
         <button onclick="window.print()" style="margin-left:16px;padding:5px 14px;background:#d4a843;border:none;border-radius:5px;font-weight:700;cursor:pointer">🖨 Print</button>
         <button onclick="window.close()" style="margin-left:6px;padding:5px 14px;border:1px solid #ccc;border-radius:5px;cursor:pointer">Close</button>
         <span style="margin-left:12px;color:#888;font-size:12px">Tip: In print dialog choose "Fit to page" or "No scaling" for best results</span>
@@ -323,7 +341,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
             Select items and click Print — your browser generates QR code labels you can print on any printer.
             Each label includes the item name, category, location, ID code, and scannable QR code.
             Any phone camera (no app needed) scans the code and pulls up the item instantly.
-            Flip on <strong>Photo card</strong> to print a larger card with the item&rsquo;s photo on top — handy to tape on a storage bag or bin so you can see what&rsquo;s inside without opening it.
+            Flip on <strong>Photo card</strong> to print a larger card with the item&rsquo;s photo on top, then pick a size. Handy for taping on a storage bag or bin so you can see what&rsquo;s inside without opening it.
           </p>
           <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
             <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search items, locations, codes…"
@@ -336,6 +354,14 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
                 cursor:"pointer",fontFamily:"inherit"}}>
               🖼 Photo card: {withPhoto?"On":"Off"}
             </button>
+            {withPhoto&&(
+              <select value={cardSize} onChange={e=>setCardSize(Number(e.target.value))}
+                title="Card size for printing"
+                style={{padding:"7px 10px",borderRadius:7,border:"1px solid var(--border)",
+                  background:"var(--white)",color:"var(--text)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+                {PHOTO_SIZES.map((s,i)=><option key={s.id} value={i}>{s.label}</option>)}
+              </select>
+            )}
             <button onClick={selAll} style={{padding:"7px 13px",borderRadius:7,border:"1px solid var(--border)",
               background:"transparent",color:"var(--muted)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
               Select All ({filtered.length})
