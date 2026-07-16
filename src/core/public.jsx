@@ -8,7 +8,7 @@ import { CAT_MAP } from "./inventory.js";
 import { QR } from "./qr.js";
 import { CSS } from "./styles.js";
 import { usp } from "../lib/backgrounds.js";
-import { DEFAULT_FEATURES, DEFAULT_STEPS, parseFeatures } from "../lib/landing-defaults.js";
+import { DEFAULT_FEATURES, DEFAULT_STEPS, DEFAULT_SOCIAL, parseFeatures } from "../lib/landing-defaults.js";
 
 // ── Visit tracking (used by the public landing page) ─────────────────────────
 const TRACK_URL = "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/track-visit";
@@ -171,9 +171,9 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
 
     {/* ── Social proof strip ── */}
     <div style={{order:ord("social"),background:"rgba(212,168,67,.08)",borderTop:"1px solid rgba(212,168,67,.15)",borderBottom:"1px solid rgba(212,168,67,.15)",padding:"16px 32px",display:vis("social")?"flex":"none",flexWrap:"wrap",gap:24,justifyContent:"center",alignItems:"center"}}>
-      {(IS_ARTSTRACKER ? [["📦","Inventory management"],["🎭","Productions & events"],["📱","Mobile-ready"],["💰","Funding Tracker"],["🔄","The Exchange"],["🎪","Community board"]] : [["📦","Inventory management"],["🎭","Productions tracker"],["📱","Mobile-ready"],["💰","Funding Tracker"],["🏪","Backstage Exchange"],["🎪","Community board"]]).map(([ico,lbl])=>(
-        <div key={lbl} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,fontWeight:600,color:"rgba(255,255,255,.7)"}}>
-          <span style={{fontSize:16}}>{ico}</span>{lbl}
+      {(parseFeatures(content["landing.social.items"]) || DEFAULT_SOCIAL[IS_ARTSTRACKER?"artstracker":"theatre4u"]).map((s,i)=>(
+        <div key={i} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,fontWeight:600,color:"rgba(255,255,255,.7)"}}>
+          <span style={{fontSize:16}}>{s.icon}</span>{s.label}
         </div>
       ))}
     </div>
@@ -220,14 +220,16 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     {/* ── Pricing ── */}
     <div style={{order:ord("pricing"),display:vis("pricing")?"block":"none",padding:"80px 32px",maxWidth:1000,margin:"0 auto",width:"100%"}}>
       <div style={{textAlign:"center",marginBottom:48}}>
-        <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>Simple, honest pricing</div>
-        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(28px,4vw,42px)",color:"#fff"}}>Plans for every program</h2>
+        <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>{c("landing.pricing.eyebrow","Simple, honest pricing")}</div>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(28px,4vw,42px)",color:"#fff"}}>{c("landing.pricing.heading","Plans for every program")}</h2>
+        {content["landing.pricing.banner_show"]!=="0" && (
         <div style={{marginTop:14,marginBottom:4}}>
           <span style={{display:"inline-flex",alignItems:"center",gap:8,padding:"7px 18px",background:"rgba(76,175,80,.13)",border:"1px solid rgba(76,175,80,.4)",borderRadius:22,fontSize:13.5,fontWeight:700,color:"#82d68c"}}>
-            ⭐ Everything is free during our beta — these prices begin September 1
+            {c("landing.pricing.banner","⭐ Everything is free during our beta — these prices begin September 1")}
           </span>
         </div>
-        <p style={{fontSize:14,color:"rgba(255,255,255,.45)",marginTop:10}}>Annual plans available — save up to 2 months free</p>
+        )}
+        <p style={{fontSize:14,color:"rgba(255,255,255,.45)",marginTop:10}}>{c("landing.pricing.annual_note","Annual plans available — save up to 2 months free")}</p>
       </div>
       {planGroups.map((g,gi)=>(
         <div key={gi} style={{marginBottom: gi<planGroups.length-1 ? 44 : 0}}>
@@ -340,7 +342,7 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
       <div style={{display:"flex",alignItems:"center",gap:8}}>
         <div style={{width:26,height:26,background:"linear-gradient(135deg,var(--gold),var(--goldd))",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🎭</div>
         <span style={{fontFamily:"'Playfair Display',serif",fontSize:15,color:"var(--gold)"}}>{APP_NAME}</span>
-        <span style={{fontSize:12,color:"rgba(255,255,255,.3)"}}>© 2026 Artstracker LLC</span>
+        <span style={{fontSize:12,color:"rgba(255,255,255,.3)"}}>{c("landing.footer.copyright","© 2026 Artstracker LLC")}</span>
       </div>
       <div style={{display:"flex",gap:18,fontSize:12,color:"rgba(255,255,255,.35)"}}>
         <a href="/help.html" target="_blank" style={{color:"rgba(255,255,255,.35)",textDecoration:"none"}} onMouseEnter={e=>e.target.style.color="var(--gold)"} onMouseLeave={e=>e.target.style.color="rgba(255,255,255,.35)"}>Help Center</a>

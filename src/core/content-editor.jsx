@@ -4,7 +4,7 @@
 // Tables: site_content (cvalue = published, draft = working) + site_theme (theme / draft_theme).
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
-import { DEFAULT_FEATURES, DEFAULT_STEPS, parseFeatures } from "../lib/landing-defaults.js";
+import { DEFAULT_FEATURES, DEFAULT_STEPS, DEFAULT_SOCIAL, parseFeatures } from "../lib/landing-defaults.js";
 
 const DOORS = [
   { id: "theatre4u",   label: "Theatre4u" },
@@ -40,6 +40,11 @@ const DOOR_DEFAULTS = {
     "landing.story.para3":      "Theatre4u™ keeps track of everything your program owns — and opens the door to a community of programs ready to share resources, collaborate, and support each other.",
     "landing.story.founder_name":  "Robert Zick",
     "landing.story.founder_title": "Founder, Theatre4u™ & Artstracker · 18+ years in the classroom",
+    "landing.pricing.eyebrow":  "Simple, honest pricing",
+    "landing.pricing.heading":  "Plans for every program",
+    "landing.pricing.banner":   "⭐ Everything is free during our beta — these prices begin September 1",
+    "landing.pricing.annual_note": "Annual plans available — save up to 2 months free",
+    "landing.footer.copyright": "© 2026 Artstracker LLC",
   },
   artstracker: {
     logo: "/logo-artstracker.png",
@@ -67,6 +72,11 @@ const DOOR_DEFAULTS = {
     "landing.story.para3":      "ArtsTracker keeps track of everything your program owns — and opens the door to a community of programs ready to share resources, collaborate, and support each other.",
     "landing.story.founder_name":  "Robert Zick",
     "landing.story.founder_title": "Founder, Theatre4u™ & Artstracker · 18+ years in the classroom",
+    "landing.pricing.eyebrow":  "Simple, honest pricing",
+    "landing.pricing.heading":  "Plans for every program",
+    "landing.pricing.banner":   "⭐ Everything is free during our beta — these prices begin September 1",
+    "landing.pricing.annual_note": "Annual plans available — save up to 2 months free",
+    "landing.footer.copyright": "© 2026 Artstracker LLC",
   },
 };
 
@@ -109,6 +119,19 @@ const SECTIONS = [
     { key: "landing.cta.subtext",   label: "Closing sub-text",                 type: "textarea" },
     { key: "landing.cta.button",    label: "Closing button label",             type: "text" },
     { key: "landing.cta.fineprint", label: "Fine print under the button",      type: "text" },
+  ] },
+  { title: "Feature strip (the icon row)", fields: [
+    { key: "landing.social.items", label: "Strip items (icon + label)", type: "social" },
+  ] },
+  { title: "Pricing — section text only (not the actual prices/charges)", fields: [
+    { key: "landing.pricing.eyebrow",     label: "Eyebrow",              type: "text" },
+    { key: "landing.pricing.heading",     label: "Heading",              type: "text" },
+    { key: "landing.pricing.banner_show", label: "Show the beta banner", type: "checkbox" },
+    { key: "landing.pricing.banner",      label: "Beta banner text",     type: "text" },
+    { key: "landing.pricing.annual_note", label: "Annual note",          type: "text" },
+  ] },
+  { title: "Footer", fields: [
+    { key: "landing.footer.copyright", label: "Copyright line", type: "text" },
   ] },
 ];
 const CONTENT_FIELDS = SECTIONS.flatMap(s => s.fields);
@@ -210,10 +233,11 @@ function CtaPreview({ vals, theme, def }) {
 // Compact, representative previews for the sections that aren't text-editable yet — enough to make
 // reordering and show/hide visible in the preview stack. Gold accents follow the draft theme.
 const bar = (w, o) => ({ height: 4, width: w, background: "rgba(255,255,255," + (o || .1) + ")", borderRadius: 2, marginBottom: 4 });
-function MiniSocial() {
+function MiniSocial({ items }) {
+  const list = (items && items.length ? items : []).slice(0, 8);
   return (
     <div style={{ background: "#1a0f06", borderTop: "1px solid rgba(212,168,67,.15)", borderBottom: "1px solid rgba(212,168,67,.15)", padding: "12px 14px", display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
-      {["📦 Inventory", "🎭 Productions", "📱 Mobile", "💰 Funding", "🔄 Exchange", "🎪 Community"].map(t => <span key={t} style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,.7)" }}>{t}</span>)}
+      {list.map((s, i) => <span key={i} style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,.7)" }}>{s.icon} {s.label}</span>)}
     </div>
   );
 }
@@ -253,11 +277,11 @@ function MiniSteps({ gold, deep, items, heading }) {
     </div>
   );
 }
-function MiniPricing({ gold, deep }) {
+function MiniPricing({ gold, deep, heading }) {
   const cols = [["Free", "$0"], ["Pro", "$15"], ["District", "$49"]];
   return (
     <div style={{ background: "#140b06", padding: "18px 16px" }}>
-      <div style={{ textAlign: "center", fontFamily: "'Playfair Display',Georgia,serif", fontSize: 15, color: "#fff", marginBottom: 12 }}>Pricing</div>
+      <div style={{ textAlign: "center", fontFamily: "'Playfair Display',Georgia,serif", fontSize: 15, color: "#fff", marginBottom: 12 }}>{heading}</div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
         {cols.map(([n, pr], i) => (
           <div key={n} style={{ border: i === 1 ? "1px solid " + gold + "88" : "1px solid rgba(255,255,255,.1)", borderRadius: 8, overflow: "hidden" }}>
@@ -347,6 +371,14 @@ export function ContentBrandEditor({ userId }) {
   const removeStep = (i) => setSteps(stepItems.filter((_, idx) => idx !== i));
   const addStep = () => setSteps([...stepItems, { title: "New step", desc: "Describe this step." }]);
 
+  // Feature strip items (icon + label) under landing.social.items.
+  const socialItems = parseFeatures(dc("landing.social.items")) || DEFAULT_SOCIAL[door];
+  const setSocial = (arr) => setDC("landing.social.items", JSON.stringify(arr));
+  const updateSocial = (i, k, val) => setSocial(socialItems.map((it, idx) => idx === i ? { ...it, [k]: val } : it));
+  const moveSocial = (i, dir) => { const a = socialItems.slice(); const j = i + dir; if (j < 0 || j >= a.length) return; const t = a[i]; a[i] = a[j]; a[j] = t; setSocial(a); };
+  const removeSocial = (i) => setSocial(socialItems.filter((_, idx) => idx !== i));
+  const addSocial = () => setSocial([...socialItems, { icon: "✨", label: "New item" }]);
+
   const dirty = (() => {
     for (const k of ALL_CONTENT_KEYS) if ((draft.content[door + "||" + k] ?? "") !== (pub.content[door + "||" + k] ?? "")) return true;
     const pth = pub.theme[door] || {}, dth = draft.theme[door] || {};
@@ -415,6 +447,25 @@ export function ContentBrandEditor({ userId }) {
             </div>
           ))}
           <button onClick={addCard} style={{ padding: "8px 14px", borderRadius: 8, border: "1px dashed #c4922a", background: "#fff", color: "#a5731f", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>+ Add a card</button>
+        </>
+      );
+    }
+    if (f.type === "social") {
+      return (
+        <>
+          <label style={S.label}>{f.label}</label>
+          {socialItems.map((it, i) => (
+            <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+              <input value={it.icon || ""} onChange={e => updateSocial(i, "icon", e.target.value)} placeholder="📦" style={{ ...S.input, width: 52, textAlign: "center", fontSize: 18, padding: "6px" }} />
+              <input value={it.label || ""} onChange={e => updateSocial(i, "label", e.target.value)} placeholder="Label" style={{ ...S.input, flex: 1, minWidth: 0 }} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <button onClick={() => moveSocial(i, -1)} disabled={i === 0} style={arrowBtn(i === 0)}>▲</button>
+                <button onClick={() => moveSocial(i, 1)} disabled={i === socialItems.length - 1} style={arrowBtn(i === socialItems.length - 1)}>▼</button>
+              </div>
+              <button onClick={() => removeSocial(i)} title="Remove" style={{ width: 28, height: 34, borderRadius: 6, border: "1px solid #e2b6b6", background: "#fff", color: "#c0392b", cursor: "pointer", fontSize: 15, fontFamily: "inherit", flexShrink: 0 }}>×</button>
+            </div>
+          ))}
+          <button onClick={addSocial} style={{ padding: "8px 14px", borderRadius: 8, border: "1px dashed #c4922a", background: "#fff", color: "#a5731f", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>+ Add item</button>
         </>
       );
     }
@@ -550,10 +601,10 @@ export function ContentBrandEditor({ userId }) {
               const render = (id) => {
                 switch (id) {
                   case "hero":       return <HeroPreview vals={pv} theme={draftThemeObj} def={defs} />;
-                  case "social":     return <MiniSocial />;
+                  case "social":     return <MiniSocial items={socialItems} />;
                   case "features":   return <MiniFeatures gold={gold} items={featureItems} eyebrow={pv["landing.features.eyebrow"] || defs["landing.features.eyebrow"]} heading={pv["landing.features.heading"] || defs["landing.features.heading"]} />;
                   case "howitworks": return <MiniSteps gold={gold} deep={deep} items={stepItems} heading={pv["landing.howitworks.heading"] || defs["landing.howitworks.heading"]} />;
-                  case "pricing":    return <MiniPricing gold={gold} deep={deep} />;
+                  case "pricing":    return <MiniPricing gold={gold} deep={deep} heading={pv["landing.pricing.heading"] || defs["landing.pricing.heading"]} />;
                   case "finalcta":   return <CtaPreview vals={pv} theme={draftThemeObj} def={defs} />;
                   case "story":      return <MiniStory gold={gold} badge={pv["landing.story.badge"] || defs["landing.story.badge"]} heading1={pv["landing.story.heading1"] || defs["landing.story.heading1"]} heading2={pv["landing.story.heading2"] || defs["landing.story.heading2"]} />;
                   default:           return null;

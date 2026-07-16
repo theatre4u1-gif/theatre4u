@@ -36,7 +36,18 @@ export const DEFAULT_STEPS = {
   ],
 };
 
-// Safely parse an admin-saved features array; returns null if empty/invalid so callers fall back.
+export const DEFAULT_SOCIAL = {
+  theatre4u: [
+    { icon: "📦", label: "Inventory management" }, { icon: "🎭", label: "Productions tracker" }, { icon: "📱", label: "Mobile-ready" },
+    { icon: "💰", label: "Funding Tracker" }, { icon: "🏪", label: "Backstage Exchange" }, { icon: "🎪", label: "Community board" },
+  ],
+  artstracker: [
+    { icon: "📦", label: "Inventory management" }, { icon: "🎭", label: "Productions & events" }, { icon: "📱", label: "Mobile-ready" },
+    { icon: "💰", label: "Funding Tracker" }, { icon: "🔄", label: "The Exchange" }, { icon: "🎪", label: "Community board" },
+  ],
+};
+
+// Safely parse an admin-saved JSON array (features/steps/social); returns null if empty/invalid so callers fall back.
 export function parseFeatures(raw) {
   try {
     if (!raw) return null;
