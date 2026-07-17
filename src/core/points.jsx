@@ -19,6 +19,7 @@ export function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
   const [daysUntilElig, setDaysUntilElig] = useState(null);
   const [redeeming,     setRedeeming]     = useState(false);
   const [redeemMsg,     setRedeemMsg]     = useState("");
+  const [refCopied,     setRefCopied]     = useState(false);
   const isAdmin   = ADMIN_EMAILS?.includes?.(org?.email);
   const isAnnual  = org?.plan_interval === "annual";
   const earnMult  = isAnnual ? 1.5 : 1.0;
@@ -169,10 +170,9 @@ export function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
                 {/* Referral link box */}
                 {(()=>{
                   const refUrl = "https://theatre4u.org?ref=" + org.referral_code;
-                  const [copied, setCopied] = useState(false);
                   const copy = () => {
                     navigator.clipboard.writeText(refUrl).then(()=>{
-                      setCopied(true); setTimeout(()=>setCopied(false), 2500);
+                      setRefCopied(true); setTimeout(()=>setRefCopied(false), 2500);
                     });
                   };
                   return (
@@ -185,11 +185,11 @@ export function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
                       </div>
                       <button onClick={copy}
                         style={{ padding: "9px 18px", borderRadius: 8, border: "none",
-                          background: copied ? "var(--green)" : "var(--gold)",
+                          background: refCopied ? "var(--green)" : "var(--gold)",
                           color: "#1a0f00", fontWeight: 700, fontSize: 13,
                           cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
                           transition: "background .2s" }}>
-                        {copied ? "✓ Copied!" : "Copy Link"}
+                        {refCopied ? "✓ Copied!" : "Copy Link"}
                       </button>
                       <button onClick={()=>fbShare(refUrl,
                         `I use ${APP_NAME} to manage my program's inventory and share resources with other programs through the Exchange. It's free right now — check it out!\n\n${APP_HOST} ` + (IS_ARTSTRACKER ? "#ArtsEducation" : "#Theatre #TheatreEducation"))}
