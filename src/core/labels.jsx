@@ -118,31 +118,34 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
       ));
       const w = window.open("","_blank","width=900,height=700");
       if(!w){setPrinting(false);return;}
+      // Escape user-entered fields before writing them into the print document.
+      const esc = (s)=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
       const labels = toPrint.map((item,n)=>{
         const cat = CAT[item.category]||CAT.other;
         const dispId = item.display_id||item.id.slice(0,8).toUpperCase();
+        const eName = esc(item.name), eLoc = esc(item.location), eId = esc(dispId), eImg = esc(item.img), eCat = esc(cat.label);
         if(withPhoto){
           const photo = item.img
-            ? `<img src="${item.img}" class="pc-img"/>`
+            ? `<img src="${eImg}" class="pc-img"/>`
             : `<div class="pc-noimg">${cat.icon}</div>`;
           return `<div class="pcard">
             ${photo}
             <div class="pc-body">
-              <div class="pc-cat" style="color:${cat.color||"#888"}">${cat.icon} ${cat.label}</div>
-              <div class="pc-name">${item.name}</div>
-              ${item.location?`<div class="pc-loc">📍 ${item.location}</div>`:""}
+              <div class="pc-cat" style="color:${cat.color||"#888"}">${cat.icon} ${eCat}</div>
+              <div class="pc-name">${eName}</div>
+              ${item.location?`<div class="pc-loc">📍 ${eLoc}</div>`:""}
               <div class="pc-foot">
-                <div class="pc-id">${dispId}</div>
+                <div class="pc-id">${eId}</div>
                 ${srcs[n]?`<img src="${srcs[n]}" class="pc-qr"/>`:""}
               </div>
             </div>
           </div>`;
         }
         return `<div class="lbl">
-          <div class="lbl-cat" style="color:${cat.color||"#888"}">${cat.icon} ${cat.label}</div>
-          <div class="lbl-name">${item.name}</div>
-          ${item.location?`<div class="lbl-loc">📍 ${item.location}</div>`:""}
-          <div class="lbl-id">${dispId}</div>
+          <div class="lbl-cat" style="color:${cat.color||"#888"}">${cat.icon} ${eCat}</div>
+          <div class="lbl-name">${eName}</div>
+          ${item.location?`<div class="lbl-loc">📍 ${eLoc}</div>`:""}
+          <div class="lbl-id">${eId}</div>
           ${srcs[n]?`<img src="${srcs[n]}" class="lbl-qr"/>`:""}
           <div class="lbl-brand">${APP_HOST}</div>
         </div>`;

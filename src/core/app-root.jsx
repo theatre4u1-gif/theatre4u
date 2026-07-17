@@ -214,7 +214,10 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
         window.history.replaceState({}, "", window.location.pathname + window.location.hash);
         // Refresh org data — try immediately then again after 3s for webhook processing
         const refresh = async () => {
-          const { data: freshOrg } = await SB.from("orgs").select("*").eq("id", user.id).single();
+          // Refresh the org that was ACTIVE when checkout began (not necessarily the
+          // owner's primary org == user.id) — read the saved active-program id.
+          const activeId = (()=>{ try { return localStorage.getItem("t4u_active_program"); } catch(e){ return null; } })() || user.id;
+          const { data: freshOrg } = await SB.from("orgs").select("*").eq("id", activeId).single();
           if(freshOrg) {
             setOrg(prev => ({ ...prev, ...freshOrg }));
             const ep = freshOrg.stripe_subscription_id ? freshOrg.plan
@@ -463,7 +466,8 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   },[user,activeOrgId]);
 
   const del = useCallback(async(id)=>{
-    await SB.from("items").delete().eq("id",id);
+    const { error } = await SB.from("items").delete().eq("id",id);
+    if(error){ alert("Couldn't delete that item — please try again."); return; }
     setItems(p=>p.filter(x=>x.id!==id));
   },[]);
 
@@ -481,8 +485,9 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   const setPlan = useCallback(async(newPlan)=>{
     setPlanState(newPlan);
     setOrg(p=>({...p,plan:newPlan}));
-    await SB.from("orgs").update({plan:newPlan}).eq("id",user.id);
-  },[user]);
+    const { error } = await SB.from("orgs").update({plan:newPlan}).eq("id",activeOrgId);
+    if(error){ console.warn("setPlan failed:", error.message); alert("Couldn't update the plan — please try again."); }
+  },[activeOrgId]);
 
   // Founding members: one-click $9.99 checkout (forever coupon pre-applied, first charge Sept 1).
   const [foundingBusy, setFoundingBusy] = useState(false);
@@ -499,14 +504,15 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
 
   const saveOrg = useCallback(async(o)=>{
     setOrg(o);
-    let update = {...o, id:user.id};
+    let update = {...o, id:activeOrgId};
     // Auto-geocode zipcode when saving profile
     if(o.zipcode && o.zipcode.length===5 && o.zipcode!==org.zipcode){
       const coords = await zipToCoords(o.zipcode);
       if(coords){ update.lat=coords.lat; update.lng=coords.lng; update.state=update.state||coords.state; }
     }
-    await SB.from("orgs").upsert(update);
-  },[user,org.zipcode]);
+    const { error } = await SB.from("orgs").upsert(update);
+    if(error) alert("Couldn't save your changes — please try again.");
+  },[activeOrgId,org.zipcode]);
 
   const signOut = async()=>{ await SB.auth.signOut(); };
 
@@ -667,7 +673,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       }
 
       // Check if this org is already in a different district
-      const { data: currentOrg } = await SB.from("orgs").select("district_id,name").eq("id", user.id).single();
+      const { data: currentOrg } = await SB.from("orgs").select("district_id,name").eq("id", activeOrgId).single();
       if (currentOrg?.district_id && currentOrg.district_id !== invite.district_id) {
         const districtName = invite.districts?.name || "this district";
         const confirmed = window.confirm(
@@ -679,11 +685,12 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       }
 
       // Link org to district + mark invite accepted
-      await SB.from("orgs").update({ district_id: invite.district_id, role: "school_admin" }).eq("id", user.id);
+      const { error: joinErr } = await SB.from("orgs").update({ district_id: invite.district_id, role: "school_admin" }).eq("id", activeOrgId);
+      if(joinErr){ alert("Couldn't join the district — please try again."); return; }
       await SB.from("district_invites").update({ status: "accepted", accepted_at: new Date().toISOString() }).eq("id", invite.id);
       clearInvite();
       // Reload org data to pick up new district_id
-      const { data: updatedOrg } = await SB.from("orgs").select("*").eq("id", user.id).single();
+      const { data: updatedOrg } = await SB.from("orgs").select("*").eq("id", activeOrgId).single();
       if (updatedOrg) setOrg(updatedOrg);
       alert(`✓ You've joined ${invite.districts?.name || "the district"}! Your account and inventory are now linked. Welcome to ${APP_NAME}.`);
     })();

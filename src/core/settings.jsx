@@ -502,7 +502,7 @@ function SelfServiceDeleteAccount({ user, org }) {
     setWorking(true); setErr("");
     const { data: { session } } = await SB.auth.getSession();
     const result = await callEdgeFn("close-org", {
-      org_id: user.id, reason: reason || "Owner requested", action: "close", is_admin_action: false
+      org_id: org?.id || user.id, reason: reason || "Owner requested", action: "close", is_admin_action: false
     }, session?.access_token);
     if (result?.success) {
       setDone(true);
@@ -858,7 +858,8 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
                 if(error) failed++;
               }
               // Also try a bulk delete by org_id as belt-and-suspenders
-              await SB.from("items").delete().eq("org_id",user.id);
+              const { error: bulkErr } = await SB.from("items").delete().eq("org_id",userId);
+              if(bulkErr) console.warn("bulk delete fallback failed:", bulkErr.message);
               setItems([]);
               if(failed>0) window.alert("Deleted with "+failed+" error(s). Refresh if items remain.");
               else window.alert("All inventory items deleted.");
