@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { APP_NAME, APP_EMAIL, APP_HOST, IS_ARTSTRACKER } from "./config.js";
 import { SB } from "./supabase.js";
 import { BG, usp } from "../lib/backgrounds.js";
-import { fbShare, getPointsName } from "./helpers.js";
+import { fbShare, getPointsName, doorUrl } from "./helpers.js";
 import { ADMIN_EMAILS } from "./config.js";
 import { POINTS_FREE_MONTH } from "./points-config.js";
 
@@ -169,7 +169,7 @@ export function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
                 </div>
                 {/* Referral link box */}
                 {(()=>{
-                  const refUrl = "https://theatre4u.org?ref=" + org.referral_code;
+                  const refUrl = doorUrl(org) + "?ref=" + org.referral_code;
                   const copy = () => {
                     navigator.clipboard.writeText(refUrl).then(()=>{
                       setRefCopied(true); setTimeout(()=>setRefCopied(false), 2500);

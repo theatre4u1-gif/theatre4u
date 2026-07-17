@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { EM } from "./messages.js";
 import { CSS } from "./styles.js";
-import { APP_NAME, IS_ARTSTRACKER } from "./config.js";
+import { APP_NAME, IS_ARTSTRACKER, APP_URL, APP_EMAIL, APP_HOST } from "./config.js";
 import { LegalModal } from "./ui.jsx";
 import { TERMS_CONTENT, PRIVACY_CONTENT } from "./legal.js";
 import { authErrKey, getRefCode, isDemoMode } from "./helpers.js";
@@ -76,7 +76,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
         if(!ownerName.trim()){setErr("Please enter your name.");setLoading(false);return;}
         if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
         // All signups during beta get temp_pro — no access code needed
-        const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName},emailRedirectTo:"https://theatre4u.org"}});
+        const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName},emailRedirectTo:APP_URL}});
         if(error){
           if(error.message?.toLowerCase().includes('already registered')||error.message?.toLowerCase().includes('already exists')){
             setMode("login");
@@ -561,10 +561,10 @@ export function AuthScreen({onAuth}){
         if(code){
           const{data:cd,error:codeErr}=await SB.from("beta_codes").select("code,max_uses,used_count,active").eq("code",code).eq("active",true).single();
           if(codeErr||!cd){throw new Error("Invalid or expired access code. Please check with your contact.");}
-          if(cd.used_count>=cd.max_uses){throw new Error("This access code has reached its limit. Contact hello@theatre4u.org.");}
+          if(cd.used_count>=cd.max_uses){throw new Error("This access code has reached its limit. Contact "+APP_EMAIL+".");}
           codeData = cd;
         }
-        const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName},emailRedirectTo:"https://theatre4u.org"}});
+        const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName},emailRedirectTo:APP_URL}});
         if(error)throw error;
         if(data.user){
           const isLeadingPlayer = !!code;
@@ -667,7 +667,7 @@ export function AuthScreen({onAuth}){
           {mode==="login"&&<button onClick={resetPass} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:"var(--faint)",fontSize:12.5,cursor:"pointer",fontFamily:"'Raleway',sans-serif",textDecoration:"underline"}}>Forgot password?</button>}
           {mode==="signup"&&<p style={{fontSize:12,color:"var(--faint)",textAlign:"center",marginTop:14,lineHeight:1.6}}>Free to start — no credit card needed. By creating an account you agree to our{" "}<span onClick={()=>setLegal("terms")} style={{color:"var(--goldink)",textDecoration:"underline",cursor:"pointer"}}>Terms of Service</span>{" "}and{" "}<span onClick={()=>setLegal("privacy")} style={{color:"var(--goldink)",textDecoration:"underline",cursor:"pointer"}}>Privacy Policy</span>.</p>}
         </div>
-        <p style={{textAlign:"center",color:"rgba(255,255,255,.25)",fontSize:12,marginTop:20}}>Theatre4u™ · Artstracker LLC · theatre4u.org</p>
+        <p style={{textAlign:"center",color:"rgba(255,255,255,.25)",fontSize:12,marginTop:20}}>{APP_NAME} · Artstracker LLC · {APP_HOST}</p>
       </div>
       {legal==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegal(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
       {legal==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegal(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}

@@ -39,7 +39,7 @@ function TeamSettings({ userId, orgName, plan }) {
 
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(""), 3500); };
 
-  const inviteUrl = joinCode ? `https://theatre4u.org/invite.html?code=${joinCode}` : null;
+  const inviteUrl = joinCode ? `https://${APP_HOST}/invite.html?code=${joinCode}` : null;
 
   // Generate a QR image for the join link whenever the code is available.
   // Retries a few times — the QR generator loads from a CDN and can fail the
@@ -268,7 +268,7 @@ function TeamSettings({ userId, orgName, plan }) {
                 </div>
               </div>
               <button onClick={() => {
-                const url = `https://theatre4u.org/invite.html?token=${inv.token}`;
+                const url = `https://${APP_HOST}/invite.html?token=${inv.token}`;
                 if (navigator.clipboard?.writeText) {
                   navigator.clipboard.writeText(url)
                     .then(() => flash("✓ Invite link copied!"))

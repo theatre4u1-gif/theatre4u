@@ -5,7 +5,7 @@ import { SB } from "./supabase.js";
 import { Modal, Pager, HeroImg, CatCard, CatThumb } from "./ui.jsx";
 import { Ic } from "./icons.jsx";
 import { EM } from "./messages.js";
-import { fmt$, uid } from "./helpers.js";
+import { fmt$, uid, doorUrl } from "./helpers.js";
 import { CAT, CATS, CAT_GFX, CONDS, SIZES, AVAIL, MKT, getCatsMerged, customCatsFor } from "./inventory.js";
 import { QR } from "./qr.js";
 import { PLANS_DEF } from "./plans.js";
@@ -229,7 +229,7 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
       <div class="grid" id="lbl">Generating labels…</div>
       </body></html>`);
       w.document.close();
-      const srcs = await Promise.all(toPrint.map(i => QR.toDataURL("https://theatre4u.org/#/item/" + i.id, 140)));
+      const srcs = await Promise.all(toPrint.map(i => QR.toDataURL(doorUrl(org) + "/#/item/" + i.id, 140)));
       const labels = toPrint.map((item, n) => {
         const cat = CAT[item.category] || CAT.other;
         const dispId = item.display_id || item.id.slice(0,8).toUpperCase();

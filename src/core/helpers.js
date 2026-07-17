@@ -1,4 +1,5 @@
 import { APP_NAME, APP_HOST, IS_ARTSTRACKER } from "./config.js";
+import { doorOf } from "../lib/admin-metrics.js";
 // Small shared helpers — extracted from App.jsx.
 
 // Short unique-ish id generator (used for local item ids before DB insert).
@@ -99,10 +100,15 @@ export function fbShare(url, quote="") {
   window.open("https://www.facebook.com/sharer/sharer.php?" + params, "fb-share", "width=600,height=500,scrollbars=yes");
 }
 
-export const getPointsName = (vertical) => (!vertical || vertical === "theatre") ? "Stage Points" : "Encore Points";
+export const getPointsName = (vertical) => (!vertical || vertical === "theatre") ? "Stage Points" : "ArtsPoints";
+
+// The brand-door host/url for a specific program (music/dance/art/booster => ArtsTracker;
+// theatre follows its signup domain). Use for QR codes and links tied to a program.
+export const doorHost = (org) => doorOf(org) === "artstracker" ? "artstracker.org" : "theatre4u.org";
+export const doorUrl  = (org) => "https://" + doorHost(org);
 
 export function itemShareUrl(item) {
-  return "https://theatre4u.org/#/item/" + (item.display_id || item.id);
+  return "https://" + APP_HOST + "/#/item/" + (item.display_id || item.id);
 }
 
 export function itemShareText(item, orgName) {

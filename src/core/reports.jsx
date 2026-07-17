@@ -5,7 +5,7 @@ import { CAT, CATS, CONDS, AVAIL, MKT } from "./inventory.js";
 import { BG, usp } from "../lib/backgrounds.js";
 import { Ic } from "./icons.jsx";
 import { UpgradePlans } from "./billing.jsx";
-import { fmt$ } from "./helpers.js";
+import { fmt$, doorUrl, doorHost } from "./helpers.js";
 import { QR } from "./qr.js";
 import { printProductionReport } from "./productions.jsx";
 import { getExchangeName, getTerm } from "../lib/verticals.js";
@@ -41,7 +41,7 @@ export function Reports({ items, plan="free", org=null, userId=null, userEmail=n
   const printAllQR = async () => {
     const w=window.open("","_blank");if(!w)return;
     w.document.write(`<html><head><title>${APP_NAME} QR Labels</title></head><body style="font-family:sans-serif;padding:16px"><h2 style="font-size:14px;margin-bottom:16px;color:#333">Theatre4u™ — QR Labels (${items.length} items)</h2><div id="lbl">Generating…</div></body></html>`);w.document.close();
-    const srcs=await Promise.all(items.map(i=>QR.toDataURL("https://theatre4u.org/#/item/"+i.id,140)));
+    const srcs=await Promise.all(items.map(i=>QR.toDataURL(doorUrl(org)+"/#/item/"+i.id,140)));
     const labels=items.map((i,n)=>`<div style="display:inline-block;text-align:center;padding:10px;border:1px dashed #ccc;margin:5px;width:160px;vertical-align:top"><img src="${srcs[n]||""}" width="100" height="100"/><div style="font-size:10px;font-weight:700;margin-top:5px;word-break:break-word">${i.name}</div><div style="font-size:8px;color:#888;margin-top:2px">${i.category} · ${i.id.slice(0,8)}</div></div>`).join("");
     const el=w.document.getElementById("lbl");if(el){el.outerHTML=labels;setTimeout(()=>w.print(),400);}
   };
@@ -269,7 +269,7 @@ export function PlatformUsageReport({ items, org, plan }) {
       <h2>Why This Matters</h2>
       <p style="font-size:13px;line-height:1.8;color:#444">Theatre programs typically manage hundreds of thousands of dollars in physical assets — costumes, lighting equipment, sound systems, and set materials — with no formal inventory system. Items go missing, get double-purchased, or sit unused while neighboring schools pay commercial rental rates for the same gear.</p>
       <p style="font-size:13px;line-height:1.8;color:#444">${APP_NAME} gives <strong>${orgName}</strong> a permanent, searchable record of every item the program owns. QR labels allow any staff member to instantly look up any item with their phone camera. The Backstage Exchange enables schools within the district to share resources freely — reducing program expenses and maximizing the return on arts investment.</p>
-      <div style="margin-top:40px;padding-top:16px;border-top:1px solid #e0d5c0;font-size:10px;color:#aaa;text-align:center">${APP_NAME} — Artstracker LLC · theatre4u.org · Report generated ${today}</div>
+      <div style="margin-top:40px;padding-top:16px;border-top:1px solid #e0d5c0;font-size:10px;color:#aaa;text-align:center">${APP_NAME} — Artstracker LLC · ${doorHost(org)} · Report generated ${today}</div>
     </div></body></html>`;
     w.document.write(html);
     w.document.close();

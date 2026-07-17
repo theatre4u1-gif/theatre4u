@@ -2,7 +2,7 @@
 // Components: CommunityPostForm, CommunityPostCard, CommunityPage, CommunityGate.
 // Constants: POST_TYPES, PT. Only CommunityGate is rendered by App.jsx.
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { APP_NAME } from "./config.js";
+import { APP_NAME, APP_URL } from "./config.js";
 import { SB } from "./supabase.js";
 import { Ic } from "./icons.jsx";
 import { resizeImg, postShareText } from "./helpers.js";
@@ -201,7 +201,7 @@ function CommunityPostCard({post, orgName, onEdit, onDelete, isOwn}) {
             {post.ticket_url&&<a href={post.ticket_url} target="_blank" rel="noreferrer" className="btn btn-o btn-sm" style={{fontSize:11,padding:"3px 10px"}}>🎟️ Tickets</a>}
             {post.contact_email&&<a href={`mailto:${post.contact_email}`} className="btn btn-o btn-sm" style={{fontSize:11,padding:"3px 10px"}}>✉️ Contact</a>}
             <FbShareBtn
-              url={"https://theatre4u.org/#/community"}
+              url={APP_URL+"/#/community"}
               text={postShareText(post, orgName)}
               compact={true}
               style={{fontSize:11,padding:"3px 9px"}}

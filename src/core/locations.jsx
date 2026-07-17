@@ -2,7 +2,7 @@
 // Extracted from App.jsx. LocationsPanel is the entry point (Inventory's
 // Locations tab); the other three are module-internal.
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { APP_NAME } from "./config.js";
+import { APP_NAME, APP_URL } from "./config.js";
 import { SB } from "./supabase.js";
 import { Modal } from "./ui.jsx";
 import { EM } from "./messages.js";
@@ -402,7 +402,7 @@ export function LocationsPanel({ userId, items, onEditItem, onDeleteItem, vertic
 
   // Print QR label for a location container
   const printLocationQR = async (loc) => {
-    const qrUrl = `https://theatre4u.org/#/location/${loc.id}`;
+    const qrUrl = `${APP_URL}/#/location/${loc.id}`;
     const qrSrc = await QR.toDataURL(qrUrl, 200);
     if (!qrSrc) return;
     const w = window.open("", "_blank", "width=420,height=540");

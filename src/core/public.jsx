@@ -2,7 +2,7 @@
 // LandingPage, PublicOrgPage, PublicItemPage (+ UnassignedLabelAssigner, internal).
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
-import { APP_NAME, LOGO_ICON, LOGO_FULL, IS_ARTSTRACKER } from "./config.js";
+import { APP_NAME, LOGO_ICON, LOGO_FULL, IS_ARTSTRACKER, APP_URL, APP_EMAIL } from "./config.js";
 import { getRefCode } from "./helpers.js";
 import { CAT_MAP } from "./inventory.js";
 import { QR } from "./qr.js";
@@ -344,7 +344,7 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
         <a href="/contact.html" target="_blank" style={{color:"rgba(255,255,255,.35)",textDecoration:"none"}} onMouseEnter={e=>e.target.style.color="var(--gold)"} onMouseLeave={e=>e.target.style.color="rgba(255,255,255,.35)"}>Contact</a>
         <span style={{cursor:"pointer"}} onClick={onSignIn}>Sign In</span>
         <span style={{cursor:"pointer"}} onClick={onSignUp}>Sign Up</span>
-        <span>hello@theatre4u.org</span>
+        <span>{APP_EMAIL}</span>
       </div>
     </div>
   </div>);
@@ -387,7 +387,7 @@ export function PublicOrgPage({ slug }) {
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"var(--gold)",lineHeight:1}}>{APP_NAME}</div>
         <div style={{fontSize:10,color:"rgba(255,255,255,.4)",letterSpacing:2,textTransform:"uppercase"}}>Inventory · Backstage Exchange · Community</div>
       </div>
-      <a href="https://theatre4u.org" style={{marginLeft:"auto",fontSize:12,color:"var(--gold)",textDecoration:"none",border:"1px solid rgba(212,168,67,.3)",borderRadius:6,padding:"5px 12px"}}>Visit Site →</a>
+      <a href={APP_URL} style={{marginLeft:"auto",fontSize:12,color:"var(--gold)",textDecoration:"none",border:"1px solid rgba(212,168,67,.3)",borderRadius:6,padding:"5px 12px"}}>Visit Site →</a>
     </div>
   );
 
@@ -502,7 +502,7 @@ export function PublicOrgPage({ slug }) {
             </>)}
 
             <div style={{textAlign:"center",marginTop:20}}>
-              <a href="https://theatre4u.org?signin=1"
+              <a href={`${APP_URL}?signin=1`}
                 style={{display:"inline-flex",alignItems:"center",gap:8,padding:"11px 24px",
                   background:"linear-gradient(135deg,#c4922a,#8b6914)",color:"#1a0f00",
                   borderRadius:8,textDecoration:"none",fontSize:14,fontWeight:700}}>
@@ -583,7 +583,7 @@ function UnassignedLabelAssigner({ labelCode, onDone }) {
       <div style={{color:"rgba(255,255,255,.5)",fontSize:13,marginBottom:16}}>
         Sign in to assign this label to one of your inventory items.
       </div>
-      <a href={`https://theatre4u.org?signin=1&next=${encodeURIComponent("#/item/"+labelCode)}`}
+      <a href={`${APP_URL}?signin=1&next=${encodeURIComponent("#/item/"+labelCode)}`}
         style={{display:"inline-block",padding:"11px 28px",
           background:"linear-gradient(135deg,#c4922a,#8b6914)",
           borderRadius:8,color:"#1a0f00",fontWeight:700,
@@ -778,7 +778,7 @@ export function PublicItemPage({ itemId }) {
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:"var(--gold)",lineHeight:1}}>{APP_NAME}</div>
         <div style={{fontSize:10,color:"rgba(255,255,255,.4)",letterSpacing:2,textTransform:"uppercase"}}>Inventory · Backstage Exchange · Community</div>
       </div>
-      <a href="https://theatre4u.org" style={{marginLeft:"auto",fontSize:12,color:"var(--gold)",textDecoration:"none",border:"1px solid rgba(212,168,67,.3)",borderRadius:6,padding:"5px 12px"}}>Visit Site →</a>
+      <a href={APP_URL} style={{marginLeft:"auto",fontSize:12,color:"var(--gold)",textDecoration:"none",border:"1px solid rgba(212,168,67,.3)",borderRadius:6,padding:"5px 12px"}}>Visit Site →</a>
     </div>
   );
 
@@ -852,7 +852,7 @@ export function PublicItemPage({ itemId }) {
               <div style={{color:"rgba(255,255,255,.6)",fontSize:14,marginBottom:24}}>
                 Next time someone scans this label, they'll see the item details.
               </div>
-              <a href="https://theatre4u.org" style={{display:"inline-block",
+              <a href={APP_URL} style={{display:"inline-block",
                 padding:"10px 24px",background:"linear-gradient(135deg,#c4922a,#8b6914)",
                 borderRadius:8,color:"#1a0f00",fontWeight:700,textDecoration:"none",fontSize:14}}>
                 Back to Theatre4u →
@@ -870,7 +870,7 @@ export function PublicItemPage({ itemId }) {
                   ? "This QR label was printed with an older format. The item owner needs to reprint the label from their Theatre4u inventory."
                   : "This item may have been deleted or the QR label may be damaged."}
               </div>
-              <a href="https://theatre4u.org?signin=1" style={{display:"inline-block",padding:"10px 24px",background:"linear-gradient(135deg,#c4922a,#8b6914)",borderRadius:8,color:"#1a0f00",fontWeight:700,textDecoration:"none",fontSize:14}}>
+              <a href={`${APP_URL}?signin=1`} style={{display:"inline-block",padding:"10px 24px",background:"linear-gradient(135deg,#c4922a,#8b6914)",borderRadius:8,color:"#1a0f00",fontWeight:700,textDecoration:"none",fontSize:14}}>
                 Sign In to Theatre4u →
               </a>
             </div>
@@ -939,7 +939,7 @@ export function PublicItemPage({ itemId }) {
               </div>
             )}
             {/* Open in App — deep links to the item in the main app */}
-            <a href={"https://theatre4u.org/#/item/"+(item.display_id||itemId)}
+            <a href={APP_URL+"/#/item/"+(item.display_id||itemId)}
               style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,
                 marginTop:16,background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.25)",
                 color:"var(--gold)",padding:"10px 16px",borderRadius:8,
@@ -978,7 +978,7 @@ export function PublicItemPage({ itemId }) {
                    "You can manage this loan through the Backstage Exchange in your Theatre4u account."}
                 </p>
               </div>
-              <a href={"https://theatre4u.org?signin=1&next="+encodeURIComponent("#/item/"+itemId)}
+              <a href={APP_URL+"?signin=1&next="+encodeURIComponent("#/item/"+itemId)}
                 style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"linear-gradient(135deg,#c4922a,#8b6914)",color:"#1a0f00",padding:"12px 16px",borderRadius:8,textDecoration:"none",fontSize:14,fontWeight:700}}>
                 🎭 Open in Theatre4u →
               </a>
@@ -1015,7 +1015,7 @@ export function PublicItemPage({ itemId }) {
                     {rentalPrice>0&&salePrice>0 ? " · " : ""}
                     {salePrice>0 ? ("$"+Number(salePrice).toFixed(2)) : ""}
                   </div>
-                  <a href={"https://theatre4u.org?signin=1&next="+encodeURIComponent("#/item/"+itemId)}
+                  <a href={APP_URL+"?signin=1&next="+encodeURIComponent("#/item/"+itemId)}
                     style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"linear-gradient(135deg,#c4922a,#8b6914)",color:"#1a0f00",padding:"10px 16px",borderRadius:8,textDecoration:"none",fontSize:13,fontWeight:700}}>
                     Request via Backstage Exchange →
                   </a>
@@ -1035,7 +1035,7 @@ export function PublicItemPage({ itemId }) {
                   )}
                 </div>
               )}
-              <a href={"https://theatre4u.org?signin=1&next="+encodeURIComponent("#/item/"+itemId)}
+              <a href={APP_URL+"?signin=1&next="+encodeURIComponent("#/item/"+itemId)}
                 style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"linear-gradient(135deg,#1a3a2a,#0d2419)",border:"1px solid rgba(76,175,80,.3)",color:"rgba(255,255,255,.8)",padding:"10px 16px",borderRadius:8,textDecoration:"none",fontSize:13,fontWeight:600,marginTop:8}}>
                 🎭 Open in Theatre4u
               </a>
@@ -1076,7 +1076,7 @@ export function PublicItemPage({ itemId }) {
                   )}
                 </div>
               )}
-              <a href={"https://theatre4u.org?signin=1&next="+encodeURIComponent("#/item/"+itemId)}
+              <a href={APP_URL+"?signin=1&next="+encodeURIComponent("#/item/"+itemId)}
                 style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"linear-gradient(135deg,#c4922a,#8b6914)",color:"#1a0f00",padding:"12px 16px",borderRadius:8,textDecoration:"none",fontSize:14,fontWeight:700}}>
                 🎭 Sign In to Theatre4u
               </a>

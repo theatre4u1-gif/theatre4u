@@ -456,7 +456,7 @@ export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, ca
     w.document.close();
   };
 
-  const dlQR=async()=>{const qId=item.display_id||item.id;const u=await QR.toDataURL("https://theatre4u.org/#/item/"+qId,300);if(!u)return;const a=document.createElement("a");a.href=u;a.download="T4U-"+(item.display_id||item.id)+".png";a.click();};
+  const dlQR=async()=>{const qId=item.display_id||item.id;const u=await QR.toDataURL(APP_URL+"/#/item/"+qId,300);if(!u)return;const a=document.createElement("a");a.href=u;a.download="T4U-"+(item.display_id||item.id)+".png";a.click();};
 
   return(
     <>

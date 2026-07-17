@@ -3,6 +3,7 @@
 // inside Inventory and Backstage Exchange.
 import React, { useState, useEffect } from "react";
 import { APP_NAME } from "./config.js";
+import { doorUrl } from "./helpers.js";
 import { SB } from "./supabase.js";
 
 export function ExternalLoans({ userId, org, items=[] }){
@@ -74,7 +75,7 @@ export function ExternalLoans({ userId, org, items=[] }){
 
   const invite = (l) => {
     const subject = encodeURIComponent("Join us on "+APP_NAME.replace("™",""));
-    const body = encodeURIComponent(`Hi ${l.counterparty_name},\n\nWe use ${APP_NAME} to track our program's inventory and to borrow, lend, and rent items with other programs. It would make sharing between us much easier if you joined too — it's free to start.\n\nYou can sign up here: https://theatre4u.org\n\nThanks!\n${org?.name||""}`);
+    const body = encodeURIComponent(`Hi ${l.counterparty_name},\n\nWe use ${APP_NAME} to track our program's inventory and to borrow, lend, and rent items with other programs. It would make sharing between us much easier if you joined too — it's free to start.\n\nYou can sign up here: ${doorUrl(org)}\n\nThanks!\n${org?.name||""}`);
     const to = (l.counterparty_contact && l.counterparty_contact.includes("@")) ? l.counterparty_contact : "";
     window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
   };
