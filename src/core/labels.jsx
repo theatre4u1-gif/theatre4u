@@ -46,6 +46,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
   const [printing, setPrinting] = useState(false);
   const [withPhoto, setWithPhoto] = useState(false);
   const [cardSize, setCardSize]   = useState(1); // index into PHOTO_SIZES (default: Card 2.5x3.5)
+  const [fitMode, setFitMode]     = useState("cover"); // cover = crop to fill, contain = show whole photo
 
   // Assign tab state
   const [assignCode, setAssignCode] = useState("");
@@ -171,7 +172,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
         .lbl-brand{font-size:7px;color:#aaa}
         .pcard{width:${cw}px;height:${ch}px;border:1.5px solid #222;border-radius:8px;overflow:hidden;
           display:flex;flex-direction:column;page-break-inside:avoid;background:#fff}
-        .pc-img{width:100%;height:${ph}px;object-fit:cover;display:block;background:#f2f2f2}
+        .pc-img{width:100%;height:${ph}px;object-fit:${fitMode};display:block;background:#f2f2f2}
         .pc-noimg{width:100%;height:${ph}px;display:flex;align-items:center;justify-content:center;font-size:${Math.round(ph*0.34)}px;background:#f2f2f2}
         .pc-body{padding:${pad}px ${pad+2}px;display:flex;flex-direction:column;gap:3px;flex:1;min-height:0}
         .pc-cat{font-size:${fCat}px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
@@ -360,6 +361,15 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
                 style={{padding:"7px 10px",borderRadius:7,border:"1px solid var(--border)",
                   background:"var(--white)",color:"var(--text)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
                 {PHOTO_SIZES.map((s,i)=><option key={s.id} value={i}>{s.label}</option>)}
+              </select>
+            )}
+            {withPhoto&&(
+              <select value={fitMode} onChange={e=>setFitMode(e.target.value)}
+                title="How the photo fills the card"
+                style={{padding:"7px 10px",borderRadius:7,border:"1px solid var(--border)",
+                  background:"var(--white)",color:"var(--text)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+                <option value="cover">Crop to fill</option>
+                <option value="contain">Show whole photo</option>
               </select>
             )}
             <button onClick={selAll} style={{padding:"7px 13px",borderRadius:7,border:"1px solid var(--border)",
