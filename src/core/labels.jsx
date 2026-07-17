@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { CAT } from "./inventory.js";
 import { QR } from "./qr.js";
-import { APP_NAME, APP_EMAIL, APP_HOST } from "./config.js";
+import { APP_NAME, APP_EMAIL } from "./config.js";
+import { doorOf } from "../lib/admin-metrics.js";
 
 const LABEL_PACKS = [
   { qty:25,  type:"standard",    label:"25 Standard",     retail:1000, desc:"Indoor use · polyester matte · water-resistant" },
@@ -113,8 +114,11 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
     if(!toPrint.length) return;
     setPrinting(true);
     try {
+      // Point the QR at the program's own door (music/dance/art/booster => ArtsTracker;
+      // theatre follows its signup domain). Both doors resolve /#/item/ the same way.
+      const brandHost = doorOf(org) === "artstracker" ? "artstracker.org" : "theatre4u.org";
       const srcs = await Promise.all(toPrint.map(i=>
-        QR.toDataURL("https://theatre4u.org/#/item/"+i.id, 160)
+        QR.toDataURL("https://"+brandHost+"/#/item/"+i.id, 160)
       ));
       const w = window.open("","_blank","width=900,height=700");
       if(!w){setPrinting(false);return;}
@@ -147,7 +151,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
           ${item.location?`<div class="lbl-loc">📍 ${eLoc}</div>`:""}
           <div class="lbl-id">${eId}</div>
           ${srcs[n]?`<img src="${srcs[n]}" class="lbl-qr"/>`:""}
-          <div class="lbl-brand">${APP_HOST}</div>
+          <div class="lbl-brand">${brandHost}</div>
         </div>`;
       }).join("");
       const noun = withPhoto ? "card" : "label";
