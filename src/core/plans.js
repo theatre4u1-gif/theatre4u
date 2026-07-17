@@ -27,6 +27,8 @@ export const PLANS_DEF = {
   free:     { label:"Free",     maxItems:25,  marketplace:false, reports:false, allVerticals:false, monthlyPrice:0,  annualPrice:0   },
   pro:      { label:"Pro",      maxItems:Infinity, marketplace:true,  reports:true,  allVerticals:false, monthlyPrice:15, annualPrice:150 },
   district: { label:"District", maxItems:Infinity, marketplace:true,  reports:true,  allVerticals:false, monthlyPrice:49, annualPrice:500 },
+  district_m:{ label:"District M", maxItems:Infinity, marketplace:true, reports:true, allVerticals:false, monthlyPrice:99,  annualPrice:999  },
+  district_l:{ label:"District L", maxItems:Infinity, marketplace:true, reports:true, allVerticals:false, monthlyPrice:179, annualPrice:1799 },
   // ArtsTracker (all-verticals) track — allVerticals:true unlocks all 5 departments. Not yet enforced (needs vertical-switcher UX + webhook mapping).
   at_pro:        { label:"ArtsTracker Pro",        maxItems:Infinity, marketplace:true, reports:true, allVerticals:true, monthlyPrice:59,  annualPrice:590  },
   at_district_s: { label:"ArtsTracker District S", maxItems:Infinity, marketplace:true, reports:true, allVerticals:true, monthlyPrice:199, annualPrice:1990 },

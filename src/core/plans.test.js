@@ -6,7 +6,7 @@ describe("plan gates", () => {
     expect(PLANS_DEF.free.maxItems).toBe(25);
   });
   it("paid plans are unlimited", () => {
-    for (const p of ["pro", "district", "at_pro", "at_district_s", "at_district_m", "at_district_l"]) {
+    for (const p of ["pro", "district", "district_m", "district_l", "at_pro", "at_district_s", "at_district_m", "at_district_l"]) {
       expect(PLANS_DEF[p].maxItems).toBe(Infinity);
     }
   });
@@ -26,6 +26,12 @@ describe("current prices — guard against accidental changes (see Pricing-and-B
   it("Theatre4u District S is $49 / $500", () => {
     expect(PLANS_DEF.district.monthlyPrice).toBe(49);
     expect(PLANS_DEF.district.annualPrice).toBe(500);
+  });
+  it("Theatre4u District M / L exist and are $99/$999 and $179/$1,799", () => {
+    expect(PLANS_DEF.district_m.monthlyPrice).toBe(99);
+    expect(PLANS_DEF.district_m.annualPrice).toBe(999);
+    expect(PLANS_DEF.district_l.monthlyPrice).toBe(179);
+    expect(PLANS_DEF.district_l.annualPrice).toBe(1799);
   });
   it("ArtsTracker monthly ladder is 59 / 199 / 399 / 699", () => {
     expect(PLANS_DEF.at_pro.monthlyPrice).toBe(59);
