@@ -238,7 +238,7 @@ window.addEventListener('error', function(e) {
     '<div style="font-size:48px;margin-bottom:16px">⚠️</div>' +
     '<div style="font-size:18px;font-weight:700;margin-bottom:8px">App failed to load</div>' +
     '<div style="font-size:13px;color:#8a8aa0;margin-bottom:16px">' + (e.message||'Unknown error') + '</div>' +
-    '<a href="https://theatre4u.org" style="color:#d4a843">Return to theatre4u.org</a>' +
+    '<a href="'+BRAND_URL+'" style="color:#d4a843">Return to '+BRAND_HOST+'</a>' +
     '</div>';
 });
 window.addEventListener('unhandledrejection', function(e) {
@@ -248,7 +248,7 @@ window.addEventListener('unhandledrejection', function(e) {
       '<div style="font-size:48px;margin-bottom:16px">⚠️</div>' +
       '<div style="font-size:18px;font-weight:700;margin-bottom:8px">App failed to load</div>' +
       '<div style="font-size:13px;color:#8a8aa0;margin-bottom:16px">Network error loading app components. Check your connection.</div>' +
-      '<a href="https://theatre4u.org" style="color:#d4a843">Return to theatre4u.org</a>' +
+      '<a href="'+BRAND_URL+'" style="color:#d4a843">Return to '+BRAND_HOST+'</a>' +
       '</div>';
   }
 });
@@ -278,6 +278,8 @@ const IS_ARTSTRACKER = location.hostname.includes("artstracker");
 const APP_NAME = IS_ARTSTRACKER ? "ArtsTracker" : "Theatre4u™";
 const APP_TAGLINE = IS_ARTSTRACKER ? "Inventory · Exchange · Community for Arts Programs" : "Inventory · Backstage Exchange · Community";
 const APP_ICON = IS_ARTSTRACKER ? "🎨" : "🎭";
+const BRAND_URL  = IS_ARTSTRACKER ? "https://artstracker.org" : "https://theatre4u.org";
+const BRAND_HOST = IS_ARTSTRACKER ? "artstracker.org" : "theatre4u.org";
 document.title = APP_NAME;
 if (IS_ARTSTRACKER) {
   const ic = document.querySelector('link[rel="icon"]'); if (ic){ ic.href = "/favicon-artstracker.png"; ic.type = "image/png"; }
@@ -509,11 +511,11 @@ function InstallBanner() {
         ", then tap Share → Add to Home Screen."
       ),
       h("a",{
-        href:"safari-web-content://theatre4u.org/app",
+        href:"safari-web-content://"+BRAND_HOST+"/app",
         onClick:e=>{
           e.preventDefault();
           // Copy URL and prompt to open in Safari
-          if(navigator.clipboard){navigator.clipboard.writeText("https://theatre4u.org/app");}
+          if(navigator.clipboard){navigator.clipboard.writeText(BRAND_URL+"/app");}
           alert("URL copied! Paste it into Safari and use Share → Add to Home Screen to install the app.");
         },
         style:{fontSize:12,color:"var(--gold)",fontWeight:700,textDecoration:"underline",cursor:"pointer"}
@@ -593,7 +595,7 @@ function AuthScreen({onAuth}) {
         loading?"Signing in…":"Sign In →"
       ),
       h("div",{style:{textAlign:"center",fontSize:12,color:"var(--muted)",marginTop:12}},
-        "Use the same login as theatre4u.org"
+        "Use the same login as "+BRAND_HOST
       )
     )
   );
@@ -612,7 +614,7 @@ function ItemDetail({item, onBack, onEdited, onDeleted, userId, plan}) {
   const [heroIdx, setHI] = useState(0);
   const mktCls = item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="For Loan"?"mb-loan":item.mkt==="Rent or Sale"?"mb-both":"mb-none";
 
-  useEffect(()=>{ genQR("https://theatre4u.org/#/item/"+item.id, 160).then(setQr); },[item.id]);
+  useEffect(()=>{ genQR(BRAND_URL+"/#/item/"+item.id, 160).then(setQr); },[item.id]);
 
   const deleteItem = async () => {
     await SB.from("items").delete().eq("id", item.id);
@@ -1462,7 +1464,7 @@ function ProfileTab({user, org, onSignOut}) {
 
       h("div",{className:"card card-p",style:{marginBottom:16}},
         h("div",{style:{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:14}},"Platform"),
-        h("a",{href:"https://theatre4u.org",target:"_blank",rel:"noreferrer",style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid var(--border)",textDecoration:"none",color:"var(--text)",fontSize:14}},
+        h("a",{href:BRAND_URL,target:"_blank",rel:"noreferrer",style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid var(--border)",textDecoration:"none",color:"var(--text)",fontSize:14}},
           h("span",null,"Open "+APP_NAME.replace("™","")+" Web"),h("span",{style:{color:"var(--muted)"}},"→")
         ),
         h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid var(--border)",fontSize:14}},
@@ -1483,7 +1485,7 @@ function ProfileTab({user, org, onSignOut}) {
         ),
         isIOSChrome && !isStandalone && h("div",{style:{marginTop:10,padding:"10px 12px",background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.2)",borderRadius:8,fontSize:12,color:"var(--muted)",lineHeight:1.6}},
           "💡 Everything works in Chrome! To install as a home screen app, open ",
-          h("strong",{style:{color:"var(--text)"}},"theatre4u.org/app")," in Safari and use Share → Add to Home Screen."
+          h("strong",{style:{color:"var(--text)"}},BRAND_HOST+"/app")," in Safari and use Share → Add to Home Screen."
         )
       ),
       h("button",{className:"btn btn-danger btn-full",onClick:onSignOut,style:{marginBottom:32}},"Sign Out")
@@ -1623,7 +1625,7 @@ function FundingMobileTab({userId}) {
           h("div",{style:{fontSize:10,color:"var(--muted)",fontWeight:700,textTransform:"uppercase",letterSpacing:.5,marginTop:2}},"Expenditures")
         )
       ),
-      h("div",{style:{fontSize:11,color:"var(--muted)",marginTop:6,textAlign:"center"}},"Full reports available at theatre4u.org")
+      h("div",{style:{fontSize:11,color:"var(--muted)",marginTop:6,textAlign:"center"}},"Full reports available at "+BRAND_HOST)
     ),
     h("div",{className:"screen"},
       loading
@@ -1633,7 +1635,7 @@ function FundingMobileTab({userId}) {
               h("div",{className:"ei"},"💰"),
               h("h3",null,"No Funding Sources"),
               h("p",null,"Add funding sources on the web app first, then log expenditures here on the go."),
-              h("a",{href:"https://theatre4u.org",className:"btn btn-gold"},"Open theatre4u.org")
+              h("a",{href:BRAND_URL,className:"btn btn-gold"},"Open "+BRAND_HOST)
             )
           : exps.length===0
             ? h("div",{className:"empty"},
@@ -1765,7 +1767,7 @@ function App() {
     h("p",{style:{fontSize:15,color:"var(--muted)",lineHeight:1.7,maxWidth:320}},
       "The "+APP_NAME+" mobile app is included with Pro and District plans. Upgrade at "+(IS_ARTSTRACKER?"artstracker.org":"theatre4u.org")+" to unlock mobile inventory management, Funding Tracker, and QR scanning."
     ),
-    h("a",{href:"https://theatre4u.org",style:{background:"linear-gradient(135deg,#d4a843,#8a6a20)",color:"#1a1000",padding:"14px 32px",borderRadius:10,fontWeight:700,fontSize:16,textDecoration:"none"}},"Upgrade at theatre4u.org →"),
+    h("a",{href:BRAND_URL,style:{background:"linear-gradient(135deg,#d4a843,#8a6a20)",color:"#1a1000",padding:"14px 32px",borderRadius:10,fontWeight:700,fontSize:16,textDecoration:"none"}},"Upgrade at "+BRAND_HOST+" →"),
     h("button",{onClick:signOut,style:{background:"none",border:"none",color:"var(--muted)",fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",marginTop:8}},"Sign out")
   );
 
@@ -1815,7 +1817,10 @@ const manifest = {
   name:APP_NAME,short_name:APP_NAME,description:APP_TAGLINE,
   start_url:"/app",display:"standalone",background_color:"#0a0a0f",theme_color:"#0a0a0f",
   orientation:"portrait",
-  icons:[
+  icons: IS_ARTSTRACKER ? [
+    {src:"/icon-192-artstracker.png",sizes:"192x192",type:"image/png"},
+    {src:"/icon-512-artstracker.png",sizes:"512x512",type:"image/png"}
+  ] : [
     {src:"/icon-192-theatre4u.png",sizes:"192x192",type:"image/png"},
     {src:"/icon-512-theatre4u.png",sizes:"512x512",type:"image/png"},
     {src:"/favicon-theatre4u.svg",sizes:"any",type:"image/svg+xml"}
