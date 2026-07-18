@@ -165,8 +165,8 @@ function CommunityPostCard({post, orgName, onEdit, onDelete, isOwn}) {
             </div>
           </div>
           {isOwn&&<div style={{display:"flex",gap:4,flexShrink:0}}>
-            <button className="ico-btn" onClick={()=>onEdit(post)}>{Ic.edit}</button>
-            <button className="ico-btn" style={{color:"var(--red)"}} onClick={()=>onDelete(post.id)}>{Ic.trash}</button>
+            <button className="ico-btn" aria-label="Edit post" onClick={()=>onEdit(post)}>{Ic.edit}</button>
+            <button className="ico-btn" aria-label="Delete post" style={{color:"var(--red)"}} onClick={()=>onDelete(post.id)}>{Ic.trash}</button>
           </div>}
         </div>
 
@@ -396,7 +396,7 @@ function CommunityPage({userId, org, plan}) {
                       <div style={{fontSize:12,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.title}</div>
                       <div style={{fontSize:10,color:"var(--muted)"}}>{new Date(p.created_at).toLocaleDateString()}</div>
                     </div>
-                    <button className="ico-btn" style={{flexShrink:0,color:"var(--red)"}} onClick={()=>deletePost(p.id)}>{Ic.trash}</button>
+                    <button className="ico-btn" aria-label="Delete post" style={{flexShrink:0,color:"var(--red)"}} onClick={()=>deletePost(p.id)}>{Ic.trash}</button>
                   </div>
                 ))}
               </div>

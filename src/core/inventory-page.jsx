@@ -301,8 +301,8 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
       </div>
       <div style={{padding:"24px 36px 56px",position:"relative",zIndex:1}}>
         <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:14,alignItems:"center"}}>
-          <div className="srch">{Ic.search}<input value={search} onChange={e=>setSrch(e.target.value)} placeholder="Search items, tags, location…"/></div>
-          <button className="ico-btn" style={showF?{borderColor:"var(--gold)",color:"var(--cog)"}:{}} onClick={()=>setShowF(!showF)}>{Ic.filter}</button>
+          <div className="srch">{Ic.search}<input aria-label="Search inventory" value={search} onChange={e=>setSrch(e.target.value)} placeholder="Search items, tags, location…"/></div>
+          <button className="ico-btn" aria-label="Filters" style={showF?{borderColor:"var(--gold)",color:"var(--cog)"}:{}} onClick={()=>setShowF(!showF)}>{Ic.filter}</button>
           <div className="vtog"><button className={view==="grid"?"on":""} onClick={()=>setView("grid")}>Grid</button><button className={view==="table"?"on":""} onClick={()=>setView("table")}>Table</button><button className={view==="locations"?"on":""} onClick={()=>setView("locations")}>📦 Locations</button></div>
           {canEdit&&<button
             onClick={()=>{ setSelectMode(m=>!m); setSelected(new Set()); setBulkField(""); setBulkValue(""); setBulkMsg(""); }}
@@ -576,8 +576,8 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
                       <td>{item.avail}</td>
                       <td><span className={"mkt-badge "+mktCls(item.mkt)}>{item.mkt}</span></td>
                       <td><div style={{display:"flex",gap:4}}>
-                        {!selectMode&&<button className="ico-btn" onClick={e=>{e.stopPropagation();openE(item)}}>{Ic.edit}</button>}
-                        {!selectMode&&canDelete&&<button className="ico-btn" style={{color:"var(--red)"}} onClick={e=>{e.stopPropagation();if(window.confirm("Delete?"))onDelete(item.id)}}>{Ic.trash}</button>}
+                        {!selectMode&&<button className="ico-btn" aria-label="Edit item" onClick={e=>{e.stopPropagation();openE(item)}}>{Ic.edit}</button>}
+                        {!selectMode&&canDelete&&<button className="ico-btn" aria-label="Delete item" style={{color:"var(--red)"}} onClick={e=>{e.stopPropagation();if(window.confirm("Delete?"))onDelete(item.id)}}>{Ic.trash}</button>}
                       </div></td>
                     </tr>
                   );

@@ -112,7 +112,7 @@ export function BulkPhotoAdd({ userId, vertical = "theatre", cats = [], onClose,
                   {cats.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
                 </select>
                 <input className="fi" style={{ width: 56 }} type="number" min="1" step="1" value={r.qty} onChange={(e) => upd(r.key, "qty", parseInt(e.target.value) || 1)} title="Quantity" />
-                <button type="button" className="ico-btn" onClick={() => remove(r.key)} title="Remove">✕</button>
+                <button type="button" className="ico-btn" aria-label="Remove photo" onClick={() => remove(r.key)} title="Remove">✕</button>
               </div>
             ))}
           </div>}

@@ -36,7 +36,7 @@ export function Modal({title,onClose,children,footer}){
   return(
     <div className="overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="modal" onClick={e=>e.stopPropagation()}>
-        <div className="modal-hd"><h2>{title}</h2><button className="ico-btn" onClick={onClose}>{Ic.x}</button></div>
+        <div className="modal-hd"><h2>{title}</h2><button className="ico-btn" aria-label="Close" onClick={onClose}>{Ic.x}</button></div>
         <div className="modal-bd">{children}</div>
         {footer&&<div className="modal-ft">{footer}</div>}
       </div>
