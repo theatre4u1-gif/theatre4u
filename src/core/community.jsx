@@ -378,7 +378,7 @@ function CommunityPage({userId, org, plan}) {
                     <button className="btn btn-g" onClick={()=>{setActive(null);setModal("add");}}>+ Share Something</button>
                   </div>
                 :filtered.map(post=>(
-                    <CommunityPostCard key={post.id} post={post} orgName={orgs[post.org_id]||"A Theatre Program"} isOwn={post.org_id===userId} onEdit={p=>{setActive(p);setModal("edit");}} onDelete={deletePost}/>
+                    <CommunityPostCard key={post.id} post={post} orgName={orgs[post.org_id]||"A program"} isOwn={post.org_id===userId} onEdit={p=>{setActive(p);setModal("edit");}} onDelete={deletePost}/>
                   ))
             }
           </div>
@@ -458,9 +458,9 @@ export function CommunityGate({userId, org, setOrg, plan}) {
           <img src={usp("photo-1503095396549-807759245b35",1100,290)} alt="Community" loading="eager"/>
           <div className="hero-fade"/>
           <div className="hero-body">
-            <div className="hero-eyebrow">🎪 Theatre Community</div>
+            <div className="hero-eyebrow">🎪 {getVertical(org?.vertical).label} Community</div>
             <h1 className="hero-title" style={{fontSize:44}}>Community Board</h1>
-            <p className="hero-sub">Connect with theatre programs across the network.</p>
+            <p className="hero-sub">Connect with {getVertical(org?.vertical).label.toLowerCase()} programs across the network.</p>
           </div>
           <div className="hero-bar"/>
         </div>
@@ -475,9 +475,9 @@ export function CommunityGate({userId, org, setOrg, plan}) {
           </p>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:24}}>
             {[
-              ["🎭","Post Show Announcements","Let the network know about your upcoming productions."],
-              ["🎤","Share Audition Notices","Find talent and help others find their next role."],
-              ["📸","Share Production Photos","Celebrate your work with the broader community."],
+              ["🎭",`Post ${getTerm(org?.vertical,'showAnnouncement')}s`,`Let the network know about your upcoming ${getTerm(org?.vertical,'productions').toLowerCase()}.`],
+              ["🎤",`Share ${getTerm(org?.vertical,'auditionNotice')}`,"Find people and help others find their next opportunity."],
+              ["📸",`Share ${getTerm(org?.vertical,'productionPhotos')}`,"Celebrate your work with the broader community."],
               ["🔍","Post Wanted Items","Let others know what you're looking for."],
             ].map(([icon,title,desc])=>(
               <div key={title} style={{padding:"14px",background:"var(--parch)",borderRadius:10,border:"1px solid var(--linen)"}}>

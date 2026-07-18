@@ -8,7 +8,7 @@ import { SB } from "./supabase.js";
 import { Modal, Pager, FbShareBtn, HeroImg, CatCard } from "./ui.jsx";
 import { Ic } from "./icons.jsx";
 import { EM } from "./messages.js";
-import { fmt$, itemShareUrl, itemShareText, CSV_FIELDS, parseCSV, autoMatch } from "./helpers.js";
+import { fmt$, itemShareUrl, itemShareText, CSV_FIELDS, parseCSV, autoMatch, getPointsName } from "./helpers.js";
 import { CAT, CATS, CONDS, SIZES, AVAIL, MKT } from "./inventory.js";
 import { BG, usp } from "../lib/backgrounds.js";
 import { getExchangeName } from "../lib/verticals.js";
@@ -488,7 +488,7 @@ function NewConversationModal({ item, itemOrgId, itemOrgName, currentUserId, cur
             value={body}
             onChange={e=>setBody(e.target.value)}
             placeholder={item
-              ? `Hi! I saw your listing for "${item.name}" on ${APP_NAME}. Is it available for our production running March 15–22?`
+              ? `Hi! I saw your listing for "${item.name}" on ${APP_NAME}. Is it still available? We'd love to borrow or rent it.`
               : `Hi! I found your organization on ${APP_NAME} and wanted to reach out…`}
             autoFocus
             rows={5}
@@ -905,7 +905,7 @@ export function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool,
           <div className="hero-body">
             <div className="hero-eyebrow">🏪 {getExchangeName(org?.vertical)}</div>
             <h1 className="hero-title" style={{fontSize:46}}>{getExchangeName(org?.vertical)}</h1>
-            <p className="hero-sub">Rent, buy, or loan theatre assets from programs near you.</p>
+            <p className="hero-sub">Rent, buy, or loan resources from programs near you.</p>
           </div>
           <div className="hero-bar"/>
         </div>
@@ -920,9 +920,9 @@ export function MarketplaceGate({items, org, setOrg, plan, userId, activeSchool,
           </p>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:24}}>
             {[
-              ["🔍","Browse Nearby","Find costumes, props, lighting and sound from programs in your area."],
+              ["🔍","Browse Nearby","Find items shared by programs in your area."],
               ["💰","Earn Revenue","List items for rent or sale and earn income for your program."],
-              ["🤝","Share Resources","Loan items to other programs and earn Stage Points in return."],
+              ["🤝","Share Resources",`Loan items to other programs and earn ${getPointsName(org?.vertical)} in return.`],
             ].map(([icon,title,desc])=>(
               <div key={title} style={{padding:"14px",background:"var(--parch)",borderRadius:10,border:"1px solid var(--linen)",textAlign:"center"}}>
                 <div style={{fontSize:28,marginBottom:8}}>{icon}</div>

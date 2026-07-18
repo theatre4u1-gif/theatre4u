@@ -54,15 +54,15 @@ function CommunitySpotlight({onViewAll}){
   };
 
   const PT_COLORS={show:"#7b1fa2",audition:"#1565c0",photo:"#c2185b",wanted:"#d84315",announcement:"#2e7d32"};
-  const PT_ICONS ={show:"🎭",audition:"🎤",photo:"📸",wanted:"🔍",announcement:"📢"};
-  const PT_LABELS={show:"Upcoming Show",audition:"Audition Notice",photo:"Production Photos",wanted:"Item Wanted",announcement:"Announcement"};
+  const PT_ICONS ={show:"📅",audition:"🎤",photo:"📸",wanted:"🔍",announcement:"📢"};
+  const PT_LABELS={show:"Upcoming Event",audition:"Audition Notice",photo:"Event Photos",wanted:"Item Wanted",announcement:"Announcement"};
 
   // Empty state — encourage first post
   if(posts.length===0) return(
     <div style={{background:"var(--parch)",border:"2px dashed var(--border)",borderRadius:"var(--rl)",padding:"32px 24px",textAlign:"center",marginBottom:32}}>
       <div style={{fontSize:40,marginBottom:10}}>🎪</div>
       <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:20,marginBottom:6}}>Nothing posted yet</h3>
-      <p style={{color:"var(--muted)",fontSize:13,maxWidth:380,margin:"0 auto 16px",lineHeight:1.6}}>Be the first to share an upcoming show, post an audition notice, or connect with your theatre community.</p>
+      <p style={{color:"var(--muted)",fontSize:13,maxWidth:380,margin:"0 auto 16px",lineHeight:1.6}}>Be the first to share an update, post a notice, or connect with your community.</p>
       <button className="btn btn-g" onClick={onViewAll}>+ Post to Community Board</button>
     </div>
   );
@@ -71,7 +71,7 @@ function CommunitySpotlight({onViewAll}){
   const color = PT_COLORS[post.type]||"#7b1fa2";
   const icon  = PT_ICONS[post.type]||"📢";
   const label = PT_LABELS[post.type]||"Post";
-  const orgName = orgs[post.org_id]||"A Theatre Program";
+  const orgName = orgs[post.org_id]||"A program";
 
   return(
     <div style={{marginBottom:32}}>
@@ -323,7 +323,7 @@ export function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMa
                 Complete your profile
               </div>
               <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>
-                Add your location, phone, and bio so other programs can find and contact you in Backstage Exchange.
+                Add your location, phone, and bio so other programs can find and contact you in the Exchange.
               </div>
             </div>
             <div style={{color:"var(--goldink)",fontSize:18,flexShrink:0}}>→</div>

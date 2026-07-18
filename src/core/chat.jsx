@@ -144,7 +144,7 @@ export function Messages({ userId, orgName, openConvId, onClearOpenConv }) {
               <div style={{fontSize:36,marginBottom:10}}>💬</div>
               <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:6}}>No messages yet</div>
               <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>
-                Start a conversation by finding a program in Backstage Exchange, or wait for someone to reach out to you here.
+                Start a conversation by finding a program in the Exchange, or wait for someone to reach out to you here.
               </div>
             </div>
           ) : (
@@ -210,7 +210,7 @@ export function Messages({ userId, orgName, openConvId, onClearOpenConv }) {
             <div style={{fontSize:56}}>💬</div>
             <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"var(--ink)"}}>Your Messages</div>
             <div style={{fontSize:14,color:"var(--muted)",maxWidth:340,textAlign:"center",lineHeight:1.6}}>
-              Select a conversation on the left, or click "+ New" to message any organization. You can also contact programs directly from Backstage Exchange.
+              Select a conversation on the left, or click "+ New" to message any organization. You can also contact programs directly from the Exchange.
             </div>
           </div>
         )}

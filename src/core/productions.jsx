@@ -10,7 +10,7 @@ import { CATS, CAT } from "./inventory.js";
 import { Ic } from "./icons.jsx";
 import { parseCSV } from "./helpers.js";
 import { usp } from "../lib/backgrounds.js";
-import { getTerm, getVertical } from "../lib/verticals.js";
+import { getTerm, getVertical, getExchangeName } from "../lib/verticals.js";
 
 // ══════════════════════════════════════════════════════════════════════════════
 // PRODUCTIONS  (Show Folders)
@@ -222,7 +222,7 @@ export async function printProductionReport(prod, needs, prodItems, allItems, or
   const statusLabel = { needed:"Still Needed", searching:"Searching", found:"Found",
     acquired:"Acquired", not_needed:"Not Needed" };
   const sourceLabel  = { unknown:"TBD", in_house:"From Our Inventory",
-    exchange:"Backstage Exchange", borrow:"Borrowing", buy:"Purchasing", donate:"Donated" };
+    exchange:"The Exchange", borrow:"Borrowing", buy:"Purchasing", donate:"Donated" };
 
   // Stats
   const totalNeeds = needs.length;
@@ -736,7 +736,7 @@ const NEED_STATUSES = [
 const NEED_SOURCES = [
   { key:"unknown",   label:"Source TBD"      },
   { key:"in_house",  label:"From Our Inventory" },
-  { key:"exchange",  label:"Backstage Exchange" },
+  { key:"exchange",  label:"The Exchange" },
   { key:"borrow",    label:"Borrowing"       },
   { key:"buy",       label:"Purchasing"      },
   { key:"donate",    label:"Donated"         },
@@ -1015,7 +1015,7 @@ function ProductionNeedsChecklist({ prod, allItems, userId, org, onNavigateToExc
           onClick={onNavigateToExchange}>
           <span style={{ fontSize:20 }}>🏪</span>
           <div style={{ flex:1 }}>
-            <div style={{ fontSize:12, fontWeight:700, color:"var(--blue)" }}>Check Backstage Exchange</div>
+            <div style={{ fontSize:12, fontWeight:700, color:"var(--blue)" }}>Check the {getExchangeName(org?.vertical)}</div>
             <div style={{ fontSize:11, color:"var(--muted)" }}>
               Other programs near you may have items on your needs list available to borrow or rent.
             </div>
