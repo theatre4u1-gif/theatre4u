@@ -1716,18 +1716,19 @@ export function DistrictDashboard({ user, plan, onSwitchSchool }) {
                       {school.type || "School"}
                     </span>
                   </div>
-                  <div style={{ display: "flex", gap: 6, marginTop: "auto", paddingTop: 8, borderTop: "1px solid var(--border)" }}>
-                    <button className="btn btn-g btn-sm" style={{ flex: 1 }}
-                      onClick={() => onSwitchSchool(school)}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: "auto", paddingTop: 8, borderTop: "1px solid var(--border)" }}>
+                    <button className="btn btn-g btn-sm" onClick={() => onSwitchSchool(school)}>
                       Enter School →
                     </button>
-                    <button className="btn btn-o btn-sm" onClick={() => openDirectors(school)}>
-                      👤 Directors
-                    </button>
-                    <button className="btn btn-o btn-sm" style={{ color: "rgba(255,100,100,.7)", borderColor: "rgba(255,100,100,.2)" }}
-                      onClick={() => removeSchool(school.id)}>
-                      Remove
-                    </button>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button className="btn btn-o btn-sm" style={{ flex: 1, minWidth: 0 }} onClick={() => openDirectors(school)}>
+                        👤 Directors
+                      </button>
+                      <button className="btn btn-o btn-sm" style={{ flex: 1, minWidth: 0, color: "rgba(255,100,100,.7)", borderColor: "rgba(255,100,100,.2)" }}
+                        onClick={() => removeSchool(school.id)}>
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
