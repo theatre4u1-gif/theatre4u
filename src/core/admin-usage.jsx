@@ -47,11 +47,13 @@ export function UsageDashboard({ door = "all" }) {
       try {
         const login30 = new Date(Date.now() - 30 * DAY).toISOString();
         const sess14 = new Date(Date.now() - 14 * DAY).toISOString();
-        const [loginRes, orgsRes, usageRes, sessRes] = await Promise.all([
+        const [loginRes, orgsRes, usageRes, sessRes, locRes, invRes] = await Promise.all([
           SB.from("login_events").select("org_id,created_at").gte("created_at", login30).limit(50000),
-          SB.from("orgs").select("id,name,plan,temp_pro,founding_member,stripe_subscription_id,last_seen,deleted_at,vertical,signup_domain").is("deleted_at", null),
+          SB.from("orgs").select("id,name,plan,temp_pro,founding_member,stripe_subscription_id,last_seen,created_at,deleted_at,vertical,signup_domain").is("deleted_at", null),
           SB.from("org_platform_usage").select("*").limit(20000),
           SB.from("app_sessions").select("org_id,started_at,last_seen_at").gte("started_at", sess14).limit(20000),
+          SB.from("storage_locations").select("org_id").limit(50000),
+          SB.from("org_invites").select("org_id").limit(50000),
         ]);
         if (!alive) return;
         if (orgsRes.error) throw orgsRes.error;
@@ -67,6 +69,22 @@ export function UsageDashboard({ door = "all" }) {
         const lastActive = (o) => lastActiveTs(o, usageMap[o.id]);
         const counts = { a7: 0, a30: 0, dormant: 0, inactive: 0, never: 0 };
         orgs.forEach(o => { counts[activeBucket(lastActive(o), now)]++; });
+
+        // Activation milestones — computed from existing data (no new event tracking).
+        // The item tiers are a true funnel (25 ⊂ 5 ⊂ 1 ⊂ signup); location/team/return are milestones.
+        const orgIds = new Set(orgs.map(o => o.id));
+        const itemsOf = (id) => (usageMap[id]?.total_items) || 0;
+        const locSet = new Set((locRes.data || []).map(r => r.org_id).filter(id => orgIds.has(id)));
+        const teamSet = new Set((invRes.data || []).map(r => r.org_id).filter(id => orgIds.has(id)));
+        const funnel = [
+          { label: "Signed up", n: orgs.length },
+          { label: "Added an item", n: orgs.filter(o => itemsOf(o.id) >= 1).length },
+          { label: "5+ items", n: orgs.filter(o => itemsOf(o.id) >= 5).length },
+          { label: "25+ items (founding threshold)", n: orgs.filter(o => itemsOf(o.id) >= 25).length },
+          { label: "Created a storage location", n: orgs.filter(o => locSet.has(o.id)).length },
+          { label: "Invited a teammate", n: orgs.filter(o => teamSet.has(o.id)).length },
+          { label: "Returned after day 1", n: orgs.filter(o => o.last_seen && o.created_at && (new Date(o.last_seen) - new Date(o.created_at)) > DAY).length },
+        ];
 
         // logins per day (30d)
         const logins = (loginRes.data || []).filter(e => inDoor(e.org_id));
@@ -86,7 +104,7 @@ export function UsageDashboard({ door = "all" }) {
         const needsAttention = usage.filter(u => (u.total_items || 0) > 0 && u._active && (now - u._active) / DAY > 30)
           .sort((a, b) => (b.total_items || 0) - (a.total_items || 0)).slice(0, 12);
 
-        setD({ counts, total: orgs.length, loginSeries, distinctLogins, totalLogins: logins.length, sessSeries, avgMin, sessCount: sess.length, mostActive, needsAttention });
+        setD({ counts, total: orgs.length, funnel, loginSeries, distinctLogins, totalLogins: logins.length, sessSeries, avgMin, sessCount: sess.length, mostActive, needsAttention });
       } catch (e) { if (alive) setErr(e.message || String(e)); }
     })();
     return () => { alive = false; };
@@ -110,6 +128,25 @@ export function UsageDashboard({ door = "all" }) {
         <Stat label="Active ≤ 30 days" value={d.counts.a30 + d.counts.a7} accent="#1a7f37" sub="includes this-week" />
         <Stat label="Dormant 30–90d" value={d.counts.dormant} accent="#c07a00" />
         <Stat label="Inactive 90d+ / never" value={d.counts.inactive + d.counts.never} accent="#a5342b" />
+      </div>
+
+      <H>Activation funnel</H>
+      <div style={card}>
+        {d.funnel.map((s, i) => {
+          const pct = d.total ? Math.round(s.n / d.total * 100) : 0;
+          return (
+            <div key={i} style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 3 }}>
+                <span style={{ color: "#3a3a3a" }}>{s.label}</span>
+                <span style={{ color: "#9a9284" }}>{s.n} · {pct}%</span>
+              </div>
+              <div style={{ background: "#efe9de", borderRadius: 6, height: 10, overflow: "hidden" }}>
+                <div style={{ width: pct + "%", height: "100%", background: "#c4922a" }} />
+              </div>
+            </div>
+          );
+        })}
+        <div style={{ fontSize: 11, color: "#b3aa98", marginTop: 4 }}>Share of signed-up programs reaching each milestone{door !== "all" ? " (" + door + ")" : ""}. Shows where activation drops off.</div>
       </div>
 
       <H>Logins — last 30 days</H>
