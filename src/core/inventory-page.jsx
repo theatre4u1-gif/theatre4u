@@ -57,6 +57,8 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
   const[search,setSrch]=useState("");const[catF,setCatF]=useState("all");
   const[condF,setCondF]=useState("all");const[availF,setAvailF]=useState("all");
   const[mktF,setMktF]=useState("all");const[view,setView]=useState("grid"); // grid | table | locations
+  const[tagF,setTagF]=useState(()=>new Set()); // active tag filters (item must have ALL selected)
+  const toggleTag=(t)=>setTagF(prev=>{const n=new Set(prev);n.has(t)?n.delete(t):n.add(t);return n;});
   const[showF,setShowF]=useState(false);const[pg,setPg]=useState(1);
   const[modal,setModal]=useState(null);const[active,setActive]=useState(null);
   const[showImport,setShowImport]=useState(false);
@@ -163,6 +165,8 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
   };
   const PP=20;
   const mktCls=m=>m==="For Rent"?"mb-rent":m==="For Sale"?"mb-sale":m==="Rent or Sale"?"mb-both":m==="For Loan"?"mb-loan":"mb-none";
+  // Every tag in use across this inventory, most-used first (for the filter chips).
+  const allTags=useMemo(()=>{const m=new Map();items.forEach(i=>(i.tags||[]).forEach(t=>{if(t)m.set(t,(m.get(t)||0)+1);}));return[...m.keys()].sort((a,b)=>(m.get(b)-m.get(a))||a.localeCompare(b));},[items]);
   const filtered=useMemo(()=>{
     let f=items;
     if(search){const q=search.toLowerCase();f=f.filter(i=>i.name.toLowerCase().includes(q)||(i.notes||"").toLowerCase().includes(q)||(i.location||"").toLowerCase().includes(q)||(i.display_id||"").toLowerCase().includes(q)||(i.tags||[]).some(t=>t.includes(q)))}
@@ -170,14 +174,15 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
     if(condF!=="all")f=f.filter(i=>i.condition===condF);
     if(availF!=="all")f=f.filter(i=>i.avail===availF);
     if(mktF!=="all")f=f.filter(i=>i.mkt===mktF);
+    if(tagF.size)f=f.filter(i=>{const it=new Set(i.tags||[]);for(const t of tagF)if(!it.has(t))return false;return true;});
     if(locFilter!=="all")f=f.filter(i=>
       i.location_id===locFilter ||
       (i.location&&locFilterName&&i.location.toLowerCase()===locFilterName.name.toLowerCase())
     );
     return f;
-  },[items,search,catF,condF,availF,mktF,locFilter,locFilterName]);
+  },[items,search,catF,condF,availF,mktF,tagF,locFilter,locFilterName]);
   const paged=useMemo(()=>filtered.slice((pg-1)*PP,pg*PP),[filtered,pg]);
-  useEffect(()=>setPg(1),[search,catF,condF,availF,mktF]);
+  useEffect(()=>setPg(1),[search,catF,condF,availF,mktF,tagF]);
   const openD=item=>{setActive(item);setModal("d")};
   const openE=item=>{setActive(item);setModal("e")};
   const handleSave=async form=>{
@@ -448,6 +453,22 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
             <div><label>Availability</label><select value={availF} onChange={e=>setAvailF(e.target.value)}><option value="all">All</option>{vAVAIL.map(a=><option key={a}>{a}</option>)}</select></div>
             <div><label>Exchange Status</label><select value={mktF} onChange={e=>setMktF(e.target.value)}><option value="all">All</option>{vMKT.map(s=><option key={s}>{s}</option>)}</select></div>
             <button className="btn btn-o btn-sm" onClick={()=>{setCatF("all");setCondF("all");setAvailF("all");setMktF("all")}}>Clear</button>
+          </div>
+        )}
+        {allTags.length>0&&(
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center",marginBottom:14}}>
+            <span style={{fontSize:11,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:.5,marginRight:2}}>🏷 Tags</span>
+            {allTags.map(t=>{
+              const on=tagF.has(t);
+              return <button key={t} onClick={()=>toggleTag(t)}
+                style={{padding:"3px 10px",borderRadius:12,border:"1px solid",cursor:"pointer",fontFamily:"inherit",fontSize:12,
+                  fontWeight:on?700:500,borderColor:on?"var(--gold)":"var(--border)",
+                  background:on?"rgba(212,168,67,.15)":"transparent",color:on?"var(--cog)":"var(--muted)"}}>
+                #{t}{on?" ✕":""}
+              </button>;
+            })}
+            {tagF.size>0&&<button onClick={()=>setTagF(new Set())}
+              style={{fontSize:12,color:"var(--muted)",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",textDecoration:"underline"}}>clear tags</button>}
           </div>
         )}
         {!gsHide&&invView==="items"&&view!=="locations"&&items.length<5&&(
