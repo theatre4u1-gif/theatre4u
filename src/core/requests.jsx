@@ -3,13 +3,15 @@
 // (+ DOC_TYPES, NOTIFY_URL, printDocument). Exports the two App.jsx entry points:
 // RequestItemModal (rendered by Marketplace) and Requests (main router page).
 import React, { useState, useEffect, useCallback } from "react";
-import { APP_NAME, APP_HOST } from "./config.js";
+import { APP_NAME, APP_HOST, IS_ARTSTRACKER } from "./config.js";
 import { SB } from "./supabase.js";
 import { Modal } from "./ui.jsx";
 import { EM } from "./messages.js";
 import { fmt$ } from "./helpers.js";
 import { BG, usp } from "../lib/backgrounds.js";
 import { PLATFORM_FEE_PCT, MILESTONE_POINTS, POINT_EARN_RATES } from "./points-config.js";
+// Door-based points name (this user is on their own door). Vertical isn't in scope here.
+const POINTS_NAME = IS_ARTSTRACKER ? "ArtsPoints" : "Stage Points";
 
 // ══════════════════════════════════════════════════════════════════════════════
 // RENTAL REQUEST FLOW
@@ -114,7 +116,7 @@ export function RequestItemModal({ item, currentUserId, currentOrgName, currentO
       qty_requested:  qty,
       message:        msg.trim() + (creditAmt>0?`
 
-[${creditAmt} Stage Points applied — cash due: $${finalPrice.toFixed(2)}]`:"") + (platformFee>0?`
+[${creditAmt} ${POINTS_NAME} applied — cash due: $${finalPrice.toFixed(2)}]`:"") + (platformFee>0?`
 
 [8% platform fee: $${platformFee.toFixed(2)} payable to Artstracker LLC — instructions will follow by email]`:""),
       agreed_price:        finalPrice,
@@ -170,7 +172,7 @@ export function RequestItemModal({ item, currentUserId, currentOrgName, currentO
             <button className="btn btn-o" onClick={onClose}>Maybe Later</button>
           </div>
           <p style={{fontSize:11,color:"var(--muted)",marginTop:12}}>
-            Pro: $15/mo · Unlimited inventory · Full Exchange access · Stage Points
+            Pro: $15/mo · Unlimited inventory · Full Exchange access · {POINTS_NAME}
           </p>
         </div>
       ) : (
@@ -269,7 +271,7 @@ export function RequestItemModal({ item, currentUserId, currentOrgName, currentO
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <span style={{fontSize:20}}>🪙</span>
                     <div>
-                      <div style={{fontWeight:700,fontSize:13,color:"var(--goldink)"}}>Apply Stage Points</div>
+                      <div style={{fontWeight:700,fontSize:13,color:"var(--goldink)"}}>Apply {POINTS_NAME}</div>
                       <div style={{fontSize:11,color:"var(--muted)"}}>You have {myCredits.toLocaleString()} points available</div>
                     </div>
                   </div>
@@ -563,7 +565,7 @@ function TransactionDocForm({ req, docType, existing, org, onSave, onCancel }) {
           {isLoan && <>
             <p>• The borrower agrees to return the item(s) in the same condition as received, reasonable wear excepted.</p>
             <p>• The borrower is responsible for any damage, loss, or theft during the loan period.</p>
-            <p>• This is a free loan between theatre programs. No monetary exchange is required.</p>
+            <p>• This is a free loan between programs. No monetary exchange is required.</p>
           </>}
           {isSale && <>
             <p>• Item is sold "as-is" in the condition described above. No warranty is expressed or implied.</p>
@@ -1132,7 +1134,7 @@ export function Requests({ userId, orgName, orgEmail }) {
             <h3>{tab==="incoming"?"No Incoming Requests":"No Outgoing Requests"}</h3>
             <p>{tab==="incoming"
               ?"When other programs request your listed items, they'll appear here."
-              :"When you request items from Backstage Exchange, they'll appear here."}</p>
+              :"When you request items from the Exchange, they'll appear here."}</p>
           </div>
         ) : (
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -1234,7 +1236,7 @@ export function Requests({ userId, orgName, orgEmail }) {
                               <span style={{fontSize:18}}>⚠️</span>
                               <div style={{flex:1}}>
                                 <div style={{fontWeight:800,fontSize:13,color:"var(--goldink)"}}>Return date has passed</div>
-                                <div style={{fontSize:12,color:"var(--muted)"}}>Mark the item returned to release the calendar and earn your Stage Points.</div>
+                                <div style={{fontSize:12,color:"var(--muted)"}}>Mark the item returned to release the calendar and earn your {POINTS_NAME}.</div>
                               </div>
                             </div>
                           )}
@@ -1250,7 +1252,7 @@ export function Requests({ userId, orgName, orgEmail }) {
                             {isActive?"Processing…":"📦 Mark Item as Returned → Earn Credits"}
                           </button>
                           <div style={{textAlign:"center",fontSize:11,color:"var(--muted)",marginTop:5}}>
-                            🪙 You'll earn {POINT_EARN_RATES[req?.item?.category] || 15} Stage Points when you confirm the return
+                            🪙 You'll earn {POINT_EARN_RATES[req?.item?.category] || 15} {POINTS_NAME} when you confirm the return
                           </div>
                         </div>
                       )}

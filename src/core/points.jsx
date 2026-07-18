@@ -164,8 +164,8 @@ export function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
                   Your Referral Link — Earn 50 Points Per Program
                 </div>
                 <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, marginBottom: 14 }}>
-                  Share this link with other theatre directors. When they sign up and create an account,
-                  you automatically earn 50 Stage Points. No limit on referrals.
+                  Share this link with other program directors. When they sign up and create an account,
+                  you automatically earn 50 {getPointsName(org?.vertical)}. No limit on referrals.
                 </div>
                 {/* Referral link box */}
                 {(()=>{

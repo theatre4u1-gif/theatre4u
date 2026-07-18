@@ -2,6 +2,8 @@
 import React, { useState } from "react";
 import { APP_NAME } from "./config.js";
 import { SB } from "./supabase.js";
+import { getVertical, getTerm, getExchangeName } from "../lib/verticals.js";
+import { getPointsName } from "./helpers.js";
 
 export function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav }) {
   const [saving, setSaving] = useState(false);
@@ -34,7 +36,7 @@ export function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav })
       onboarding_step: 2,
       name:          pf.name.trim()          || org.name,
       director_name: pf.director_name.trim() || "",
-      director_title:"Theatre Director",
+      director_title: (org?.vertical && org.vertical !== "theatre") ? "Director" : "Theatre Director",
       phone:         pf.phone.trim()         || "",
       type:          pf.type                 || org.type,
       location:      pf.location.trim()      || org.location,
@@ -97,18 +99,18 @@ export function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav })
     <div style={ov}>
       <div style={box}>
         <div style={{...hdr, paddingTop:36}}>
-          <div style={{fontSize:52, marginBottom:12}}>🎭</div>
+          <div style={{fontSize:52, marginBottom:12}}>{getVertical(org?.vertical).icon}</div>
           <h2 style={{fontFamily:"'Playfair Display',serif", fontSize:26, marginBottom:8, color:"var(--ink,#1a0f00)"}}>
             Welcome to {APP_NAME}
           </h2>
           <p style={{fontSize:14, color:"var(--muted,#685f76)", lineHeight:1.7, marginBottom:4}}>
-            Your backstage command center is ready. Let's get your inventory started — pick how you'd like to begin:
+            Your inventory command center is ready. Let's get started — pick how you'd like to begin:
           </p>
         </div>
         <div style={bod}>
           <div style={{display:"flex", flexDirection:"column", gap:10, marginBottom:20}}>
             {[
-              ["📝", "Add items one by one",    "Start with a few key pieces — costumes, props, lights.",    "inventory"],
+              ["📝", "Add items one by one",    "Start with a few key pieces from your inventory.",    "inventory"],
               ["📥", "Import from a spreadsheet","Already have a list? Upload a CSV and we'll map the columns.","inventory-csv"],
               ["🎪", "Load sample data",         "See how the app looks with a full inventory loaded in.",   "sample"],
             ].map(([ico, title, desc, action]) => (
@@ -187,7 +189,7 @@ export function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav })
               <label style={lbl}>About your program <span style={{fontWeight:400,textTransform:"none",letterSpacing:0}}>(optional)</span></label>
               <textarea style={{...inp, minHeight:64, resize:"vertical"}} value={pf.bio}
                 onChange={e=>setPf(p=>({...p,bio:e.target.value}))}
-                placeholder="A line or two about what your program does, what shows you produce…"/>
+                placeholder="A line or two about what your program does…"/>
             </div>
           </div>
           <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", gap:8}}>
@@ -248,7 +250,7 @@ export function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav })
         <div style={hdr}>
           <div style={{fontSize:44, marginBottom:10}}>🎪</div>
           <h2 style={{fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:6, color:"var(--ink,#1a0f00)"}}>
-            Want to connect with other theatre programs?
+            Want to connect with other {getVertical(org?.vertical).label.toLowerCase()} programs?
           </h2>
           <p style={{fontSize:13, color:"var(--muted,#685f76)", lineHeight:1.65, marginBottom:0}}>
             {APP_NAME} has two optional community features. Both are completely opt-in — nothing is shared until you say so.
@@ -260,15 +262,15 @@ export function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav })
               key:  "community",
               ico:  "🎭",
               title:"Community Board",
-              desc: "Post your upcoming shows, share audition notices, and see what other programs are up to nearby. Your program name and city appear on posts you make. Your inventory stays private.",
+              desc: `Post your upcoming ${getTerm(org?.vertical,'productions').toLowerCase()}, share notices, and see what other programs are up to nearby. Your program name and city appear on posts you make. Your inventory stays private.`,
               val:  joinCommunity,
               set:  setJoinCommunity,
             },
             {
               key:  "exchange",
               ico:  "🏪",
-              title:"Backstage Exchange",
-              desc: "Browse items other programs are renting, selling, or loaning. List your own items to earn revenue or Stage Points. You control exactly which items appear — everything else stays invisible.",
+              title:getExchangeName(org?.vertical),
+              desc: `Browse items other programs are renting, selling, or loaning. List your own items to earn revenue or ${getPointsName(org?.vertical)}. You control exactly which items appear — everything else stays invisible.`,
               val:  joinExchange,
               set:  setJoinExchange,
             },

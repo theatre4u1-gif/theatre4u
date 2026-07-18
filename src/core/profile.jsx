@@ -3,6 +3,8 @@ import { SB } from "./supabase.js";
 import { BG, usp } from "../lib/backgrounds.js";
 import { geocodeLocation } from "../lib/geo.js";
 import { APP_URL } from "./config.js";
+import { getPointsName } from "./helpers.js";
+import { getExchangeName } from "../lib/verticals.js";
 
 // Public org profile editor page — extracted from App.jsx.
 
@@ -179,7 +181,7 @@ export function OrgProfilePage({ userId, org, setOrg, plan, items }) {
                 {f.founded_year && <span style={{ padding: "3px 10px", background: "rgba(212,168,67,.1)", color: "var(--goldink)", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>Est. {f.founded_year}</span>}
                 {f.student_count && <span style={{ padding: "3px 10px", background: "rgba(82,199,132,.1)", color: "var(--green)", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>{f.student_count.toLocaleString()} students</span>}
                 {listed > 0 && <span style={{ padding: "3px 10px", background: "rgba(66,165,245,.1)", color: "#42a5f5", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>{listed} items listed</span>}
-                {plan !== "free" && <span style={{ padding: "3px 10px", background: "rgba(212,168,67,.15)", color: "var(--goldink)", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>🪙 Accepts Stage Points</span>}
+                {plan !== "free" && <span style={{ padding: "3px 10px", background: "rgba(212,168,67,.15)", color: "var(--goldink)", borderRadius: 6, fontSize: 12, fontWeight: 700 }}>🪙 Accepts {getPointsName(org?.vertical)}</span>}
               </div>
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -198,7 +200,7 @@ export function OrgProfilePage({ userId, org, setOrg, plan, items }) {
             <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, marginBottom: 16 }}>Edit Profile</h3>
             <div className="fg2">
               <div className="fg fu"><label className="fl">Organization Name</label>
-                <input className="fi" value={f.name || ""} onChange={e => upd("name", e.target.value)} placeholder="Lincoln High Drama Dept." /></div>
+                <input className="fi" value={f.name || ""} onChange={e => upd("name", e.target.value)} placeholder="Your program name" /></div>
 
               <div className="fg"><label className="fl">Your Name (Director)</label>
                 <input className="fi" value={f.director_name || ""} onChange={e => upd("director_name", e.target.value)} placeholder="Jane Smith" /></div>
@@ -244,17 +246,17 @@ export function OrgProfilePage({ userId, org, setOrg, plan, items }) {
 
               <div className="fg fu"><label className="fl">About Your Program</label>
                 <textarea className="ft" value={f.bio || ""} onChange={e => upd("bio", e.target.value)}
-                  placeholder="Tell other programs and the community about your theatre program…" style={{ minHeight: 80 }} /></div>
+                  placeholder="Tell other programs and the community about your program…" style={{ minHeight: 80 }} /></div>
 
               <div style={{ gridColumn: "1/-1", borderTop: "1px solid var(--border)", paddingTop: 14, marginTop: 4 }}>
                 <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", marginBottom: 12 }}>Links & Social</div>
               </div>
 
               <div className="fg"><label className="fl">Website URL</label>
-                <input className="fi" value={f.website || ""} onChange={e => upd("website", e.target.value)} placeholder="https://yourschool.edu/drama" /></div>
+                <input className="fi" value={f.website || ""} onChange={e => upd("website", e.target.value)} placeholder="https://yourschool.edu" /></div>
 
               <div className="fg"><label className="fl">Instagram Handle</label>
-                <input className="fi" value={f.instagram || ""} onChange={e => upd("instagram", e.target.value)} placeholder="@lincolnhighdrama" /></div>
+                <input className="fi" value={f.instagram || ""} onChange={e => upd("instagram", e.target.value)} placeholder="@yourprogram" /></div>
 
               <div className="fg fu"><label className="fl">Logo Image URL (optional)</label>
                 <input className="fi" value={f.logo_url || ""} onChange={e => upd("logo_url", e.target.value)} placeholder="https://drive.google.com/… or direct image URL" />
@@ -278,7 +280,7 @@ export function OrgProfilePage({ userId, org, setOrg, plan, items }) {
         {/* Listed items preview */}
         {listed > 0 && (
           <div className="card card-p">
-            <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 18, marginBottom: 4 }}>Backstage Exchange — Your Listings</h3>
+            <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 18, marginBottom: 4 }}>{getExchangeName(org?.vertical)} — Your Listings</h3>
             <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 14 }}>These items appear on your public profile. Anyone can browse them without logging in.</p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 10 }}>
               {items.filter(i => i.market_status && i.market_status !== "Not Listed" && i.market_status !== "Private").slice(0, 6).map(item => {

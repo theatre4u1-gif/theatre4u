@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
+import { APP_NAME } from "./config.js";
 
 // Beta feedback widget — floating trigger + panel. Slated for removal at launch (Sept 1, 2026).
 export function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
@@ -143,7 +144,7 @@ export function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
               <div style={{textAlign:"center",padding:"24px 0"}}>
                 <div style={{fontSize:44,marginBottom:12}}>🙏</div>
                 <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,color:"var(--green)"}}>Thank you!</div>
-                <div style={{fontSize:13,color:"var(--muted)",marginTop:4}}>Your feedback is making Theatre4u better.</div>
+                <div style={{fontSize:13,color:"var(--muted)",marginTop:4}}>Your feedback is making {APP_NAME} better.</div>
               </div>
             ) : tab === "quick" ? (
               <>
@@ -217,7 +218,7 @@ export function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
                     1. What inventory is hardest to track right now?
                   </label>
                   <input value={q1} onChange={e=>setQ1(e.target.value)}
-                    placeholder="e.g. Small props, lighting gels, period costumes…"
+                    placeholder="e.g. items or supplies you're looking for…"
                     style={{width:"100%",background:"#f9fafb",border:"1.5px solid #d1d5db",
                       borderRadius:8,padding:"10px 12px",color:"#111827",fontFamily:"inherit",fontSize:14,outline:"none"}}
                     onFocus={e=>e.target.style.borderColor="#7c3aed"} onBlur={e=>e.target.style.borderColor="#d1d5db"}
