@@ -170,6 +170,33 @@ const SUPABASE_URL  = 'https://ldmmphwivnnboyhlxipl.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA';
 const SB = createClient(SUPABASE_URL, SUPABASE_ANON);
 
+// ── Domain-aware branding (Theatre4u vs ArtsTracker) ──────────────────────────
+const IS_AT       = location.hostname.includes("artstracker");
+const BRAND_PLAIN = IS_AT ? "ArtsTracker" : "Theatre4u";
+const BRAND_URL   = IS_AT ? "https://artstracker.org" : "https://theatre4u.org";
+const BRAND_EMAIL = IS_AT ? "hello@artstracker.org" : "hello@theatre4u.org";
+if (IS_AT) {
+  document.title = "You've Been Invited — ArtsTracker";
+  const nav = document.querySelector("nav .logo");
+  if (nav) { nav.href = BRAND_URL; nav.textContent = "ArtsTracker"; }
+  const badgeP = document.querySelector(".invite-badge p");
+  if (badgeP) badgeP.textContent = "has invited you to join their team";
+  const badgeIcon = document.querySelector(".invite-badge .icon");
+  if (badgeIcon) badgeIcon.textContent = "🎨";
+  const loadIcon = document.querySelector("#loading > div");
+  if (loadIcon) loadIcon.textContent = "🎨";
+  const tabSignup = document.getElementById("tab-signup");
+  if (tabSignup) tabSignup.textContent = "New to ArtsTracker";
+  const orgName = document.getElementById("org-name");
+  if (orgName) orgName.textContent = "Your Program";
+  const successLink = document.querySelector("#success .success a");
+  if (successLink) { successLink.href = BRAND_URL; successLink.textContent = "Open ArtsTracker →"; }
+  const errLink = document.querySelector("#invite-error a");
+  if (errLink) { errLink.href = BRAND_URL; errLink.textContent = "Go to ArtsTracker →"; }
+  const foot = document.querySelector("footer");
+  if (foot) foot.innerHTML = 'ArtsTracker · <a href="https://artstracker.org" style="color:var(--t3)">artstracker.org</a> · A product of <a href="https://artstracker.org" style="color:var(--t3)">Artstracker LLC</a>';
+}
+
 const params   = new URLSearchParams(location.search);
 const token    = params.get('token') || '';
 const joinCode = params.get('code')  || '';
@@ -225,7 +252,7 @@ async function acceptInvite() {
 function showSuccess(orgName, role) {
   const roleLabel = ROLE_LABELS[role] || role || 'Team Member';
   document.getElementById('success-msg').innerHTML =
-    `You've joined <strong>${orgName}</strong> as <strong>${roleLabel}</strong>.<br>Open Theatre4u to see the full inventory.`;
+    `You've joined <strong>${orgName}</strong> as <strong>${roleLabel}</strong>.<br>Open ${BRAND_PLAIN} to see the full inventory.`;
   show('success');
 }
 
@@ -242,8 +269,8 @@ async function handleSignup() {
 
   // Create auth account flagged as team member — no org_name so no org is created
   const inviteReturn = token
-    ? `https://theatre4u.org/invite.html?token=${encodeURIComponent(token)}`
-    : `https://theatre4u.org/invite.html?code=${encodeURIComponent(joinCode)}`;
+    ? `${BRAND_URL}/invite.html?token=${encodeURIComponent(token)}`
+    : `${BRAND_URL}/invite.html?code=${encodeURIComponent(joinCode)}`;
 
   const { data: authData, error: authErr } = await SB.auth.signUp({
     email, password: pass,
@@ -292,7 +319,7 @@ async function handleSignup() {
           We sent a confirmation link to <strong style="color:var(--t1)">${email}</strong>.<br>
           Click it to activate your account and you'll be connected to ${inviteData?.org_name || 'the program'} automatically.
         </p>
-        <a href="https://theatre4u.org" style="color:var(--gold);font-size:14px">Go to Theatre4u →</a>
+        <a href="${BRAND_URL}" style="color:var(--gold);font-size:14px">Go to ${BRAND_PLAIN} →</a>
       </div>`;
     return;
   }
@@ -344,7 +371,7 @@ async function handleSignin() {
     if (msg.includes('Already a member')) {
       showSuccess(inviteData?.org_name || 'the program', inviteData?.role);
     } else {
-      showErr(msg || 'Could not join the team. Please contact hello@theatre4u.org.');
+      showErr(msg || 'Could not join the team. Please contact ' + BRAND_EMAIL + '.');
     }
     return;
   }
@@ -406,7 +433,7 @@ async function init() {
 
   // Populate invite badge
   if (inviteData) {
-    document.getElementById('org-name').textContent = inviteData.org_name || 'Your Theatre Program';
+    document.getElementById('org-name').textContent = inviteData.org_name || (IS_AT ? 'Your Program' : 'Your Theatre Program');
     document.getElementById('role-label').textContent = ROLE_LABELS[inviteData.role] || inviteData.role || 'Team Member';
     if (inviteData.email) {
       document.getElementById('su-email').value = inviteData.email;
