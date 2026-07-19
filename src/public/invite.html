@@ -340,6 +340,7 @@ async function handleSignup() {
       org_email: email,
       team_org_name: orgName,
       team_role: role,
+      team_signup_domain: location.hostname,  // door the invite was opened on → brands the email
     }),
   }).catch(() => {});  // fire and forget
 
