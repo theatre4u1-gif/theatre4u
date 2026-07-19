@@ -36,21 +36,24 @@ export function BillingDashboard({ door = "all" }) {
   const [err, setErr] = useState("");
   const [detailOrg, setDetailOrg] = useState(null);
   const [tab, setTab] = useState("money"); // money | founding | beta
+  const [paused, setPaused] = useState(null); // billing kill-switch (site_content global/billing_paused)
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const [orgsRes, revRes, payRes] = await Promise.all([
+        const [orgsRes, revRes, payRes, flagRes] = await Promise.all([
           SB.from("orgs").select("id,name,email,plan,vertical,signup_domain,temp_pro,founding_member,founding_rate_monthly,stripe_subscription_id,subscription_status,plan_expires_at,beta_end_date,account_status,deleted_at,created_at"),
           SB.from("stripe_revenue_summary").select("month,revenue_cents,refunded_cents,successful_payments,unique_customers"),
           SB.from("stripe_payments_current").select("org_name,customer_name,customer_email,amount_cents,plan,status,refunded,stripe_created_at").order("stripe_created_at", { ascending: false }).limit(100),
+          SB.from("site_content").select("cvalue").eq("vertical", "global").eq("ckey", "billing_paused").maybeSingle(),
         ]);
         if (!alive) return;
         if (orgsRes.error) throw orgsRes.error;
         setOrgs((orgsRes.data || []).filter(o => !o.deleted_at));
         setRev((revRes.data || []).slice().sort((a, b) => new Date(a.month) - new Date(b.month)));
         setPays(payRes.data || []);
+        setPaused(flagRes.data?.cvalue === "1");
       } catch (e) { if (alive) setErr(e.message || String(e)); }
     })();
     return () => { alive = false; };
@@ -88,9 +91,28 @@ export function BillingDashboard({ door = "all" }) {
   const cohort = tab === "founding" ? founding : tab === "beta" ? betaExp : paying;
   const cohortLabel = tab === "founding" ? "Founding members" : tab === "beta" ? "Beta ending" : "Paying now";
 
+  const togglePause = async () => {
+    const next = !paused;
+    if (!window.confirm(next
+      ? "PAUSE billing now? New in-app subscribe + founding checkout will be gated for everyone until you resume. This does NOT cancel existing Stripe subscriptions (pause those in Stripe if needed)."
+      : "Resume billing? The subscribe buttons go live again.")) return;
+    const { error } = await SB.from("site_content").upsert({ vertical: "global", ckey: "billing_paused", cvalue: next ? "1" : "0" }, { onConflict: "vertical,ckey" });
+    if (error) { alert("Couldn't update the billing switch: " + error.message); return; }
+    setPaused(next);
+  };
+
   return (
     <div style={{ maxWidth: 1080, margin: "0 auto" }}>
       <p style={{ color: "#777", fontSize: 13, margin: "0 0 4px" }}>Revenue and the money-relevant cohorts. Billing begins September 1, so revenue stays near zero until then and the recurring figure is an estimate. Click a program to open its console.</p>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", background: paused ? "#fdecea" : "#f1f7f1", border: "1px solid " + (paused ? "#e6b0aa" : "#c8e0c8"), borderRadius: 12, padding: "12px 16px", margin: "8px 0 4px" }}>
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 14, color: paused ? "#a5342b" : "#1a7f37" }}>{paused === null ? "Billing switch…" : paused ? "⏸ Billing is PAUSED" : "● Billing is live"}</div>
+          <div style={{ fontSize: 12, color: "#7a7367", marginTop: 2 }}>{paused ? "New in-app subscribe + founding checkout are gated. Existing Stripe subscriptions are unaffected — pause those in Stripe if needed." : "Emergency brake: instantly gate new in-app subscribe + founding checkout (does not touch existing Stripe subscriptions)."}</div>
+        </div>
+        <button onClick={togglePause} disabled={paused === null} style={{ padding: "9px 16px", borderRadius: 8, border: "none", fontWeight: 800, fontSize: 13, cursor: paused === null ? "default" : "pointer", fontFamily: "inherit", background: paused ? "#1a7f37" : "#c0392b", color: "#fff", opacity: paused === null ? .5 : 1 }}>
+          {paused === null ? "…" : paused ? "Resume billing" : "Pause billing"}
+        </button>
+      </div>
 
       <H>Revenue{door !== "all" ? " (all sites — not split by door)" : ""}</H>
       <div style={grid}>

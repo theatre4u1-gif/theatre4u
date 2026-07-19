@@ -204,6 +204,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
 
   // ── Detect post-Stripe-payment redirect and refresh org plan ────────────────
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState("");
+  const [billingPaused, setBillingPaused] = useState(false); // admin kill-switch (site_content global/billing_paused)
   useEffect(()=>{
     if(!user) return;
     try {
@@ -233,6 +234,12 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
     } catch(e) {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+  useEffect(()=>{
+    let alive = true;
+    SB.from("site_content").select("cvalue").eq("vertical","global").eq("ckey","billing_paused").maybeSingle()
+      .then(({ data }) => { if (alive) setBillingPaused(data?.cvalue === "1"); });
+    return () => { alive = false; };
+  }, []);
   useEffect(()=>{
     if(!user) return;
     try {
@@ -353,6 +360,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   // uid is not an orgs row, which violates items_org_id_fkey. (Coppell fix 2026-06-15)
   const activeOrgId = org?.id || user?.id;
   const beforeLaunch = Date.now() < Date.parse("2026-09-01T07:00:00Z"); // billing begins Sept 1 (PT) — gate early charges
+  const gated = beforeLaunch || billingPaused; // gate paid subscribe when pre-launch OR admin-paused
 
   // ── Session heartbeat (time-spent analytics) ──────────────────────────────
   // While a logged-in user has the app open and visible, bump app_sessions ~every 60s so the
@@ -922,11 +930,11 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                           border:"none",cursor:foundingBusy?"default":"pointer",marginBottom:0,width:"100%",fontFamily:"inherit"}}>
                         {foundingBusy ? "Starting…" : "⭐ Claim your $9.99 founding rate"}
                       </button>
-                    : beforeLaunch
+                    : gated
                     ? <div style={{display:"flex",alignItems:"center",justifyContent:"center",textAlign:"center",
                         gap:6,padding:"9px 12px",borderRadius:8,fontSize:12,fontWeight:700,lineHeight:1.3,
                         background:"rgba(212,168,67,.14)",border:"1px solid rgba(212,168,67,.35)",color:"rgba(240,230,211,.85)"}}>
-                        Free during beta · billing begins Sept 1
+                        {billingPaused && !beforeLaunch ? "Subscriptions paused — check back soon" : "Free during beta · billing begins Sept 1"}
                       </div>
                     : <a href={stripeLink(STRIPE_LINKS.pro?.monthly, user?.id, user?.email)}
                         target="_blank" rel="noreferrer"
