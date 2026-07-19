@@ -97,6 +97,30 @@ async function sendPaymentAlert(params: {
   }).catch((e: Error) => console.error("sendPaymentAlert:", e.message));
 }
 
+// Internal alert to the admin when the webhook itself errors or cannot provision a paying
+// customer. These are silent failures otherwise (only console-logged), so they get an email.
+async function sendErrorAlert(subject: string, detail: string) {
+  if (!RESEND_KEY) return;
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f5f0e8;font-family:Arial,sans-serif">
+<div style="max-width:520px;margin:0 auto;background:#fff">
+  <div style="background:#1a1200;padding:18px 24px"><span style="font-family:Georgia,serif;font-size:20px;font-weight:700;color:#d4a843">&#x26A0;&#xFE0F; Stripe Webhook Alert</span></div>
+  <div style="padding:22px 24px">
+    <div style="background:#fdf0f0;border:1.5px solid #e8b4b4;border-radius:8px;padding:14px 18px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8c1a2a;margin-bottom:6px">Needs attention</div>
+      <div style="font-size:16px;font-weight:700;color:#1a1200">${subject}</div>
+    </div>
+    <div style="font-size:13px;color:#444;line-height:1.6;white-space:pre-wrap;word-break:break-word">${detail}</div>
+    <div style="font-size:12px;color:#888;margin-top:16px">Check the Stripe dashboard (Developers, then Webhooks) and the admin Billing dashboard.</div>
+  </div>
+  <div style="padding:10px 24px;border-top:1px solid #e8e0d0;text-align:center;font-size:11px;color:#aaa">Theatre4u&trade; &middot; Artstracker LLC</div>
+</div></body></html>`;
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: FROM_EMAIL, to: [ADMIN_EMAIL], subject: `⚠️ Stripe webhook: ${subject}`, html }),
+  }).catch((e: Error) => console.error("sendErrorAlert:", e.message));
+}
+
 async function verifyStripeSignature(payload: string, sigHeader: string, secret: string): Promise<boolean> {
   try {
     const parts = sigHeader.split(",");
@@ -245,8 +269,12 @@ Deno.serve(async (req: Request) => {
             plan: planInfo.plan + (planInfo.allVerticals ? " (ArtsTracker)" : ""), interval: planInfo.interval, amountCents: subAmountCents });
         } else if (!planInfo) {
           console.warn("Unknown price ID:", priceId);
+          await sendErrorAlert("unknown price ID on a completed checkout",
+            `A subscription checkout completed (${eventId}) but price ${priceId} is not in PRICE_TO_PLAN, so the org was not upgraded. Customer ${customerId} / ${customerEmail}. Add the price mapping and provision manually.`);
         } else if (!org) {
           console.error("No org found for customer:", customerId, customerEmail);
+          await sendErrorAlert("paid subscription with no matching org",
+            `A subscription checkout completed (${eventId}) for plan ${planInfo.plan} ${planInfo.interval} but no org matched customer ${customerId} / ${customerEmail}. The customer paid but was not provisioned. Provision manually.`);
         }
         break;
       }
@@ -382,6 +410,9 @@ Deno.serve(async (req: Request) => {
   } catch (e) {
     // Log the error but return 200 so Stripe doesn't retry endlessly
     console.error("Webhook handler error:", String(e));
+    // Alert the admin — otherwise this is a silent failure that only shows in logs.
+    await sendErrorAlert(`handler error on ${eventType}`,
+      `Event ${eventType} (${eventId}) threw while processing:\n\n${String(e)}`);
   }
 
   return new Response(JSON.stringify({ received: true }), {
