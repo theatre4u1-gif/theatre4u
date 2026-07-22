@@ -97,7 +97,8 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     {/* ── Sticky Nav ── */}
     <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:1000,padding:"0 32px",height:64,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?"rgba(13,10,8,.97)":"transparent",borderBottom:scrolled?"1px solid rgba(255,255,255,.08)":"none",backdropFilter:scrolled?"blur(12px)":"none",transition:"all .3s"}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <img src={LOGO_ICON} alt={APP_NAME} style={{width:34,height:34,objectFit:"contain",display:"block",flexShrink:0}}/>
+        {/* White logo in the corner — the landing nav sits on a dark background. Silhouette via filter. */}
+        <img src={LOGO_ICON} alt={APP_NAME} style={{width:34,height:34,objectFit:"contain",display:"block",flexShrink:0,filter:"brightness(0) invert(1)"}}/>
         <span style={{fontFamily:"'Playfair Display',serif",fontSize:20,color:"var(--gold)"}}>{APP_NAME}</span>
       </div>
       <div style={{display:"flex",gap:10,alignItems:"center"}}>
