@@ -1422,6 +1422,9 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
   const [distSchoolF,setDistSchoolF]= useState("all");
   const [distProgF,  setDistProgF]  = useState("all");
   const [distLoading,setDistLoading]= useState(false);
+  const [distFund,   setDistFund]   = useState({ sources:[], exps:[], prop28:[] }); // district-wide funding report data
+  const [distFundLoading,setDistFundLoading]= useState(false);
+  const [fundSchoolF,setFundSchoolF]= useState("all");
   const [showInvite, setShowInvite] = useState(false);
   const [invEmail,   setInvEmail]   = useState("");
   const [invSchool,  setInvSchool]  = useState("");
@@ -1554,8 +1557,22 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
     setDistLoading(false);
   }, [district, schools]);
 
+  const loadDistFunding = useCallback(async () => {
+    if (!schools.length) { setDistFund({ sources:[], exps:[], prop28:[] }); return; }
+    setDistFundLoading(true);
+    const ids = schools.map(s => s.id);
+    const [{ data: src }, { data: exp }, { data: p28 }] = await Promise.all([
+      SB.from("funding_sources").select("id,org_id,name,source_type,total_amount,is_active,fiscal_year").in("org_id", ids),
+      SB.from("funding_expenditures").select("id,org_id,amount,category,funding_source_id").in("org_id", ids),
+      SB.from("prop28_purchases").select("id,org_id,cost,students_served,school_year").in("org_id", ids),
+    ]);
+    setDistFund({ sources: src || [], exps: exp || [], prop28: p28 || [] });
+    setDistFundLoading(false);
+  }, [schools]);
+
   useEffect(() => { if (plan === "district" || isFacilitator) load(); }, [load, plan, isFacilitator]);
   useEffect(() => { if (tab === "inventory") loadDistInventory(); }, [tab, loadDistInventory]);
+  useEffect(() => { if (tab === "funding") loadDistFunding(); }, [tab, loadDistFunding]);
 
   const sendInvite = async () => {
     if (!invEmail.trim()) return;
@@ -1682,10 +1699,10 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
 
         {/* Tabs */}
         <div className="tabs" style={{ marginBottom: 16 }}>
-          {["schools", "invites", "inventory"].map(t => (
+          {["schools", "invites", "inventory", "funding"].map(t => (
             <button key={t} className={`tab ${tab === t ? "on" : ""}`} onClick={() => setTab(t)}
               style={{ textTransform: "capitalize" }}>
-              {t==="schools" ? `🏫 Schools (${slotsUsed})` : t==="invites" ? `📨 Invites (${invites.filter(i=>i.status==="pending").length})` : `📦 Inventory (${distItems.length})`}
+              {t==="schools" ? `🏫 Schools (${slotsUsed})` : t==="invites" ? `📨 Invites (${invites.filter(i=>i.status==="pending").length})` : t==="inventory" ? `📦 Inventory (${distItems.length})` : `💰 Funding`}
             </button>
           ))}
           <button className="btn btn-o btn-sm" style={{ marginLeft: "auto" }}
@@ -1801,7 +1818,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
               </table>
             )}
           </div>
-        ) : (
+        ) : tab === "inventory" ? (
           /* Inventory tab */
           <div>
             <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16,alignItems:"center"}}>
@@ -1870,6 +1887,89 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
               );
             })()}
           </div>
+        ) : (
+          /* Funding tab — district-wide totals across every school (per-site + multi-site) */
+          (()=>{
+            const fmt$ = n => "$"+(n||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+            const bySchool = schools.map(sc=>{
+              const alloc = distFund.sources.filter(s=>s.org_id===sc.id && s.is_active).reduce((a,s)=>a+(parseFloat(s.total_amount)||0),0);
+              const spent = distFund.exps.filter(e=>e.org_id===sc.id).reduce((a,e)=>a+(parseFloat(e.amount)||0),0);
+              return { id:sc.id, name:sc.name||"Unnamed School", alloc, spent, remaining:alloc-spent };
+            });
+            const shown = fundSchoolF==="all" ? bySchool : bySchool.filter(r=>r.id===fundSchoolF);
+            const tAlloc = shown.reduce((a,r)=>a+r.alloc,0);
+            const tSpent = shown.reduce((a,r)=>a+r.spent,0);
+            const tRem = tAlloc - tSpent;
+            const p28shown = distFund.prop28.filter(p=>fundSchoolF==="all"||p.org_id===fundSchoolF);
+            const p28cost = p28shown.reduce((a,p)=>a+(parseFloat(p.cost)||0),0);
+            const p28students = p28shown.reduce((a,p)=>a+(parseInt(p.students_served)||0),0);
+            const exportCsv = ()=>{
+              const rows=[["School","Allocated","Spent","Remaining"]];
+              shown.forEach(r=>rows.push([r.name,r.alloc.toFixed(2),r.spent.toFixed(2),r.remaining.toFixed(2)]));
+              rows.push(["DISTRICT TOTAL",tAlloc.toFixed(2),tSpent.toFixed(2),tRem.toFixed(2)]);
+              const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(",")).join("\n");
+              const url=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+              const a=document.createElement("a"); a.href=url; a.download="district-funding-"+new Date().toISOString().slice(0,10)+".csv"; a.click(); URL.revokeObjectURL(url);
+            };
+            if(distFundLoading) return(<div style={{textAlign:"center",padding:32,color:"var(--muted)"}}>Loading funding…</div>);
+            return(
+              <div>
+                <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16,alignItems:"center"}}>
+                  <select value={fundSchoolF} onChange={e=>setFundSchoolF(e.target.value)} style={{padding:"6px 10px",borderRadius:7,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--linen)",fontSize:13}}>
+                    <option value="all">All Schools (district total)</option>
+                    {schools.map(sc=><option key={sc.id} value={sc.id}>{sc.name}</option>)}
+                  </select>
+                  <button className="btn btn-o btn-sm" style={{marginLeft:"auto"}} onClick={exportCsv}>⬇ Download CSV</button>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12,marginBottom:20}}>
+                  {[
+                    {label:"Total Allocated",val:fmt$(tAlloc),color:"var(--gold)"},
+                    {label:"Total Spent",val:fmt$(tSpent),color:"var(--blue)"},
+                    {label:"Remaining",val:fmt$(tRem),color:tRem>=0?"var(--green)":"var(--red)"},
+                    {label:"Prop 28 Spent",val:fmt$(p28cost),color:"var(--gold)"},
+                    {label:"Students Served",val:p28students.toLocaleString("en-US"),color:"var(--linen)"},
+                  ].map(s=>(
+                    <div key={s.label} className="card card-p" style={{textAlign:"center",padding:"14px 10px"}}>
+                      <div style={{fontFamily:"var(--serif)",fontSize:20,fontWeight:700,color:s.color}}>{s.val}</div>
+                      <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+                {shown.length===0 ? (
+                  <div className="empty" style={{padding:40}}><div className="empty-ico">💰</div><h3>No funding data yet</h3><p>Schools track grants and spending in their Funding Tracker.</p></div>
+                ) : (
+                  <div style={{overflowX:"auto"}}>
+                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                      <thead><tr style={{borderBottom:"2px solid var(--border)"}}>
+                        {["School","Allocated","Spent","Remaining","% Spent"].map((h,i)=>(
+                          <th key={h} style={{padding:"8px 10px",textAlign:i===0?"left":"right",color:"var(--muted)",fontWeight:700,fontSize:11,textTransform:"uppercase",letterSpacing:.5}}>{h}</th>
+                        ))}
+                      </tr></thead>
+                      <tbody>{shown.map(r=>{
+                        const pct = r.alloc>0?Math.round(r.spent/r.alloc*100):0;
+                        return(
+                          <tr key={r.id} style={{borderBottom:"1px solid var(--border)"}}>
+                            <td style={{padding:"8px 10px",fontWeight:600}}>{r.name}</td>
+                            <td style={{padding:"8px 10px",textAlign:"right"}}>{fmt$(r.alloc)}</td>
+                            <td style={{padding:"8px 10px",textAlign:"right"}}>{fmt$(r.spent)}</td>
+                            <td style={{padding:"8px 10px",textAlign:"right",color:r.remaining>=0?"var(--green)":"var(--red)",fontWeight:600}}>{fmt$(r.remaining)}</td>
+                            <td style={{padding:"8px 10px",textAlign:"right",color:"var(--muted)"}}>{pct}%</td>
+                          </tr>
+                        );
+                      })}</tbody>
+                      <tfoot><tr style={{borderTop:"2px solid var(--border)",fontWeight:700}}>
+                        <td style={{padding:"10px"}}>District Total</td>
+                        <td style={{padding:"10px",textAlign:"right"}}>{fmt$(tAlloc)}</td>
+                        <td style={{padding:"10px",textAlign:"right"}}>{fmt$(tSpent)}</td>
+                        <td style={{padding:"10px",textAlign:"right",color:tRem>=0?"var(--green)":"var(--red)"}}>{fmt$(tRem)}</td>
+                        <td style={{padding:"10px",textAlign:"right",color:"var(--muted)"}}>{tAlloc>0?Math.round(tSpent/tAlloc*100):0}%</td>
+                      </tr></tfoot>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })()
         )}
       </div>
 
