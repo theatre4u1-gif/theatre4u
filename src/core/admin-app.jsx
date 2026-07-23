@@ -3,12 +3,14 @@
 // First module: Content & Brand editor. Future: billing dashboard, business finance, etc.
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
+import { CSS } from "./styles.js";
 import { ContentBrandEditor } from "./content-editor.jsx";
 import { OverviewDashboard } from "./admin-overview.jsx";
 import { UsageDashboard } from "./admin-usage.jsx";
 import { DataHealthDashboard } from "./admin-health.jsx";
 import { BillingDashboard } from "./admin-billing.jsx";
 import { BusinessFinance } from "./admin-finance.jsx";
+import { AdminHub } from "./admin.jsx"; // the full in-app operations hub (users, leads, payments, feedback, labels, programs, accounts, districts, tools)
 
 const PAGE_BG = "#f4f1ea";
 
@@ -67,12 +69,12 @@ function Login({ onSignedIn }) {
 
 const MODULES = [
   { id: "overview", label: "Overview" },
+  { id: "operations", label: "Operations" }, // full Admin Hub (parity with the in-app admin)
   { id: "usage", label: "Usage" },
   { id: "billing", label: "Billing" },
   { id: "finance", label: "Finance" },
   { id: "health", label: "Data health" },
   { id: "content", label: "Content & Brand" },
-  // future: { id:"billing", label:"Billing" }, { id:"finance", label:"Business Finance" }, ...
 ];
 
 export function AdminApp() {
@@ -121,6 +123,10 @@ export function AdminApp() {
   // Authorized admin shell
   return (
     <div style={{ ...box, minHeight: "100vh", background: PAGE_BG }}>
+      {/* Load the shared app stylesheet so the embedded Admin Hub (which uses the app's CSS
+          variables and classes) renders correctly. The standalone dashboards use only inline
+          styles, so they are unaffected. */}
+      <style>{CSS}</style>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px", background: "#1a0f06", color: "#f0e6d3" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <span style={{ fontWeight: 800, fontSize: 16, color: "#e8b85d" }}>Admin</span>
@@ -148,6 +154,7 @@ export function AdminApp() {
         </div>
       )}
       <main style={{ padding: "26px 20px 60px" }}>
+        {mod === "operations" && <AdminHub currentUser={user} org={null} />}
         {mod === "overview" && <OverviewDashboard door={door} />}
         {mod === "usage" && <UsageDashboard door={door} />}
         {mod === "billing" && <BillingDashboard door={door} />}

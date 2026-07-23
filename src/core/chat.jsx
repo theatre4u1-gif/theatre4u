@@ -364,9 +364,9 @@ export function ChatWindow({ convId, currentUserId, orgNames, onClose, onUnreadC
         <div ref={bottomRef}/>
       </div>
 
-      {/* Input */}
+      {/* Input — extra right space so the Send button clears the floating help bubble (fixed at bottom-right) */}
       <div style={{padding:"12px",borderTop:"1px solid var(--border)",flexShrink:0,background:"var(--cream)"}}>
-        <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+        <div style={{display:"flex",gap:8,alignItems:"flex-end",paddingRight:72}}>
           <textarea
             ref={inputRef}
             value={body}
