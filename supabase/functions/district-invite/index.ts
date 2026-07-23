@@ -41,13 +41,31 @@ Deno.serve(async (req: Request) => {
     const { data: ownerOrg } = await sb.from("orgs").select("name, vertical, signup_domain").eq("id", user.id).single();
     const B = brandFor(ownerOrg?.signup_domain, ownerOrg?.vertical);
 
-    // Find or auto-create district for this user
+    // Resolve the district: the caller's OWN (owner) first, else a district they FACILITATE.
+    // Facilitators must use their facilitated district and never auto-create a new one.
     let { data: district } = await sb.from("districts")
       .select("id, name, max_schools")
       .eq("owner_id", user.id)
-      .single();
+      .maybeSingle();
 
     if (!district) {
+      const { data: fac } = await sb.from("district_members")
+        .select("district_id")
+        .eq("user_id", user.id)
+        .eq("role", "facilitator")
+        .limit(1)
+        .maybeSingle();
+      if (fac?.district_id) {
+        const { data: fd } = await sb.from("districts")
+          .select("id, name, max_schools")
+          .eq("id", fac.district_id)
+          .single();
+        district = fd;
+      }
+    }
+
+    if (!district) {
+      // Genuine district owner with no district yet — auto-create. Facilitators never reach here.
       const { data: newDist, error: distErr } = await sb.from("districts")
         .insert({ owner_id: user.id, name: ownerOrg?.name || "", max_schools: 6 })
         .select("id, name, max_schools")

@@ -208,3 +208,5 @@ Total migrations: 188
 | 186 | 20260714024958 | fix_org_platform_usage_include_paused |
 | 187 | 20260714031919 | phase8_record_login_rpc |
 | 188 | 20260716011044 | phase8_business_ledger |
+| 189 | 20260723172224 | fix_signup_notify_durable_row_and_sweeper_backfill |
+| 190 | 20260723175521 | district_facilitator_full_partner_access |

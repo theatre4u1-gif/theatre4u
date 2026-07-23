@@ -316,6 +316,19 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
           sessionStorage.removeItem("t4u_oauth_flow");
           const sid = window.__t4u_sid || sessionStorage.getItem("t4u_sid") || "";
           await SB.rpc("record_login", { p_session: sid, p_user_agent: navigator.userAgent, p_referrer: document.referrer||null, p_utm_source: window.__t4u_utm?.source||null });
+          // Instant new-signup alert for Google OAuth. The org is auto-created server-side, so the
+          // finish-setup path that normally fires signup-notify is skipped. This gives the direct,
+          // reliable call the password path already has. signup-notify dedupes, and the freshness
+          // gate keeps returning users from re-firing it.
+          try{
+            const _created = orgData?.created_at ? Date.parse(orgData.created_at) : 0;
+            if(orgData && !realMembership && (Date.now()-_created) < 10*60*1000){
+              fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/signup-notify",{
+                method:"POST", headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({org_id:orgData.id, org_email:orgData.email, is_team_member:false}),
+              }).catch(()=>{});
+            }
+          }catch(_){}
         }
       }catch(_){}
       const{data:itemData}=await SB.from("items").select("*").eq("org_id",targetOrgId).order("added",{ascending:false}).limit(2000);
@@ -732,7 +745,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       { id:"profile",     label:"My Profile",  ico:"👤"       },
       ...(!isMember ? [{ id:"labels",  label:"QR Labels",    ico:"🏷" }] : []),
       ...(!isMember ? [{ id:"points", label:getPointsName(curVertical), ico:"🪙" }] : []),
-      ...((!isMember && plan === "district") || ownsDistrict ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
+      ...(((!isMember && plan === "district") || ownsDistrict || (!isMember && facDistrict)) ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
       ...(!isMember && facDistrict ? [{ id:"facschools", label:"District Schools", ico:"🏫" }] : []),
       ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
     ];
@@ -1024,7 +1037,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                   {page==="prop28"      && <Prop28Page  userId={org?.id || user?.id} org={viewOrg} onNav={nav}/>}
                   {page==="profile"     && <OrgProfilePage userId={org?.id || user?.id} org={org} setOrg={saveOrg} plan={plan} items={items}/>}
               {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} userId={org?.id || user?.id} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
-                  {page==="district"    && (plan==="district" || ownsDistrict) && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool}/>}
+                  {page==="district"    && (plan==="district" || ownsDistrict || facDistrict) && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool} isFacilitator={!!facDistrict}/>}
                   {page==="facschools"  && facDistrict && (
                     <div style={{padding:"32px 36px 56px"}}>
                       <h1 style={{fontFamily:"var(--serif)",fontSize:32,marginBottom:4}}>District Schools</h1>

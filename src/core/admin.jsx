@@ -1409,8 +1409,9 @@ export function AdminHub({ currentUser, org }) {
   );
 }
 
-export function DistrictDashboard({ user, plan, onSwitchSchool }) {
+export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = false }) {
   const [district,   setDistrict]   = useState(null);
+  const [isOwner,    setIsOwner]    = useState(false); // true only for the district owner (gates owner-only controls)
   const [schools,    setSchools]    = useState([]);
   const [invites,    setInvites]    = useState([]);
   const [itemCounts, setItemCounts] = useState({});
@@ -1499,15 +1500,25 @@ export function DistrictDashboard({ user, plan, onSwitchSchool }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    // Load or create district record for this user
-    let { data: dist } = await SB.from("districts").select("*").eq("owner_id", user.id).single();
-    if (!dist) {
-      // Auto-create district on first visit
+    // Resolve the district: the user's OWN (owner) first, else the one they FACILITATE.
+    let { data: dist } = await SB.from("districts").select("*").eq("owner_id", user.id).maybeSingle();
+    if (!dist && isFacilitator) {
+      const { data: fac } = await SB.from("district_members")
+        .select("district_id").eq("user_id", user.id).eq("role", "facilitator").limit(1).maybeSingle();
+      if (fac?.district_id) {
+        const { data: fd } = await SB.from("districts").select("*").eq("id", fac.district_id).single();
+        dist = fd;
+      }
+    }
+    if (!dist && plan === "district") {
+      // Auto-create only for a genuine district-plan owner on first visit (never for facilitators).
       const { data: newDist } = await SB.from("districts")
         .insert({ owner_id: user.id, name: "", max_schools: 6 })
         .select().single();
       dist = newDist;
     }
+    if (!dist) { setLoading(false); return; }
+    setIsOwner(dist.owner_id === user.id);
     setDistrict(dist);
 
     // Load schools in this district
@@ -1530,7 +1541,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool }) {
       .select("*").eq("district_id", dist.id).order("created_at", { ascending: false });
     setInvites(invData || []);
     setLoading(false);
-  }, [user]);
+  }, [user, isFacilitator, plan]);
 
   const loadDistInventory = useCallback(async () => {
     if (!district || !schools.length) return;
@@ -1543,7 +1554,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool }) {
     setDistLoading(false);
   }, [district, schools]);
 
-  useEffect(() => { if (plan === "district") load(); }, [load, plan]);
+  useEffect(() => { if (plan === "district" || isFacilitator) load(); }, [load, plan, isFacilitator]);
   useEffect(() => { if (tab === "inventory") loadDistInventory(); }, [tab, loadDistInventory]);
 
   const sendInvite = async () => {
@@ -1584,7 +1595,9 @@ export function DistrictDashboard({ user, plan, onSwitchSchool }) {
 
   const removeSchool = async (schoolId) => {
     if (!window.confirm("Remove this school from your district? Their account and data will remain, but they will no longer be linked to your district.")) return;
-    await SB.from("orgs").update({ district_id: null, role: "school_admin" }).eq("id", schoolId);
+    // Detach via a scoped RPC (owner or facilitator of this district only) so orgs stays locked down.
+    const { error } = await SB.rpc("district_remove_school", { p_school_id: schoolId });
+    if (error) { setMsg("❌ " + error.message); return; }
     load();
   };
 
@@ -1599,7 +1612,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool }) {
   const slotsUsed  = schools.length;
   const slotsTotal = district?.max_schools || 6;
 
-  if (plan !== "district") return (
+  if (plan !== "district" && !isFacilitator) return (
     <div style={{ padding: 48, textAlign: "center" }}>
       <div style={{ fontSize: 40, marginBottom: 12 }}>🏢</div>
       <h2 style={{ fontFamily: "var(--serif)", marginBottom: 8 }}>District Plan Required</h2>
@@ -1643,7 +1656,8 @@ export function DistrictDashboard({ user, plan, onSwitchSchool }) {
           ))}
         </div>
 
-        {/* District Name */}
+        {/* District Name — owner only (facilitators cannot rename the district) */}
+        {isOwner && (
         <div className="card card-p" style={{ marginBottom: 20 }}>
           <div className="sh"><h2>District Profile</h2><p>This name appears on all school Exchange listings.</p></div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
@@ -1664,6 +1678,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool }) {
             {msg && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>{msg}</span>}
           </div>
         </div>
+        )}
 
         {/* Tabs */}
         <div className="tabs" style={{ marginBottom: 16 }}>
