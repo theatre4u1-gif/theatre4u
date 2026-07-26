@@ -229,59 +229,6 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
     } finally { setPrinting(false); }
   };
 
-  // Print sized for the P-touch Cube (PT-P710BT) 24mm tape: one label per tape segment
-  // (QR + ID + name + location). Choose the Brother PT-P710BT in the browser print dialog.
-  const printPtouchTape = async () => {
-    const toPrint = myItems.filter(i=>selected.includes(i.id));
-    if(!toPrint.length) return;
-    setPrinting(true);
-    try {
-      const brandHost = doorOf(org) === "artstracker" ? "artstracker.org" : "theatre4u.org";
-      const srcs = await Promise.all(toPrint.map(i=>QR.toDataURL("https://"+brandHost+"/#/item/"+i.id,160)));
-      const w = window.open("","_blank","width=900,height=700");
-      if(!w){setPrinting(false);return;}
-      const esc = (s)=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-      const labels = toPrint.map((item,n)=>{
-        const dispId = item.display_id||item.id.slice(0,8).toUpperCase();
-        const eName=esc(item.name), eLoc=esc(item.location), eId=esc(dispId);
-        return `<div class="ptl">
-          <div class="ptl-txt">
-            <div class="ptl-id">${eId}</div>
-            <div class="ptl-name">${eName}</div>
-            ${item.location?`<div class="ptl-loc">${eLoc}</div>`:""}
-          </div>
-          ${srcs[n]?`<img src="${srcs[n]}" class="ptl-qr"/>`:""}
-        </div>`;
-      }).join("");
-      w.document.write(`<!DOCTYPE html><html><head><title>P-touch tape — ${esc(org?.name||APP_NAME)}</title>
-      <style>
-        *{margin:0;padding:0;box-sizing:border-box}
-        @page{size:76mm 24mm;margin:0}
-        body{font-family:Arial,sans-serif;background:#fff}
-        .controls{padding:10px 14px;text-align:center;font-size:13px}
-        .ptl{width:76mm;height:24mm;display:flex;align-items:center;gap:2mm;padding:1.5mm 2mm;page-break-after:always;overflow:hidden}
-        .ptl:last-child{page-break-after:auto}
-        .ptl-txt{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:.4mm}
-        .ptl-id{font-family:monospace;font-weight:800;font-size:3.4mm;letter-spacing:.3px;color:#000}
-        .ptl-name{font-weight:700;font-size:3.4mm;line-height:1.05;color:#000;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-        .ptl-loc{font-size:2.7mm;color:#000;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-        .ptl-qr{width:18mm;height:18mm;flex-shrink:0}
-        @media screen{.ptl{border:1px solid #ccc;margin:6px auto}}
-        @media print{.controls{display:none}}
-      </style></head><body>
-      <div class="controls">
-        <strong>${esc(org?.name||APP_NAME)}</strong> — ${toPrint.length} P-touch label${toPrint.length!==1?"s":""} (24mm tape)
-        <button onclick="window.print()" style="margin-left:16px;padding:5px 14px;background:#d4a843;border:none;border-radius:5px;font-weight:700;cursor:pointer">🖨 Print</button>
-        <button onclick="window.close()" style="margin-left:6px;padding:5px 14px;border:1px solid #ccc;border-radius:5px;cursor:pointer">Close</button>
-        <div style="margin:8px auto 0;color:#888;font-size:12px;max-width:560px;line-height:1.5">In the print dialog choose your <b>Brother PT-P710BT</b>, set the label size to <b>24mm</b> tape, and set scaling to <b>100% / None</b>. For large batches the CSV export into P-touch Editor is more reliable.</div>
-      </div>
-      <div class="grid">${labels}</div>
-      <script>setTimeout(function(){window.print()},600)<\/script>
-      </body></html>`);
-      w.document.close();
-    } finally { setPrinting(false); }
-  };
-
   // ── ASSIGN TAB ───────────────────────────────────────────────────────────
   const doAssign = async () => {
     const code = assignCode.trim().toUpperCase();
@@ -478,13 +425,6 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
               style={{padding:"8px 16px",borderRadius:8,border:"1px solid var(--border)",fontFamily:"inherit",fontSize:12.5,fontWeight:700,
                 cursor:filtered.length?"pointer":"not-allowed",background:"transparent",color:"var(--goldink)"}}>
               ⬇ Export for P-touch{selected.length?(" ("+selected.length+")"):""}
-            </button>
-            <button onClick={printPtouchTape} disabled={selected.length===0||printing}
-              title="Open a print layout sized for 24mm P-touch tape (one label per tape). Choose the Brother PT-P710BT in the print dialog."
-              style={{padding:"8px 16px",borderRadius:8,border:"1px solid var(--border)",fontFamily:"inherit",fontSize:12.5,fontWeight:700,
-                cursor:selected.length&&!printing?"pointer":"not-allowed",background:"transparent",
-                color:selected.length?"var(--goldink)":"var(--muted)"}}>
-              🏷 P-touch tape layout{selected.length?(" ("+selected.length+")"):""}
             </button>
           </div>
 
@@ -708,6 +648,24 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
                 </div>
               </div>
             ))}
+          </div>
+          <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,padding:"16px 18px",marginBottom:18}}>
+            <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>🔧 How to print on the P-touch Cube Plus (PT-P710BT)</div>
+            <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.7,marginBottom:12}}>
+              The P-touch Cube prints on 24mm tape using Brother's free <strong style={{color:"var(--text)"}}>P-touch Editor</strong> on a Mac or Windows computer (the phone app can't merge a list of items). One-time setup, then a quick routine each batch:
+            </div>
+            <div style={{fontWeight:700,fontSize:12.5,color:"var(--text)",marginBottom:4}}>First time only</div>
+            <ol style={{margin:"0 0 12px 20px",padding:0,fontSize:13,color:"var(--muted)",lineHeight:1.8}}>
+              <li>Install <strong style={{color:"var(--text)"}}>P-touch Editor</strong> and the PT-P710BT driver from Brother's website (search "Brother PT-P710BT downloads").</li>
+              <li>Load a 24mm TZe tape cassette and connect the printer to your computer with the USB cable.</li>
+            </ol>
+            <div style={{fontWeight:700,fontSize:12.5,color:"var(--text)",marginBottom:4}}>Each time you print a batch</div>
+            <ol style={{margin:"0 0 0 20px",padding:0,fontSize:13,color:"var(--muted)",lineHeight:1.8}}>
+              <li>In the <strong style={{color:"var(--text)"}}>Print Labels</strong> tab, select your items and click <strong style={{color:"var(--text)"}}>Export for P-touch</strong>. A CSV downloads to your computer.</li>
+              <li>Open your label template (the .lbx file) in P-touch Editor.</li>
+              <li>Connect the CSV: <strong style={{color:"var(--text)"}}>File → Database → Connect</strong>, choose the CSV, and confirm "first row contains field names." The fields (Label_ID, Item_Name, Location, QR_URL) line up automatically.</li>
+              <li>Preview the records, then <strong style={{color:"var(--text)"}}>File → Print</strong>, choose <strong style={{color:"var(--text)"}}>Brother PT-P710BT</strong>, and print <strong style={{color:"var(--text)"}}>All records</strong>. Turn on Auto Cut to separate labels.</li>
+            </ol>
           </div>
           <div style={{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap",marginBottom:14}}>
             <button onClick={()=>setTab("print")}
