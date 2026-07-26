@@ -628,7 +628,6 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
               ["🔧","Brother P-touch CUBE Plus (PT-P710BT)","Prints durable laminated tape for props, cases, and anything handled every week. Connects to a computer by USB (Bluetooth is for the phone app).","https://www.amazon.com/dp/B07HB8LNSY?tag=artstracker-20","Printer on Amazon",null,null],
               ["📦","TZe-251 tape, 24mm black on white (everyday, best overall)","The size the label template uses. Best for props, storage tubs, toolboxes, shelving, and lighting and sound equipment.","https://www.amazon.com/s?k=Brother+TZe-251+24mm&tag=artstracker-20","Tape on Amazon",null,null],
               ["💪","TZe-S241 tape, 24mm extra strength adhesive","Stronger stick for rough or textured surfaces: Rubbermaid bins, Pelican and road cases, and painted scenery carts.","https://www.amazon.com/s?k=Brother+TZe-S241&tag=artstracker-20","Tape on Amazon",null,null],
-              ["👗","TZe-FA3 iron-on fabric tape (12mm)","Iron-on labels for costumes, jackets, dancewear, uniforms, fabric bags, and aprons. Works with the PT-P710BT. Prefer black text? Use TZe-FA231.","https://www.amazon.com/dp/B0055FGLF8?tag=artstracker-20","Fabric tape (blue text)","https://www.amazon.com/s?k=Brother+TZe-FA231&tag=artstracker-20","Fabric tape (black text)"],
             ].map(([icon,name,desc,url,cta,url2,cta2],i)=>(
               <div key={i} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,padding:"16px 18px",display:"flex",gap:14,alignItems:"flex-start"}}>
                 <div style={{fontSize:26,lineHeight:1}}>{icon}</div>
@@ -652,7 +651,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
             ))}
           </div>
           <div style={{fontSize:12.5,color:"var(--muted)",lineHeight:1.7,marginBottom:16}}>
-            <strong style={{color:"var(--text)"}}>Outfitting a whole department?</strong> A solid starter set: 10x TZe-251 (everyday), 4x TZe-S241 (extra strength), 4x TZe-FA3 (costumes). That covers just about everything in a theatre program.
+            <strong style={{color:"var(--text)"}}>Outfitting a whole department?</strong> A solid starter set: 10x TZe-251 (everyday) and 4x TZe-S241 (extra strength).
           </div>
           <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,padding:"16px 18px",marginBottom:18}}>
             <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>🔧 How to print on the P-touch Cube Plus (PT-P710BT)</div>
