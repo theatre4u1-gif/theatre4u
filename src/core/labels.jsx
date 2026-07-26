@@ -109,6 +109,32 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
   const selAll    = () => setSelected(filtered.map(i=>i.id));
   const clearSel  = () => setSelected([]);
 
+  // Export a CSV for Brother P-touch Editor (matches the merge template's columns exactly:
+  // Label_ID, Item_Name, Location, QR_URL, Label_Type). Uses selected items, or all filtered if none.
+  const exportPtouchCsv = () => {
+    const rows = selected.length ? myItems.filter(i=>selected.includes(i.id)) : filtered;
+    if(!rows.length) return;
+    const brandHost = doorOf(org) === "artstracker" ? "artstracker.org" : "theatre4u.org";
+    const esc = v => '"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+    const lines = [["Label_ID","Item_Name","Location","QR_URL","Label_Type"].join(",")];
+    rows.forEach(i=>{
+      const dispId = i.display_id || i.id.slice(0,8).toUpperCase();
+      const cat = CAT[i.category] || CAT.other;
+      lines.push([
+        esc(dispId), esc(i.name), esc(i.location||""),
+        esc("https://"+brandHost+"/#/item/"+i.id),
+        esc(cat.label || i.category || "")
+      ].join(","));
+    });
+    const csv = "﻿" + lines.join("\r\n"); // BOM + CRLF so P-touch Editor / Excel read it cleanly
+    const url = URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = (org?.label_prefix || "labels") + "-ptouch-" + new Date().toISOString().slice(0,10) + ".csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const printSelected = async () => {
     const toPrint = myItems.filter(i=>selected.includes(i.id));
     if(!toPrint.length) return;
@@ -393,6 +419,12 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
                 background:selected.length&&!printing?"var(--gold)":"var(--border)",
                 color:selected.length&&!printing?"#1a0f00":"var(--muted)"}}>
               {printing?"Generating…":selected.length?("🖨 Print "+selected.length+" Label"+(selected.length!==1?"s":"")):"Select items to print"}
+            </button>
+            <button onClick={exportPtouchCsv} disabled={filtered.length===0}
+              title="Download a CSV for Brother P-touch Editor (Label_ID, Item_Name, Location, QR_URL). Uses selected items, or all if none are selected."
+              style={{padding:"8px 16px",borderRadius:8,border:"1px solid var(--border)",fontFamily:"inherit",fontSize:12.5,fontWeight:700,
+                cursor:filtered.length?"pointer":"not-allowed",background:"transparent",color:"var(--goldink)"}}>
+              ⬇ Export for P-touch{selected.length?(" ("+selected.length+")"):""}
             </button>
           </div>
 
