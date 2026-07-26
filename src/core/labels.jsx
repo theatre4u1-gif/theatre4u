@@ -625,7 +625,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
           <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:18}}>
             {[
               ["🏷️","Brother QL-810W","Cheap, fast bulk labels for bins and shelves. Paper rolls run about 3\u00A2 per label (400-label roll \u2248 $14).","https://www.amazon.com/dp/B01MTWGMRR?tag=artstracker-20","Printer on Amazon","https://www.amazon.com/dp/B0002VS6HG?tag=artstracker-20","DK-1201 label rolls"],
-              ["🔧","Brother P-touch CUBE Plus (PT-P710BT)","Laminated tape that shrugs off water and handling \u2014 the right choice for equipment, cases, and anything touched every week.","https://www.amazon.com/dp/B07HB8LNSY?tag=artstracker-20","Printer on Amazon",null,null],
+              ["🔧","Brother P-touch CUBE Plus (PT-P710BT)","Laminated tape that shrugs off water and handling \u2014 the right choice for equipment, cases, and anything touched every week.","https://www.amazon.com/dp/B07HB8LNSY?tag=artstracker-20","Printer on Amazon","https://www.amazon.com/s?k=Brother+TZe-251+24mm+laminated+tape&tag=artstracker-20","24mm tape (TZe-251)"],
               ["👗","Iron-on fabric tape (TZe-FA3)","For the same P-touch printer \u2014 fabric labels that survive 30+ washes. Note: it\u2019s \u00BD\u2033 tape, so print your program name + item ID inside the collar, and put the scannable QR on the hanger or bin.","https://www.amazon.com/dp/B0055FGLF8?tag=artstracker-20","Tape on Amazon",null,null],
             ].map(([icon,name,desc,url,cta,url2,cta2],i)=>(
               <div key={i} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,padding:"16px 18px",display:"flex",gap:14,alignItems:"flex-start"}}>
