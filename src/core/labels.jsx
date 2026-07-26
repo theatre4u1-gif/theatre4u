@@ -625,8 +625,10 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
           <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:18}}>
             {[
               ["🏷️","Brother QL-810W","Cheap, fast bulk labels for bins and shelves. Paper rolls run about 3\u00A2 per label (400-label roll \u2248 $14).","https://www.amazon.com/dp/B01MTWGMRR?tag=artstracker-20","Printer on Amazon","https://www.amazon.com/dp/B0002VS6HG?tag=artstracker-20","DK-1201 label rolls"],
-              ["🔧","Brother P-touch CUBE Plus (PT-P710BT)","Laminated tape that shrugs off water and handling \u2014 the right choice for equipment, cases, and anything touched every week.","https://www.amazon.com/dp/B07HB8LNSY?tag=artstracker-20","Printer on Amazon","https://www.amazon.com/s?k=Brother+TZe-251+24mm+laminated+tape&tag=artstracker-20","24mm tape (TZe-251)"],
-              ["👗","Iron-on fabric tape (TZe-FA3)","For the same P-touch printer \u2014 fabric labels that survive 30+ washes. Note: it\u2019s \u00BD\u2033 tape, so print your program name + item ID inside the collar, and put the scannable QR on the hanger or bin.","https://www.amazon.com/dp/B0055FGLF8?tag=artstracker-20","Tape on Amazon",null,null],
+              ["🔧","Brother P-touch CUBE Plus (PT-P710BT)","Prints durable laminated tape for props, cases, and anything handled every week. Connects to a computer by USB (Bluetooth is for the phone app).","https://www.amazon.com/dp/B07HB8LNSY?tag=artstracker-20","Printer on Amazon",null,null],
+              ["📦","TZe-251 tape, 24mm black on white (everyday, best overall)","The size the label template uses. Best for props, storage tubs, toolboxes, shelving, and lighting and sound equipment.","https://www.amazon.com/s?k=Brother+TZe-251+24mm&tag=artstracker-20","Tape on Amazon",null,null],
+              ["💪","TZe-S241 tape, 24mm extra strength adhesive","Stronger stick for rough or textured surfaces: Rubbermaid bins, Pelican and road cases, and painted scenery carts.","https://www.amazon.com/s?k=Brother+TZe-S241&tag=artstracker-20","Tape on Amazon",null,null],
+              ["👗","TZe-FA3 iron-on fabric tape (12mm)","Iron-on labels for costumes, jackets, dancewear, uniforms, fabric bags, and aprons. Works with the PT-P710BT. Prefer black text? Use TZe-FA231.","https://www.amazon.com/dp/B0055FGLF8?tag=artstracker-20","Fabric tape (blue text)","https://www.amazon.com/s?k=Brother+TZe-FA231&tag=artstracker-20","Fabric tape (black text)"],
             ].map(([icon,name,desc,url,cta,url2,cta2],i)=>(
               <div key={i} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,padding:"16px 18px",display:"flex",gap:14,alignItems:"flex-start"}}>
                 <div style={{fontSize:26,lineHeight:1}}>{icon}</div>
@@ -649,6 +651,9 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
               </div>
             ))}
           </div>
+          <div style={{fontSize:12.5,color:"var(--muted)",lineHeight:1.7,marginBottom:16}}>
+            <strong style={{color:"var(--text)"}}>Outfitting a whole department?</strong> A solid starter set: 10x TZe-251 (everyday), 4x TZe-S241 (extra strength), 4x TZe-FA3 (costumes). That covers just about everything in a theatre program.
+          </div>
           <div style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,padding:"16px 18px",marginBottom:18}}>
             <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>🔧 How to print on the P-touch Cube Plus (PT-P710BT)</div>
             <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.7,marginBottom:12}}>
@@ -664,7 +669,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
               <li>In the <strong style={{color:"var(--text)"}}>Print Labels</strong> tab, select your items and click <strong style={{color:"var(--text)"}}>Export for P-touch</strong>. A CSV downloads to your computer.</li>
               <li>Open your label template (the .lbx file) in P-touch Editor.</li>
               <li>Connect the CSV: <strong style={{color:"var(--text)"}}>File → Database → Connect</strong>, choose the CSV, and confirm "first row contains field names." The fields (Label_ID, Item_Name, Location, QR_URL) line up automatically.</li>
-              <li>Preview the records, then <strong style={{color:"var(--text)"}}>File → Print</strong>, choose <strong style={{color:"var(--text)"}}>Brother PT-P710BT</strong>, and print <strong style={{color:"var(--text)"}}>All records</strong>. Turn on Auto Cut to separate labels.</li>
+              <li><strong style={{color:"var(--text)"}}>To print every label:</strong> in the database list at the bottom, click the first row and Shift-click the last row so all rows are highlighted (or Cmd+A). Then <strong style={{color:"var(--text)"}}>File → Print</strong>, choose <strong style={{color:"var(--text)"}}>Brother PT-P710BT</strong>, turn on Auto Cut, and Print. (Keep Copies = 1; Copies makes duplicates, not one per item. If it still prints one, open Detailed Settings and set the range to All records.)</li>
             </ol>
           </div>
           <div style={{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap",marginBottom:14}}>
