@@ -420,11 +420,20 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
                 color:selected.length&&!printing?"#1a0f00":"var(--muted)"}}>
               {printing?"Generating…":selected.length?("🖨 Print "+selected.length+" Label"+(selected.length!==1?"s":"")):"Select items to print"}
             </button>
+          </div>
+
+          {/* Secondary path: printing on a Brother P-touch label printer */}
+          <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:14,fontSize:12,color:"var(--muted)"}}>
+            <span>Using a Brother P-touch label printer?</span>
             <button onClick={exportPtouchCsv} disabled={filtered.length===0}
               title="Download a CSV for Brother P-touch Editor (Label_ID, Item_Name, Location, QR_URL). Uses selected items, or all if none are selected."
-              style={{padding:"8px 16px",borderRadius:8,border:"1px solid var(--border)",fontFamily:"inherit",fontSize:12.5,fontWeight:700,
+              style={{padding:"6px 12px",borderRadius:7,border:"1px solid var(--border)",fontFamily:"inherit",fontSize:12,fontWeight:700,
                 cursor:filtered.length?"pointer":"not-allowed",background:"transparent",color:"var(--goldink)"}}>
-              ⬇ Export for P-touch{selected.length?(" ("+selected.length+")"):""}
+              ⬇ Export for P-touch (CSV){selected.length?(" ("+selected.length+")"):""}
+            </button>
+            <button onClick={()=>setTab("gear")}
+              style={{background:"none",border:"none",padding:0,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:600,color:"var(--goldink)",textDecoration:"underline"}}>
+              See the P-touch how-to →
             </button>
           </div>
 
