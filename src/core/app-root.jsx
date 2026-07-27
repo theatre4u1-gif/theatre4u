@@ -348,11 +348,22 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       const { data: ownDist } = await SB.from("districts").select("id").eq("owner_id", user.id).maybeSingle();
       setOwnsDistrict(!!ownDist);
       setLoaded(true);
-      // Load unread message count
-      const { count: unread } = await SB.from("messages")
-        .select("id", { count: "exact", head: true })
-        .eq("read", false)
-        .neq("sender_id", targetOrgId);
+      // Load unread message count — scoped to THIS org's conversations only. Without the
+      // conversation scope, a message sent from another org the user owns (e.g. Ocean View)
+      // was counted as unread on an unrelated org's view (e.g. HB APA), showing a phantom
+      // badge with no matching conversation in the list.
+      const { data: myConvs } = await SB.from("conversations")
+        .select("id").or(`org_a.eq.${targetOrgId},org_b.eq.${targetOrgId}`);
+      const myConvIds = (myConvs || []).map(c => c.id);
+      let unread = 0;
+      if (myConvIds.length) {
+        const { count } = await SB.from("messages")
+          .select("id", { count: "exact", head: true })
+          .eq("read", false)
+          .neq("sender_id", targetOrgId)
+          .in("conversation_id", myConvIds);
+        unread = count || 0;
+      }
       setUnreadCount(unread || 0);
       // Load pending request count (incoming)
       const { count: reqCount } = await SB.from("rental_requests")
