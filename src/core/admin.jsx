@@ -2823,6 +2823,7 @@ export function AdminDailyDigest() {
       {data:loginRows},
       {data:msgs},
       {data:fbRows},
+      {data:signupRows},
     ] = await Promise.all([
       SB.from("orgs").select("id,name,email,plan,created_at").gte("created_at",since).order("created_at",{ascending:false}),
       SB.from("items").select("id,name,category,org_id,added").gte("added",since).order("added",{ascending:false}).limit(200),
@@ -2832,6 +2833,7 @@ export function AdminDailyDigest() {
       SB.from("login_events").select("id,org_id,org_name,email,plan,session_id,user_agent,referrer,utm_source,created_at").gte("created_at",since).neq("email","theatre4u1@gmail.com").order("created_at",{ascending:false}).limit(200),
       SB.from("messages").select("id,created_at").gte("created_at",since),
       SB.from("beta_feedback").select("id,category,org_name,message,created_at").gte("created_at",since).order("created_at",{ascending:false}),
+      SB.from("signup_events").select("utm_source,referrer,created_at").gte("created_at",since),
     ]);
 
     // Enrich items with org names
@@ -2865,6 +2867,13 @@ export function AdminDailyDigest() {
       pvBySource[src] = (pvBySource[src]||0) + 1;
     });
 
+    // Signups by source — conversions attributed to the same scan tag (utm_source)
+    const signupBySource = {};
+    (signupRows||[]).forEach(s => {
+      const src = s.utm_source || (s.referrer ? (s.referrer.includes("facebook")?"facebook":s.referrer.includes("google")?"google":s.referrer.includes("instagram")?"instagram":"referral") : "direct");
+      signupBySource[src] = (signupBySource[src]||0) + 1;
+    });
+
     // Login events aggregation
     const loginByOrg = {};
     (loginRows||[]).forEach(l => {
@@ -2885,6 +2894,8 @@ export function AdminDailyDigest() {
       uniqueSessions: sessions.size,
       pvByPage,
       pvBySource,
+      signupBySource,
+      signupCount:  (signupRows||[]).length,
       loginRows:    loginRows||[],
       loginByOrg,
       messages:     msgs||[],
@@ -3030,6 +3041,36 @@ export function AdminDailyDigest() {
                 </div>
                 <div style={{padding:"8px 14px",borderTop:"1px solid var(--border)",fontSize:11,color:"var(--muted)"}}>
                   Page views by page: {Object.entries(data.pvByPage).sort(([,a],[,b])=>b-a).map(([p,n])=>p+" ("+n+")").join(" · ")}
+                </div>
+              </div>
+            )}
+
+            {/* Signups by Source — which promo pieces actually convert */}
+            {data.signupCount>0&&(
+              <div style={card}>
+                {sectionHead("✍️","Signups by Source — "+data.signupCount+" total")}
+                <div style={{padding:"12px 14px",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:8}}>
+                  {Object.entries(data.signupBySource).sort(([,a],[,b])=>b-a).map(([src,n])=>{
+                    const scans=data.pvBySource[src]||0;
+                    const conv=scans>0?Math.round(n/scans*100):null;
+                    const maxN=Math.max(...Object.values(data.signupBySource));
+                    return (
+                    <div key={src} style={{display:"flex",alignItems:"center",gap:10}}>
+                      <span style={{fontSize:14}}>🎯</span>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:12,fontWeight:600,textTransform:"capitalize"}}>{src.replace(/-/g," ")}</div>
+                        <div style={{height:4,background:"var(--border)",borderRadius:2,marginTop:3,overflow:"hidden"}}>
+                          <div style={{height:"100%",width:(n/maxN*100)+"%",background:"#64A383",borderRadius:2}}/>
+                        </div>
+                      </div>
+                      <span style={{fontSize:13,fontWeight:700,color:"var(--goldink)",minWidth:52,textAlign:"right"}}>
+                        {n}{conv!=null?" · "+conv+"%":""}
+                      </span>
+                    </div>);
+                  })}
+                </div>
+                <div style={{padding:"8px 14px",borderTop:"1px solid var(--border)",fontSize:11,color:"var(--muted)"}}>
+                  Signups attributed by the scan's tag (utm_source). Percent = signups ÷ scans for that source. Print pieces use tags like teacher-postcard, district-postcard, booth-banner.
                 </div>
               </div>
             )}
