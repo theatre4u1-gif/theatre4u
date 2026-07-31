@@ -105,6 +105,8 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             utm_source: _utm.source||null, utm_medium: _utm.medium||null, utm_campaign: _utm.campaign||null,
             referrer: document.referrer||null
           }).then(()=>{}).catch(()=>{}); // fire and forget
+          // Meta Pixel: confirmed brand-new account (password signup). No PII.
+          try { if (typeof window!=="undefined" && window.fbq) window.fbq("track","CompleteRegistration"); } catch(e) {}
           await SB.from("orgs").upsert({
             id:data.user.id, name:orgName, email, director_name: ownerName.trim()||null,
             type:"", phone:"", location:"", bio:"",
@@ -422,6 +424,8 @@ export function GoogleProfileSetup({user, onDone}){
         utm_source:_utm.source||null, utm_medium:_utm.medium||null, utm_campaign:_utm.campaign||null,
         referrer:document.referrer||null
       }).then(()=>{}).catch(()=>{});
+      // Meta Pixel: confirmed brand-new account (Google sign-in). No PII.
+      try { if (typeof window!=="undefined" && window.fbq) window.fbq("track","CompleteRegistration"); } catch(e) {}
       // Notify admin of new signup
       try{
         fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/signup-notify",{
