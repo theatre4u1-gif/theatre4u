@@ -202,9 +202,7 @@ s.parentNode.insertBefore(t,s)}(window, document,'script',
 fbq('init', '1706264944009516');
 fbq('track', 'PageView');
 </script>
-<noscript><img height="1" width="1" style="display:none"
-src="https://www.facebook.com/tr?id=1706264944009516&ev=PageView&noscript=1"
-/></noscript>
+<!-- <noscript> fallback for the pixel lives in <body> — an <img> is not valid inside <noscript> in <head> -->
 <!-- End Meta Pixel Code -->
     <!-- Meta Pixel — SPA route-change PageView (fires only on real path changes, no duplicates) -->
     <script>
@@ -213,6 +211,8 @@ src="https://www.facebook.com/tr?id=1706264944009516&ev=PageView&noscript=1"
 
   </head>
   <body>
+    <!-- Meta Pixel <noscript> fallback (valid here in <body>) -->
+    <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1706264944009516&ev=PageView&noscript=1" alt=""/></noscript>
     <div id="root"></div>
     <noscript>
       <div style="font-family:sans-serif;max-width:700px;margin:60px auto;padding:0 24px;color:#1a1008">
