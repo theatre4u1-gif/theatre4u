@@ -28,6 +28,7 @@ import { Pager, Modal, FbShareBtn, HeroImg, CatCard, CatThumb, LegalModal, LogoM
 import { PIN_COLORS, ROW_LABELS, COL_LABELS } from "./storage-map.js";
 import { QR } from "./qr.js";
 import { ItemForm, ItemDetail } from "./items.jsx";
+import { FeedbackWidget } from "./feedback.jsx";
 import { Dashboard } from "./dashboard.jsx";
 import { Inventory } from "./inventory-page.jsx";
 import { MarketplaceGate, CSVImport } from "./marketplace.jsx";
@@ -1105,6 +1106,11 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
             onNav={nav}
           />
         ) : null
+      )}
+
+      {/* Beta feedback button — restored; auto-hides at launch (Sept 1, 2026) */}
+      {user && !isDemo && new Date() < new Date("2026-09-01T00:00:00-07:00") && (
+        <FeedbackWidget userId={org?.id || user?.id} orgName={org?.name} isLeadingPlayer={org?.is_leading_player} />
       )}
     </>
   );
