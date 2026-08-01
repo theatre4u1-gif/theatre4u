@@ -728,8 +728,8 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
           <div className="sh"><h2>Plans</h2><p>Choose the right plan for your program.</p></div>
           {/* Billing toggle */}
           <UpgradePlans userId={userId} userEmail={userEmail} plan={plan}/>
-          {/* Manage / Cancel billing — only shown to paid non-admin users */}
-          {plan !== "free" && !isAdminEmail(userEmail) && (
+          {/* Manage / Cancel billing — only for users with a real Stripe subscription */}
+          {org?.stripe_subscription_id && !isAdminEmail(userEmail) && (
             <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid var(--bd)"}}>
               <div style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>
                 You are on the <strong style={{color:"var(--goldink)",textTransform:"capitalize"}}>{plan}</strong> plan.
@@ -752,6 +752,14 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
                 <a href={"mailto:"+APP_EMAIL+"?subject=Check/PO Subscription Request"} style={{color:"var(--goldink)"}}>{APP_EMAIL}</a>
                 {" "}and we'll send a formal invoice. Payment made payable to <strong>Artstracker LLC</strong>. Net-30 available for districts.
               </div>
+            </div>
+          )}
+          {/* Beta / temp_pro (or comped) with no Stripe subscription — honest free-during-beta status */}
+          {!org?.stripe_subscription_id && plan !== "free" && !isAdminEmail(userEmail) && (
+            <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid var(--bd)",fontSize:12,color:"var(--muted)",lineHeight:1.7}}>
+              <span style={{fontWeight:700,color:"var(--goldink)"}}>Free during beta.</span> Billing begins September 1, 2026.
+              You have full <strong style={{textTransform:"capitalize",color:"var(--text)"}}>{plan}</strong> access at no cost right now, and no card is on file, so nothing is charged automatically. When billing begins you can choose a plan or stay on Free.
+              <div style={{marginTop:10,fontSize:11,color:"var(--faint)"}}>Questions about billing, or paying by check or PO for a district? Email <a href={"mailto:"+APP_EMAIL} style={{color:"var(--goldink)"}}>{APP_EMAIL}</a>.</div>
             </div>
           )}
         </div>
