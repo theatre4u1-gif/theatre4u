@@ -12,12 +12,12 @@ import{createClient}from'https://esm.sh/@supabase/supabase-js@2';
 
 const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type'};
 
-type Brand={name:string;plain:string;site:string;host:string;from:string;reply:string;emoji:string};
+type Brand={name:string;plain:string;site:string;host:string;from:string;reply:string;emoji:string;pro:string};
 const BRANDS:Record<string,Brand>={
   theatre4u:{name:'Theatre4u&#x2122;',plain:'Theatre4u',site:'https://theatre4u.org',host:'theatre4u.org',
-    from:'Bob Zick at Theatre4u <hello@theatre4u.org>',reply:'hello@theatre4u.org',emoji:'&#x1F3AD;'},
+    from:'Bob Zick at Theatre4u <hello@theatre4u.org>',reply:'hello@theatre4u.org',emoji:'&#x1F3AD;',pro:'$15'},
   artstracker:{name:'ArtsTracker',plain:'ArtsTracker',site:'https://artstracker.org',host:'artstracker.org',
-    from:'Bob Zick at ArtsTracker <hello@theatre4u.org>',reply:'hello@artstracker.org',emoji:'&#x1F3A8;'},
+    from:'Bob Zick at ArtsTracker <hello@theatre4u.org>',reply:'hello@artstracker.org',emoji:'&#x1F3A8;',pro:'$59'},
 };
 // Non-theatre verticals are ArtsTracker-only; theatre programs follow the domain they signed up on.
 const brandFor=(signup_domain?:string,vertical?:string):Brand=>
@@ -46,6 +46,9 @@ const vertFor=(v?:string):Vert=>VERTS[v||'theatre']||VERTS.theatre;
 
 const hdr=(B:Brand)=>`<div style="background:#1a0f00;padding:18px 24px"><span style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#d4a843">${B.emoji} ${B.name}</span></div>`;
 const ftr=(B:Brand)=>`<div style="padding:12px 28px;border-top:1px solid #e8e0d0;text-align:center;font-size:11px;color:#aaa">${B.name} &mdash; Artstracker LLC &middot; <a href="${B.site}" style="color:#aaa">${B.host}</a></div>`;
+// Full CAN-SPAM footer (postal address + unsubscribe). Injected at send time in place of ftr(B).
+const ADDR='Artstracker LLC &middot; 10441 Stanford Ave., #1155, Garden Grove, CA 92842';
+const ftrFull=(B:Brand,unsubUrl:string)=>`<div style="padding:14px 28px;border-top:1px solid #e8e0d0;text-align:center;font-size:11px;color:#aaa;line-height:1.7">${B.name} &mdash; ${ADDR}<br/><a href="${B.site}" style="color:#aaa">${B.host}</a> &middot; ${unsubUrl?`<a href="${unsubUrl}" style="color:#aaa;text-decoration:underline">Unsubscribe</a>`:`<a href="mailto:hello@theatre4u.org?subject=unsubscribe" style="color:#aaa;text-decoration:underline">Unsubscribe</a>`}<br/><span style="color:#bbb">You are receiving this because you signed up for ${B.name}.</span></div>`;
 const sig=(B:Brand)=>`<p style="font-size:15px;color:#333;margin:28px 0 4px">Warmly,</p><p style="font-size:15px;font-weight:700;color:#1a0f00;margin:0 0 4px">Bob</p><p style="font-size:13px;color:#888;margin:0">Bob Zick &middot; Founder, ${B.name}<br/>${B.reply} &middot; ${B.host}</p>`;
 const wrap=(B:Brand,body:string)=>`<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#fff">${hdr(B)}<div style="padding:28px 28px 20px">${body}${sig(B)}</div>${ftr(B)}</div>`;
 const gold=(lines:string[])=>`<div style="background:#fff8e6;border:1px solid #d4a843;border-radius:8px;padding:16px 18px;margin:20px 0">${lines.map(l=>`<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 6px">${l}</p>`).join('')}</div>`;
@@ -61,7 +64,7 @@ const ul=(items:string[])=>`<ul style="font-size:14px;color:#444;line-height:1.9
 // The founding-member offer — the ONLY beta reward (free-year promise rescinded 7/4/26)
 const FOUNDING=(B:Brand)=>gold([
   '&#x2713; Free Pro access now, through September 1, 2026 (our beta period)',
-  '&#x2713; Add <strong>25+ items</strong> and share <strong>one piece of feedback</strong> before September 1 &rarr; lock in the <strong>founding member rate: $9.99/month for as long as you subscribe</strong> (standard rate will be $15)',
+  `&#x2713; Add <strong>25+ items</strong> and share <strong>one piece of feedback</strong> before September 1 &rarr; lock in the <strong>founding member rate: $9.99/month for as long as you subscribe</strong> (standard rate will be ${B.pro})`,
   '&#x2713; Everything you build carries over &mdash; nothing is lost at launch',
 ]);
 
@@ -191,14 +194,17 @@ const EMAILS:Record<number,EmailDef>={
   `)},
 };
 
-async function sendEmail(to:string,num:number,name:string,org:string,key:string,B:Brand,V:Vert):Promise<string|null>{
+async function sendEmail(to:string,num:number,name:string,org:string,key:string,B:Brand,V:Vert,unsubUrl=''):Promise<string|null>{
   const e=EMAILS[num];
   if(!e)return null;
   const first=name?.split(' ')[0]||'there';
+  const html=e.html(B,V,first,org).replace(ftr(B),ftrFull(B,unsubUrl));
+  const headers:Record<string,string>={'List-Unsubscribe':unsubUrl?`<${unsubUrl}>, <mailto:hello@theatre4u.org?subject=unsubscribe>`:`<mailto:hello@theatre4u.org?subject=unsubscribe>`};
+  if(unsubUrl)headers['List-Unsubscribe-Post']='List-Unsubscribe=One-Click';
   const res=await fetch('https://api.resend.com/emails',{
     method:'POST',
     headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'},
-    body:JSON.stringify({from:B.from,reply_to:B.reply,to:[to],subject:e.subject(B,V),html:e.html(B,V,first,org)})
+    body:JSON.stringify({from:B.from,reply_to:B.reply,to:[to],subject:e.subject(B,V),html,headers})
   });
   const d=await res.json();
   if(!res.ok)throw new Error(`Resend ${res.status}: ${JSON.stringify(d)}`);
@@ -223,11 +229,13 @@ Deno.serve(async(req:Request)=>{
     if(!org_id||!email_num)return new Response(JSON.stringify({error:'org_id and email_num required'}),{status:400,headers:{...CORS,'Content-Type':'application/json'}});
     const{data:ex}=await SB.from('email_sequence').select('id').eq('org_id',org_id).eq('email_num',email_num).maybeSingle();
     if(ex)return new Response(JSON.stringify({ok:true,skipped:'already sent'}),{headers:{...CORS,'Content-Type':'application/json'}});
-    const{data:org}=await SB.from('orgs').select('id,name,email,director_name,plan,vertical,signup_domain').eq('id',org_id).single();
+    const{data:org}=await SB.from('orgs').select('id,name,email,director_name,plan,vertical,signup_domain,email_opt_out,unsubscribe_token').eq('id',org_id).single();
     if(!org)return new Response(JSON.stringify({error:'org not found'}),{status:404,headers:{...CORS,'Content-Type':'application/json'}});
+    if(org.email_opt_out)return new Response(JSON.stringify({ok:true,skipped:'opted out'}),{headers:{...CORS,'Content-Type':'application/json'}});
     const B=brandFor(org.signup_domain,org.vertical), V=vertFor(org.vertical);
     const name=org.director_name||org.name||'there';
-    const rid=await sendEmail(org.email,email_num,name,org.name,KEY,B,V);
+    const unsubUrl=`${Deno.env.get('SUPABASE_URL')}/functions/v1/unsubscribe/${org.unsubscribe_token}`;
+    const rid=await sendEmail(org.email,email_num,name,org.name,KEY,B,V,unsubUrl);
     await SB.from('email_sequence').insert({org_id,email_num,resend_id:rid,status:'sent'});
     console.log(`Email ${email_num} → ${org.email} (${org.name}) [${B.plain}/${org.vertical||'theatre'}]`);
     return new Response(JSON.stringify({ok:true,email_num,to:org.email,resend_id:rid}),{headers:{...CORS,'Content-Type':'application/json'}});

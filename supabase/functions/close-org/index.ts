@@ -38,12 +38,20 @@ async function cancelStripe(subId: string): Promise<boolean> {
   }
 }
 
-async function sendEmail(to: string, subject: string, html: string) {
+// Door-aware brand for closure emails so ArtsTracker owners get ArtsTracker-branded mail.
+function brandFor(org: any) {
+  const at = (org?.vertical && org.vertical !== "theatre") || (org?.signup_domain || "").includes("artstracker");
+  return at
+    ? { name: "ArtsTracker", from: "ArtsTracker <hello@theatre4u.org>", reply: "hello@artstracker.org" }
+    : { name: "Theatre4u", from: "Theatre4u <hello@theatre4u.org>", reply: "hello@theatre4u.org" };
+}
+
+async function sendEmail(to: string, subject: string, html: string, from = "Theatre4u <hello@theatre4u.org>", reply = "hello@theatre4u.org") {
   if (!RESEND_KEY || !to) return;
   await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: "Theatre4u <hello@theatre4u.org>", to: [to], subject, html }),
+    body: JSON.stringify({ from, reply_to: reply, to: [to], subject, html }),
   }).catch(e => console.error("Resend:", e));
 }
 
@@ -77,6 +85,7 @@ Deno.serve(async (req: Request) => {
     console.error("Org load:", orgErr?.message);
     return err("Organization not found", 404);
   }
+  const B = brandFor(org);
 
   // Permission check
   const { data: callerOrg } = await sb.from("orgs").select("email").eq("id", user.id).single();
@@ -128,9 +137,10 @@ Deno.serve(async (req: Request) => {
     if (org.email) {
       await sendEmail(
         org.email,
-        "Your Theatre4u account has been permanently closed",
-        `<p>Your Theatre4u account for <strong>${org.name || "your program"}</strong> has been permanently closed by an administrator.</p>
-         <p>All data has been removed. If you believe this was an error, contact <a href="mailto:hello@theatre4u.org">hello@theatre4u.org</a>.</p>`
+        `Your ${B.name} account has been permanently closed`,
+        `<p>Your ${B.name} account for <strong>${org.name || "your program"}</strong> has been permanently closed by an administrator.</p>
+         <p>All data has been removed. If you believe this was an error, contact <a href="mailto:${B.reply}">${B.reply}</a>.</p>`,
+        B.from, B.reply
       );
     }
 
@@ -168,16 +178,17 @@ Deno.serve(async (req: Request) => {
       { month: "long", day: "numeric", year: "numeric" });
     await sendEmail(
       org.email,
-      `Your Theatre4u account has been closed — ${org.name || "your program"}`,
+      `Your ${B.name} account has been closed, ${org.name || "your program"}`,
       `<p>Hi,</p>
-       <p>Your Theatre4u account for <strong>${org.name || "your program"}</strong> has been closed${
+       <p>Your ${B.name} account for <strong>${org.name || "your program"}</strong> has been closed${
          is_admin_action ? " by an administrator" : " as requested"
        }.</p>
        <p>Your data will be permanently deleted on <strong>${deleteDateStr}</strong>.
        To restore your account before then, email
-       <a href="mailto:hello@theatre4u.org">hello@theatre4u.org</a>.</p>
+       <a href="mailto:${B.reply}">${B.reply}</a>.</p>
        ${reason ? `<p>Reason: ${reason}</p>` : ""}
-       <p>Thank you for using Theatre4u.</p><p>— Bob Zick, Theatre4u</p>`
+       <p>Thank you for using ${B.name}.</p><p>— Bob Zick, ${B.name}</p>`,
+      B.from, B.reply
     );
   }
 
