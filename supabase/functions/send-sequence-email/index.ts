@@ -12,12 +12,14 @@ import{createClient}from'https://esm.sh/@supabase/supabase-js@2';
 
 const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type'};
 
-type Brand={name:string;plain:string;site:string;host:string;from:string;reply:string;emoji:string;pro:string};
+type Brand={name:string;plain:string;site:string;host:string;from:string;reply:string;emoji:string;pro:string;mark:string;mw:number;mh:number;tag:string};
 const BRANDS:Record<string,Brand>={
   theatre4u:{name:'Theatre4u&#x2122;',plain:'Theatre4u',site:'https://theatre4u.org',host:'theatre4u.org',
-    from:'Bob Zick at Theatre4u <hello@theatre4u.org>',reply:'hello@theatre4u.org',emoji:'&#x1F3AD;',pro:'$15'},
+    from:'Bob Zick at Theatre4u <hello@theatre4u.org>',reply:'hello@theatre4u.org',emoji:'&#x1F3AD;',pro:'$15',
+    mark:'https://theatre4u.org/logo-mark-theatre4u.png',mw:57,mh:44,tag:'Built for the people who make theatre happen.'},
   artstracker:{name:'ArtsTracker',plain:'ArtsTracker',site:'https://artstracker.org',host:'artstracker.org',
-    from:'Bob Zick at ArtsTracker <hello@theatre4u.org>',reply:'hello@artstracker.org',emoji:'&#x1F3A8;',pro:'$59'},
+    from:'Bob Zick at ArtsTracker <hello@theatre4u.org>',reply:'hello@artstracker.org',emoji:'&#x1F3A8;',pro:'$59',
+    mark:'https://theatre4u.org/logo-mark-artstracker.png',mw:62,mh:44,tag:'Arts programs, organized.'},
 };
 // Non-theatre verticals are ArtsTracker-only; theatre programs follow the domain they signed up on.
 const brandFor=(signup_domain?:string,vertical?:string):Brand=>
@@ -44,7 +46,7 @@ const VERTS:Record<string,Vert>={
 };
 const vertFor=(v?:string):Vert=>VERTS[v||'theatre']||VERTS.theatre;
 
-const hdr=(B:Brand)=>`<div style="background:#1a0f00;padding:18px 24px"><span style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#d4a843">${B.emoji} ${B.name}</span></div>`;
+const hdr=(B:Brand)=>`<div style="background:#FBF7F0;padding:20px 24px 16px;text-align:center;border-bottom:3px solid #d4a843"><img src="${B.mark}" alt="" width="${B.mw}" height="${B.mh}" style="border:0;vertical-align:middle"/><span style="font-family:Georgia,serif;font-size:25px;font-weight:700;color:#4C1035;vertical-align:middle;margin-left:10px">${B.name}</span><div style="font-size:11px;color:#6D625E;margin-top:6px;letter-spacing:.02em">${B.tag}</div></div>`;
 const ftr=(B:Brand)=>`<div style="padding:12px 28px;border-top:1px solid #e8e0d0;text-align:center;font-size:11px;color:#aaa">${B.name} &mdash; Artstracker LLC &middot; <a href="${B.site}" style="color:#aaa">${B.host}</a></div>`;
 // Full CAN-SPAM footer (postal address + unsubscribe). Injected at send time in place of ftr(B).
 const ADDR='Artstracker LLC &middot; 10441 Stanford Ave., #1155, Garden Grove, CA 92842';
