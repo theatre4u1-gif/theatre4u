@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Website Widget Demo — Theatre4u / ArtsTracker</title>
+<style>
+  body{margin:0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#222;background:#faf8f4}
+  .wrap{max-width:960px;margin:0 auto;padding:32px 18px 80px}
+  h1{font-size:24px;margin:0 0 6px}
+  p.sub{color:#666;margin:0 0 26px}
+  .card{background:#fff;border:1px solid #eee;border-radius:14px;padding:22px;margin-bottom:26px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  code,pre{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+  pre{background:#0d1117;color:#e6edf3;padding:14px 16px;border-radius:10px;overflow:auto}
+  .lbl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#a37f2c;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Program Website Widget — live demo</h1>
+  <p class="sub">This page shows the embeddable widget rendering a real program's public listings. Paste the snippet below into any website to show your own.</p>
+
+  <div class="card">
+    <div class="lbl">Live widget</div>
+    <div id="t4u-widget"></div>
+  </div>
+
+  <div class="card">
+    <div class="lbl">The embed code</div>
+    <pre>&lt;div id="t4u-widget"&gt;&lt;/div&gt;
+&lt;script src="https://theatre4u.org/widget.js"
+        data-org="your-program-slug"
+        data-target="t4u-widget"
+        data-limit="12"&gt;&lt;/script&gt;</pre>
+    <p style="font-size:13px;color:#555;margin:10px 0 0">Replace <code>your-program-slug</code> with the slug from My Profile &rarr; Public Profile URL. ArtsTracker programs use <code>https://artstracker.org/widget.js</code>.</p>
+  </div>
+</div>
+
+<!-- The widget itself, pointed at a public demo program -->
+<script src="/widget.js" data-org="ovhstheatre" data-target="t4u-widget" data-limit="12"></script>
+</body>
+</html>
