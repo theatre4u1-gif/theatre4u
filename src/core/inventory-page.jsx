@@ -18,23 +18,34 @@ import { LocationsPanel } from "./locations.jsx";
 import { ExternalLoans } from "./external-loans.jsx";
 import { UpgradePrompt } from "./billing.jsx";
 
-export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null, enableLoans=false, onImported=null}){
+export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null, enableLoans=false, onImported=null}){
     const[upgradeReason,setUpgradeReason]=useState(null);
+  const[pendingMsg,setPendingMsg]=useState("");
   const vVertical=org?.vertical||"theatre";
   const vCATS=getCatsMerged(vVertical);
   const vCfg=getVertical(vVertical);
   const vCONDS=vCfg.conditions, vAVAIL=vCfg.availability, vMKT=vCfg.marketOptions;
   const vCAT=Object.fromEntries(vCATS.map(c=>[c.id,c]));
-  // Role-based permissions.
-  // Student-tier roles (crew via join code, and house) are view-only: they cannot
-  // add items or upload photos. This is a child-safety control — students should not
-  // be able to post images directly. Staff roles (director, co_director,
-  // program_director, stage_manager, or the owner where memberRole is null) can manage
-  // inventory. A director can promote a trusted helper to a staff role if needed.
+  // Role-based permissions. Student-tier roles (crew via join code, and house) are
+  // governed by the org's Student Uploads setting (Settings → Student & Team Uploads):
+  //   review = submit for approval (default), direct = post immediately, off = cannot add.
+  // Staff roles (director, co_director, program_director, stage_manager, or the owner
+  // where memberRole is null) always manage inventory directly.
+  const uploadsMode = org?.student_uploads_mode || "direct";
   const isStudentTier = memberRole === "crew" || memberRole === "house";
   const canEdit   = !isStudentTier;
-  const canAdd    = !isStudentTier;
+  const canAdd    = isStudentTier ? (uploadsMode !== "off") : true;
   const canDelete = memberRole === null || memberRole === "director" || memberRole === "stage_manager";
+  const canReview = memberRole === null || memberRole === "director" || memberRole === "program_director";
+  const submitsForReview = isStudentTier && uploadsMode === "review";
+
+  // Pending (student-submitted) items are hidden from every normal view; reviewers act
+  // on them in the approval queue. Everything downstream uses the approved-only list.
+  const items = (itemsRaw||[]).filter(i => (i.review_status || "approved") !== "pending");
+  const pendingItems = (itemsRaw||[]).filter(i => i.review_status === "pending");
+
+  const approveItem = async (it) => { await onEdit({ ...it, review_status: "approved" }); };
+  const rejectItem  = async (it) => { if (window.confirm("Reject and delete this submission? This cannot be undone.")) await onDelete(it.id); };
 
   // ── Storage location deep link — filter items when QR scanned ────────────────
   const [locFilter,     setLocFilter]     = useState(deepLinkLocationId || "all");
@@ -195,7 +206,18 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
     if(active&&modal==="e"){
       await onEdit({...active,...form,id:active.id});
     } else {
-      await onAdd({...form,id:uid(),added:new Date().toISOString()});
+      await onAdd({...form,id:uid(),added:new Date().toISOString(),review_status: submitsForReview?"pending":"approved"});
+      if(submitsForReview){
+        setPendingMsg("📨 Sent to your Program Director for approval. It will appear in the catalog once approved.");
+        setTimeout(()=>setPendingMsg(""),7000);
+        // Notify the director by email (fire and forget — never block the submitter).
+        try{
+          fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/pending-notify",{
+            method:"POST", headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({ org_id: userId, item_name: form?.name || null }),
+          }).catch(()=>{});
+        }catch(e){}
+      }
     }
     setModal(null);setActive(null);
   };
@@ -331,9 +353,9 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
               {addMenu&&<>
                 <div onClick={()=>setAddMenu(false)} style={{position:"fixed",inset:0,zIndex:40}}/>
                 <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",zIndex:41,background:"var(--cream)",border:"1px solid var(--border)",borderRadius:"var(--rm)",boxShadow:"var(--sh2)",minWidth:236,overflow:"hidden"}}>
-                  <button className="addmenu-item" onClick={()=>{setAddMenu(false);const max=PLANS_DEF[plan]?.maxItems??25;if(items.length>=max){setUpgradeReason(EM.planItemLimit.body);return;}setActive(null);setModal("a");}}>✚&nbsp;&nbsp;Add one item</button>
-                  <button className="addmenu-item" onClick={()=>{setAddMenu(false);setShowBulk(true);}}>📸&nbsp;&nbsp;Bulk add from photos</button>
-                  <button className="addmenu-item" onClick={()=>{setAddMenu(false);setShowImport(true);}}>⬆&nbsp;&nbsp;Import from CSV</button>
+                  <button className="addmenu-item" onClick={()=>{setAddMenu(false);const max=PLANS_DEF[plan]?.maxItems??25;if(items.length>=max){setUpgradeReason(EM.planItemLimit.body);return;}setActive(null);setModal("a");}}>✚&nbsp;&nbsp;Add one item{submitsForReview?" (for approval)":""}</button>
+                  {!isStudentTier&&<button className="addmenu-item" onClick={()=>{setAddMenu(false);setShowBulk(true);}}>📸&nbsp;&nbsp;Bulk add from photos</button>}
+                  {!isStudentTier&&<button className="addmenu-item" onClick={()=>{setAddMenu(false);setShowImport(true);}}>⬆&nbsp;&nbsp;Import from CSV</button>}
                 </div>
               </>}
             </div>}
@@ -497,8 +519,8 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
                 </div>
                 <div style={{fontSize:12.5,color:"var(--muted)",marginBottom:10,lineHeight:1.45}}>Snap or pick photos and each one becomes an item — fastest way to build your catalog. Start with one area, like a single rack or shelf.</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                  <button className="btn btn-g btn-sm" onClick={()=>setShowBulk(true)}>📸 Add from photos</button>
-                  <button className="btn btn-o btn-sm" onClick={()=>{setActive(null);setModal("a");}}>One at a time</button>
+                  {!isStudentTier&&<button className="btn btn-g btn-sm" onClick={()=>setShowBulk(true)}>📸 Add from photos</button>}
+                  <button className="btn btn-o btn-sm" onClick={()=>{setActive(null);setModal("a");}}>One at a time{submitsForReview?" (for approval)":""}</button>
                 </div>
               </div>
               <div style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 14px 16px"}}>
@@ -518,6 +540,28 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
                 </div>
                 <div style={{fontSize:12.5,color:"var(--muted)",lineHeight:1.45}}>Print QR labels for your bins and racks from the <b>Labels</b> tab — scan with any phone to see what's inside. Then tag items by show as you pull them.</div>
               </div>
+            </div>
+          </div>
+        )}
+        {pendingMsg&&<div style={{background:"rgba(26,127,55,.08)",border:"1px solid rgba(26,127,55,.3)",borderRadius:8,padding:"9px 13px",marginBottom:12,fontSize:13,color:"#1a7f37"}}>{pendingMsg}</div>}
+        {canReview&&pendingItems.length>0&&(
+          <div style={{border:"1px solid rgba(178,106,0,.35)",background:"rgba(178,106,0,.06)",borderRadius:12,padding:"14px 16px",marginBottom:16}}>
+            <div style={{fontSize:14,fontWeight:800,color:"var(--text)",marginBottom:3}}>🕓 Pending approval ({pendingItems.length})</div>
+            <div style={{fontSize:12.5,color:"var(--muted)",marginBottom:10,lineHeight:1.45}}>Items submitted by team members. Approve to add them to your inventory, or reject to discard. Review each photo before approving.</div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {pendingItems.map(it=>(
+                <div key={it.id} style={{display:"flex",gap:10,alignItems:"center",background:"var(--white,#fff)",border:"1px solid var(--border)",borderRadius:8,padding:8}}>
+                  {((Array.isArray(it.images)&&it.images[0])||it.image)
+                    ? <img src={(Array.isArray(it.images)&&it.images[0])||it.image} alt="" style={{width:48,height:48,objectFit:"cover",borderRadius:6,flexShrink:0}}/>
+                    : <div style={{width:48,height:48,borderRadius:6,background:"rgba(0,0,0,.05)",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>🗒</div>}
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it.name||"(untitled)"}</div>
+                    <div style={{fontSize:11.5,color:"var(--muted)"}}>{(vCAT[it.category]&&vCAT[it.category].label)||it.category||""}</div>
+                  </div>
+                  <button className="btn btn-g btn-sm" onClick={()=>approveItem(it)}>Approve</button>
+                  <button className="btn btn-p btn-sm" onClick={()=>rejectItem(it)}>Reject</button>
+                </div>
+              ))}
             </div>
           </div>
         )}

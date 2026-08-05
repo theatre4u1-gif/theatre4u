@@ -738,6 +738,10 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   }, [deepLinkLocation, loaded, user]);
 
   const isAdmin = isAdminEmail(user?.email);
+  // Count of student-submitted items awaiting review — only reviewers (owner/director/
+  // program director) see the badge.
+  const canReviewPending = (memberRole === null || memberRole === "director" || memberRole === "program_director");
+  const pendingReviewCount = canReviewPending ? items.filter(i => i && i.review_status === "pending").length : 0;
   const NAV = (() => {
     const role = memberRole; // null=director/owner, stage_manager, crew, house
     const isCrew  = role === "crew"  || role === "house";
@@ -915,6 +919,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                     {n.id==="messages"   && unreadCount>0    && <span className="sb-badge" style={{background:"var(--red)",color:"#fff"}}>{unreadCount}</span>}
                     {n.id==="requests"   && pendingReqCount>0 && <span className="sb-badge" style={{background:"var(--red)",color:"#fff"}}>{pendingReqCount}</span>}
                     {n.id==="inventory"  && items.length>0 && <span className="sb-badge">{activeSchool ? schoolItems.length : items.length}</span>}
+                    {n.id==="inventory"  && pendingReviewCount>0 && <span className="sb-badge" style={{background:"var(--red)",color:"#fff"}} title="Submissions awaiting your approval">{pendingReviewCount} to review</span>}
                     {n.id==="marketplace"&& listed>0       && <span className="sb-badge">{listed}</span>}
                     {n.id==="productions"&& <span className="sb-badge" style={{background:"rgba(212,168,67,.2)",color:"var(--goldink)"}}>{getVertical(curVertical)?.icon || "🎭"}</span>}
                     

@@ -314,6 +314,10 @@ function TeamSettings({ userId, orgName, plan }) {
       <div>
         <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1,
           color: "var(--faint)", marginBottom: 8 }}>Join Code — For Groups & Students</div>
+        <div style={{ display:"flex", gap:8, alignItems:"flex-start", background:"rgba(212,168,67,.08)", border:"1px solid rgba(212,168,67,.3)", borderRadius:8, padding:"9px 12px", marginBottom:12, fontSize:12, color:"var(--muted)", lineHeight:1.5 }}>
+          <span style={{ fontSize:15, lineHeight:1 }}>💡</span>
+          <span>By default, team members and students can add inventory and photos right away. If you'd rather review student photos before they appear, turn on approval under <strong>Settings → Student &amp; Team Uploads</strong>. You'll get an email and a badge when something is waiting.</span>
+        </div>
         {!showCode ? (
           <button className="btn bs" onClick={getJoinCode}>
             🔑 Generate Join Code
@@ -832,6 +836,37 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
           <p style={{fontSize:11,color:"var(--muted)",marginTop:14,fontStyle:"italic"}}>
             Changes take effect immediately. Turning off Community or Backstage Exchange removes your content from shared views but does not delete it. The Funding Tracker is always private to your account.
           </p>
+        </div>
+        )}
+
+        {(!memberRole||memberRole==="director"||memberRole==="program_director")&&(
+        <div className="card card-p">
+          <div className="sh">
+            <h2>📸 Student &amp; Team Uploads</h2>
+            <p>Control whether students and helpers (crew and house roles) can add items and photos, and whether their submissions need your approval first.</p>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:14}}>
+            {[
+              {v:"direct", label:"Allow direct uploads (default)", desc:"Students and crew can add items and photos that appear immediately, with no approval step."},
+              {v:"review", label:"Require approval first", desc:"Students and crew can submit items with photos, but nothing appears in your catalog until you approve it. You get an email and an in-app badge when something is waiting."},
+              {v:"off",    label:"Staff only", desc:"Students and crew cannot add items or upload photos at all. They can still browse the inventory."},
+            ].map(({v,label,desc})=>{
+              const cur=(org&&org.student_uploads_mode)||"direct";
+              const on=cur===v;
+              return (
+                <label key={v} style={{display:"flex",gap:12,alignItems:"flex-start",padding:"12px",border:"1.5px solid",borderColor:on?"var(--gold)":"var(--border)",borderRadius:10,cursor:"pointer",background:on?"rgba(212,168,67,.08)":"transparent"}}>
+                  <input type="radio" name="student_uploads_mode" checked={on}
+                    onChange={async()=>{ const updated={...org,student_uploads_mode:v}; setOrg(updated); await SB.from("orgs").update({student_uploads_mode:v}).eq("id",userId); }}
+                    style={{marginTop:2,accentColor:"var(--gold)",width:16,height:16,flexShrink:0}}/>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:14}}>{label}</div>
+                    <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>{desc}</div>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+          <p style={{fontSize:11,color:"var(--muted)",marginTop:12,fontStyle:"italic"}}>Changes take effect immediately. Any items already awaiting approval stay in your review queue until you act on them.</p>
         </div>
         )}
 
