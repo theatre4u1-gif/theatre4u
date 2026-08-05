@@ -354,5 +354,42 @@ const observer = new IntersectionObserver(entries => {
 sections.forEach(s => observer.observe(s));
 </script>
 
+<script>
+/* Domain-aware branding: this page is authored for Theatre4u (default). On
+   artstracker.org it re-renders as ArtsTracker — name, email, domain, Exchange
+   name, audience, service description, and pricing all differ. Mirrors the
+   hostname swap used in app.html / invite.html. Theatre4u is untouched. */
+(function(){
+  if(!/artstracker/i.test(location.hostname)) return;
+  var TM = String.fromCharCode(8482);
+  var pairs = [
+    ["privacy of theatre educators and their programs", "privacy of arts educators and their programs"],
+    ["for theatre programs, schools, community theatres, and performing arts organizations",
+     "for theatre, music, dance, visual art, and other performing and visual arts programs, schools, and organizations"],
+    ["theatre educators, school drama departments, community theatre organizations, and district administrators",
+     "arts educators, school arts departments (theatre, music, dance, and visual art), community arts organizations, and district administrators"],
+    ["Pro ($15/month or $150/year), and District (from $49/month or $500/year)",
+     "Pro ($59/month or $590/year), and District (from $199/month or $1,990/year)"],
+    ["between theatre programs", "between arts programs"],
+    ["Other Theatre Programs", "Other Arts Programs"],
+    ["Backstage Exchange", "The Exchange"],
+    ["Theatre4u"+TM, "ArtsTracker"],
+    ["Theatre4u", "ArtsTracker"],
+    ["theatre4u.org", "artstracker.org"]
+  ];
+  function swap(s){ if(s==null) return s; for(var i=0;i<pairs.length;i++){ s = s.split(pairs[i][0]).join(pairs[i][1]); } return s; }
+  function run(){
+    var w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false), n, arr=[];
+    while(n=w.nextNode()) arr.push(n);
+    arr.forEach(function(t){ var v=swap(t.nodeValue); if(v!==t.nodeValue) t.nodeValue=v; });
+    document.title = swap(document.title);
+    var md=document.querySelector('meta[name="description"]'); if(md) md.setAttribute("content", swap(md.getAttribute("content")));
+    document.querySelectorAll('a[href]').forEach(function(a){ a.setAttribute("href", (a.getAttribute("href")||"").split("theatre4u.org").join("artstracker.org")); });
+    document.querySelectorAll('img[src*="theatre4u"]').forEach(function(im){ im.src="/favicon-artstracker.png"; });
+    document.querySelectorAll('link[rel~="icon"]').forEach(function(l){ l.href="/favicon-artstracker.png"; });
+  }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", run); else run();
+})();
+</script>
 </body>
 </html>
