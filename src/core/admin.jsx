@@ -7,6 +7,7 @@ import { stripeLink } from "./plans.js";
 import { usp } from "../lib/backgrounds.js";
 import { getVertical } from "../lib/verticals.js";
 import { fmt$ } from "./helpers.js";
+import { AdminContentReports } from "./admin-reports.jsx";
 
 // Admin module — building-block forms/widgets. The big admin cluster (AdminHub, etc.) will join this file.
 
@@ -323,6 +324,7 @@ export function AdminHub({ currentUser, org }) {
     ["payments",  "💰 Payments"],
     ["analytics", "📈 Analytics"],
     ["feedback",  "💬 Feedback"],
+    ["reports",   "🚩 Reports"],
     ["labels",    "🏷 Label Orders"],
     ["programs",  "🎭 Programs"],
     ["accounts",  "⚠️ Accounts"],
@@ -365,6 +367,9 @@ export function AdminHub({ currentUser, org }) {
 
       {/* ── DAILY DIGEST ── */}
       {tab==="digest"&&<AdminDailyDigest/>}
+
+      {/* ── CONTENT REPORTS ── */}
+      {tab==="reports"&&<AdminContentReports/>}
 
       {/* ── OVERVIEW ── */}
       {!loading&&tab==="overview"&&(

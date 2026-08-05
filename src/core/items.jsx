@@ -100,6 +100,23 @@ export function CameraCapture({ max, current, onCapture, onClose, noun = "photos
 }
 
 // Upload a file to Supabase Storage and return the public URL
+// Content-moderation switch. Leave OFF until the `moderate-image` edge function is
+// deployed AND a provider key (AWS Rekognition / Google Vision / Hive, etc.) is set.
+// While OFF, uploads behave exactly as before (no extra network call, no latency).
+// When ON, every uploaded image is screened; a rejected image is deleted and the
+// upload returns null so it never reaches the catalog.
+export const MODERATION_ON = false;
+
+async function moderateImage(publicUrl) {
+  // Returns true = allow, false = reject. Any error/timeout allows (fail-open at the
+  // client; the server function should fail-closed for known CSAM matches).
+  try {
+    const r = await SB.functions.invoke("moderate-image", { body: { url: publicUrl } });
+    if (r?.error) return true;
+    return r?.data?.allowed !== false;
+  } catch (e) { return true; }
+}
+
 export async function uploadPhoto(file, userId) {
   try {
     const dataUrl = await resizeImg(file, 800, 0.82);
@@ -109,7 +126,16 @@ export async function uploadPhoto(file, userId) {
     const { error } = await SB.storage.from("item-photos").upload(path, blob, { contentType: "image/jpeg", upsert: false });
     if (error) { console.error("Upload error:", error); return null; }
     const { data } = SB.storage.from("item-photos").getPublicUrl(path);
-    return data.publicUrl;
+    const url = data.publicUrl;
+    if (MODERATION_ON && url) {
+      const allowed = await moderateImage(url);
+      if (!allowed) {
+        try { await SB.storage.from("item-photos").remove([path]); } catch (e) {}
+        console.warn("Image rejected by content moderation");
+        return null;
+      }
+    }
+    return url;
   } catch(e) { console.error("uploadPhoto failed:", e); return null; }
 }
 
@@ -433,6 +459,23 @@ export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, ca
   const[qr,setQr]=useState(null);
   const[showAddToProd,setShowAddToProd]=useState(false);
   const[showCal,setShowCal]=useState(false);
+  const[reporting,setReporting]=useState(false);
+  const[reported,setReported]=useState(false);
+
+  const submitReport=async(reason)=>{
+    try{
+      await SB.from("content_reports").insert({
+        context: "inventory_item",
+        reporter_org_id: userId || null,
+        reported_org_id: item.org_id || null,
+        reported_item_id: item.id != null ? String(item.id) : null,
+        item_name: item.name || null,
+        image_url: (Array.isArray(item.images) && item.images[0]) || item.image || null,
+        reason,
+      });
+    }catch(e){ /* non-fatal — never block the reporter */ }
+    setReported(true); setReporting(false);
+  };
   const gfx=CAT_GFX[item.category]||CAT_GFX.other;
   const mktCls=item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="Rent or Sale"?"mb-both":item.mkt==="For Loan"?"mb-loan":"mb-none";
 
@@ -551,7 +594,20 @@ export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, ca
           compact={true}
           label="Share on Facebook"
         />}
+        {!reported&&<button className="btn btn-o btn-sm" title="Report this item" onClick={()=>setReporting(v=>!v)}>&#9873; Report</button>}
       </div>
+      {reporting&&!reported&&(
+        <div style={{marginTop:12,padding:"12px 14px",border:"1px solid rgba(194,24,91,.3)",borderRadius:8,background:"rgba(194,24,91,.05)"}}>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:8}}>Report this item to the {APP_NAME} team</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+            {["Inappropriate or explicit image","Nudity or sexual content","A person's photo used without consent","Illegal or unsafe content","Spam or fraud","Other"].map(r=>(
+              <button key={r} className="btn btn-o btn-sm" onClick={()=>submitReport(r)}>{r}</button>
+            ))}
+          </div>
+          <button className="btn btn-p btn-sm" style={{marginTop:10}} onClick={()=>setReporting(false)}>Cancel</button>
+        </div>
+      )}
+      {reported&&<div style={{marginTop:12,fontSize:13,fontWeight:600,color:"#1a7f37"}}>Thank you. This has been sent to the {APP_NAME} team for review.</div>}
       {showAddToProd && userId && (
         <AddToProductionPicker item={item} userId={userId} onClose={()=>setShowAddToProd(false)}/>
       )}

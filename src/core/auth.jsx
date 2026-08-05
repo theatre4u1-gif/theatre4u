@@ -24,6 +24,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
   const[legal,setLegal]=useState(null);
   const[showPass,setShowPass]=useState(false);
   const[ageConfirmed,setAgeConfirmed]=useState(false);
+  const[termsAccepted,setTermsAccepted]=useState(false);
   const[vertical,setVertical]=useState("theatre");
 
   useEffect(()=>{
@@ -49,7 +50,8 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
     if(!email.trim()){setErr("Please enter your email address.");return;}
     if(!pass){setErr("Please enter a password.");return;}
     if(mode==="signup"&&pass.length<6){setErr("Password must be at least 6 characters.");return;}
-    if(mode==="signup"&&!ageConfirmed){setErr("Please confirm you are 13 years of age or older.");return;}
+    if(mode==="signup"&&!ageConfirmed){setErr("Please confirm you are an adult or an authorized school employee.");return;}
+    if(mode==="signup"&&!termsAccepted){setErr("Please agree to the Terms of Service and Privacy Policy to continue.");return;}
     setLoading(true);
 
       // ── Demo mode fast-path ───────────────────────────────────────────────
@@ -116,6 +118,9 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             temp_pro: true,
             temp_pro_granted_at: new Date().toISOString(),
             temp_pro_note: "Beta signup — auto-granted",
+            // Record acceptance of Terms + Privacy at signup (audit trail)
+            terms_accepted_at: new Date().toISOString(),
+            terms_version: "2026-08",
           },{onConflict:"id",ignoreDuplicates:false});
           // Notify admin of new signup — called directly from app to avoid pg_net timeout
           try {
@@ -336,18 +341,22 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             <input type="checkbox" checked={ageConfirmed} onChange={e=>setAgeConfirmed(e.target.checked)}
               style={{marginTop:2,accentColor:"#d4a843",flexShrink:0,width:15,height:15}}/>
             <span style={{fontSize:12,color:"rgba(255,255,255,.55)",lineHeight:1.5}}>
-              I confirm I am <strong style={{color:"rgba(255,255,255,.75)"}}>13 years of age or older</strong>.
-              If you are under 13, please have a parent or guardian create this account on your behalf.
+              I am an <strong style={{color:"rgba(255,255,255,.75)"}}>adult (18 or older) or an authorized school employee</strong> creating this account for my program or organization.
             </span>
           </label>
         )}
-        {mode==="signup"&&<p style={{fontSize:11,color:"rgba(255,255,255,.4)",textAlign:"center",marginTop:16,lineHeight:1.6}}>
-          By creating an account you agree to our{" "}
-          <span style={{color:"var(--goldink)",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setLegal("terms")}>Terms of Service</span>
-          {" "}and{" "}
-          <span style={{color:"var(--goldink)",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setLegal("privacy")}>Privacy Policy</span>,
-          including the grant of a perpetual license to content you upload.
-        </p>}
+        {mode==="signup"&&(
+          <label style={{display:"flex",alignItems:"flex-start",gap:8,marginTop:10,cursor:"pointer"}}>
+            <input type="checkbox" checked={termsAccepted} onChange={e=>setTermsAccepted(e.target.checked)}
+              style={{marginTop:2,accentColor:"#d4a843",flexShrink:0,width:15,height:15}}/>
+            <span style={{fontSize:12,color:"rgba(255,255,255,.55)",lineHeight:1.5}}>
+              I agree to the{" "}
+              <span style={{color:"var(--goldink)",cursor:"pointer",textDecoration:"underline"}} onClick={e=>{e.preventDefault();setLegal("terms");}}>Terms of Service</span>
+              {" "}and acknowledge the{" "}
+              <span style={{color:"var(--goldink)",cursor:"pointer",textDecoration:"underline"}} onClick={e=>{e.preventDefault();setLegal("privacy")}}>Privacy Policy</span>.
+            </span>
+          </label>
+        )}
         <button onClick={submit} disabled={loading} style={{marginTop:12,width:"100%",background:"linear-gradient(135deg,#d4a843,#a37f2c)",color:"#1a0f00",border:"none",borderRadius:6,padding:"12px",fontSize:15,fontWeight:700,cursor:loading?"not-allowed":"pointer",fontFamily:"'DM Sans',sans-serif",opacity:loading?.7:1}}>
           {loading?"Please wait…":mode==="login"?"Sign In →":"Create Free Account →"}
         </button>
@@ -378,6 +387,7 @@ export function GoogleProfileSetup({user, onDone}){
   const[orgName,setOrgName]=useState("");
   const[vertical,setVertical]=useState("theatre");
   const[ageConfirmed,setAgeConfirmed]=useState(false);
+  const[termsAccepted,setTermsAccepted]=useState(false);
   const[err,setErr]=useState("");
   const[loading,setLoading]=useState(false);
   const[legal,setLegal]=useState(null);
@@ -403,7 +413,8 @@ export function GoogleProfileSetup({user, onDone}){
     setErr("");
     if(!ownerName.trim()){setErr("Please enter your name.");return;}
     if(!orgName.trim()){setErr("Please enter your program or organization name.");return;}
-    if(!ageConfirmed){setErr("Please confirm you are 13 years of age or older.");return;}
+    if(!ageConfirmed){setErr("Please confirm you are an adult or an authorized school employee.");return;}
+    if(!termsAccepted){setErr("Please agree to the Terms of Service and Privacy Policy to continue.");return;}
     setLoading(true);
     try{
       const email = user?.email || "";
@@ -415,6 +426,8 @@ export function GoogleProfileSetup({user, onDone}){
         temp_pro: true,
         temp_pro_granted_at: new Date().toISOString(),
         temp_pro_note: "Beta signup — auto-granted (Google sign-in)",
+        terms_accepted_at: new Date().toISOString(),
+        terms_version: "2026-08",
       },{onConflict:"id",ignoreDuplicates:false});
       // Track signup conversion with UTM attribution (same as password signup)
       const _sid = window.__t4u_sid || sessionStorage.getItem("t4u_sid") || null;
@@ -495,17 +508,19 @@ export function GoogleProfileSetup({user, onDone}){
           <input type="checkbox" checked={ageConfirmed} onChange={e=>setAgeConfirmed(e.target.checked)}
             style={{marginTop:2,accentColor:"#d4a843",flexShrink:0,width:15,height:15}}/>
           <span style={{fontSize:12,color:"rgba(255,255,255,.55)",lineHeight:1.5}}>
-            I confirm I am <strong style={{color:"rgba(255,255,255,.75)"}}>13 years of age or older</strong>.
-            If you are under 13, please have a parent or guardian create this account on your behalf.
+            I am an <strong style={{color:"rgba(255,255,255,.75)"}}>adult (18 or older) or an authorized school employee</strong> creating this account for my program or organization.
           </span>
         </label>
-        <p style={{fontSize:11,color:"rgba(255,255,255,.4)",textAlign:"center",marginTop:16,lineHeight:1.6}}>
-          By continuing you agree to our{" "}
-          <span style={{color:"var(--goldink)",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setLegal("terms")}>Terms of Service</span>
-          {" "}and{" "}
-          <span style={{color:"var(--goldink)",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setLegal("privacy")}>Privacy Policy</span>,
-          including the grant of a perpetual license to content you upload.
-        </p>
+        <label style={{display:"flex",alignItems:"flex-start",gap:8,marginTop:10,cursor:"pointer"}}>
+          <input type="checkbox" checked={termsAccepted} onChange={e=>setTermsAccepted(e.target.checked)}
+            style={{marginTop:2,accentColor:"#d4a843",flexShrink:0,width:15,height:15}}/>
+          <span style={{fontSize:12,color:"rgba(255,255,255,.55)",lineHeight:1.5}}>
+            I agree to the{" "}
+            <span style={{color:"var(--goldink)",cursor:"pointer",textDecoration:"underline"}} onClick={e=>{e.preventDefault();setLegal("terms");}}>Terms of Service</span>
+            {" "}and acknowledge the{" "}
+            <span style={{color:"var(--goldink)",cursor:"pointer",textDecoration:"underline"}} onClick={e=>{e.preventDefault();setLegal("privacy")}}>Privacy Policy</span>.
+          </span>
+        </label>
         <button onClick={submit} disabled={loading} style={{marginTop:12,width:"100%",background:"linear-gradient(135deg,#d4a843,#a37f2c)",color:"#1a0f00",border:"none",borderRadius:6,padding:"12px",fontSize:15,fontWeight:700,cursor:loading?"not-allowed":"pointer",fontFamily:"'DM Sans',sans-serif",opacity:loading?.7:1}}>
           {loading?"Setting up…":"Finish Setup →"}
         </button>
@@ -529,12 +544,16 @@ export function AuthScreen({onAuth}){
   const[loading,setLoading]=useState(false);
   const[done,setDone]=useState(false);
   const[legal,setLegal]=useState(null);
+  const[ageConfirmed,setAgeConfirmed]=useState(false);
+  const[termsAccepted,setTermsAccepted]=useState(false);
 
   const submit=async()=>{
     setErr("");
     if(!email.trim()){setErr("Please enter your email address.");return;}
     if(!pass){setErr("Please enter a password.");return;}
     if(mode==="signup"&&pass.length<6){setErr("Password must be at least 6 characters.");return;}
+    if(mode==="signup"&&!ageConfirmed){setErr("Please confirm you are an adult or an authorized school employee.");return;}
+    if(mode==="signup"&&!termsAccepted){setErr("Please agree to the Terms of Service and Privacy Policy to continue.");return;}
     setLoading(true);
 
       // ── Demo mode fast-path ───────────────────────────────────────────────
@@ -572,7 +591,7 @@ export function AuthScreen({onAuth}){
         if(error)throw error;
         if(data.user){
           const isLeadingPlayer = !!code;
-          await SB.from("orgs").upsert({id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:"",beta_code:code||null,is_leading_player:isLeadingPlayer},{onConflict:"id",ignoreDuplicates:false});
+          await SB.from("orgs").upsert({id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:"",beta_code:code||null,is_leading_player:isLeadingPlayer,terms_accepted_at:new Date().toISOString(),terms_version:"2026-08"},{onConflict:"id",ignoreDuplicates:false});
           if(code&&codeData){
             await SB.from("beta_codes").update({used_count:codeData.used_count+1}).eq("code",code);
           }
@@ -665,11 +684,32 @@ export function AuthScreen({onAuth}){
             </div>
           </div>
           {err&&<div style={{marginTop:12,padding:"9px 12px",background:err.includes("sent")?"rgba(38,94,42,.1)":"rgba(139,26,42,.08)",border:`1px solid ${err.includes("sent")?"rgba(38,94,42,.3)":"rgba(139,26,42,.2)"}`,borderRadius:7,fontSize:13,color:err.includes("sent")?"var(--green)":"var(--red)"}}>{err}</div>}
+          {mode==="signup"&&(
+            <label style={{display:"flex",alignItems:"flex-start",gap:8,marginTop:16,cursor:"pointer"}}>
+              <input type="checkbox" checked={ageConfirmed} onChange={e=>setAgeConfirmed(e.target.checked)}
+                style={{marginTop:2,accentColor:"var(--gold)",flexShrink:0,width:15,height:15}}/>
+              <span style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>
+                I am an <strong>adult (18 or older) or an authorized school employee</strong> creating this account for my program or organization.
+              </span>
+            </label>
+          )}
+          {mode==="signup"&&(
+            <label style={{display:"flex",alignItems:"flex-start",gap:8,marginTop:10,cursor:"pointer"}}>
+              <input type="checkbox" checked={termsAccepted} onChange={e=>setTermsAccepted(e.target.checked)}
+                style={{marginTop:2,accentColor:"var(--gold)",flexShrink:0,width:15,height:15}}/>
+              <span style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>
+                I agree to the{" "}
+                <span onClick={e=>{e.preventDefault();setLegal("terms");}} style={{color:"var(--goldink)",textDecoration:"underline",cursor:"pointer"}}>Terms of Service</span>
+                {" "}and acknowledge the{" "}
+                <span onClick={e=>{e.preventDefault();setLegal("privacy");}} style={{color:"var(--goldink)",textDecoration:"underline",cursor:"pointer"}}>Privacy Policy</span>.
+              </span>
+            </label>
+          )}
           <button className="btn btn-g btn-full" style={{marginTop:20,padding:"12px",fontSize:15,letterSpacing:.3}} onClick={submit} disabled={loading}>
             {loading?"Please wait…":mode==="login"?"Sign In →":"Create Free Account →"}
           </button>
           {mode==="login"&&<button onClick={resetPass} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:"var(--faint)",fontSize:12.5,cursor:"pointer",fontFamily:"'Raleway',sans-serif",textDecoration:"underline"}}>Forgot password?</button>}
-          {mode==="signup"&&<p style={{fontSize:12,color:"var(--faint)",textAlign:"center",marginTop:14,lineHeight:1.6}}>Free to start — no credit card needed. By creating an account you agree to our{" "}<span onClick={()=>setLegal("terms")} style={{color:"var(--goldink)",textDecoration:"underline",cursor:"pointer"}}>Terms of Service</span>{" "}and{" "}<span onClick={()=>setLegal("privacy")} style={{color:"var(--goldink)",textDecoration:"underline",cursor:"pointer"}}>Privacy Policy</span>.</p>}
+          {mode==="signup"&&<p style={{fontSize:12,color:"var(--faint)",textAlign:"center",marginTop:14,lineHeight:1.6}}>Free to start — no credit card needed.</p>}
         </div>
         <p style={{textAlign:"center",color:"rgba(255,255,255,.25)",fontSize:12,marginTop:20}}>{APP_NAME} · Artstracker LLC · {APP_HOST}</p>
       </div>

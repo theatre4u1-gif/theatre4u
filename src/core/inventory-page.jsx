@@ -25,9 +25,15 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
   const vCfg=getVertical(vVertical);
   const vCONDS=vCfg.conditions, vAVAIL=vCfg.availability, vMKT=vCfg.marketOptions;
   const vCAT=Object.fromEntries(vCATS.map(c=>[c.id,c]));
-  // Role-based permissions
-  const canEdit   = memberRole !== "house";
-  const canAdd    = memberRole !== "house";
+  // Role-based permissions.
+  // Student-tier roles (crew via join code, and house) are view-only: they cannot
+  // add items or upload photos. This is a child-safety control — students should not
+  // be able to post images directly. Staff roles (director, co_director,
+  // program_director, stage_manager, or the owner where memberRole is null) can manage
+  // inventory. A director can promote a trusted helper to a staff role if needed.
+  const isStudentTier = memberRole === "crew" || memberRole === "house";
+  const canEdit   = !isStudentTier;
+  const canAdd    = !isStudentTier;
   const canDelete = memberRole === null || memberRole === "director" || memberRole === "stage_manager";
 
   // ── Storage location deep link — filter items when QR scanned ────────────────
@@ -471,7 +477,7 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
               style={{fontSize:12,color:"var(--muted)",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",textDecoration:"underline"}}>clear tags</button>}
           </div>
         )}
-        {!gsHide&&invView==="items"&&view!=="locations"&&items.length<5&&(
+        {canAdd&&!gsHide&&invView==="items"&&view!=="locations"&&items.length<5&&(
           <div style={{border:"1px solid var(--border)",borderRadius:14,padding:"18px 20px",marginBottom:16,
             background:"linear-gradient(135deg,rgba(212,168,67,.10),rgba(212,168,67,.02))"}}>
             <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:14}}>
@@ -517,7 +523,7 @@ export function Inventory({items,onAdd,onEdit,onDelete,userId, memberRole="direc
         )}
         <div style={{fontSize:13,fontWeight:700,color:"var(--faint)",marginBottom:12}}>{filtered.length} item{filtered.length!==1?"s":""}</div>
         {view==="grid"&&(paged.length===0
-          ?<div className="empty"><div className="empty-ico">{vCfg.icon}</div><h3>No Items Found</h3><p>{items.length===0?"Add your first item to build your catalog.":"Try adjusting search or filters."}</p>{items.length===0&&<button className="btn btn-g" onClick={()=>{setActive(null);setModal("a")}}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add First Item</button>}</div>
+          ?<div className="empty"><div className="empty-ico">{vCfg.icon}</div><h3>No Items Found</h3><p>{items.length===0?"Add your first item to build your catalog.":"Try adjusting search or filters."}</p>{items.length===0&&canAdd&&<button className="btn btn-g" onClick={()=>{setActive(null);setModal("a")}}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add First Item</button>}</div>
           :<div className="inv-grid">
               {paged.map(item=>{
                 const cat=vCAT[item.category]||vCAT.other||CAT.other;

@@ -7,8 +7,8 @@ const RESEND_KEY   = Deno.env.get("RESEND_API_KEY") ?? "";
 
 // Brand by vertical: non-theatre programs (music/dance/art/booster) = ArtsTracker; theatre follows signup_domain.
 const BRANDS = {
-  theatre4u:   { name:"Theatre4u",   site:"https://theatre4u.org",   host:"theatre4u.org",   from:"Theatre4u <hello@theatre4u.org>",   reply:"hello@theatre4u.org",   emoji:"&#x1F3AD;" },
-  artstracker: { name:"ArtsTracker", site:"https://artstracker.org", host:"artstracker.org", from:"ArtsTracker <hello@theatre4u.org>", reply:"hello@artstracker.org", emoji:"&#x1F3A8;" },
+  theatre4u:   { name:"Theatre4u",   site:"https://theatre4u.org",   host:"theatre4u.org",   from:"Theatre4u <hello@theatre4u.org>",   reply:"hello@theatre4u.org",   emoji:"&#x1F3AD;", mark:"https://theatre4u.org/logo-mark-theatre4u.png", mw:57, tag:"Built for the people who make theatre happen." },
+  artstracker: { name:"ArtsTracker", site:"https://artstracker.org", host:"artstracker.org", from:"ArtsTracker <hello@theatre4u.org>", reply:"hello@artstracker.org", emoji:"&#x1F3A8;", mark:"https://theatre4u.org/logo-mark-artstracker.png", mw:62, tag:"Arts programs, organized." },
 };
 const brandFor = (d?: string, v?: string) =>
   ((v || "theatre") !== "theatre") ? BRANDS.artstracker

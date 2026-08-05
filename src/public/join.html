@@ -137,6 +137,14 @@ src="https://www.facebook.com/tr?id=1706264944009516&ev=PageView&noscript=1"
           <label>Password</label>
           <input type="password" id="pass" placeholder="At least 6 characters" autocomplete="new-password">
         </div>
+        <label style="display:flex;align-items:flex-start;gap:8px;margin:14px 0 0;cursor:pointer;font-size:12px;color:var(--t2);line-height:1.5;text-align:left">
+          <input type="checkbox" id="ageOk" style="margin-top:2px;accent-color:var(--gold);flex-shrink:0;width:15px;height:15px">
+          <span>I am an <strong style="color:var(--t1)">adult (18 or older) or an authorized school employee</strong> creating this account for my program or organization.</span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:8px;margin:10px 0 4px;cursor:pointer;font-size:12px;color:var(--t2);line-height:1.5;text-align:left">
+          <input type="checkbox" id="termsOk" style="margin-top:2px;accent-color:var(--gold);flex-shrink:0;width:15px;height:15px">
+          <span>I agree to the <a href="/terms.html" target="_blank" style="color:var(--gold)">Terms of Service</a> and acknowledge the <a href="/privacy.html" target="_blank" style="color:var(--gold)">Privacy Policy</a>.</span>
+        </label>
         <button class="cta-btn" onclick="handleSignup()">Start Free Beta Access →</button>
         <p class="small-print">Free during beta · Founding member rate when we launch · No contracts</p>
       </div>
@@ -200,7 +208,7 @@ src="https://www.facebook.com/tr?id=1706264944009516&ev=PageView&noscript=1"
 </div>
 
 <footer>
-  <p>Theatre4u™ · <a href="https://theatre4u.org">theatre4u.org</a> · <a href="https://theatre4u.org/#privacy">Privacy</a> · <a href="https://theatre4u.org/#terms">Terms</a></p>
+  <p>Theatre4u™ · <a href="https://theatre4u.org">theatre4u.org</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a></p>
   <p style="margin-top:6px">A product of <a href="https://artstracker.org">Artstracker LLC</a></p>
 </footer>
 
@@ -241,6 +249,8 @@ async function handleSignup() {
   if(!orgName){ showErr('Please enter your program name.'); return; }
   if(!email || !email.includes('@')){ showErr('Please enter a valid email address.'); return; }
   if(!pass || pass.length < 6){ showErr('Password must be at least 6 characters.'); return; }
+  if(!document.getElementById('ageOk').checked){ showErr('Please confirm you are an adult or an authorized school employee.'); return; }
+  if(!document.getElementById('termsOk').checked){ showErr('Please agree to the Terms of Service and Privacy Policy to continue.'); return; }
 
   document.querySelector('.cta-btn').textContent = 'Creating your account…';
   document.querySelector('.cta-btn').disabled = true;
@@ -266,6 +276,7 @@ async function handleSignup() {
     type:'', phone:'', location:'', bio:'',
     temp_pro: true, temp_pro_granted_at: new Date().toISOString(),
     temp_pro_note: 'Beta signup via join.html landing page',
+    terms_accepted_at: new Date().toISOString(), terms_version: '2026-08',
   },{onConflict:'id',ignoreDuplicates:false}).catch(()=>{});
 
   // Handle referral
