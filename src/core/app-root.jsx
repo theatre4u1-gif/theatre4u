@@ -152,11 +152,15 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   },[pendingInvite,user]);
 
   // ── Auth listener ────────────────────────────────────────────────────────
+  // Tracks the currently loaded user id so tab-refocus auth events (which re-fire
+  // SIGNED_IN / TOKEN_REFRESHED for the same user) don't trigger a reload/reset.
+  const authedUserIdRef = useRef(null);
   useEffect(()=>{
     // Demo mode: user is pre-set, skip all real auth checks
     if(isDemo){ setAuthChk(true); return; }
 
     SB.auth.getSession().then(({data:{session}})=>{
+      authedUserIdRef.current = session?.user?.id || null;
       setUser(session?.user||null);
       setAuthChk(true);
       if(!session){
@@ -166,15 +170,24 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
         }catch(e){}
       }
     });
-    const{data:{subscription}}=SB.auth.onAuthStateChange((_,session)=>{
+    const{data:{subscription}}=SB.auth.onAuthStateChange((_event,session)=>{
       const u = session?.user||null;
-      setUser(u);
-      if(!session) {
+      if(!session){
+        // Real sign-out — clear everything.
+        authedUserIdRef.current = null;
+        setUser(null);
         setItems([]); setOrg({name:"",type:"",email:"",phone:"",location:"",bio:""});
         setLoaded(false); setNeedsProfile(false);
-      } else if(u) {
-        setLoaded(false);
+        return;
       }
+      // Supabase re-fires SIGNED_IN / TOKEN_REFRESHED every time the browser tab
+      // regains focus. If it's the SAME signed-in user, do nothing — reloading here
+      // would reset the current page and wipe any in-progress form the user is on.
+      if(authedUserIdRef.current === u.id) return;
+      // Genuinely new account (or first sign-in) — load their data.
+      authedUserIdRef.current = u.id;
+      setUser(u);
+      setLoaded(false);
     });
     return()=>subscription.unsubscribe();
   },[]);
