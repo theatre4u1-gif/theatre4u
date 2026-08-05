@@ -50,7 +50,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
     if(!email.trim()){setErr("Please enter your email address.");return;}
     if(!pass){setErr("Please enter a password.");return;}
     if(mode==="signup"&&pass.length<6){setErr("Password must be at least 6 characters.");return;}
-    if(mode==="signup"&&!ageConfirmed){setErr("Please confirm you are an adult or an authorized school employee.");return;}
+    if(mode==="signup"&&!ageConfirmed){setErr("Please confirm you are an adult or an authorized user.");return;}
     if(mode==="signup"&&!termsAccepted){setErr("Please agree to the Terms of Service and Privacy Policy to continue.");return;}
     setLoading(true);
 
@@ -341,7 +341,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             <input type="checkbox" checked={ageConfirmed} onChange={e=>setAgeConfirmed(e.target.checked)}
               style={{marginTop:2,accentColor:"#d4a843",flexShrink:0,width:15,height:15}}/>
             <span style={{fontSize:12,color:"rgba(255,255,255,.55)",lineHeight:1.5}}>
-              I am an <strong style={{color:"rgba(255,255,255,.75)"}}>adult (18 or older) or an authorized school employee</strong> creating this account for my program or organization.
+              I am an <strong style={{color:"rgba(255,255,255,.75)"}}>adult (18 or older) or an authorized user</strong> creating this account for my program or organization.
             </span>
           </label>
         )}
@@ -413,7 +413,7 @@ export function GoogleProfileSetup({user, onDone}){
     setErr("");
     if(!ownerName.trim()){setErr("Please enter your name.");return;}
     if(!orgName.trim()){setErr("Please enter your program or organization name.");return;}
-    if(!ageConfirmed){setErr("Please confirm you are an adult or an authorized school employee.");return;}
+    if(!ageConfirmed){setErr("Please confirm you are an adult or an authorized user.");return;}
     if(!termsAccepted){setErr("Please agree to the Terms of Service and Privacy Policy to continue.");return;}
     setLoading(true);
     try{
@@ -508,7 +508,7 @@ export function GoogleProfileSetup({user, onDone}){
           <input type="checkbox" checked={ageConfirmed} onChange={e=>setAgeConfirmed(e.target.checked)}
             style={{marginTop:2,accentColor:"#d4a843",flexShrink:0,width:15,height:15}}/>
           <span style={{fontSize:12,color:"rgba(255,255,255,.55)",lineHeight:1.5}}>
-            I am an <strong style={{color:"rgba(255,255,255,.75)"}}>adult (18 or older) or an authorized school employee</strong> creating this account for my program or organization.
+            I am an <strong style={{color:"rgba(255,255,255,.75)"}}>adult (18 or older) or an authorized user</strong> creating this account for my program or organization.
           </span>
         </label>
         <label style={{display:"flex",alignItems:"flex-start",gap:8,marginTop:10,cursor:"pointer"}}>
@@ -552,7 +552,7 @@ export function AuthScreen({onAuth}){
     if(!email.trim()){setErr("Please enter your email address.");return;}
     if(!pass){setErr("Please enter a password.");return;}
     if(mode==="signup"&&pass.length<6){setErr("Password must be at least 6 characters.");return;}
-    if(mode==="signup"&&!ageConfirmed){setErr("Please confirm you are an adult or an authorized school employee.");return;}
+    if(mode==="signup"&&!ageConfirmed){setErr("Please confirm you are an adult or an authorized user.");return;}
     if(mode==="signup"&&!termsAccepted){setErr("Please agree to the Terms of Service and Privacy Policy to continue.");return;}
     setLoading(true);
 
@@ -689,7 +689,7 @@ export function AuthScreen({onAuth}){
               <input type="checkbox" checked={ageConfirmed} onChange={e=>setAgeConfirmed(e.target.checked)}
                 style={{marginTop:2,accentColor:"var(--gold)",flexShrink:0,width:15,height:15}}/>
               <span style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>
-                I am an <strong>adult (18 or older) or an authorized school employee</strong> creating this account for my program or organization.
+                I am an <strong>adult (18 or older) or an authorized user</strong> creating this account for my program or organization.
               </span>
             </label>
           )}
