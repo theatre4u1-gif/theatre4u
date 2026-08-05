@@ -240,6 +240,7 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
       <a href="#multiprogram"><span class="nav-icon">🔀</span>Multiple Programs</a>
       <a href="#departments"><span class="nav-icon">🎨</span>Departments</a>
       <a href="#csv"><span class="nav-icon">📊</span>CSV Import</a>
+      <a href="#website"><span class="nav-icon">🌐</span>On Your Website</a>
       <a href="#plans"><span class="nav-icon">⭐</span>Plans & Pricing</a>
       <a href="#faq"><span class="nav-icon">❓</span>FAQ</a>
     </aside>
@@ -921,6 +922,48 @@ kbd{background:var(--bg2);border:1px solid var(--border);border-radius:4px;paddi
             <a href="https://theatre4u.org" style="display:inline-block;background:var(--gold);color:var(--ink);padding:12px 28px;border-radius:10px;font-weight:700;font-size:15px">Upgrade Your Plan →</a>
           </div>
         </div></div>
+      </section>
+
+      <!-- ═══════════════ ON YOUR WEBSITE ═══════════════ -->
+      <section class="section" id="website">
+        <div class="sec-hero" data-emoji="🌐">
+          <div class="sec-badge">Platform</div>
+          <h2>Add Your Program to Your Website</h2>
+          <p>Put your public program page, or a live view of your available items, right on your own website. You control what is public, so nothing is shared until you choose to share it.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-hd"><h3>Option 1 — Add a Link or Button (easiest)</h3></div>
+          <div class="card-bd">
+            <div class="steps">
+              <div class="step"><div class="step-n">1</div><div class="step-body"><h4>Make your profile public</h4><p>Go to <strong>My Profile</strong> and turn on the <strong>Public Profile</strong> toggle. Profiles are private by default.</p></div></div>
+              <div class="step"><div class="step-n">2</div><div class="step-body"><h4>Copy your public link</h4><p>Click <strong>Copy Link</strong> on your profile. Your link looks like <code>https://theatre4u.org/#/org/your-program</code>.</p></div></div>
+              <div class="step"><div class="step-n">3</div><div class="step-body"><h4>Add it to your website</h4><p>On your site, highlight text like "Browse our inventory" and paste the link, or add a Button element and set the link as its destination. Set it to open in a new tab.</p></div></div>
+            </div>
+            <p style="margin-top:12px">Prefer a styled button? If your site lets you paste HTML, use this:</p>
+            <pre style="background:#0d1117;color:#e6edf3;padding:14px 16px;border-radius:10px;overflow:auto;font-size:13px;line-height:1.5">&lt;a href="https://theatre4u.org/#/org/your-program"
+   target="_blank" rel="noopener"
+   style="display:inline-block;padding:12px 22px;background:#d4a843;
+   color:#1a0f00;border-radius:8px;font-weight:700;text-decoration:none"&gt;
+   Browse Our Inventory
+&lt;/a&gt;</pre>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hd"><h3>Option 2 — Embed a Live View of Your Listings</h3></div>
+          <div class="card-bd">
+            <p>Want your available items to appear right inside your own page? Paste this where you want it to show. It updates automatically as you list items.</p>
+            <pre style="background:#0d1117;color:#e6edf3;padding:14px 16px;border-radius:10px;overflow:auto;font-size:13px;line-height:1.5">&lt;div id="t4u-widget"&gt;&lt;/div&gt;
+&lt;script src="https://theatre4u.org/widget.js"
+        data-org="your-program"
+        data-target="t4u-widget"
+        data-limit="12"&gt;&lt;/script&gt;</pre>
+            <p>Replace <code>your-program</code> with your slug (the last part of your Public Profile URL). It works on WordPress, Wix, Squarespace, Google Sites, and most school websites.</p>
+            <p style="font-size:13px;color:#777;margin-top:6px" data-at="ArtsTracker programs: use artstracker.org in place of theatre4u.org in the links above (for example, artstracker.org/widget.js).">ArtsTracker programs: use <code>artstracker.org</code> in place of <code>theatre4u.org</code> in the links above (for example, <code>artstracker.org/widget.js</code>).</p>
+            <div class="tip">🔒 Only items you have listed for sharing (rent, sale, or loan) appear. Your private inventory never shows, and turning the Public Profile toggle off hides everything again.</div>
+          </div>
+        </div>
       </section>
 
       <!-- ═══════════════ FAQ ═══════════════ -->
