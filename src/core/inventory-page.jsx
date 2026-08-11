@@ -71,7 +71,13 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
     if (onDeepLinkCategoryConsumed) onDeepLinkCategoryConsumed();
   }, [deepLinkCategory]);
 
-  const[search,setSrch]=useState("");const[catF,setCatF]=useState("all");
+  const catKey="t4u_catf_"+(org?.id||userId||"x");
+  const[search,setSrch]=useState("");
+  // Category filter remembers the last choice per program (sticky). A costume
+  // director who selects "Costumes" stays on it across visits.
+  const[catF,setCatF]=useState(()=>{try{return localStorage.getItem(catKey)||"all"}catch{return "all"}});
+  useEffect(()=>{try{localStorage.setItem(catKey,catF)}catch(e){}},[catF]);
+  const[sortBy,setSortBy]=useState("newest"); // newest | number | name | location
   const[condF,setCondF]=useState("all");const[availF,setAvailF]=useState("all");
   const[mktF,setMktF]=useState("all");const[view,setView]=useState("grid"); // grid | table | locations
   const[tagF,setTagF]=useState(()=>new Set()); // active tag filters (item must have ALL selected)
@@ -196,8 +202,21 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
       i.location_id===locFilter ||
       (i.location&&locFilterName&&i.location.toLowerCase()===locFilterName.name.toLowerCase())
     );
-    return f;
-  },[items,search,catF,condF,availF,mktF,tagF,locFilter,locFilterName]);
+    // Sort (copy first so we never mutate the items prop)
+    const byNum=(a,b)=>{
+      const na=a.item_number, nb=b.item_number;
+      if(na!=null&&nb!=null) return na-nb;
+      if(na!=null) return -1; if(nb!=null) return 1;
+      return String(a.display_id||"").localeCompare(String(b.display_id||""),undefined,{numeric:true});
+    };
+    const sorters={
+      newest:(a,b)=>new Date(b.added||0)-new Date(a.added||0),
+      number:byNum,
+      name:(a,b)=>String(a.name||"").localeCompare(String(b.name||"")),
+      location:(a,b)=>String(a.location||"").localeCompare(String(b.location||"")) || byNum(a,b),
+    };
+    return [...f].sort(sorters[sortBy]||sorters.newest);
+  },[items,search,catF,condF,availF,mktF,tagF,locFilter,locFilterName,sortBy]);
   const paged=useMemo(()=>filtered.slice((pg-1)*PP,pg*PP),[filtered,pg]);
   useEffect(()=>setPg(1),[search,catF,condF,availF,mktF,tagF]);
   const openD=item=>{setActive(item);setModal("d")};
@@ -332,6 +351,12 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
           <div className="srch">{Ic.search}<input aria-label="Search inventory" value={search} onChange={e=>setSrch(e.target.value)} placeholder="Search items, tags, location…"/></div>
           <button className="ico-btn" aria-label="Filters" style={showF?{borderColor:"var(--gold)",color:"var(--cog)"}:{}} onClick={()=>setShowF(!showF)}>{Ic.filter}</button>
           <div className="vtog"><button className={view==="grid"?"on":""} onClick={()=>setView("grid")}>Grid</button><button className={view==="table"?"on":""} onClick={()=>setView("table")}>Table</button><button className={view==="locations"?"on":""} onClick={()=>setView("locations")}>📦 Locations</button></div>
+          {view!=="locations"&&<select value={sortBy} onChange={e=>setSortBy(e.target.value)} title="Sort items" style={{padding:"6px 11px",borderRadius:7,border:"1.5px solid var(--border)",background:"transparent",fontSize:13,fontFamily:"inherit",color:"var(--muted)",cursor:"pointer"}}>
+            <option value="newest">Sort: Newest</option>
+            <option value="number">Sort: Item #</option>
+            <option value="name">Sort: Name</option>
+            <option value="location">Sort: Location</option>
+          </select>}
           {canEdit&&<button
             onClick={()=>{ setSelectMode(m=>!m); setSelected(new Set()); setBulkField(""); setBulkValue(""); setBulkMsg(""); }}
             style={{padding:"6px 13px",borderRadius:7,border:"1.5px solid",fontSize:13,fontWeight:700,

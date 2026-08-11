@@ -36,6 +36,13 @@ export function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
       category, message: message.trim(),
       rating, page_context: page,
     });
+    // Alert the founder by email (fire and forget — never block the user).
+    try {
+      fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/feedback-notify", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ org_id: userId, org_name: orgName, category, message: message.trim(), rating, page_context: page }),
+      }).catch(() => {});
+    } catch (e) {}
     setSaving(false);
     setDone(true);
     setTimeout(() => { setDone(false); setOpen(false); setMessage(""); setRating(null); }, 2000);
@@ -53,6 +60,14 @@ export function FeedbackWidget({ userId, orgName, isLeadingPlayer }) {
       wishlist_hour: q4.trim(),
       page_context: "leading-player-survey",
     });
+    try {
+      fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/feedback-notify", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "survey", org_id: userId, org_name: orgName, category: "feature",
+          hardest_inventory: q1.trim(), prop28_pain_score: q2, lending_barrier: q3.trim(), wishlist_hour: q4.trim(),
+          page_context: "leading-player-survey" }),
+      }).catch(() => {});
+    } catch (e) {}
     setSaving(false);
     setDone(true);
     setTimeout(() => { setDone(false); setOpen(false); }, 2500);
