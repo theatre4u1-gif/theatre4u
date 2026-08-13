@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { ProgramDetail } from "./admin-program.jsx";
+import { BreakEvenTracker } from "./admin-breakeven.jsx";
 import { lastActiveTs, activeBucket, doorOf, DOOR_LABEL } from "../lib/admin-metrics.js";
 
 const DAY = 86400000;
@@ -243,6 +244,8 @@ export function OverviewDashboard({ door = "all" }) {
     <div style={{ maxWidth: 1080, margin: "0 auto" }}>
       <p style={{ color: "#777", fontSize: 13, margin: "0 0 4px" }}>A live snapshot{door !== "all" ? " — showing " + DOOR_LABEL[door] + " only (use the Site filter above)" : ""}. Click any card to drill in and manage.</p>
       {flash && <div style={{ marginTop: 8, fontWeight: 700, fontSize: 13, color: flash.startsWith("Error") ? "#c0392b" : "#1a7f37" }}>{flash}</div>}
+
+      <BreakEvenTracker />
 
       <div style={{ marginTop: 14, background: "#fff", border: "1px solid #e6e0d6", borderRadius: 12, padding: "14px 18px" }}>
         <div style={{ fontSize: 12, fontWeight: 800, color: "#6b6459", textTransform: "uppercase", letterSpacing: .5, marginBottom: 10 }}>By site</div>
