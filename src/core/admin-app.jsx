@@ -68,7 +68,7 @@ function Login({ onSignedIn }) {
 }
 
 const MODULES = [
-  { id: "overview", label: "Overview" },
+  { id: "overview", label: "Pulse" },
   { id: "operations", label: "Operations" }, // full Admin Hub (parity with the in-app admin)
   { id: "usage", label: "Usage" },
   { id: "billing", label: "Billing" },

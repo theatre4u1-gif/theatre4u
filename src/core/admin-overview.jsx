@@ -1,16 +1,21 @@
-// Overview / Pulse dashboard for the standalone admin app (Phase 8).
-// Headline numbers pulled live from Supabase (platform-admin read). Cards are clickable and drill
-// into a filtered, actionable detail view (programs list, payments, traffic, sessions).
+// Pulse — command-center dashboard for the standalone admin app (Phase 8).
+// Top of the page is "Needs attention today": a live radar of anything that may need Bob —
+// open content reports, data anomalies, at-risk paying/founding programs, new feedback + leads,
+// pending label orders. Each row drills into an actionable list/console. Headline KPIs, the
+// by-site split, and the break-even tracker follow below.
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { ProgramDetail } from "./admin-program.jsx";
 import { BreakEvenTracker } from "./admin-breakeven.jsx";
+import { AdminContentReports } from "./admin-reports.jsx";
+import { DataHealthDashboard } from "./admin-health.jsx";
 import { lastActiveTs, activeBucket, doorOf, DOOR_LABEL } from "../lib/admin-metrics.js";
 
 const DAY = 86400000;
 const fmtMoney = (cents) => "$" + ((cents || 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 });
 const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
 const agoDays = (iso) => { if (!iso) return "never"; const days = Math.floor((Date.now() - new Date(iso)) / DAY); return days <= 0 ? "today" : days === 1 ? "1 day ago" : days + " days ago"; };
+const norm = (s) => (s || "").trim().toLowerCase().replace(/\s+/g, " ");
 const planLabel = (o) => o.stripe_subscription_id ? "Paying" : o.founding_member ? "Founding" : o.temp_pro ? "Beta (free Pro)" : (o.plan || "free");
 const planColor = (o) => o.stripe_subscription_id ? "#1a7f37" : o.founding_member ? "#c4922a" : o.temp_pro ? "#b06fc9" : "#8a8272";
 
@@ -30,6 +35,24 @@ function Card({ label, value, sub, accent, onClick }) {
 const th = { textAlign: "left", fontSize: 11, fontWeight: 800, color: "#8a8272", textTransform: "uppercase", letterSpacing: .5, padding: "8px 10px", borderBottom: "1px solid #e6e0d6" };
 const td = { fontSize: 13, color: "#3a3a3a", padding: "9px 10px", borderBottom: "1px solid #f0ece3", verticalAlign: "middle" };
 const badge = (color) => ({ display: "inline-block", padding: "2px 9px", borderRadius: 20, fontSize: 11, fontWeight: 700, color, background: color + "1a" });
+
+// ── Needs-attention radar row ──
+function RadarRow({ icon, tone, count, label, cta, onClick }) {
+  const [hov, setHov] = useState(false);
+  const toneColor = tone === "danger" ? "#c0392b" : tone === "warn" ? "#c07a00" : "#2a6fb0";
+  const clear = count === 0;
+  return (
+    <div onClick={clear ? undefined : onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: "1px solid #f0ece3", cursor: clear ? "default" : "pointer", background: hov && !clear ? "#faf7f0" : "transparent" }}>
+      <span style={{ fontSize: 17, width: 22, textAlign: "center" }}>{icon}</span>
+      <span style={{ minWidth: 58, textAlign: "center", fontSize: 12.5, fontWeight: 800, padding: "3px 10px", borderRadius: 20, color: clear ? "#1a7f37" : toneColor, background: (clear ? "#1a7f37" : toneColor) + "18" }}>
+        {clear ? "clear" : count}
+      </span>
+      <span style={{ fontSize: 13.5, color: "#3a3a3a" }}>{label}</span>
+      {!clear && <span style={{ marginLeft: "auto", fontSize: 12.5, fontWeight: 700, color: hov ? "#a5731f" : "#c0b7a4" }}>{cta} ›</span>}
+    </div>
+  );
+}
 
 function ProgramsTable({ rows, onToggleBeta, busyId, onOpen }) {
   const [q, setQ] = useState("");
@@ -91,6 +114,20 @@ function PaymentsTable({ rows }) {
   );
 }
 
+function SimpleTable({ cols, rows, empty }) {
+  return (
+    <div style={{ overflowX: "auto", border: "1px solid #e6e0d6", borderRadius: 10 }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff" }}>
+        <thead><tr>{cols.map((c, i) => <th key={i} style={th}>{c.h}</th>)}</tr></thead>
+        <tbody>
+          {rows.length === 0 && <tr><td style={td} colSpan={cols.length}>{empty}</td></tr>}
+          {rows.map((r, i) => <tr key={i}>{cols.map((c, j) => <td key={j} style={td}>{c.cell(r)}</td>)}</tr>)}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function RankList({ title, items }) {
   const max = Math.max(1, ...items.map(i => i.n));
   return (
@@ -131,13 +168,18 @@ function SessionsTable({ rows }) {
 export function OverviewDashboard({ door = "all" }) {
   const [orgs, setOrgs] = useState(null);
   const [usageMap, setUsageMap] = useState({});
+  const [itemsMap, setItemsMap] = useState({});
   const [pv, setPv] = useState([]);
   const [payments, setPayments] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [rev, setRev] = useState(0);
+  const [reports, setReports] = useState([]);
+  const [feedback, setFeedback] = useState([]);
+  const [leads, setLeads] = useState([]);
+  const [labelOrders, setLabelOrders] = useState([]);
   const [err, setErr] = useState("");
   const [drill, setDrill] = useState(null); // {type, filter, label}
-  const [detailOrg, setDetailOrg] = useState(null); // program support console
+  const [detailOrg, setDetailOrg] = useState(null);
   const [busyId, setBusyId] = useState("");
   const [flash, setFlash] = useState("");
 
@@ -149,22 +191,30 @@ export function OverviewDashboard({ door = "all" }) {
         const weekAgo = new Date(Date.now() - 7 * DAY).toISOString();
         const d30 = new Date(Date.now() - 30 * DAY).toISOString();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-        const [orgsRes, usageRes, pvRes, revRes, payRes, sessRes] = await Promise.all([
-          SB.from("orgs").select("id,name,email,plan,temp_pro,founding_member,stripe_subscription_id,created_at,last_seen,deleted_at,location,city,vertical,signup_domain"),
-          SB.from("org_platform_usage").select("org_id,last_item_added,last_exchange_activity").limit(20000),
+        const [orgsRes, usageRes, pvRes, revRes, payRes, sessRes, repRes, fbRes, leadRes, labRes] = await Promise.all([
+          SB.from("orgs").select("id,name,email,plan,temp_pro,founding_member,stripe_subscription_id,created_at,last_seen,deleted_at,location,city,vertical,signup_domain,owner_id,account_status"),
+          SB.from("org_platform_usage").select("org_id,last_item_added,last_exchange_activity,total_items").limit(20000),
           SB.from("page_views").select("page,utm_source,referrer,session_id").gte("created_at", weekAgo).limit(20000),
           SB.from("stripe_revenue_summary").select("month,revenue_cents,refunded_cents"),
           SB.from("stripe_payments_current").select("org_name,customer_name,customer_email,amount_cents,plan,status,refunded,stripe_created_at,created_at").gte("stripe_created_at", monthStart).order("stripe_created_at", { ascending: false }).limit(2000),
           SB.from("app_sessions").select("org_id,email,plan,started_at,last_seen_at").gte("started_at", d30).order("started_at", { ascending: false }).limit(20000),
+          SB.from("content_reports").select("id,status,created_at").limit(2000),
+          SB.from("beta_feedback").select("id,org_name,category,rating,status,created_at").order("created_at", { ascending: false }).limit(2000),
+          SB.from("beta_leads").select("id,org,name,email,type,converted,created_at").order("created_at", { ascending: false }).limit(2000),
+          SB.from("label_orders").select("id,status,created_at").limit(2000),
         ]);
         if (!alive) return;
         if (orgsRes.error) throw orgsRes.error;
-        const um = {}; (usageRes.data || []).forEach(u => { um[u.org_id] = u; });
-        setUsageMap(um);
+        const um = {}, im = {}; (usageRes.data || []).forEach(u => { um[u.org_id] = u; im[u.org_id] = u.total_items || 0; });
+        setUsageMap(um); setItemsMap(im);
         setOrgs((orgsRes.data || []).filter(o => !o.deleted_at));
         setPv(pvRes.data || []);
         setPayments(payRes.data || []);
         setSessions((sessRes.data || []).map(s => ({ ...s, mins: Math.max(0, Math.round((new Date(s.last_seen_at) - new Date(s.started_at)) / 60000)) })));
+        setReports(repRes.data || []);
+        setFeedback(fbRes.data || []);
+        setLeads(leadRes.data || []);
+        setLabelOrders(labRes.data || []);
         const cur = (revRes.data || []).find(r => { const m = new Date(r.month); return m.getFullYear() === now.getFullYear() && m.getMonth() === now.getMonth(); });
         setRev(cur ? (cur.revenue_cents - (cur.refunded_cents || 0)) : 0);
       } catch (e) { if (alive) setErr(e.message || String(e)); }
@@ -181,13 +231,15 @@ export function OverviewDashboard({ door = "all" }) {
     setTimeout(() => setFlash(""), 3500);
   };
 
-  if (err) return <div style={{ padding: 24, color: "#c0392b" }}>Couldn't load overview: {err}</div>;
-  if (!orgs) return <div style={{ padding: 24, color: "#888" }}>Loading overview…</div>;
+  if (err) return <div style={{ padding: 24, color: "#c0392b" }}>Couldn't load Pulse: {err}</div>;
+  if (!orgs) return <div style={{ padding: 24, color: "#888" }}>Loading Pulse…</div>;
 
   const weekAgo = new Date(Date.now() - 7 * DAY).toISOString();
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
   const bucketOf = (o) => activeBucket(lastActiveTs(o, usageMap[o.id]));
   const doored = door === "all" ? orgs : orgs.filter(o => doorOf(o) === door);
+  const dormant = (o) => { const t = lastActiveTs(o, usageMap[o.id]); return !t || (Date.now() - t) > 14 * DAY; };
+  const atRisk = doored.filter(o => (o.stripe_subscription_id || o.founding_member) && o.account_status !== "closed" && dormant(o));
   const seg = {
     all: doored,
     active7: doored.filter(o => bucketOf(o) === "a7"),
@@ -198,28 +250,53 @@ export function OverviewDashboard({ door = "all" }) {
     founding: doored.filter(o => o.founding_member),
     beta: doored.filter(o => o.temp_pro && !o.founding_member && !o.stripe_subscription_id),
     free: doored.filter(o => o.plan === "free" && !o.temp_pro && !o.stripe_subscription_id),
+    atrisk: atRisk,
   };
-  // Always-visible side-by-side split by door (independent of the filter).
+
+  // ── radar counts (whole platform, not door-filtered) ──
+  const openReports = reports.filter(r => !["resolved", "dismissed", "actioned", "closed"].includes((r.status || "").toLowerCase()));
+  const newFeedback = feedback.filter(f => (f.status || "new") === "new");
+  const newLeads = leads.filter(l => !l.converted);
+  const pendingLabels = labelOrders.filter(l => (l.status || "").toLowerCase() === "pending");
+  const groupsBy = (keyFn) => { const m = {}; orgs.forEach(o => { const k = keyFn(o); if (!k) return; (m[k] = m[k] || []).push(o); }); return Object.values(m).filter(l => l.length > 1); };
+  const anomalies = groupsBy(o => norm(o.name)).length + groupsBy(o => norm(o.email)).length
+    + orgs.filter(o => (itemsMap[o.id] || 0) > 0 && !o.last_seen).length
+    + orgs.filter(o => o.account_status && !["active", "closed"].includes(o.account_status)).length
+    + orgs.filter(o => o.stripe_subscription_id && o.temp_pro).length
+    + orgs.filter(o => !o.owner_id).length;
+  const radar = [
+    { icon: "🚩", tone: "danger", count: openReports.length, label: "Content reports awaiting review", cta: "Review", type: "reports" },
+    { icon: "💤", tone: "warn", count: atRisk.length, label: "Paying / founding programs gone quiet (14+ days)", cta: "Open", type: "atrisk" },
+    { icon: "🩺", tone: "warn", count: anomalies, label: "Data anomalies to check", cta: "Fix", type: "anomalies" },
+    { icon: "💬", tone: "info", count: newFeedback.length, label: "New feedback", cta: "Read", type: "feedback" },
+    { icon: "📥", tone: "info", count: newLeads.length, label: "New leads", cta: "See", type: "leads" },
+    { icon: "🏷", tone: "info", count: pendingLabels.length, label: "Label orders pending", cta: "See", type: "labels" },
+  ];
+  const attentionTotal = radar.reduce((a, r) => a + r.count, 0);
+
   const byDoor = ["theatre4u", "artstracker"].map(d => {
     const list = orgs.filter(o => doorOf(o) === d);
     return { d, total: list.length, active: list.filter(o => ["a7", "a30"].includes(bucketOf(o))).length, paying: list.filter(o => o.stripe_subscription_id).length, founding: list.filter(o => o.founding_member).length };
   });
   const visitors7 = new Set(pv.map(r => r.session_id).filter(Boolean)).size;
   const avgMin = sessions.length ? Math.round(sessions.reduce((a, s) => a + s.mins, 0) / sessions.length) : null;
-
   const openProg = (filter, label) => setDrill({ type: "programs", filter, label });
 
-  // ── Program support console (opened from a programs list) ──
   if (detailOrg) {
     return <ProgramDetail org={detailOrg} onBack={() => setDetailOrg(null)}
       onChanged={(id, p) => setOrgs(prev => prev.map(x => x.id === id ? { ...x, ...p } : x))} />;
   }
 
-  // ── Drill-down views ──
   if (drill) {
-    const back = <button onClick={() => setDrill(null)} style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid #d5cfc4", background: "#fff", color: "#555", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", marginBottom: 16 }}>← Back to overview</button>;
+    const back = <button onClick={() => setDrill(null)} style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid #d5cfc4", background: "#fff", color: "#555", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", marginBottom: 16 }}>← Back to Pulse</button>;
     let body = null, title = drill.label;
     if (drill.type === "programs") body = <ProgramsTable rows={seg[drill.filter] || []} onToggleBeta={toggleBeta} busyId={busyId} onOpen={setDetailOrg} />;
+    else if (drill.type === "atrisk") { title = "At-risk programs (paying/founding, quiet 14+ days)"; body = <ProgramsTable rows={atRisk} onToggleBeta={toggleBeta} busyId={busyId} onOpen={setDetailOrg} />; }
+    else if (drill.type === "reports") { title = "Content reports"; body = <AdminContentReports />; }
+    else if (drill.type === "anomalies") { title = "Data anomalies"; body = <DataHealthDashboard />; }
+    else if (drill.type === "feedback") { title = "Feedback"; body = <SimpleTable empty="No feedback yet." rows={feedback} cols={[{ h: "Program", cell: r => r.org_name || "—" }, { h: "Type", cell: r => r.category || "—" }, { h: "Rating", cell: r => r.rating != null ? r.rating + "★" : "—" }, { h: "Status", cell: r => <span style={badge((r.status || "new") === "new" ? "#e91e63" : "#8a8272")}>{r.status || "new"}</span> }, { h: "When", cell: r => fmtDate(r.created_at) }]} />; }
+    else if (drill.type === "leads") { title = "Beta leads"; body = <SimpleTable empty="No leads yet." rows={leads} cols={[{ h: "Program", cell: r => r.org || "—" }, { h: "Name", cell: r => r.name || "—" }, { h: "Email", cell: r => r.email || "—" }, { h: "Type", cell: r => r.type || "—" }, { h: "Converted", cell: r => r.converted ? "✓" : "—" }, { h: "When", cell: r => fmtDate(r.created_at) }]} />; }
+    else if (drill.type === "labels") { title = "Label orders"; body = <SimpleTable empty="No label orders." rows={labelOrders} cols={[{ h: "Order", cell: r => (r.id || "").slice(0, 8) }, { h: "Status", cell: r => <span style={badge((r.status || "") === "pending" ? "#c07a00" : "#1a7f37")}>{r.status || "—"}</span> }, { h: "When", cell: r => fmtDate(r.created_at) }]} />; }
     else if (drill.type === "payments") { title = "Payments this month"; body = <PaymentsTable rows={payments} />; }
     else if (drill.type === "sessions") { title = "Recent sessions (last 30 days)"; body = <SessionsTable rows={sessions.slice(0, 200)} />; }
     else if (drill.type === "traffic") {
@@ -230,22 +307,28 @@ export function OverviewDashboard({ door = "all" }) {
     return (
       <div style={{ maxWidth: 1080, margin: "0 auto" }}>
         {back}
-        <h2 style={{ fontSize: 20, fontWeight: 800, color: "#2a2a2a", margin: "0 0 14px" }}>{title} {drill.type === "programs" && <span style={{ fontSize: 14, fontWeight: 600, color: "#9a9284" }}>({(seg[drill.filter] || []).length})</span>}</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: "#2a2a2a", margin: "0 0 14px" }}>{title}</h2>
         {flash && <div style={{ marginBottom: 12, fontWeight: 700, fontSize: 13, color: flash.startsWith("Error") ? "#c0392b" : "#1a7f37" }}>{flash}</div>}
         {body}
       </div>
     );
   }
 
-  // ── Cards ──
   const grid = { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(210px,1fr))", gap: 14 };
   const H = ({ children }) => <h3 style={{ fontSize: 13, fontWeight: 800, color: "#6b6459", textTransform: "uppercase", letterSpacing: .5, margin: "26px 0 12px" }}>{children}</h3>;
   return (
     <div style={{ maxWidth: 1080, margin: "0 auto" }}>
-      <p style={{ color: "#777", fontSize: 13, margin: "0 0 4px" }}>A live snapshot{door !== "all" ? " — showing " + DOOR_LABEL[door] + " only (use the Site filter above)" : ""}. Click any card to drill in and manage.</p>
+      <p style={{ color: "#777", fontSize: 13, margin: "0 0 4px" }}>A live snapshot{door !== "all" ? " — showing " + DOOR_LABEL[door] + " only (use the Site filter above)" : ""}. Click anything to drill in and manage.</p>
       {flash && <div style={{ marginTop: 8, fontWeight: 700, fontSize: 13, color: flash.startsWith("Error") ? "#c0392b" : "#1a7f37" }}>{flash}</div>}
 
-      <BreakEvenTracker />
+      {/* ── Needs attention today ── */}
+      <div style={{ marginTop: 14, background: "#fff", border: "1px solid " + (attentionTotal ? "#e7cfa0" : "#d7e6d3"), borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: attentionTotal ? "#fdf6e9" : "#f2f8ef", borderBottom: "1px solid " + (attentionTotal ? "#f0e2c4" : "#dcebd7") }}>
+          <span style={{ fontSize: 13, fontWeight: 800, color: "#6b6459", textTransform: "uppercase", letterSpacing: .5 }}>Needs attention today</span>
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: attentionTotal ? "#c07a00" : "#1a7f37" }}>{attentionTotal ? attentionTotal + " to look at" : "all clear ✓"}</span>
+        </div>
+        {radar.map((r, i) => <RadarRow key={i} {...r} onClick={() => setDrill({ type: r.type, label: r.label })} />)}
+      </div>
 
       <div style={{ marginTop: 14, background: "#fff", border: "1px solid #e6e0d6", borderRadius: 12, padding: "14px 18px" }}>
         <div style={{ fontSize: 12, fontWeight: 800, color: "#6b6459", textTransform: "uppercase", letterSpacing: .5, marginBottom: 10 }}>By site</div>
@@ -280,6 +363,9 @@ export function OverviewDashboard({ door = "all" }) {
         <Card label="Free" value={seg.free.length} onClick={() => openProg("free", "Free programs")} />
       </div>
 
+      <H>Break-even</H>
+      <BreakEvenTracker />
+
       <H>Money & traffic{door !== "all" ? " (all sites)" : ""}</H>
       <div style={grid}>
         <Card label="Revenue this month" value={fmtMoney(rev)} sub="Stripe · click for payments" accent="#1a7f37" onClick={() => setDrill({ type: "payments" })} />
@@ -288,7 +374,7 @@ export function OverviewDashboard({ door = "all" }) {
       </div>
 
       <p style={{ color: "#9a9284", fontSize: 11.5, marginTop: 22, lineHeight: 1.5 }}>
-        Billing begins September 1, so revenue is expected to be minimal until then. Session-length tracking was just turned on, so that figure fills in over the coming days.
+        Billing begins September 1, so revenue is expected to be minimal until then. The radar at top pulls live from reports, feedback, leads, label orders, and account health each time you open Pulse.
       </p>
     </div>
   );
