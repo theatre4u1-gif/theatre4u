@@ -6,6 +6,7 @@ import { SB } from "./supabase.js";
 import { CSS } from "./styles.js";
 import { ContentBrandEditor } from "./content-editor.jsx";
 import { OverviewDashboard } from "./admin-overview.jsx";
+import { ProgramsDashboard } from "./admin-programs.jsx";
 import { UsageDashboard } from "./admin-usage.jsx";
 import { DataHealthDashboard } from "./admin-health.jsx";
 import { BillingDashboard } from "./admin-billing.jsx";
@@ -69,6 +70,7 @@ function Login({ onSignedIn }) {
 
 const MODULES = [
   { id: "overview", label: "Pulse" },
+  { id: "programs", label: "Programs" },
   { id: "operations", label: "Operations" }, // full Admin Hub (parity with the in-app admin)
   { id: "usage", label: "Usage" },
   { id: "billing", label: "Billing" },
@@ -144,7 +146,7 @@ export function AdminApp() {
           <button onClick={signOut} style={{ padding: "5px 12px", borderRadius: 7, border: "1px solid rgba(240,230,211,.25)", background: "transparent", color: "rgba(240,230,211,.85)", cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}>Sign out</button>
         </div>
       </header>
-      {["overview", "usage", "billing"].includes(mod) && (
+      {["overview", "programs", "usage", "billing"].includes(mod) && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 24px", background: "#241608", borderBottom: "1px solid rgba(240,230,211,.08)" }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(240,230,211,.5)", textTransform: "uppercase", letterSpacing: .5, marginRight: 2 }}>Site</span>
           {[["all", "Both"], ["theatre4u", "Theatre4u"], ["artstracker", "ArtsTracker"]].map(([id, label]) => (
@@ -156,6 +158,7 @@ export function AdminApp() {
       <main style={{ padding: "26px 20px 60px" }}>
         {mod === "operations" && <AdminHub currentUser={user} org={null} />}
         {mod === "overview" && <OverviewDashboard door={door} />}
+        {mod === "programs" && <ProgramsDashboard door={door} />}
         {mod === "usage" && <UsageDashboard door={door} />}
         {mod === "billing" && <BillingDashboard door={door} />}
         {mod === "finance" && <BusinessFinance userId={user?.id} />}
