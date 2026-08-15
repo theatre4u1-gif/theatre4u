@@ -36,6 +36,36 @@ export const PLANS_DEF = {
   at_district_l: { label:"ArtsTracker District L", maxItems:Infinity, marketplace:true, reports:true, allVerticals:true, monthlyPrice:699, annualPrice:6990 },
 };
 
+// ── Beta → paid transition (billing goes live Sept 1 2026) ───────────────────
+// Beta accounts (temp_pro) get full Pro free during beta. After beta_end_date
+// there's a grace window; if still unpaid when grace ends, the account drops to
+// Free (25-item cap). Comped accounts and paying/subscribed accounts are exempt.
+// beta_end_date is a date; we anchor it to midnight Pacific (07:00 UTC) to match
+// the launch gate in billing.jsx.
+export const GRACE_DAYS = 14;
+
+export function isComped(org) {
+  return !!org && (org.admin_notes || "").includes("[COMPED]");
+}
+
+// Returns one of: "paid" | "comped" | "free" | "beta" | "grace" | "expired"
+export function betaPhase(org, now = Date.now()) {
+  if (!org) return "free";
+  if (org.stripe_subscription_id) return "paid";     // already subscribing
+  if (isComped(org)) return "comped";                // free & exempt (e.g. HBUHSD)
+  if (!org.temp_pro) return "free";                  // ordinary Free plan, not a beta grant
+  const end = org.beta_end_date ? Date.parse(org.beta_end_date + "T07:00:00Z") : null;
+  if (!end || now < end) return "beta";              // still complimentary
+  const graceEnd = end + GRACE_DAYS * 86400000;
+  return now < graceEnd ? "grace" : "expired";
+}
+
+// The date a beta account's grace window ends (Date object) or null.
+export function graceEndDate(org) {
+  const end = org?.beta_end_date ? Date.parse(org.beta_end_date + "T07:00:00Z") : null;
+  return end ? new Date(end + GRACE_DAYS * 86400000) : null;
+}
+
 export const UPGRADE_PLANS = [
   // ── Single-Department track — one art area ──────────────────────────────────
   { id:"free",     track:"single", name:"Free",     monthlyPrice:"$0",  annualPrice:"Free",   per:"/forever", annualNote:null,       desc:"Perfect for getting started.",     hot:false,

@@ -10,6 +10,7 @@ import { CAT, CATS, getCatsMerged } from "./inventory.js";
 import { POINTS_FREE_MONTH } from "./points-config.js";
 import { BG, usp } from "../lib/backgrounds.js";
 import { getVertical, getExchangeName, getCatGfx, getTerm } from "../lib/verticals.js";
+import { betaPhase } from "./plans.js";
 
 function CommunitySpotlight({onViewAll}){
   const [posts,   setPosts]   = useState([]);
@@ -199,7 +200,7 @@ export function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMa
       <div className="page-layer">
 
         {/* Temp Pro beta notice */}
-        {isTempPro&&(()=>{
+        {isTempPro&&betaPhase(org)==="beta"&&(()=>{
           const itemCount = items.filter(i=>!i._is_loan).length;
           const hasFeedback = org?.founding_member_rate || false;
           const isFoundingMember = org?.founding_member_rate || false;

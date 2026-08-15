@@ -9,9 +9,10 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const PRO_PRICE = "price_1TPSjgBRkceXoRsJLTvsknvy";  // real Theatre4u Pro monthly ($15) => plan maps to pro
-const FOUNDING_COUPON = "Wc5L1HD0";                 // $5.01 off, forever => $9.99/mo locked
-const BILLING_START = 1788220800;                   // 2026-09-01T00:00:00Z — first charge deferred to here
+const PRO_PRICE = "price_1TPSjgBRkceXoRsJLTvsknvy";      // Pro monthly ($15) list price
+const FOUNDING_PRICE = "price_1U4muQBRkceXoRsJLMWSwfZE"; // dedicated $9.99/mo founding price — always $9.99, independent of the Pro list price
+const FOUNDING_COUPON = "Wc5L1HD0";                     // legacy $5.01-off coupon — no longer used (kept for reference)
+const BILLING_START = 1788220800;                       // 2026-09-01T00:00:00Z — first charge deferred to here
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: CORS });
@@ -49,9 +50,8 @@ Deno.serve(async (req: Request) => {
 
     const body = new URLSearchParams();
     body.append("mode", "subscription");
-    body.append("line_items[0][price]", PRO_PRICE);
+    body.append("line_items[0][price]", FOUNDING_PRICE); // $9.99/mo locked — no coupon needed
     body.append("line_items[0][quantity]", "1");
-    body.append("discounts[0][coupon]", FOUNDING_COUPON);
     body.append("client_reference_id", org_id); // webhook maps subscription -> org by this
     body.append("payment_method_collection", "always"); // collect card now even though $0 until Sept 1
     body.append("success_url", `${base}/?payment_success=1`);

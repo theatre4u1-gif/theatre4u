@@ -18,6 +18,7 @@ const ALL_VERTICALS = ["theatre", "music", "dance", "art", "booster"];
 
 const PRICE_TO_PLAN: Record<string, { plan: string; interval: string; allVerticals?: boolean }> = {
   "price_1TPSjgBRkceXoRsJLTvsknvy": { plan: "pro",        interval: "monthly" },
+  "price_1U4muQBRkceXoRsJLMWSwfZE": { plan: "pro",        interval: "monthly" }, // founding $9.99 locked
   "price_1TPSk1BRkceXoRsJ3k27ZRuW": { plan: "pro",        interval: "annual"  },
   "price_1TADqIBRkceXoRsJ9ew0pIjX": { plan: "pro",        interval: "monthly" },
   "price_1TADqMBRkceXoRsJOGoCrUIf": { plan: "pro",        interval: "annual"  },

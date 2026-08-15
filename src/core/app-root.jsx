@@ -9,7 +9,7 @@ import { EM } from "./messages.js";
 import { TERMS_CONTENT, PRIVACY_CONTENT } from "./legal.js";
 import { authErrKey, getRefCode, isDemoMode, fmt$, parseCSV, autoMatch, postShareText, resizeImg, fbShare, getPointsName, itemShareUrl, itemShareText, CSV_FIELDS, uid } from "./helpers.js";
 import { AuthOverlay, GoogleProfileSetup } from "./auth.jsx";
-import { STRIPE_LINKS, stripeLink, PLANS_DEF, UPGRADE_PLANS } from "./plans.js";
+import { STRIPE_LINKS, stripeLink, PLANS_DEF, UPGRADE_PLANS, betaPhase, graceEndDate } from "./plans.js";
 import { UpgradePrompt, UpgradePlans } from "./billing.jsx";
 import { CAT_GFX, CATS, CAT, CAT_MAP, CONDS, SIZES, AVAIL, MKT, setCustomCats, customCatsFor, getCatsMerged } from "./inventory.js";
 import { AdminHub, DistrictDashboard } from "./admin.jsx";
@@ -236,7 +236,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
           if(freshOrg) {
             setOrg(prev => ({ ...prev, ...freshOrg }));
             const ep = freshOrg.stripe_subscription_id ? freshOrg.plan
-              : freshOrg.temp_pro ? "pro" : (freshOrg.plan || "free");
+              : freshOrg.temp_pro ? (betaPhase(freshOrg) === "expired" ? "free" : "pro") : (freshOrg.plan || "free");
             setPlanState(ep);
           }
         };
@@ -310,7 +310,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       // Admin emails always get District plan regardless of what is stored
       // temp_pro = true gives Pro access during beta (no payment required)
       const effectivePlan = isAdminEmail(user?.email) ? "district"
-        : orgData?.temp_pro ? "pro"
+        : orgData?.temp_pro ? (betaPhase(orgData) === "expired" ? "free" : "pro")
         : (orgData?.plan || "free");
       if(orgData){
         setOrg({...orgData, _memberRole: memberRole, _isMember: !!realMembership});
@@ -1033,6 +1033,45 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                     cursor:"pointer",fontSize:18,padding:"0 4px",lineHeight:1}}>✕</button>
               </div>
             )}
+            {/* Beta-ended billing prompt — unpaid beta accounts, on every page, after Sept 1.
+                "grace" = free access continues through graceEnd; "expired" = dropped to Free. */}
+            {loaded && org?.temp_pro && !org?.stripe_subscription_id && !isAdmin && !isDemoMode() && (()=>{
+              const ph = betaPhase(org);
+              if(ph!=="grace" && ph!=="expired") return null;
+              const expired = ph==="expired";
+              const gEnd = graceEndDate(org);
+              const gTxt = gEnd ? gEnd.toLocaleDateString(undefined,{month:"long",day:"numeric"}) : "";
+              const founding = org?.founding_member;
+              const cta = founding
+                ? <button onClick={claimFounding} disabled={foundingBusy}
+                    style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:7,padding:"9px 14px",borderRadius:8,fontSize:13,fontWeight:800,background:"linear-gradient(135deg,var(--gold),#a37f2c)",color:"#1a0f00",border:"none",cursor:foundingBusy?"default":"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                    {foundingBusy ? "Starting…" : "⭐ Claim your $9.99 rate"}
+                  </button>
+                : <a href={stripeLink(STRIPE_LINKS.pro?.monthly, user?.id, user?.email)} target="_blank" rel="noreferrer"
+                    style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:7,padding:"9px 14px",borderRadius:8,fontSize:13,fontWeight:700,background:"linear-gradient(135deg,var(--gold),#a37f2c)",color:"#1a0f00",textDecoration:"none",border:"none",cursor:"pointer",whiteSpace:"nowrap"}}>
+                    ⭐ Subscribe — $15/mo
+                  </a>;
+              return (
+                <div style={{
+                  background: expired ? "linear-gradient(135deg,rgba(139,26,42,.18),rgba(139,26,42,.07))" : "linear-gradient(135deg,rgba(212,168,67,.16),rgba(212,168,67,.05))",
+                  border: "1px solid " + (expired ? "rgba(139,26,42,.4)" : "rgba(212,168,67,.4)"),
+                  borderRadius:10, margin:"16px 24px 0", padding:"14px 18px",
+                  display:"flex", gap:14, alignItems:"center", flexWrap:"wrap"}}>
+                  <span style={{fontSize:22,flexShrink:0}}>{expired ? "🔔" : "⭐"}</span>
+                  <div style={{flex:1, minWidth:220}}>
+                    <div style={{fontWeight:800, fontSize:14, color: expired ? "#e08a8a" : "var(--goldink)"}}>
+                      {expired ? "Your beta has ended — your account is now on the Free plan" : "Your free beta has ended"}
+                    </div>
+                    <div style={{fontSize:12.5, color:"var(--muted)", lineHeight:1.55, marginTop:3}}>
+                      {expired
+                        ? <>Add payment to restore unlimited items and Pro features. {founding ? <>Your founding rate of <strong style={{color:"var(--text)"}}>$9.99/month</strong> is still available.</> : <>Pro is <strong style={{color:"var(--text)"}}>$15/month</strong>.</>}</>
+                        : <>Add your payment to keep Pro. You have full access through <strong style={{color:"var(--text)"}}>{gTxt}</strong>, then your account moves to the Free plan (25-item limit).{founding ? <> Lock in your <strong style={{color:"var(--goldink)"}}>$9.99/month</strong> founding rate.</> : null}</>}
+                    </div>
+                  </div>
+                  <div style={{flexShrink:0}}>{cta}</div>
+                </div>
+              );
+            })()}
             {!loaded
               ? <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:18,color:"var(--faint)"}}>
                   <img src={LOGO_MARK} alt="" style={{width:96,height:72,objectFit:"contain",display:"block"}}/>
