@@ -9,7 +9,7 @@ import { ContentBrandEditor } from "./content-editor.jsx";
 import { OverviewDashboard } from "./admin-overview.jsx";
 import { ProgramsDashboard } from "./admin-programs.jsx";
 import { UsageDashboard } from "./admin-usage.jsx";
-import { DataHealthDashboard } from "./admin-health.jsx";
+import { WatchDashboard } from "./admin-watch.jsx"; // reports + at-risk + data health + feedback
 import { MoneyDashboard } from "./admin-money.jsx"; // Billing + Break-even + Bookkeeping
 import { AdminHub } from "./admin.jsx"; // the full in-app operations hub (users, leads, payments, feedback, labels, programs, accounts, districts, tools)
 
@@ -72,8 +72,8 @@ const MODULES = [
   { id: "overview", label: "Pulse" },
   { id: "programs", label: "Programs" },
   { id: "money", label: "Money" },
+  { id: "watch", label: "Watch" },
   { id: "usage", label: "Usage" },
-  { id: "health", label: "Data health" },
   { id: "operations", label: "Operations" }, // legacy hub — to be retired
   { id: "content", label: "Content & Brand" },
 ];
@@ -170,7 +170,7 @@ export function AdminApp() {
           <button onClick={signOut} style={{ padding: "5px 12px", borderRadius: 7, border: "1px solid rgba(240,230,211,.25)", background: "transparent", color: "rgba(240,230,211,.85)", cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}>Sign out</button>
         </div>
       </header>
-      {["overview", "programs", "usage", "money"].includes(mod) && (
+      {["overview", "programs", "usage", "money", "watch"].includes(mod) && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 24px", background: "#241608", borderBottom: "1px solid rgba(240,230,211,.08)" }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(240,230,211,.5)", textTransform: "uppercase", letterSpacing: .5, marginRight: 2 }}>Site</span>
           {[["all", "Both"], ["theatre4u", "Theatre4u"], ["artstracker", "ArtsTracker"]].map(([id, label]) => (
@@ -185,7 +185,7 @@ export function AdminApp() {
         {mod === "programs" && <ProgramsDashboard door={door} />}
         {mod === "usage" && <UsageDashboard door={door} />}
         {mod === "money" && <MoneyDashboard door={door} userId={user?.id} />}
-        {mod === "health" && <DataHealthDashboard />}
+        {mod === "watch" && <WatchDashboard door={door} />}
         {mod === "content" && <ContentBrandEditor userId={user?.id} />}
       </main>
     </div>

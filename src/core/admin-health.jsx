@@ -1,8 +1,9 @@
 // Data health panel (Phase 8 admin app). Surfaces data anomalies automatically so the numbers can
 // be trusted — duplicate records, activity without a login, unusual statuses, and billing conflicts.
 // Read-only detection; each flagged program opens the support console for a fix.
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { SB } from "./supabase.js";
+import { AdminBackContext } from "./admin-back.js";
 import { ProgramDetail } from "./admin-program.jsx";
 
 const norm = (s) => (s || "").trim().toLowerCase().replace(/\s+/g, " ");
@@ -12,6 +13,12 @@ export function DataHealthDashboard() {
   const [orgs, setOrgs] = useState(null);
   const [err, setErr] = useState("");
   const [detailOrg, setDetailOrg] = useState(null);
+  const back = useContext(AdminBackContext);
+
+  useEffect(() => {
+    if (!back || !detailOrg) return;
+    return back(() => setDetailOrg(null));
+  }, [back, detailOrg]);
 
   useEffect(() => {
     let alive = true;
