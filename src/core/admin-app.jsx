@@ -1,16 +1,16 @@
 // Standalone admin app (Phase 8) — served on admin.artstracker.org (see IS_ADMIN_HOST in config.js).
 // Self-contained: email/password sign-in, platform_admins gate, then the admin modules.
 // First module: Content & Brand editor. Future: billing dashboard, business finance, etc.
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { SB } from "./supabase.js";
+import { AdminBackContext } from "./admin-back.js";
 import { CSS } from "./styles.js";
 import { ContentBrandEditor } from "./content-editor.jsx";
 import { OverviewDashboard } from "./admin-overview.jsx";
 import { ProgramsDashboard } from "./admin-programs.jsx";
 import { UsageDashboard } from "./admin-usage.jsx";
 import { DataHealthDashboard } from "./admin-health.jsx";
-import { BillingDashboard } from "./admin-billing.jsx";
-import { BusinessFinance } from "./admin-finance.jsx";
+import { MoneyDashboard } from "./admin-money.jsx"; // Billing + Break-even + Bookkeeping
 import { AdminHub } from "./admin.jsx"; // the full in-app operations hub (users, leads, payments, feedback, labels, programs, accounts, districts, tools)
 
 const PAGE_BG = "#f4f1ea";
@@ -71,11 +71,10 @@ function Login({ onSignedIn }) {
 const MODULES = [
   { id: "overview", label: "Pulse" },
   { id: "programs", label: "Programs" },
-  { id: "operations", label: "Operations" }, // full Admin Hub (parity with the in-app admin)
+  { id: "money", label: "Money" },
   { id: "usage", label: "Usage" },
-  { id: "billing", label: "Billing" },
-  { id: "finance", label: "Finance" },
   { id: "health", label: "Data health" },
+  { id: "operations", label: "Operations" }, // legacy hub — to be retired
   { id: "content", label: "Content & Brand" },
 ];
 
@@ -108,6 +107,30 @@ export function AdminApp() {
     return () => { try { sub?.subscription?.unsubscribe?.(); } catch (e) {} };
   }, []);
 
+  // ── Browser Back guard: keep Back inside admin, stepping through internal screens ──
+  const backHandlers = useRef([]); // stack of module handlers for open consoles/drills
+  const registerBack = useCallback((fn) => {
+    backHandlers.current.push(fn);
+    return () => { backHandlers.current = backHandlers.current.filter(h => h !== fn); };
+  }, []);
+  const tabStack = useRef(["overview"]);
+  const goTab = (id) => {
+    if (id !== mod) { tabStack.current.push(id); try { window.history.pushState({ adm: 1 }, ""); } catch (e) {} }
+    setMod(id);
+  };
+  useEffect(() => {
+    try { window.history.pushState({ adm: 1 }, ""); } catch (e) {}
+    const onPop = () => {
+      try { window.history.pushState({ adm: 1 }, ""); } catch (e) {} // re-seed so Back never leaves admin
+      const hs = backHandlers.current;
+      if (hs.length) { hs[hs.length - 1](); return; } // 1) close the deepest open console/drill
+      if (tabStack.current.length > 1) { tabStack.current.pop(); setMod(tabStack.current[tabStack.current.length - 1]); } // 2) previous tab
+      // 3) nothing to go back to → stay put
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
   const signOut = async () => { await SB.auth.signOut(); setUser(null); setPhase("login"); };
 
   if (phase === "loading") return <Centered><div style={{ color: "#999" }}>Loading…</div></Centered>;
@@ -124,6 +147,7 @@ export function AdminApp() {
 
   // Authorized admin shell
   return (
+    <AdminBackContext.Provider value={registerBack}>
     <div style={{ ...box, minHeight: "100vh", background: PAGE_BG }}>
       {/* Load the shared app stylesheet so the embedded Admin Hub (which uses the app's CSS
           variables and classes) renders correctly. The standalone dashboards use only inline
@@ -134,7 +158,7 @@ export function AdminApp() {
           <span style={{ fontWeight: 800, fontSize: 16, color: "#e8b85d" }}>Admin</span>
           <nav style={{ display: "flex", gap: 6 }}>
             {MODULES.map(m => (
-              <button key={m.id} onClick={() => setMod(m.id)}
+              <button key={m.id} onClick={() => goTab(m.id)}
                 style={{ padding: "6px 14px", borderRadius: 7, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 700, background: mod === m.id ? "#c4922a" : "transparent", color: mod === m.id ? "#1a0f06" : "rgba(240,230,211,.75)" }}>
                 {m.label}
               </button>
@@ -146,7 +170,7 @@ export function AdminApp() {
           <button onClick={signOut} style={{ padding: "5px 12px", borderRadius: 7, border: "1px solid rgba(240,230,211,.25)", background: "transparent", color: "rgba(240,230,211,.85)", cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}>Sign out</button>
         </div>
       </header>
-      {["overview", "programs", "usage", "billing"].includes(mod) && (
+      {["overview", "programs", "usage", "money"].includes(mod) && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 24px", background: "#241608", borderBottom: "1px solid rgba(240,230,211,.08)" }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(240,230,211,.5)", textTransform: "uppercase", letterSpacing: .5, marginRight: 2 }}>Site</span>
           {[["all", "Both"], ["theatre4u", "Theatre4u"], ["artstracker", "ArtsTracker"]].map(([id, label]) => (
@@ -160,11 +184,11 @@ export function AdminApp() {
         {mod === "overview" && <OverviewDashboard door={door} />}
         {mod === "programs" && <ProgramsDashboard door={door} />}
         {mod === "usage" && <UsageDashboard door={door} />}
-        {mod === "billing" && <BillingDashboard door={door} />}
-        {mod === "finance" && <BusinessFinance userId={user?.id} />}
+        {mod === "money" && <MoneyDashboard door={door} userId={user?.id} />}
         {mod === "health" && <DataHealthDashboard />}
         {mod === "content" && <ContentBrandEditor userId={user?.id} />}
       </main>
     </div>
+    </AdminBackContext.Provider>
   );
 }

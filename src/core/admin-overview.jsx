@@ -3,8 +3,9 @@
 // open content reports, data anomalies, at-risk paying/founding programs, new feedback + leads,
 // pending label orders. Each row drills into an actionable list/console. Headline KPIs, the
 // by-site split, and the break-even tracker follow below.
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { SB } from "./supabase.js";
+import { AdminBackContext } from "./admin-back.js";
 import { ProgramDetail } from "./admin-program.jsx";
 import { BreakEvenTracker } from "./admin-breakeven.jsx";
 import { AdminContentReports } from "./admin-reports.jsx";
@@ -182,6 +183,13 @@ export function OverviewDashboard({ door = "all" }) {
   const [detailOrg, setDetailOrg] = useState(null);
   const [busyId, setBusyId] = useState("");
   const [flash, setFlash] = useState("");
+  const back = useContext(AdminBackContext);
+
+  // Browser Back closes an open console/drill before leaving the tab.
+  useEffect(() => {
+    if (!back || (!drill && !detailOrg)) return;
+    return back(() => { if (detailOrg) setDetailOrg(null); else setDrill(null); });
+  }, [back, drill, detailOrg]);
 
   useEffect(() => {
     let alive = true;

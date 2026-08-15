@@ -2,8 +2,9 @@
 // Search-first list with plan filters + a Leads view; every row opens the per-program
 // support console (ProgramDetail). Replaces the old Operations "Users & Leads / Programs /
 // Accounts" tabs.
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { SB } from "./supabase.js";
+import { AdminBackContext } from "./admin-back.js";
 import { ProgramDetail } from "./admin-program.jsx";
 import { lastActiveTs, doorOf } from "../lib/admin-metrics.js";
 
@@ -32,6 +33,13 @@ export function ProgramsDashboard({ door = "all" }) {
   const [busyId, setBusyId] = useState("");
   const [flash, setFlash] = useState("");
   const [err, setErr] = useState("");
+  const back = useContext(AdminBackContext);
+
+  // Browser Back closes an open program console before leaving the tab.
+  useEffect(() => {
+    if (!back || !detailOrg) return;
+    return back(() => setDetailOrg(null));
+  }, [back, detailOrg]);
 
   useEffect(() => {
     let alive = true;
