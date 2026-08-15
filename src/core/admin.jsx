@@ -105,8 +105,8 @@ export function PoolHealthWidget() {
   );
 }
 
-export function AdminHub({ currentUser, org }) {
-  const [tab, setTab]             = useState("overview");
+export function AdminHub({ currentUser, org, only, initialTab }) {
+  const [tab, setTab]             = useState(initialTab || "overview");
   const [orgs, setOrgs]           = useState([]);
   const [leads, setLeads]         = useState([]);
   const [feedback, setFeedback]   = useState([]);
@@ -122,7 +122,7 @@ export function AdminHub({ currentUser, org }) {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      if (tab === "overview" || tab === "programs" || tab === "users" || tab === "billing") {
+      if (tab === "overview" || tab === "programs" || tab === "users" || tab === "billing" || tab === "districts" || tab === "tools") {
         // Use RPC to get item counts per org in one query
         const { data: orgData } = await SB.rpc("get_admin_org_overview");
         if (orgData) setOrgs(orgData);
@@ -331,18 +331,19 @@ export function AdminHub({ currentUser, org }) {
     ["districts", "🏛 Districts"],
     ["tools",     "🔧 Tools"],
   ];
+  const visibleTabs = only ? TABS.filter(([id]) => only.includes(id)) : TABS;
 
   return (
     <div style={{padding:"28px 32px 64px",minHeight:"80vh"}}>
-      <div style={{marginBottom:22}}>
+      {!only && (<div style={{marginBottom:22}}>
         <h1 style={{fontFamily:"var(--serif)",fontSize:28,margin:"0 0 4px"}}>🎛 Admin Hub</h1>
         <p style={{fontSize:13,color:"var(--muted)",margin:0}}>Theatre4u™ platform administration — everything in one place.</p>
-      </div>
+      </div>)}
 
-      <div style={{display:"flex",gap:4,marginBottom:24,borderBottom:"1px solid var(--border)",
+      {visibleTabs.length > 1 && (<div style={{display:"flex",gap:4,marginBottom:24,borderBottom:"1px solid var(--border)",
         paddingBottom:0,overflowX:"auto",WebkitOverflowScrolling:"touch",
         scrollbarWidth:"none",msOverflowStyle:"none"}}>
-        {TABS.map(([id,lbl])=>{
+        {visibleTabs.map(([id,lbl])=>{
           const badge = id==="feedback"&&newFeedback>0?newFeedback
             : id==="users"&&newLeads>0?newLeads
             : id==="labels"&&labelOrders.filter(o=>o.status==="pending").length>0?labelOrders.filter(o=>o.status==="pending").length
@@ -360,7 +361,7 @@ export function AdminHub({ currentUser, org }) {
             </button>
           );
         })}
-      </div>
+      </div>)}
 
       {msg&&<div style={{background:"rgba(76,175,80,.1)",border:"1px solid rgba(76,175,80,.3)",borderRadius:8,padding:"8px 14px",marginBottom:16,fontSize:13,color:"#4caf50"}}>{msg}</div>}
       {loading&&<div style={{color:"var(--muted)",padding:20,textAlign:"center"}}>Loading…</div>}

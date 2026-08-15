@@ -74,7 +74,8 @@ const MODULES = [
   { id: "money", label: "Money" },
   { id: "watch", label: "Watch" },
   { id: "usage", label: "Usage" },
-  { id: "operations", label: "Operations" }, // legacy hub — to be retired
+  { id: "districts", label: "Districts" },
+  { id: "tools", label: "Tools" },
   { id: "content", label: "Content & Brand" },
 ];
 
@@ -83,6 +84,8 @@ export function AdminApp() {
   const [user, setUser] = useState(null);
   const [mod, setMod] = useState("overview");
   const [door, setDoor] = useState("all"); // all | theatre4u | artstracker — filters the org-based modules
+  const [refreshKey, setRefreshKey] = useState(0); // bump to remount the active module (refetch)
+  const [refreshedAt, setRefreshedAt] = useState(() => Date.now());
 
   // Keep the admin app out of search engines (belt-and-suspenders to the X-Robots-Tag header in middleware.js).
   useEffect(() => {
@@ -115,9 +118,21 @@ export function AdminApp() {
   }, []);
   const tabStack = useRef(["overview"]);
   const goTab = (id) => {
-    if (id !== mod) { tabStack.current.push(id); try { window.history.pushState({ adm: 1 }, ""); } catch (e) {} }
+    if (id !== mod) { tabStack.current.push(id); try { window.history.pushState({ adm: 1 }, ""); } catch (e) {} setRefreshedAt(Date.now()); }
     setMod(id);
   };
+  const doRefresh = () => { setRefreshKey(k => k + 1); setRefreshedAt(Date.now()); };
+  // Auto-refresh the active tab when you return to it — but never while a console/drill is open.
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState !== "visible") return;
+      if (backHandlers.current.length) return;
+      if (Date.now() - refreshedAt < 60000) return;
+      doRefresh();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [refreshedAt]);
   useEffect(() => {
     try { window.history.pushState({ adm: 1 }, ""); } catch (e) {}
     const onPop = () => {
@@ -166,6 +181,8 @@ export function AdminApp() {
           </nav>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 12 }}>
+          <span style={{ color: "rgba(240,230,211,.4)" }}>updated {new Date(refreshedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
+          <button onClick={doRefresh} style={{ padding: "5px 12px", borderRadius: 7, border: "1px solid rgba(240,230,211,.25)", background: "transparent", color: "rgba(240,230,211,.85)", cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}>↻ Refresh</button>
           <span style={{ color: "rgba(240,230,211,.6)" }}>{user?.email}</span>
           <button onClick={signOut} style={{ padding: "5px 12px", borderRadius: 7, border: "1px solid rgba(240,230,211,.25)", background: "transparent", color: "rgba(240,230,211,.85)", cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}>Sign out</button>
         </div>
@@ -180,13 +197,14 @@ export function AdminApp() {
         </div>
       )}
       <main style={{ padding: "26px 20px 60px" }}>
-        {mod === "operations" && <AdminHub currentUser={user} org={null} />}
-        {mod === "overview" && <OverviewDashboard door={door} />}
-        {mod === "programs" && <ProgramsDashboard door={door} />}
-        {mod === "usage" && <UsageDashboard door={door} />}
-        {mod === "money" && <MoneyDashboard door={door} userId={user?.id} />}
-        {mod === "watch" && <WatchDashboard door={door} />}
-        {mod === "content" && <ContentBrandEditor userId={user?.id} />}
+        {mod === "overview" && <OverviewDashboard key={refreshKey} door={door} />}
+        {mod === "programs" && <ProgramsDashboard key={refreshKey} door={door} />}
+        {mod === "money" && <MoneyDashboard key={refreshKey} door={door} userId={user?.id} />}
+        {mod === "watch" && <WatchDashboard key={refreshKey} door={door} />}
+        {mod === "usage" && <UsageDashboard key={refreshKey} door={door} />}
+        {mod === "districts" && <AdminHub key={refreshKey} currentUser={user} org={null} only={["districts"]} initialTab="districts" />}
+        {mod === "tools" && <AdminHub key={refreshKey} currentUser={user} org={null} only={["labels", "tools"]} initialTab="labels" />}
+        {mod === "content" && <ContentBrandEditor key={refreshKey} userId={user?.id} />}
       </main>
     </div>
     </AdminBackContext.Provider>
