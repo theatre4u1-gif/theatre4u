@@ -550,14 +550,21 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
 
   const saveOrg = useCallback(async(o)=>{
     setOrg(o);
-    let update = {...o, id:activeOrgId};
+    // Some callers pass a functional updater (o => ({...o, ...})) purely to update
+    // local state — there is nothing concrete to persist, and spreading a function
+    // produced a malformed {id}-only write. Only persist when handed a real object.
+    if(typeof o === "function") return;
+    const update = {...o, id:activeOrgId};
     // Auto-geocode zipcode when saving profile
     if(o.zipcode && o.zipcode.length===5 && o.zipcode!==org.zipcode){
       const coords = await zipToCoords(o.zipcode);
       if(coords){ update.lat=coords.lat; update.lng=coords.lng; update.state=update.state||coords.state; }
     }
-    const { error } = await SB.from("orgs").upsert(update);
-    if(error) alert("Couldn't save your changes — please try again.");
+    // Use .update() (not .upsert()): the org row always exists, and upsert needs
+    // INSERT rights that RLS denies — which errored and fired a blocking alert()
+    // that froze the whole tab. Log instead of alert so a save error never freezes.
+    const { error } = await SB.from("orgs").update(update).eq("id",activeOrgId);
+    if(error) console.error("saveOrg failed:", error.message);
   },[activeOrgId,org.zipcode]);
 
   const signOut = async()=>{ await SB.auth.signOut(); };

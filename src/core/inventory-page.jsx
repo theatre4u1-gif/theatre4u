@@ -80,6 +80,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
   const[sortBy,setSortBy]=useState("newest"); // newest | number | name | location
   const[condF,setCondF]=useState("all");const[availF,setAvailF]=useState("all");
   const[mktF,setMktF]=useState("all");const[view,setView]=useState("grid"); // grid | table | locations
+  const[hoverImg,setHoverImg]=useState(null); // full-size photo shown on card hover
   const[tagF,setTagF]=useState(()=>new Set()); // active tag filters (item must have ALL selected)
   const toggleTag=(t)=>setTagF(prev=>{const n=new Set(prev);n.has(t)?n.delete(t):n.add(t);return n;});
   const[showF,setShowF]=useState(false);const[pg,setPg]=useState(1);
@@ -601,7 +602,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
                     onClick={()=>selectMode ? toggleSelect(item.id) : openD(item)}
                     style={{position:"relative",...(selectMode?{cursor:"pointer",outline:selected.has(item.id)?"2px solid var(--gold)":"2px solid transparent",outlineOffset:2,background:selected.has(item.id)?"rgba(212,168,67,.06)":""}:{})}}>
                     {selectMode&&<div style={{position:"absolute",top:10,left:10,zIndex:10,width:24,height:24,borderRadius:6,border:"2px solid",borderColor:selected.has(item.id)?"var(--gold)":"rgba(255,255,255,.6)",background:selected.has(item.id)?"var(--gold)":"rgba(0,0,0,.35)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:900,color:"#1a0f00"}}>{selected.has(item.id)?"✓":""}</div>}
-                    <div className="inv-img">{item.img?<img src={item.img} alt={item.name} loading="lazy"/>:<CatCard catId={item.category} width="100%" height={220} vertical={vVertical}><div style={{padding:"0 14px 12px",color:"#fff"}}></div></CatCard>}</div>
+                    <div className="inv-img" onMouseEnter={()=>item.img&&setHoverImg(item.img)} onMouseLeave={()=>setHoverImg(null)}>{item.img?<img src={item.img} alt={item.name} loading="lazy"/>:<CatCard catId={item.category} width="100%" height={220} vertical={vVertical}><div style={{padding:"0 14px 12px",color:"#fff"}}></div></CatCard>}</div>
                     <div className="inv-body">
                       {schoolName&&<div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:1.5,color:"#42a5f5",marginBottom:4,display:"flex",alignItems:"center",gap:4}}><span>🏫</span>{schoolName}</div>}
                       <div className="inv-cat" style={{color:cat.color}}>{cat.icon} {cat.label}</div>
@@ -614,6 +615,11 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
                 );
               })}
             </div>
+        )}
+        {hoverImg&&(
+          <div style={{position:"fixed",inset:0,zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none",padding:24}}>
+            <img src={hoverImg} alt="" style={{maxWidth:"70vw",maxHeight:"80vh",objectFit:"contain",borderRadius:12,boxShadow:"0 14px 64px rgba(0,0,0,.6)",background:"#111",border:"1px solid rgba(255,255,255,.15)"}}/>
+          </div>
         )}
         {view==="table"&&(
           <div className="tw">
