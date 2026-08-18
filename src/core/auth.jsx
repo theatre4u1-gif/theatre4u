@@ -302,14 +302,14 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.25)",
               borderRadius:9,padding:"12px 14px"}}>
               <div style={{fontWeight:700,fontSize:13,color:"#d4a843",marginBottom:6}}>
-                ⭐ Free Pro Access During Beta
+                ⭐ Founding Member Opportunity
               </div>
               <div style={{fontSize:12,color:"rgba(255,255,255,.65)",lineHeight:1.7}}>
-                All programs that sign up during {APP_NAME}'s beta phase get full Pro access at no charge.
-                When {APP_NAME} launches, beta programs that have added 25+ items and shared feedback
-                will receive a{" "}
-                <strong style={{color:"rgba(255,255,255,.85)"}}>founding member rate of $9.99/month</strong>
-                {" "}— instead of the standard $15 — locked in for as long as you subscribe.
+                Create your free {APP_NAME} account by August 31 and receive full Pro access during beta.
+                Add at least 25 inventory items and share feedback during beta to qualify for the{" "}
+                <strong style={{color:"rgba(255,255,255,.85)"}}>Founding Member rate of $9.99/month</strong>{" "}
+                when paid plans begin, rather than the standard $15/month. Your rate remains locked in
+                for as long as your subscription stays active.
               </div>
             </div>
           </>)}
