@@ -93,9 +93,19 @@ Deno.serve(async(req:Request)=>{
     const{data:existing}=await SB.from('signup_notifications').select('id,notified').eq('org_id',org.id).maybeSingle();
     if(existing?.notified) return new Response(JSON.stringify({ok:true,skipped:'already notified'}),{headers:{...CORS,'Content-Type':'application/json'}});
 
+    // Count only real programs: exclude test/internal accounts and closed/deleted orgs, plus the
+    // known duplicate Coppell student orgs (the id list is temporary — remove it after the dedup
+    // cleanup). HBUHSD comped programs are intentionally included.
+    const realOrgs=(q:any)=>q
+      .not('account_status','in','(closed,deleted)')
+      .not('email','ilike','%theatre4u1%')
+      .not('email','ilike','rzickjr%')
+      .not('email','ilike','%@theatre4u.or%')
+      .neq('email','hello@theatre4u.org')
+      .not('id','in','(5250f74c-2fea-41c4-a3f6-26fce7609ec9,79532e97-f7a4-43ce-81ee-e4416a427549,474ed94b-22d0-4921-ba46-0c6136ec1b50,2727d45f-ae9b-4140-95fd-744482e22f33)');
     const[{count:totalOrgs},{count:paidOrgs},{count:totalItems}]=await Promise.all([
-      SB.from('orgs').select('*',{count:'exact',head:true}),
-      SB.from('orgs').select('*',{count:'exact',head:true}).in('plan',['pro','district','district_m','district_l']),
+      realOrgs(SB.from('orgs').select('*',{count:'exact',head:true})),
+      realOrgs(SB.from('orgs').select('*',{count:'exact',head:true}).in('plan',['pro','district','district_m','district_l'])),
       SB.from('items').select('*',{count:'exact',head:true}),
     ]);
     const stats={total_orgs:totalOrgs||0,paid_orgs:paidOrgs||0,total_items:totalItems||0};
