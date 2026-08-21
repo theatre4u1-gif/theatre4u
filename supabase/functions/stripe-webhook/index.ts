@@ -98,6 +98,29 @@ async function sendPaymentAlert(params: {
   }).catch((e: Error) => console.error("sendPaymentAlert:", e.message));
 }
 
+// Net recurring amount after any subscription-level discount (e.g. the founding coupon),
+// so admin payment alerts show what the member actually pays (e.g. $9.99) rather than the
+// plan's list price. Falls back to baseCents on any uncertainty so the alert never breaks.
+async function netOfDiscount(sub: Record<string, any>, baseCents: number): Promise<number> {
+  try {
+    const disc = Array.isArray(sub?.discounts) ? sub.discounts[0] : sub?.discount;
+    if (!disc || typeof disc === "string") return baseCents;
+    let coupon: Record<string, any> | null =
+      (disc.coupon && typeof disc.coupon === "object") ? disc.coupon : null;
+    const couponId = coupon ? null
+      : (disc?.source?.coupon ?? (typeof disc?.coupon === "string" ? disc.coupon : null));
+    if (!coupon && couponId && STRIPE_KEY) {
+      const r = await fetch("https://api.stripe.com/v1/coupons/" + couponId,
+        { headers: { "Authorization": "Bearer " + STRIPE_KEY } });
+      if (r.ok) coupon = await r.json();
+    }
+    if (!coupon) return baseCents;
+    if (typeof coupon.amount_off === "number") return Math.max(0, baseCents - coupon.amount_off);
+    if (typeof coupon.percent_off === "number") return Math.round(baseCents * (1 - coupon.percent_off / 100));
+    return baseCents;
+  } catch { return baseCents; }
+}
+
 // Internal alert to the admin when the webhook itself errors or cannot provision a paying
 // customer. These are silent failures otherwise (only console-logged), so they get an email.
 async function sendErrorAlert(subject: string, detail: string) {
@@ -223,6 +246,7 @@ Deno.serve(async (req: Request) => {
         let periodEnd: number | null = null;
         let periodStart: number | null = null;
         let subAmountCents = (data.amount_total as number) || 0;
+        let alertAmountCents = subAmountCents;
 
         if (STRIPE_KEY && subscriptionId) {
           try {
@@ -235,7 +259,10 @@ Deno.serve(async (req: Request) => {
               const pe = periodEndsFromSub(sub as Record<string, unknown>);
               periodEnd = pe.end;
               periodStart = pe.start;
-              subAmountCents = subAmountCents || (sub?.items?.data?.[0]?.price?.unit_amount ?? 0);
+              const baseUnit = (sub?.items?.data?.[0]?.price?.unit_amount ?? 0) as number;
+              subAmountCents = subAmountCents || baseUnit;
+              // Alert shows the true recurring price after any founding/discount coupon.
+              alertAmountCents = baseUnit ? await netOfDiscount(sub, baseUnit) : subAmountCents;
             }
           } catch (e) { console.error("Failed to fetch subscription:", e); }
         }
@@ -267,7 +294,7 @@ Deno.serve(async (req: Request) => {
           }).eq("id", org.id);
           if (isAnnual) await sb.rpc("award_milestone_points", { p_org_id: org.id, p_type: "annual_bonus", p_amount: 300, p_desc: "Annual plan bonus" }).catch(() => {});
           await sendPaymentAlert({ eventType, orgName: org.name, orgEmail: org.email,
-            plan: planInfo.plan + (planInfo.allVerticals ? " (ArtsTracker)" : ""), interval: planInfo.interval, amountCents: subAmountCents });
+            plan: planInfo.plan + (planInfo.allVerticals ? " (ArtsTracker)" : ""), interval: planInfo.interval, amountCents: alertAmountCents });
         } else if (!planInfo) {
           console.warn("Unknown price ID:", priceId);
           await sendErrorAlert("unknown price ID on a completed checkout",
