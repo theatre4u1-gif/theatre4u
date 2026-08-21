@@ -222,10 +222,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 .fin{animation:fadeIn .2s ease}
 </style>
 
-    <!-- Meta Pixel Code -->
-    <script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js'); fbq('init', '1486269912908144'); fbq('init', '1706264944009516'); fbq('track', 'PageView');</script>
-    <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1486269912908144&ev=PageView&noscript=1"/></noscript>
-    <!-- End Meta Pixel Code -->
+    <!-- Meta Pixel intentionally NOT loaded in the authenticated app. Ad-conversion
+         tracking runs only on the public marketing pages and /join signup page, so no
+         logged-in activity (school staff / student data context) is sent to Meta. This
+         keeps the Privacy Policy's "analytics on public marketing pages only" accurate. -->
 </head>
 <body>
 <div id="root"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;background:#0a0a0f"><div style="font-size:52px">🎭</div><div style="width:32px;height:32px;border:2.5px solid #2a2a38;border-top-color:#d4a843;border-radius:50%;animation:spin .7s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div></div>
