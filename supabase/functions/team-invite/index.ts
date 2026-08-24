@@ -67,7 +67,10 @@ Deno.serve(async (req: Request) => {
 
     const { data: org } = await sb.from("orgs").select("name, vertical, signup_domain").eq("id", user.id).single();
     const orgName = org?.name || "a program";
-    const B = brandFor(org?.signup_domain, org?.vertical);
+    // Prefer the door the invite was sent from (Origin/Referer); non-theatre vertical = ArtsTracker.
+    const reqOrigin = req.headers.get("origin") || req.headers.get("referer") || "";
+    const B = (/artstracker/i.test(reqOrigin) || (org?.vertical || "theatre") !== "theatre" || (org?.signup_domain || "").includes("artstracker"))
+      ? BRANDS.artstracker : BRANDS.theatre4u;
 
     const inviteUrl = `${B.site}/invite.html?token=${invite.token}`;
 

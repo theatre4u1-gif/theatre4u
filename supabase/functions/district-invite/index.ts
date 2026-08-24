@@ -37,9 +37,13 @@ Deno.serve(async (req: Request) => {
     const { email, school_name } = await req.json();
     if (!email) return json({ error: "Missing email" }, 400);
 
-    // Owner org drives branding (vertical + signup_domain)
+    // Branding: prefer the door the invite was actually sent from (Origin/Referer), so an invite
+    // sent from artstracker.org brands as ArtsTracker even if the district signed up on theatre4u.org.
+    // A non-theatre vertical (music/dance/art/booster) always brands as ArtsTracker.
     const { data: ownerOrg } = await sb.from("orgs").select("name, vertical, signup_domain").eq("id", user.id).single();
-    const B = brandFor(ownerOrg?.signup_domain, ownerOrg?.vertical);
+    const reqOrigin = req.headers.get("origin") || req.headers.get("referer") || "";
+    const B = (/artstracker/i.test(reqOrigin) || (ownerOrg?.vertical || "theatre") !== "theatre" || (ownerOrg?.signup_domain || "").includes("artstracker"))
+      ? BRANDS.artstracker : BRANDS.theatre4u;
 
     // Resolve the district: the caller's OWN (owner) first, else a district they FACILITATE.
     // Facilitators must use their facilitated district and never auto-create a new one.
