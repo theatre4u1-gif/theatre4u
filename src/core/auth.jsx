@@ -8,6 +8,7 @@ import { TERMS_CONTENT, PRIVACY_CONTENT } from "./legal.js";
 import { authErrKey, getRefCode, isDemoMode } from "./helpers.js";
 import { BG, usp } from "../lib/backgrounds.js";
 import { VERTICALS_LIST } from "../lib/verticals.js";
+import { US_STATES, STATE_NAMES } from "../lib/geo.js";
 
 // Auth screens (sign-in / sign-up overlay + full-page login) — extracted from App.jsx.
 
@@ -26,6 +27,8 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
   const[ageConfirmed,setAgeConfirmed]=useState(false);
   const[termsAccepted,setTermsAccepted]=useState(false);
   const[vertical,setVertical]=useState("theatre");
+  const[zipcode,setZipcode]=useState("");
+  const[stateCode,setStateCode]=useState("");
 
   useEffect(()=>{
     window.__t4u_show_auth=(m)=>{setMode(m||"login");setErr("");setVisible(true);};
@@ -77,6 +80,8 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
       if(mode==="signup"){
         if(!ownerName.trim()){setErr("Please enter your name.");setLoading(false);return;}
         if(!orgName.trim()){setErr("Please enter your organization name.");setLoading(false);return;}
+        if(!stateCode){setErr("Please select your state.");setLoading(false);return;}
+        if(!/^\d{5}$/.test(zipcode)){setErr("Please enter a valid ZIP code (5 digits).");setLoading(false);return;}
         // All signups during beta get temp_pro — no access code needed
         const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName},emailRedirectTo:APP_URL}});
         if(error){
@@ -112,6 +117,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
           await SB.from("orgs").upsert({
             id:data.user.id, name:orgName, email, director_name: ownerName.trim()||null,
             type:"", phone:"", location:"", bio:"",
+            state: stateCode, zipcode: zipcode,
             vertical: vertical, verticals_enabled: [vertical],
             signup_domain: (typeof window!=="undefined" && window.location && window.location.hostname.includes("artstracker")) ? "artstracker.org" : "theatre4u.org",
             // All beta signups get temp_pro — full Pro access during beta period
@@ -298,6 +304,20 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             <div><label style={labelStyle}>Program / Organization Name *</label>
               <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High School Drama" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
             </div>
+            <div style={{display:"flex",gap:10}}>
+              <div style={{flex:1,minWidth:0}}><label style={labelStyle}>State *</label>
+                <select value={stateCode} onChange={e=>setStateCode(e.target.value)} style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}>
+                  <option value="">Select…</option>
+                  {US_STATES.map(s=><option key={s} value={s}>{STATE_NAMES[s]} ({s})</option>)}
+                </select>
+              </div>
+              <div style={{width:120,flexShrink:0}}><label style={labelStyle}>ZIP *</label>
+                <input value={zipcode} onChange={e=>setZipcode(e.target.value.replace(/[^0-9]/g,"").slice(0,5))} placeholder="92648" maxLength={5} inputMode="numeric" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
+              </div>
+            </div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginTop:-6,lineHeight:1.5}}>
+              Used to connect you with nearby programs in the Exchange.
+            </div>
             {/* Beta access notice */}
             <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.25)",
               borderRadius:9,padding:"12px 14px"}}>
@@ -386,6 +406,8 @@ export function GoogleProfileSetup({user, onDone}){
   const[ownerName,setOwnerName]=useState(user?.user_metadata?.full_name||user?.user_metadata?.name||"");
   const[orgName,setOrgName]=useState("");
   const[vertical,setVertical]=useState("theatre");
+  const[zipcode,setZipcode]=useState("");
+  const[stateCode,setStateCode]=useState("");
   const[ageConfirmed,setAgeConfirmed]=useState(false);
   const[termsAccepted,setTermsAccepted]=useState(false);
   const[err,setErr]=useState("");
@@ -413,6 +435,8 @@ export function GoogleProfileSetup({user, onDone}){
     setErr("");
     if(!ownerName.trim()){setErr("Please enter your name.");return;}
     if(!orgName.trim()){setErr("Please enter your program or organization name.");return;}
+    if(!stateCode){setErr("Please select your state.");return;}
+    if(!/^\d{5}$/.test(zipcode)){setErr("Please enter a valid ZIP code (5 digits).");return;}
     if(!ageConfirmed){setErr("Please confirm you are an adult or an authorized user.");return;}
     if(!termsAccepted){setErr("Please agree to the Terms of Service and Privacy Policy to continue.");return;}
     setLoading(true);
@@ -421,6 +445,7 @@ export function GoogleProfileSetup({user, onDone}){
       await SB.from("orgs").upsert({
         id:user.id, name:orgName, email, director_name: ownerName.trim()||null,
         type:"", phone:"", location:"", bio:"",
+        state: stateCode, zipcode: zipcode,
         vertical: vertical, verticals_enabled: [vertical],
         signup_domain: (typeof window!=="undefined" && window.location && window.location.hostname.includes("artstracker")) ? "artstracker.org" : "theatre4u.org",
         temp_pro: true,
@@ -501,6 +526,20 @@ export function GoogleProfileSetup({user, onDone}){
           </div>
           <div><label style={labelStyle}>Program / Organization Name *</label>
             <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High School Drama" style={inputStyle} onKeyDown={e=>e.key==="Enter"&&submit()}/>
+          </div>
+          <div style={{display:"flex",gap:10}}>
+            <div style={{flex:1,minWidth:0}}><label style={labelStyle}>State *</label>
+              <select value={stateCode} onChange={e=>setStateCode(e.target.value)} style={inputStyle}>
+                <option value="">Select…</option>
+                {US_STATES.map(s=><option key={s} value={s}>{STATE_NAMES[s]} ({s})</option>)}
+              </select>
+            </div>
+            <div style={{width:120,flexShrink:0}}><label style={labelStyle}>ZIP *</label>
+              <input value={zipcode} onChange={e=>setZipcode(e.target.value.replace(/[^0-9]/g,"").slice(0,5))} placeholder="92648" maxLength={5} inputMode="numeric" style={inputStyle}/>
+            </div>
+          </div>
+          <div style={{fontSize:11,color:"#685f76",marginTop:-6,lineHeight:1.5}}>
+            Used to connect you with nearby programs in the Exchange.
           </div>
         </div>
         {err&&<div style={{marginTop:12,padding:"9px 12px",background:"rgba(194,24,91,.1)",border:"1px solid rgba(194,24,91,.25)",borderRadius:7,fontSize:13,color:"#e57373"}}>{err}</div>}

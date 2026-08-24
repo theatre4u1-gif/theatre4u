@@ -1624,6 +1624,19 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
     load();
   };
 
+  const renameSchool = async (school) => {
+    const next = window.prompt("Rename this school. This is how it appears across the district and in the Exchange.", school.name || "");
+    if (next === null) return; // cancelled
+    const trimmed = next.trim();
+    if (!trimmed || trimmed === (school.name || "")) return;
+    // Scoped RPC (owner or facilitator of this district only) so orgs stays locked down.
+    const { data, error } = await SB.rpc("rename_district_school", { p_org_id: school.id, p_name: trimmed });
+    if (error) { setMsg("❌ " + error.message); return; }
+    setSchools(prev => prev.map(s => s.id === school.id ? { ...s, name: (data?.name) || trimmed } : s));
+    setMsg("✓ Renamed to " + ((data?.name) || trimmed));
+    setTimeout(() => setMsg(""), 2500);
+  };
+
   const saveDistrict = async (updates) => {
     await SB.from("districts").update(updates).eq("id", district.id);
     setDistrict(p => ({ ...p, ...updates }));
@@ -1742,7 +1755,13 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
                     <div style={{ width: 40, height: 40, background: "rgba(212,168,67,.15)", borderRadius: 8,
                       display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>🏫</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.3 }}>{school.name || "Unnamed School"}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.3 }}>{school.name || "Unnamed School"}</div>
+                        <button title="Rename school" aria-label="Rename school" onClick={() => renameSchool(school)}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 13, padding: 2, lineHeight: 1, flexShrink: 0 }}>
+                          ✏️
+                        </button>
+                      </div>
                       <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{school.location || school.email || "—"}</div>
                     </div>
                   </div>
