@@ -431,9 +431,9 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   const multiVertical = enabledVerticals.length > 1;
   const viewOrg = multiVertical ? { ...org, vertical: curVertical } : org;
   const vItems = multiVertical ? items.filter(i => (i.vertical||"theatre") === curVertical) : items;
-  const add = useCallback(async(item)=>{
-    const row={...item,org_id:activeOrgId, vertical: item.vertical || activeVertical || org?.vertical || "theatre"};
-    // Sanitize optional numeric/date/uuid fields — empty string → null
+  // Empty string → null for optional numeric/date/uuid columns Postgres would reject.
+  // Shared by the main add/edit and the district school-context handlers so neither drifts.
+  const sanitizeItemRow = (row) => {
     if(!row.purchase_cost || row.purchase_cost==="")    row.purchase_cost    = null;
     else row.purchase_cost = parseFloat(row.purchase_cost) || null;
     if(!row.purchase_date  || row.purchase_date==="")   row.purchase_date    = null;
@@ -442,6 +442,10 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
     if(!row.location_id    || row.location_id==="")     row.location_id      = null;
     if(!row.pin_id         || row.pin_id==="")           row.pin_id           = null;
     if(!row.rack_slot      || row.rack_slot==="")        row.rack_slot        = null;
+    return row;
+  };
+  const add = useCallback(async(item)=>{
+    const row=sanitizeItemRow({...item,org_id:activeOrgId, vertical: item.vertical || activeVertical || org?.vertical || "theatre"});
     const{data,error}=await SB.from("items").insert(row).select().single();
     if(error){ alert("Could not save item: "+error.message); console.error(error); return; }
     if(data){
@@ -548,24 +552,10 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
     setFoundingBusy(false);
   },[org,user]);
 
-  const saveOrg = useCallback(async(o)=>{
-    setOrg(o);
-    // Some callers pass a functional updater (o => ({...o, ...})) purely to update
-    // local state — there is nothing concrete to persist, and spreading a function
-    // produced a malformed {id}-only write. Only persist when handed a real object.
-    if(typeof o === "function") return;
-    const update = {...o, id:activeOrgId};
-    // Auto-geocode zipcode when saving profile
-    if(o.zipcode && o.zipcode.length===5 && o.zipcode!==org.zipcode){
-      const coords = await zipToCoords(o.zipcode);
-      if(coords){ update.lat=coords.lat; update.lng=coords.lng; update.state=update.state||coords.state; }
-    }
-    // Use .update() (not .upsert()): the org row always exists, and upsert needs
-    // INSERT rights that RLS denies — which errored and fired a blocking alert()
-    // that froze the whole tab. Log instead of alert so a save error never freezes.
-    const { error } = await SB.from("orgs").update(update).eq("id",activeOrgId);
-    if(error) console.error("saveOrg failed:", error.message);
-  },[activeOrgId,org.zipcode]);
+  // NOTE: Profile + Settings receive the plain `setOrg` state setter (stable identity)
+  // and persist through their own explicit save handlers. The former `saveOrg` wrapper
+  // (an async DB writer passed in as `setOrg`) was the source of the tab-freeze on those
+  // two pages, so it has been removed.
 
   const signOut = async()=>{ await SB.auth.signOut(); };
 
@@ -1098,9 +1088,10 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                     schoolLoading
                       ? <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading {activeSchool.name}…</div>
                       : <Inventory items={schoolItems}
-                          onAdd={async(item)=>{ const row={...item,org_id:activeSchool.id}; const{data}=await SB.from("items").insert(row).select().single(); if(data) setSchoolItems(p=>[data,...p]); }}
-                          onEdit={async(item)=>{ const pl={...item}; delete pl.id; delete pl.org_id; delete pl.added; const{data,error}=await SB.from("items").update(pl).eq("id",item.id).select().single(); if(error){alert("Could not update item: "+error.message);console.error(error);}else if(data) setSchoolItems(p=>p.map(x=>x.id===item.id?data:x)); }}
+                          onAdd={async(item)=>{ const row=sanitizeItemRow({...item,org_id:activeSchool.id}); const{data,error}=await SB.from("items").insert(row).select().single(); if(error){alert("Could not save item: "+error.message);console.error(error);return;} if(data) setSchoolItems(p=>[data,...p]); }}
+                          onEdit={async(item)=>{ const pl=sanitizeItemRow({...item}); delete pl.id; delete pl.org_id; delete pl.added; const{data,error}=await SB.from("items").update(pl).eq("id",item.id).select().single(); if(error){alert("Could not update item: "+error.message);console.error(error);}else if(data) setSchoolItems(p=>p.map(x=>x.id===item.id?data:x)); }}
                           onDelete={async(id)=>{ await SB.from("items").delete().eq("id",id); setSchoolItems(p=>p.filter(x=>x.id!==id)); }}
+                          onImported={(data)=>setSchoolItems(data)}
                           userId={activeSchool.id} plan={plan} org={activeSchool}
                           schoolName={activeSchool.name}
                           headerNote={<div style={{padding:"8px 12px",background:"rgba(66,165,245,.1)",border:"1px solid rgba(66,165,245,.2)",borderRadius:7,marginBottom:12,fontSize:12,color:"#42a5f5"}}>🏫 Editing inventory for <strong>{activeSchool.name}</strong></div>}
@@ -1111,8 +1102,8 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                   {page==="reports"     && <Reports     items={activeSchool ? schoolItems : vItems} plan={plan} org={viewOrg} userId={org?.id || user?.id} userEmail={user?.email}/>}
                   {page==="funding"     && <FundingPage userId={org?.id || user?.id} org={viewOrg} plan={plan}/>}
                   {page==="prop28"      && <Prop28Page  userId={org?.id || user?.id} org={viewOrg} onNav={nav}/>}
-                  {page==="profile"     && <OrgProfilePage userId={org?.id || user?.id} org={org} setOrg={saveOrg} plan={plan} items={items}/>}
-              {page==="settings"    && <Settings    org={org} setOrg={saveOrg} onSeed={seed} user={user} userId={org?.id || user?.id} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
+                  {page==="profile"     && <OrgProfilePage userId={org?.id || user?.id} org={org} setOrg={setOrg} plan={plan} items={items}/>}
+              {page==="settings"    && <Settings    org={org} setOrg={setOrg} onSeed={seed} user={user} userId={org?.id || user?.id} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
                   {page==="district"    && (plan==="district" || ownsDistrict || facDistrict) && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool} isFacilitator={!!facDistrict}/>}
                   {page==="facschools"  && facDistrict && (
                     <div style={{padding:"32px 36px 56px"}}>

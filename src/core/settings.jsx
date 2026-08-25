@@ -660,15 +660,24 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
   const save = async() => {
     // Geocode location if it changed so community posts are proximity-sorted correctly
     let geoUpdate = {};
-    let fData = {...f};
     if (f.location && f.location !== org?.location) {
       const geo = await geocodeLocation(f.location);
-      if (geo) { geoUpdate = { lat: geo.lat, lng: geo.lng }; fData = { ...fData, ...geoUpdate }; }
+      if (geo) geoUpdate = { lat: geo.lat, lng: geo.lng };
     } else if (f.zipcode && f.zipcode !== org?.zipcode) {
       const geo = await geocodeLocation(f.zipcode + ", USA");
-      if (geo) { geoUpdate = { lat: geo.lat, lng: geo.lng }; fData = { ...fData, ...geoUpdate }; }
+      if (geo) geoUpdate = { lat: geo.lat, lng: geo.lng };
     }
-    await setOrg(fData);
+    // Persist ONLY the editable profile fields (never spread the whole org row or
+    // route through an async setter — that was the tab-freeze cause). Then update
+    // local app state with the plain setter.
+    const patch = {
+      name: f.name, type: f.type, email: f.email, phone: f.phone,
+      location: f.location, bio: f.bio, state: f.state, zipcode: f.zipcode,
+      ...geoUpdate,
+    };
+    const { error } = await SB.from("orgs").update(patch).eq("id", userId);
+    if (error) { console.error("Settings save failed:", error.message); return; }
+    setOrg(o => ({ ...o, ...patch }));
     setSaved(true);
     setTimeout(()=>setSaved(false),2200);
   };
