@@ -202,8 +202,8 @@ export function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMa
         {/* Temp Pro beta notice */}
         {isTempPro&&betaPhase(org)==="beta"&&(()=>{
           const itemCount = items.filter(i=>!i._is_loan).length;
-          const hasFeedback = org?.founding_member_rate || false;
-          const isFoundingMember = org?.founding_member_rate || false;
+          const hasFeedback = org?.founding_member || false;
+          const isFoundingMember = org?.founding_member || false;
           const itemsNeeded = Math.max(0, 25 - itemCount);
           const itemPct = Math.min(100, Math.round(itemCount / 25 * 100));
 

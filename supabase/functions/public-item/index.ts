@@ -2,7 +2,7 @@ const CORS={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"co
 const BASE="https://ldmmphwivnnboyhlxipl.supabase.co";
 const ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA";
 const SERVICE=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")??"";
-const ITEM_SELECT="id,name,category,condition,size,qty,location,avail,notes,tags,img,mkt,rent,sale,display_id,item_number,org_id";
+const ITEM_SELECT="id,name,category,condition,size,qty,location,avail,notes,tags,img,mkt,rent,sale,display_id,item_number,org_id,review_status";
 const svcH=()=>({apikey:ANON,Authorization:`Bearer ${SERVICE||ANON}`});
 
 async function pgGet(path:string,token?:string){
@@ -44,6 +44,13 @@ async function buildResponse(item:Record<string,unknown>, req:Request){
         if(memRows?.length)isMember=true;
       }
     }
+  }
+
+  // Child-safety: a student-submitted item still pending director review must never surface to
+  // non-members. Members (owner/team) can still see their own pending items to review them.
+  const approved=((item.review_status as string) ?? "approved")==="approved";
+  if(!approved && !isMember){
+    return {access:"restricted",item:{id:item.id,name:item.name,display_id:item.display_id}};
   }
 
   if(isMember||privacy==="public"){

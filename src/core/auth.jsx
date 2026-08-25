@@ -46,12 +46,15 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
 
   if(!visible) return null;
 
-  const close=()=>{setVisible(false);setErr("");setEmail("");setPass("");setOrgName("");setDone(false);};
+  const close=()=>{setVisible(false);setErr("");setEmail("");setPass("");setOrgName("");setDone(false);
+    setAgeConfirmed(false);setTermsAccepted(false);setStateCode("");setZipcode("");setOwnerName("");};
 
   const submit=async()=>{
+    if(loading) return; // guard against Enter-key double-submit
     setErr("");
     if(!email.trim()){setErr("Please enter your email address.");return;}
     if(!pass){setErr("Please enter a password.");return;}
+    const em = email.trim().toLowerCase(); // normalize so login matches signup
     if(mode==="signup"&&pass.length<6){setErr("Password must be at least 6 characters.");return;}
     if(mode==="signup"&&!ageConfirmed){setErr("Please confirm you are an adult or an authorized user.");return;}
     if(mode==="signup"&&!termsAccepted){setErr("Please agree to the Terms of Service and Privacy Policy to continue.");return;}
@@ -83,7 +86,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
         if(!stateCode){setErr("Please select your state.");setLoading(false);return;}
         if(!/^\d{5}$/.test(zipcode)){setErr("Please enter a valid ZIP code (5 digits).");setLoading(false);return;}
         // All signups during beta get temp_pro — no access code needed
-        const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName},emailRedirectTo:APP_URL}});
+        const{data,error}=await SB.auth.signUp({email:em,password:pass,options:{data:{org_name:orgName},emailRedirectTo:APP_URL}});
         if(error){
           if(error.message?.toLowerCase().includes('already registered')||error.message?.toLowerCase().includes('already exists')){
             setMode("login");
@@ -91,6 +94,13 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             setLoading(false); return;
           }
           throw error;
+        }
+        // Supabase anti-enumeration: a duplicate signup returns NO error and an empty identities
+        // array. Detect it and route to Sign In instead of a dead-end "check your email" screen.
+        if(data?.user && Array.isArray(data.user.identities) && data.user.identities.length===0){
+          setMode("login");
+          setErr("An account with this email already exists — switching you to Sign In. Use Forgot password if needed.");
+          setLoading(false); return;
         }
         if(data.user){
           // Team members arrive via invite.html — they join an existing org, no new org needed
@@ -172,14 +182,11 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
           setDone(true);
         }
       } else {
-        const{data,error}=await SB.auth.signInWithPassword({email,password:pass});
-        if(error){
-          // If credentials invalid — could be wrong password OR no account yet
-          if(error.message?.toLowerCase().includes("invalid")||error.message?.toLowerCase().includes("credentials")){
-            throw new Error("Incorrect email or password. If you don't have an account yet, click Create Account above. Or use Forgot password to reset.");
-          }
-          throw error;
-        }
+        const{data,error}=await SB.auth.signInWithPassword({email:em,password:pass});
+        // Let the native error flow to authErrKey, which maps "invalid login/credentials"
+        // to the friendly loginBadPassword message (a rewritten string broke that mapping and
+        // fell through to the generic "check your internet" error).
+        if(error) throw error;
         // Track login — one consistent path for owners AND members (see record_login RPC).
         // Stamps last_seen on the owner's org and every org the user is a member of, and logs
         // a login_event, so districts / multi-member programs are counted correctly.
@@ -318,7 +325,8 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             <div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginTop:-6,lineHeight:1.5}}>
               Used to connect you with nearby programs in the Exchange.
             </div>
-            {/* Beta access notice */}
+            {/* Beta access notice — only while the beta/founding window is open (pre-launch) */}
+            {(new Date() < new Date('2026-09-01T07:00:00Z')) && (
             <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.25)",
               borderRadius:9,padding:"12px 14px"}}>
               <div style={{fontWeight:700,fontSize:13,color:"#d4a843",marginBottom:6}}>
@@ -332,6 +340,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
                 for as long as your subscription stays active.
               </div>
             </div>
+            )}
           </>)}
           <div><label style={labelStyle}>Email</label>
             <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@school.edu" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"} onKeyDown={e=>e.key==="Enter"&&submit()}/>

@@ -101,6 +101,7 @@
     var q = "items?org_id=eq." + encodeURIComponent(org.id)
       + "&mkt=neq." + encodeURIComponent("Not Listed")
       + "&avail=eq." + encodeURIComponent("In Stock")
+      + "&review_status=eq." + encodeURIComponent("approved")  // never surface pending student items
       + "&select=name,category,img,images,mkt,rent,sale,condition,display_id"
       + "&order=added.desc&limit=" + limit;
     api(q).then(function(items){ render(org, items || []); });

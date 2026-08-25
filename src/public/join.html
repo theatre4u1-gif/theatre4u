@@ -129,6 +129,17 @@ src="https://www.facebook.com/tr?id=1706264944009516&ev=PageView&noscript=1"
           <label>Program Name</label>
           <input type="text" id="orgName" placeholder="Lincoln High School Drama" autocomplete="organization">
         </div>
+        <div class="field" style="display:flex;gap:10px">
+          <div style="flex:1;min-width:0">
+            <label>State</label>
+            <select id="stateCode" style="width:100%"><option value="">Select…</option></select>
+          </div>
+          <div style="width:110px;flex-shrink:0">
+            <label>ZIP</label>
+            <input type="text" id="zipcode" placeholder="92648" inputmode="numeric" maxlength="5" autocomplete="postal-code">
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--t2);margin:-4px 0 0;text-align:left">Used to connect you with nearby programs in the Exchange.</p>
         <div class="field">
           <label>Email Address</label>
           <input type="email" id="email" placeholder="director@school.edu" autocomplete="email">
@@ -149,6 +160,17 @@ src="https://www.facebook.com/tr?id=1706264944009516&ev=PageView&noscript=1"
         <p class="small-print">Free during beta · Founding member rate when we launch · No contracts</p>
       </div>
     </div>
+
+    <script>
+      // Populate the State dropdown + keep ZIP numeric (5 digits).
+      (function(){
+        var S=[["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],["CA","California"],["CO","Colorado"],["CT","Connecticut"],["DE","Delaware"],["FL","Florida"],["GA","Georgia"],["HI","Hawaii"],["ID","Idaho"],["IL","Illinois"],["IN","Indiana"],["IA","Iowa"],["KS","Kansas"],["KY","Kentucky"],["LA","Louisiana"],["ME","Maine"],["MD","Maryland"],["MA","Massachusetts"],["MI","Michigan"],["MN","Minnesota"],["MS","Mississippi"],["MO","Missouri"],["MT","Montana"],["NE","Nebraska"],["NV","Nevada"],["NH","New Hampshire"],["NJ","New Jersey"],["NM","New Mexico"],["NY","New York"],["NC","North Carolina"],["ND","North Dakota"],["OH","Ohio"],["OK","Oklahoma"],["OR","Oregon"],["PA","Pennsylvania"],["RI","Rhode Island"],["SC","South Carolina"],["SD","South Dakota"],["TN","Tennessee"],["TX","Texas"],["UT","Utah"],["VT","Vermont"],["VA","Virginia"],["WA","Washington"],["WV","West Virginia"],["WI","Wisconsin"],["WY","Wyoming"],["DC","Washington DC"]];
+        var sel=document.getElementById('stateCode');
+        if(sel){ S.forEach(function(s){ var o=document.createElement('option'); o.value=s[0]; o.textContent=s[1]+" ("+s[0]+")"; sel.appendChild(o); }); }
+        var zip=document.getElementById('zipcode');
+        if(zip){ zip.addEventListener('input',function(){ this.value=this.value.replace(/[^0-9]/g,'').slice(0,5); }); }
+      })();
+    </script>
 
     <div class="proof">
       <div class="proof-chip">12+ programs onboarded</div>
@@ -244,9 +266,14 @@ async function handleSignup() {
   const err     = document.getElementById('err');
   const success = document.getElementById('success');
 
+  const stateCode = document.getElementById('stateCode').value;
+  const zipcode   = document.getElementById('zipcode').value.trim();
+
   err.style.display = 'none';
   if(!ownerName){ showErr('Please enter your name.'); return; }
   if(!orgName){ showErr('Please enter your program name.'); return; }
+  if(!stateCode){ showErr('Please select your state.'); return; }
+  if(!/^\d{5}$/.test(zipcode)){ showErr('Please enter a valid ZIP code (5 digits).'); return; }
   if(!email || !email.includes('@')){ showErr('Please enter a valid email address.'); return; }
   if(!pass || pass.length < 6){ showErr('Password must be at least 6 characters.'); return; }
   if(!document.getElementById('ageOk').checked){ showErr('Please confirm you are an adult or an authorized school employee.'); return; }
@@ -271,13 +298,25 @@ async function handleSignup() {
   }
 
   // Create org
+  const signupDomain = (location.hostname.includes('artstracker')) ? 'artstracker.org' : 'theatre4u.org';
   await SB.from('orgs').upsert({
     id: data.user.id, name: orgName, email, director_name: ownerName || null,
     type:'', phone:'', location:'', bio:'',
+    state: stateCode, zipcode: zipcode,
+    vertical: 'theatre', verticals_enabled: ['theatre'],
+    signup_domain: signupDomain,
     temp_pro: true, temp_pro_granted_at: new Date().toISOString(),
     temp_pro_note: 'Beta signup via join.html landing page',
     terms_accepted_at: new Date().toISOString(), terms_version: '2026-08',
   },{onConflict:'id',ignoreDuplicates:false}).catch(()=>{});
+
+  // Notify admin of the new signup (parity with the in-app signup path)
+  try {
+    fetch('https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/signup-notify', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ org_id: data.user.id, org_email: email, is_team_member: false }),
+    }).catch(()=>{});
+  } catch(e) {}
 
   // Handle referral
   const ref = sessionStorage.getItem('t4u_ref');

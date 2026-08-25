@@ -380,6 +380,7 @@ export function PublicOrgPage({ slug }) {
         .eq("org_id", orgData.id)
         .neq("mkt", "Not Listed")
         .eq("avail", "In Stock")
+        .eq("review_status", "approved")  // never surface pending student items publicly
         .limit(24);
       setItems(listed || []);
     })();
