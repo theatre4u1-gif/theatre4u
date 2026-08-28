@@ -8,6 +8,39 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
+// Some mail gateways / link rewriters deliver the unsubscribe link with the token
+// base64 encoded and truncated (observed in the wild: ".../unsubscribe/YzdjZDY4Nz",
+// which is base64 of the first characters of a real token). A silently failed
+// unsubscribe is a CAN-SPAM problem, so recover the token where we safely can.
+const TOKEN_PREFIX = /^[0-9a-fA-F]{4,}(-[0-9a-fA-F]*)*$/;
+const MIN_PREFIX = 7;
+
+function decodeMangled(seg: string): string {
+  try {
+    const b64 = seg.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+    const out = atob(padded);
+    return /^[\x20-\x7e]*$/.test(out) ? out : "";
+  } catch {
+    return "";
+  }
+}
+
+// Resolve a partial token to exactly one org. Ambiguous or too-short prefixes are refused.
+async function resolvePrefix(prefix: string): Promise<string | null> {
+  if (prefix.replace(/-/g, "").length < MIN_PREFIX) return null;
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/orgs?select=unsubscribe_token`, {
+    headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
+  });
+  if (!r.ok) return null;
+  const rows = await r.json().catch(() => []);
+  if (!Array.isArray(rows)) return null;
+  const hits = rows
+    .map((o: { unsubscribe_token?: string }) => o?.unsubscribe_token ?? "")
+    .filter((t: string) => t && t.toLowerCase().startsWith(prefix.toLowerCase()));
+  return hits.length === 1 ? hits[0] : null;
+}
+
 async function setOptOut(token: string, value: boolean): Promise<boolean> {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/orgs?unsubscribe_token=eq.${token}`, {
     method: "PATCH",
@@ -49,13 +82,38 @@ Deno.serve(async (req) => {
   const parts = url.pathname.split("/").filter(Boolean);
   let token = (url.searchParams.get("t") || url.searchParams.get("token") || "").trim();
   let action = (url.searchParams.get("action") || "").trim();
+  let rawSeg = "";
   if (parts.length) {
     const last = parts[parts.length - 1];
     if (last === "resubscribe") {
       action = "resubscribe";
-      if (parts.length >= 2 && UUID.test(parts[parts.length - 2])) token = parts[parts.length - 2];
+      if (parts.length >= 2) {
+        const prev = parts[parts.length - 2];
+        if (UUID.test(prev)) token = prev; else rawSeg = prev;
+      }
     } else if (!UUID.test(token) && UUID.test(last)) {
       token = last;
+    } else if (!UUID.test(token) && last !== "unsubscribe") {
+      rawSeg = last;
+    }
+  }
+
+  // Recovery path: the segment was not a clean UUID. Log it (so mangling patterns are
+  // visible in the function logs) and try to decode / prefix-match it to one org.
+  if (!UUID.test(token) && rawSeg) {
+    console.log(`unsubscribe: non-UUID token segment received: ${rawSeg}`);
+    const decoded = decodeMangled(rawSeg);
+    if (UUID.test(decoded)) {
+      token = decoded;
+    } else {
+      const candidate = decoded && TOKEN_PREFIX.test(decoded) ? decoded : (TOKEN_PREFIX.test(rawSeg) ? rawSeg : "");
+      if (candidate) {
+        const full = await resolvePrefix(candidate);
+        if (full) {
+          console.log(`unsubscribe: recovered token from partial "${rawSeg}"`);
+          token = full;
+        }
+      }
     }
   }
 
@@ -68,20 +126,22 @@ Deno.serve(async (req) => {
   const html = (h: string, m: string, e = "") =>
     new Response(page(h, m, e), { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } });
 
+  const MAILTO = `<p style="font-size:14px;margin:0"><a href="mailto:hello@theatre4u.org?subject=unsubscribe&amp;body=Please%20unsubscribe%20this%20address." style="color:#841C56;font-weight:bold">Click here to email us and we will remove you right away.</a></p>`;
+
   if (!UUID.test(token)) {
-    return html("Link problem", "This unsubscribe link is not valid. If you keep getting emails you did not ask for, email us and we will remove you right away.");
+    return html("Link problem", "Some email programs shorten links, which can break this one. We are sorry for the trouble.", MAILTO);
   }
 
   if (action === "resubscribe") {
     const ok = await setOptOut(token, false);
     return ok
       ? html("You are resubscribed", "You will receive Theatre4u and ArtsTracker updates again. Thanks for coming back.")
-      : html("Link problem", "We could not find your account for that link. Please email us and we will help.");
+      : html("Link problem", "We could not find your account for that link.", MAILTO);
   }
 
   const ok = await setOptOut(token, true);
   if (!ok) {
-    return html("Link problem", "We could not find your account for that link. Please email us and we will remove you right away.");
+    return html("Link problem", "We could not find your account for that link.", MAILTO);
   }
   const resubUrl = `${SUPABASE_URL}/functions/v1/unsubscribe/${token}/resubscribe`;
   return html(
