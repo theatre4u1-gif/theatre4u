@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 import { APP_NAME } from "./config.js";
 import { doorUrl } from "./helpers.js";
 import { SB } from "./supabase.js";
+import { DEFAULT_LOAN_TERMS, platformNotice } from "./agreements.js";
 
 export function ExternalLoans({ userId, org, items=[] }){
   const [loans,   setLoans]   = useState([]);
@@ -13,6 +14,9 @@ export function ExternalLoans({ userId, org, items=[] }){
   const [modal,   setModal]   = useState(null);    // "add" | "edit"
   const [active,  setActive]  = useState(null);
   const [tab,     setTab]     = useState("active"); // active | returned | all
+  const [loanTerms, setLoanTerms] = useState("");   // subscriber's saved terms (empty = use default)
+  const [showTerms, setShowTerms] = useState(false);
+  const [termsDraft, setTermsDraft] = useState("");
   const [msg,     setMsg]     = useState("");
   const flash = m => { setMsg(m); setTimeout(()=>setMsg(""),3500); };
 
@@ -25,9 +29,18 @@ export function ExternalLoans({ userId, org, items=[] }){
       setLoading(true);
       const { data } = await SB.from("external_loans").select("*").eq("org_id",userId).order("created_at",{ascending:false});
       if(data) setLoans(data);
+      const { data:o } = await SB.from("orgs").select("loan_terms").eq("id",userId).maybeSingle();
+      setLoanTerms((o && o.loan_terms) || "");
       setLoading(false);
     })();
   },[userId]);
+
+  const saveTerms = async() => {
+    const t = termsDraft.trim();
+    const { error } = await SB.from("orgs").update({ loan_terms: t || null }).eq("id",userId);
+    if(error){ flash("❌ Could not save terms"); return; }
+    setLoanTerms(t); setShowTerms(false); flash("✓ Loan terms saved");
+  };
 
   const openAdd  = (dir="out") => { setActive(null); setForm({...blank, direction:dir}); setModal("add"); };
   const openEdit = (l) => { setActive(l); setForm({ direction:l.direction, counterparty_name:l.counterparty_name||"", counterparty_contact:l.counterparty_contact||"", item_name:l.item_name||"", quantity:l.quantity||1, date_out:l.date_out||"", due_date:l.due_date||"", notes:l.notes||"" }); setModal("edit"); };
@@ -80,6 +93,74 @@ export function ExternalLoans({ userId, org, items=[] }){
     window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
   };
 
+  // Print a loan agreement for one record. For "Lent out" the counterparty is the borrower;
+  // for "Borrowed" your org is the borrower. Same editable terms + protective notice as rentals.
+  const printLoan = (l) => {
+    const esc = s => String(s==null?"":s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+    const brand = APP_NAME.replace("™","");
+    const bizName = esc(org?.name || brand);
+    const bizContact = [org?.email, org?.phone, org?.location].filter(Boolean).map(esc).join(" &middot; ");
+    const out = l.direction === "out";
+    const lender = out ? bizName : esc(l.counterparty_name);
+    const borrower = out ? esc(l.counterparty_name) : bizName;
+    const termsText = esc(loanTerms || DEFAULT_LOAN_TERMS).replace(/\n/g,"<br>");
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Loan Agreement</title></head>
+      <body style="font-family:Arial,Helvetica,sans-serif;color:#1a0f00;max-width:720px;margin:24px auto;padding:0 16px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #d4a843;padding-bottom:10px;margin-bottom:16px">
+          <div>
+            <div style="font-size:22px;font-weight:700">${bizName}</div>
+            ${bizContact ? `<div style="font-size:12px;color:#666;margin-top:2px">${bizContact}</div>` : ""}
+            <div style="font-size:13px;font-weight:700;color:#8b6914;margin-top:6px">Loan Agreement</div>
+          </div>
+          <div style="text-align:right;font-size:12px;color:#666">Date ${new Date().toLocaleDateString()}</div>
+        </div>
+        <table style="width:100%;font-size:13px;margin-bottom:16px">
+          <tr><td style="padding:2px 0"><strong>Lender:</strong> ${lender}</td>
+          <td style="padding:2px 0"><strong>Borrower:</strong> ${borrower}</td></tr>
+          <tr><td style="padding:2px 0"><strong>Contact:</strong> ${esc(l.counterparty_contact || "")}</td>
+          <td style="padding:2px 0"></td></tr>
+          <tr><td style="padding:2px 0"><strong>Date out:</strong> ${esc(l.date_out || "")}</td>
+          <td style="padding:2px 0"><strong>Due back:</strong> ${esc(l.due_date || "")}</td></tr>
+        </table>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:#f5f0e8">
+            <th style="text-align:left;padding:6px 8px">Item</th>
+            <th style="text-align:left;padding:6px 8px">Qty</th>
+            <th style="text-align:left;padding:6px 8px">Status</th></tr></thead>
+          <tbody><tr>
+            <td style="padding:6px 8px;border-bottom:1px solid #ddd">${esc(l.item_name)}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid #ddd">${l.quantity || 1}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid #ddd">${l.returned ? "Returned" : "Out"}</td>
+          </tr></tbody>
+        </table>
+        ${l.notes ? `<p style="font-size:12px;color:#555;margin-top:8px">Notes: ${esc(l.notes)}</p>` : ""}
+
+        <div style="margin-top:20px;border-top:1px solid #eee;padding-top:14px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:6px">Terms and Conditions</div>
+          <div style="font-size:12px;color:#333;line-height:1.6">${termsText}</div>
+        </div>
+
+        <table style="width:100%;font-size:12px;margin-top:34px">
+          <tr>
+            <td style="width:50%;padding-right:20px"><div style="border-top:1px solid #333;padding-top:4px">Borrower signature</div></td>
+            <td style="width:50%"><div style="border-top:1px solid #333;padding-top:4px">Date</div></td>
+          </tr>
+          <tr>
+            <td style="padding-top:26px;padding-right:20px"><div style="border-top:1px solid #333;padding-top:4px">Lender signature</div></td>
+            <td style="padding-top:26px"><div style="border-top:1px solid #333;padding-top:4px">Date</div></td>
+          </tr>
+        </table>
+
+        <p style="font-size:10px;color:#999;margin-top:26px;border-top:1px solid #eee;padding-top:10px;line-height:1.6">
+          ${platformNotice(bizName, brand)}
+        </p>
+      </body></html>`;
+    const w = window.open("", "_blank");
+    if(!w){ flash("❌ Allow pop-ups to print"); return; }
+    w.document.write(html); w.document.close();
+    setTimeout(()=>{ try{ w.print(); }catch(_){} }, 300);
+  };
+
   const today = new Date().toISOString().slice(0,10);
   const isOverdue = l => !l.returned && l.due_date && l.due_date < today;
   const visible = loans.filter(l => tab==="all" ? true : tab==="returned" ? l.returned : !l.returned);
@@ -103,7 +184,8 @@ export function ExternalLoans({ userId, org, items=[] }){
           <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:4}}>Borrowed & Lent</h2>
           <p style={{color:"var(--faint)",fontSize:13,maxWidth:560,lineHeight:1.5}}>Track items you've borrowed from or lent to schools and organizations that aren't on {APP_NAME} — so you always know who has what and when it's due back.</p>
         </div>
-        <div style={{display:"flex",gap:8}}>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <button onClick={()=>{setTermsDraft(loanTerms||DEFAULT_LOAN_TERMS);setShowTerms(true);}} className="btn btn-o" style={{fontSize:12}}>📝 Edit loan terms</button>
           <button onClick={()=>openAdd("out")} className="btn btn-g" style={{fontSize:12}}>＋ Lent out</button>
           <button onClick={()=>openAdd("in")} className="btn btn-o" style={{fontSize:12}}>＋ Borrowed</button>
         </div>
@@ -149,6 +231,7 @@ export function ExternalLoans({ userId, org, items=[] }){
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"stretch"}}>
                 {!l.returned ? <button onClick={()=>markReturned(l)} className="btn btn-g btn-sm" style={{fontSize:11}}>Mark returned</button> : <button onClick={()=>reopen(l)} className="btn btn-o btn-sm" style={{fontSize:11}}>Reopen</button>}
+                <button onClick={()=>printLoan(l)} className="btn btn-o btn-sm" style={{fontSize:11}}>🖨 Print agreement</button>
                 <button onClick={()=>invite(l)} className="btn btn-o btn-sm" style={{fontSize:11}}>✉️ Invite to {APP_NAME}</button>
                 <button onClick={()=>openEdit(l)} className="btn btn-o btn-sm" style={{fontSize:11}}>Edit</button>
                 <button onClick={()=>remove(l)} className="btn btn-o btn-sm" style={{fontSize:11,color:"var(--red)"}}>Delete</button>
@@ -205,6 +288,23 @@ export function ExternalLoans({ userId, org, items=[] }){
             <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
               <button onClick={()=>{setModal(null);setActive(null);}} className="btn btn-o" style={{fontSize:13}}>Cancel</button>
               <button onClick={save} disabled={saving} className="btn btn-g" style={{fontSize:13}}>{saving?"Saving…":active?"Save changes":"Add"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTerms&&(
+        <div onClick={()=>setShowTerms(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:9000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"var(--cream)",border:"1px solid var(--border)",borderRadius:12,padding:20,width:"100%",maxWidth:560,maxHeight:"90vh",overflowY:"auto"}}>
+            <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:19,marginBottom:6}}>Loan terms</h3>
+            <p style={{fontSize:12,color:"var(--muted)",marginBottom:12,lineHeight:1.5}}>These print on the loan agreement, below the item. Edit them to fit your program. A short notice that {APP_NAME.replace("™","")} is only the software provider, and not a party to the loan, is always added at the bottom to protect both sides.</p>
+            <textarea style={{...inp,minHeight:220,resize:"vertical",lineHeight:1.5}} value={termsDraft} onChange={e=>setTermsDraft(e.target.value)}/>
+            <div style={{display:"flex",gap:8,justifyContent:"space-between",marginTop:14,flexWrap:"wrap"}}>
+              <button onClick={()=>setTermsDraft(DEFAULT_LOAN_TERMS)} className="btn btn-o btn-sm" style={{fontSize:12}}>Reset to default</button>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>setShowTerms(false)} className="btn btn-o" style={{fontSize:13}}>Cancel</button>
+                <button onClick={saveTerms} className="btn btn-g" style={{fontSize:13}}>Save terms</button>
+              </div>
             </div>
           </div>
         </div>

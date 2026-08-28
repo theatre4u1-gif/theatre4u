@@ -8,6 +8,7 @@ import { SB } from "./supabase.js";
 import { APP_NAME } from "./config.js";
 import { doorUrl } from "./helpers.js";
 import { UpgradePlans } from "./billing.jsx";
+import { DEFAULT_RENTAL_TERMS as DEFAULT_TERMS, platformNotice } from "./agreements.js";
 
 // Pull a code out of a scanned value. QR codes encode a URL like
 // theatre4u.org/#/item/OVHS-PROP-042, so grab the segment after /item/.
@@ -17,14 +18,8 @@ function codeFromScan(raw) {
   return m ? decodeURIComponent(m[1]) : s;
 }
 
-// Default rental terms, prefilled and fully editable by each subscriber.
-const DEFAULT_TERMS =
-  "1. The renter is responsible for every item listed above from the time it leaves until it is returned.\n" +
-  "2. Items are due back by the date shown. Late returns may be charged a late fee.\n" +
-  "3. The renter agrees to return all items in the same condition, and to pay for cleaning, repair, or replacement of any item returned damaged, altered, or not at all.\n" +
-  "4. A security deposit may be required and is returned once all items come back in good condition.\n" +
-  "5. Items may not be resold, sublet, or loaned to anyone else without written permission.\n" +
-  "6. By signing below, the renter agrees to these terms.";
+// Default rental terms and the platform-protection notice live in agreements.js so
+// Rental Checkout and Borrowed & Lent stay identical.
 
 // ── Live camera scanner (progressive enhancement) ──────────────────────────────
 function CameraScanner({ onCode, onClose }) {
@@ -169,6 +164,24 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
     setCurrent(data); setView("detail");
   };
 
+  // ── Simple inventory sync (one-of-a-kind). Only flips In Stock <-> Checked Out, so it
+  // never clobbers a status the subscriber set by hand (In Use, Being Repaired, etc). ──
+  const markItemOut = async (itemId) => {
+    if (!itemId) return;
+    await SB.from("items").update({ avail: "Checked Out" }).eq("org_id", userId).eq("id", itemId).eq("avail", "In Stock");
+  };
+  // Free an item back to In Stock, but only if it is not still out on another open order.
+  const markItemInIfClear = async (itemId, excludeOrderId) => {
+    if (!itemId) return;
+    const { data: outLines } = await SB.from("rental_order_items").select("order_id").eq("org_id", userId).eq("item_id", itemId).eq("status", "out");
+    const otherIds = [...new Set((outLines || []).map(x => x.order_id).filter(id => id !== excludeOrderId))];
+    if (otherIds.length) {
+      const { data: openOnes } = await SB.from("rental_orders").select("id").in("id", otherIds).neq("status", "closed");
+      if (openOnes && openOnes.length) return; // still out on another open order — leave as Checked Out
+    }
+    await SB.from("items").update({ avail: "In Stock" }).eq("org_id", userId).eq("id", itemId).eq("avail", "Checked Out");
+  };
+
   const addLine = async (item) => {
     if (!current) return;
     const payload = {
@@ -181,6 +194,7 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
     const { data, error } = await SB.from("rental_order_items").insert(payload).select().single();
     if (error || !data) { flash("❌ Could not add item"); return; }
     setLines(p => [...p, data]);
+    if (current.status !== "closed") markItemOut(payload.item_id);
     flash("✓ Added " + (item.name || "item"));
   };
 
@@ -237,7 +251,11 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
   const setLineStatus = async (line, status) => {
     const patch = status === "returned" ? { status: "returned", returned_at: new Date().toISOString() } : { status: "out", returned_at: null };
     const { data, error } = await SB.from("rental_order_items").update(patch).eq("id", line.id).select().single();
-    if (!error && data) setLines(p => p.map(x => x.id === data.id ? data : x));
+    if (!error && data) {
+      setLines(p => p.map(x => x.id === data.id ? data : x));
+      if (status === "returned") markItemInIfClear(line.item_id, current.id);
+      else if (current.status !== "closed") markItemOut(line.item_id); // undo → back out
+    }
   };
 
   const returnAll = async () => {
@@ -246,12 +264,14 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
     const now = new Date().toISOString();
     await SB.from("rental_order_items").update({ status: "returned", returned_at: now }).eq("order_id", current.id).neq("status", "returned");
     setLines(p => p.map(l => l.status === "returned" ? l : { ...l, status: "returned", returned_at: now }));
+    for (const id of [...new Set(out.map(l => l.item_id).filter(Boolean))]) await markItemInIfClear(id, current.id);
     flash("✓ All items marked returned");
   };
 
   const removeLine = async (line) => {
     await SB.from("rental_order_items").delete().eq("id", line.id);
     setLines(p => p.filter(x => x.id !== line.id));
+    if (line.status !== "returned") markItemInIfClear(line.item_id, current.id);
   };
 
   const setOrderStatus = async (o, status) => {
@@ -350,7 +370,7 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
         </table>
 
         <p style="font-size:10px;color:#999;margin-top:26px;border-top:1px solid #eee;padding-top:10px;line-height:1.6">
-          This agreement is solely between ${bizName} and the renter named above. ${brand} (a product of Artstracker LLC) provides inventory and rental software only. It is not a party to this rental, makes no warranties about any item, and is not responsible for the condition, use, return, loss, or damage of any item or for any dispute between the parties. All responsibility for this rental rests with the parties named above.
+          ${platformNotice(bizName, brand)}
         </p>
       </body></html>`;
     const w = window.open("", "_blank");
