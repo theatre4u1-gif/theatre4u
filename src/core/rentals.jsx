@@ -180,6 +180,9 @@ export function RentalsPage({ userId, org, plan = "free", items = [], onItemSync
       const { data: openOnes } = await SB.from("rental_orders").select("id").in("id", otherIds).neq("status", "closed");
       if (openOnes && openOnes.length) return; // still out on another open order — leave as Checked Out
     }
+    // also held by an active lent-out loan? then leave it Checked Out
+    const { data: loanRows } = await SB.from("external_loans").select("id").eq("org_id", userId).eq("item_ref", itemId).eq("direction", "out").eq("returned", false);
+    if (loanRows && loanRows.length) return;
     const { data } = await SB.from("items").update({ avail: "In Stock" }).eq("org_id", userId).eq("id", itemId).eq("avail", "Checked Out").select("id");
     if (data && data.length && onItemSync) onItemSync(itemId, "In Stock");
   };

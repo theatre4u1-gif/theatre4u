@@ -8,7 +8,7 @@ import { SB } from "./supabase.js";
 import { DEFAULT_LOAN_TERMS, platformNotice } from "./agreements.js";
 import { CameraScanner, codeFromScan } from "./rentals.jsx";
 
-export function ExternalLoans({ userId, org, items=[] }){
+export function ExternalLoans({ userId, org, items=[], onItemSync }){
   const [loans,   setLoans]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
@@ -24,7 +24,7 @@ export function ExternalLoans({ userId, org, items=[] }){
   const [msg,     setMsg]     = useState("");
   const flash = m => { setMsg(m); setTimeout(()=>setMsg(""),3500); };
 
-  const blank = { direction:"out", counterparty_name:"", counterparty_contact:"", item_name:"", quantity:1, date_out:new Date().toISOString().slice(0,10), due_date:"", notes:"" };
+  const blank = { direction:"out", counterparty_name:"", counterparty_contact:"", item_name:"", item_ref:null, quantity:1, date_out:new Date().toISOString().slice(0,10), due_date:"", notes:"" };
   const [form, setForm] = useState(blank);
 
   useEffect(()=>{
@@ -47,18 +47,40 @@ export function ExternalLoans({ userId, org, items=[] }){
   };
 
   // Pick the item straight from your inventory (like rentals) instead of typing it.
-  const pickItem = (it) => { setForm(f=>({...f, item_name: it.name })); setPickBrowse(false); };
+  const pickItem = (it) => { setForm(f=>({...f, item_name: it.name, item_ref: it.id })); setPickBrowse(false); };
   const resolveScan = async (raw) => {
     const c = codeFromScan(raw); if(!c) return;
     let it = null;
     const q1 = await SB.from("items").select("id,name,display_id").eq("org_id",userId).eq("id",c).limit(1); it = q1.data && q1.data[0];
     if(!it){ const q2 = await SB.from("items").select("id,name,display_id").eq("org_id",userId).ilike("display_id",c).limit(1); it = q2.data && q2.data[0]; }
     if(!it){ flash("❌ No item found for "+c); return; }
-    setForm(f=>({...f, item_name: it.name })); setPickScan(false); flash("✓ Selected "+it.name);
+    setForm(f=>({...f, item_name: it.name, item_ref: it.id })); setPickScan(false); flash("✓ Selected "+it.name);
   };
 
   const openAdd  = (dir="out") => { setActive(null); setForm({...blank, direction:dir}); setModal("add"); };
-  const openEdit = (l) => { setActive(l); setForm({ direction:l.direction, counterparty_name:l.counterparty_name||"", counterparty_contact:l.counterparty_contact||"", item_name:l.item_name||"", quantity:l.quantity||1, date_out:l.date_out||"", due_date:l.due_date||"", notes:l.notes||"" }); setModal("edit"); };
+  const openEdit = (l) => { setActive(l); setForm({ direction:l.direction, counterparty_name:l.counterparty_name||"", counterparty_contact:l.counterparty_contact||"", item_name:l.item_name||"", item_ref:l.item_ref||null, quantity:l.quantity||1, date_out:l.date_out||"", due_date:l.due_date||"", notes:l.notes||"" }); setModal("edit"); };
+
+  // ── Inventory sync for LENT-OUT items (only flips In Stock <-> Checked Out; never
+  // touches borrowed items, which aren't ours). Guard checks rentals AND other loans. ──
+  const markItemOut = async (itemId) => {
+    if(!itemId) return;
+    const { data } = await SB.from("items").update({ avail:"Checked Out" }).eq("org_id",userId).eq("id",itemId).eq("avail","In Stock").select("id");
+    if(data && data.length && onItemSync) onItemSync(itemId, "Checked Out");
+  };
+  const itemStillOut = async (itemId, excludeLoanId) => {
+    const { data:outLines } = await SB.from("rental_order_items").select("order_id").eq("org_id",userId).eq("item_id",itemId).eq("status","out");
+    const orderIds = [...new Set((outLines||[]).map(x=>x.order_id))];
+    if(orderIds.length){ const { data:openOnes } = await SB.from("rental_orders").select("id").in("id",orderIds).neq("status","closed"); if(openOnes && openOnes.length) return true; }
+    const { data:loanRows } = await SB.from("external_loans").select("id").eq("org_id",userId).eq("item_ref",itemId).eq("direction","out").eq("returned",false);
+    const loanIds = (loanRows||[]).map(x=>x.id).filter(id=>id!==excludeLoanId);
+    return loanIds.length > 0;
+  };
+  const markItemInIfClear = async (itemId, excludeLoanId) => {
+    if(!itemId) return;
+    if(await itemStillOut(itemId, excludeLoanId)) return;
+    const { data } = await SB.from("items").update({ avail:"In Stock" }).eq("org_id",userId).eq("id",itemId).eq("avail","Checked Out").select("id");
+    if(data && data.length && onItemSync) onItemSync(itemId, "In Stock");
+  };
 
   const save = async() => {
     if(!form.counterparty_name.trim()){ flash("❌ Add the organization or person's name"); return; }
@@ -69,6 +91,7 @@ export function ExternalLoans({ userId, org, items=[] }){
       counterparty_name: form.counterparty_name.trim(),
       counterparty_contact: form.counterparty_contact.trim() || null,
       item_name: form.item_name.trim(),
+      item_ref: form.item_ref || null,
       quantity: parseInt(form.quantity,10) || 1,
       date_out: form.date_out || null,
       due_date: form.due_date || null,
@@ -77,28 +100,34 @@ export function ExternalLoans({ userId, org, items=[] }){
     if(active){
       const { data, error } = await SB.from("external_loans").update({...payload, updated_at:new Date().toISOString()}).eq("id",active.id).select().single();
       if(error){ flash("❌ Could not save. Try again."); }
-      else { setLoans(p=>p.map(x=>x.id===data.id?data:x)); flash("✓ Updated"); setModal(null); setActive(null); }
+      else {
+        setLoans(p=>p.map(x=>x.id===data.id?data:x)); flash("✓ Updated"); setModal(null); setActive(null);
+        // free the previously linked item if it is no longer held out by this record
+        if(active.direction==="out" && !active.returned && active.item_ref && !(data.direction==="out" && !data.returned && data.item_ref===active.item_ref)) await markItemInIfClear(active.item_ref, active.id);
+        if(data.direction==="out" && !data.returned && data.item_ref) await markItemOut(data.item_ref);
+      }
     } else {
       const { data, error } = await SB.from("external_loans").insert({...payload, org_id:userId}).select().single();
       if(error){ flash("❌ Could not save. Try again."); }
-      else { setLoans(p=>[data,...p]); flash("✓ Added"); setModal(null); }
+      else { setLoans(p=>[data,...p]); flash("✓ Added"); setModal(null); if(data.direction==="out" && !data.returned && data.item_ref) await markItemOut(data.item_ref); }
     }
     setSaving(false);
   };
 
   const markReturned = async(l) => {
     const { data, error } = await SB.from("external_loans").update({ returned:true, returned_at:new Date().toISOString() }).eq("id",l.id).select().single();
-    if(!error && data){ setLoans(p=>p.map(x=>x.id===data.id?data:x)); flash("✓ Marked returned"); }
+    if(!error && data){ setLoans(p=>p.map(x=>x.id===data.id?data:x)); flash("✓ Marked returned"); if(l.direction==="out" && l.item_ref) await markItemInIfClear(l.item_ref, l.id); }
   };
   const reopen = async(l) => {
     const { data, error } = await SB.from("external_loans").update({ returned:false, returned_at:null }).eq("id",l.id).select().single();
-    if(!error && data){ setLoans(p=>p.map(x=>x.id===data.id?data:x)); flash("Reopened"); }
+    if(!error && data){ setLoans(p=>p.map(x=>x.id===data.id?data:x)); flash("Reopened"); if(l.direction==="out" && l.item_ref) await markItemOut(l.item_ref); }
   };
   const remove = async(l) => {
     if(!confirm("Delete this record?")) return;
     await SB.from("external_loans").delete().eq("id",l.id);
     setLoans(p=>p.filter(x=>x.id!==l.id));
     flash("Deleted");
+    if(l.direction==="out" && !l.returned && l.item_ref) await markItemInIfClear(l.item_ref, l.id);
   };
 
   const invite = (l) => {
@@ -282,7 +311,7 @@ export function ExternalLoans({ userId, org, items=[] }){
                   <button type="button" onClick={()=>{setPickBrowse(true);setPickQ("");}} className="btn btn-o btn-sm" style={{fontSize:11}}>📦 Choose from inventory</button>
                   <button type="button" onClick={()=>setPickScan(true)} className="btn btn-o btn-sm" style={{fontSize:11}}>📷 Scan</button>
                 </div>
-                <input style={inp} list="t4u-my-items" value={form.item_name} onChange={e=>setForm(f=>({...f,item_name:e.target.value}))} placeholder="Pick from inventory, scan, or type"/>
+                <input style={inp} list="t4u-my-items" value={form.item_name} onChange={e=>setForm(f=>({...f,item_name:e.target.value,item_ref:null}))} placeholder="Pick from inventory, scan, or type"/>
                 <datalist id="t4u-my-items">{(items||[]).slice(0,300).map(it=><option key={it.id} value={it.name}/>)}</datalist>
               </div>
               <div>

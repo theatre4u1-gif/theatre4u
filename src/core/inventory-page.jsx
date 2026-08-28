@@ -312,7 +312,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
       </div>
     )}
     {enableLoans&&invView==="loans" ? (
-      <div style={{padding:"8px 0 56px"}}><ExternalLoans userId={userId} org={org} items={items}/></div>
+      <div style={{padding:"8px 0 56px"}}><ExternalLoans userId={userId} org={org} items={items} onItemSync={onItemSync}/></div>
     ) : enableLoans&&invView==="rentals" ? (
       <div style={{padding:"8px 0 56px"}}><RentalsPage userId={userId} org={org} plan={plan} items={items} onItemSync={onItemSync}/></div>
     ) : (<>
