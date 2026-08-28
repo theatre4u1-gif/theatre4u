@@ -285,7 +285,9 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
 
   const deleteOrder = async (o) => {
     if (!confirm("Delete this rental order and its item list? This cannot be undone.")) return;
-    await SB.from("rental_orders").delete().eq("id", o.id);
+    const outIds = [...new Set(lines.filter(l => l.status !== "returned").map(l => l.item_id).filter(Boolean))];
+    await SB.from("rental_orders").delete().eq("id", o.id);   // cascade removes its item lines
+    for (const id of outIds) await markItemInIfClear(id, o.id);
     setOrders(p => p.filter(x => x.id !== o.id));
     setView("list"); setCurrent(null); setLines([]);
     flash("Deleted");
