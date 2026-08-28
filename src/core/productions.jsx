@@ -439,7 +439,7 @@ function ProductionNeedsImport({ prod, userId, onImported, onClose }) {
   const downloadTemplate = () => {
     const h = ["Item Name","Category","Quantity","Status","Source","Estimated Cost","Notes"];
     const ex = [
-      ["Magic Wand","props","1","needed","unknown","","Check with Lincoln High"],
+      ["Magic Wand","props","1","needed","unknown","","Check with Shakespeare High"],
       ["Victorian Ball Gown","costumes","2","searching","exchange","","Need size M and L"],
       ["Crown","props","3","needed","buy","15.00","Party City or Amazon"],
       ["Fog Machine","effects","1","found","in_house","","We have one in effects cage"],
@@ -915,7 +915,7 @@ function ProductionNeedsChecklist({ prod, allItems, userId, org, onNavigateToExc
         <label className="fl">Notes</label>
         <input className="fi" value={form.resolved_notes||form.notes||""}
           onChange={e=>upd("resolved_notes",e.target.value)}
-          placeholder='e.g. "Check with Lincoln High", "Order from Amazon", "Grandma has one"'/>
+          placeholder='e.g. "Check with Shakespeare High", "Order from Amazon", "Grandma has one"'/>
       </div>
 
       <div style={{ display:"flex", gap:8, justifyContent:"flex-end" }}>

@@ -157,7 +157,7 @@ function createDemoStore() {
             data = data.map(item => {
               const org = orgStore.find(o => o.id === item.org_id) || {};
               return { ...item, orgs: {
-                name: org.name || "Demo Theatre Program",
+                name: org.name || "William Shakespeare High School Drama",
                 location: org.location || "Demo City, CA",
                 state: org.state || "CA",
                 zipcode: org.zipcode || "92648",
@@ -237,7 +237,7 @@ export function DemoApp() {
   const [showNudge,setShowNudge]= useState(false);
   const [demoUser, setDemoUser] = useState(null); // set when user clicks "Enter Demo"
 
-  const enterDemo = async (orgName="Demo Theatre Program") => {
+  const enterDemo = async (orgName="William Shakespeare High School Drama") => {
     // Create the demo org in the in-memory store
     const user = { id:"demo-user-id", email:"demo@theatre4u.org", created_at:new Date().toISOString() };
     await store.from("orgs").upsert({
@@ -300,7 +300,7 @@ export function DemoApp() {
         </p>
         <div style={{display:"flex",flexDirection:"column",gap:14,alignItems:"center",width:"100%",maxWidth:340}}>
           <button
-            onClick={()=>enterDemo("Ocean View High School Drama")}
+            onClick={()=>enterDemo("William Shakespeare High School Drama")}
             style={{width:"100%",padding:"16px 32px",borderRadius:10,border:"none",
               background:"linear-gradient(135deg,#d4a843,#a37f2c)",color:"#1a0f00",
               fontSize:17,fontWeight:800,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",
@@ -313,7 +313,7 @@ export function DemoApp() {
           <div style={{display:"flex",gap:8,width:"100%"}}>
             <input
               id="demo-org-input"
-              placeholder="e.g. Lincoln High Drama"
+              placeholder="e.g. Carol Channing High School"
               style={{flex:1,padding:"11px 14px",borderRadius:8,
                 border:"1px solid rgba(255,255,255,.15)",
                 background:"rgba(255,255,255,.06)",color:"#fff",
@@ -321,14 +321,14 @@ export function DemoApp() {
               onKeyDown={e=>{
                 if(e.key==="Enter"){
                   const v=e.target.value.trim();
-                  enterDemo(v||"Ocean View High School Drama");
+                  enterDemo(v||"William Shakespeare High School Drama");
                 }
               }}
             />
             <button
               onClick={()=>{
                 const v=document.getElementById("demo-org-input")?.value?.trim();
-                enterDemo(v||"Ocean View High School Drama");
+                enterDemo(v||"William Shakespeare High School Drama");
               }}
               style={{padding:"11px 18px",borderRadius:8,
                 border:"1px solid rgba(212,168,67,.4)",

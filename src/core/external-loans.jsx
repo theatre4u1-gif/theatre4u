@@ -254,7 +254,7 @@ export function ExternalLoans({ userId, org, items=[] }){
             </div>
             <div style={{marginBottom:10}}>
               <label style={label}>{form.direction==="out"?"Lent to (organization or person)":"Borrowed from (organization or person)"}</label>
-              <input style={inp} value={form.counterparty_name} onChange={e=>setForm(f=>({...f,counterparty_name:e.target.value}))} placeholder="e.g. Springfield Community Theatre"/>
+              <input style={inp} value={form.counterparty_name} onChange={e=>setForm(f=>({...f,counterparty_name:e.target.value}))} placeholder="e.g. August Wilson Community Theatre"/>
             </div>
             <div style={{marginBottom:10}}>
               <label style={label}>Their email or phone (optional)</label>

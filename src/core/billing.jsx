@@ -63,7 +63,7 @@ export function InvoiceRequestForm({ orgName, userEmail }) {
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
         <div>
           <label style={labelStyle}>Organization Name *</label>
-          <input style={inputStyle} value={form.name} onChange={e=>upd("name",e.target.value)} placeholder="Lincoln High Drama Dept."/>
+          <input style={inputStyle} value={form.name} onChange={e=>upd("name",e.target.value)} placeholder="Eugene O'Neil High School Drama"/>
         </div>
         <div>
           <label style={labelStyle}>Contact Email *</label>

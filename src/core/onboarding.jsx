@@ -159,7 +159,7 @@ export function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav })
             <div style={{gridColumn:"1/-1"}}>
               <label style={lbl}>Program / School Name *</label>
               <input style={inp} value={pf.name} onChange={e=>setPf(p=>({...p,name:e.target.value}))}
-                placeholder="Lincoln High Drama · Valley Rep · etc." autoFocus/>
+                placeholder="Lin Manuel Miranda High School · August Wilson Rep · etc." autoFocus/>
             </div>
             <div>
               <label style={lbl}>Your Name *</label>

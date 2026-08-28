@@ -268,7 +268,7 @@ export function PreviewMode({ onSignUp }) {
             <div style={{ fontFamily:"'Playfair Display',serif", fontSize:16,
               fontWeight:700, color:gold }}>{APP_NAME}</div>
             <div style={{ fontSize:9, color:t3, textTransform:"uppercase", letterSpacing:2 }}>
-              Ocean View Drama
+              Shakespeare Drama
             </div>
           </div>
         </div>
@@ -331,7 +331,7 @@ export function PreviewMode({ onSignUp }) {
           {tab === "dashboard" && (
             <div>
               <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:4 }}>
-                Welcome to Ocean View Drama
+                Welcome to Shakespeare Drama
               </h2>
               <p style={{ color:t2, fontSize:13, marginBottom:20 }}>
                 Your theatre inventory at a glance. (Sample data)

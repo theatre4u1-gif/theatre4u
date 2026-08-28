@@ -705,7 +705,7 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
         <div className="card card-p" style={{marginBottom:20}}>
           <div className="sh"><h2>Organization Profile</h2><p>This information appears on your Exchange listings.</p></div>
           <div className="fg2">
-            <div className="fg fu"><label className="fl">Organization Name</label><input className="fi" value={f.name||""} onChange={e=>upd("name",e.target.value)} placeholder="e.g. Lincoln High Drama Dept"/></div>
+            <div className="fg fu"><label className="fl">Organization Name</label><input className="fi" value={f.name||""} onChange={e=>upd("name",e.target.value)} placeholder="e.g. Lorraine Hansberry High School Drama"/></div>
             <div className="fg">
               <label className="fl">Type</label>
               <select className="fs" value={f.type||""} onChange={e=>upd("type",e.target.value)}>

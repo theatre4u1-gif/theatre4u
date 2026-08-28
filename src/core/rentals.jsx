@@ -574,7 +574,7 @@ export function RentalsPage({ userId, org, plan = "free", items = [], onItemSync
             <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 19, marginBottom: 14 }}>New rental order</h3>
             <div style={{ marginBottom: 10 }}>
               <label style={lbl}>Customer or borrower name</label>
-              <input style={inp} value={form.customer_name} onChange={e => setForm(f => ({ ...f, customer_name: e.target.value }))} placeholder="e.g. Lincoln High Drama, or Jane Smith" autoFocus />
+              <input style={inp} value={form.customer_name} onChange={e => setForm(f => ({ ...f, customer_name: e.target.value }))} placeholder="e.g. Carol Channing High School, or Jane Smith" autoFocus />
             </div>
             <div style={{ marginBottom: 10 }}>
               <label style={lbl}>Their email or phone (optional)</label>

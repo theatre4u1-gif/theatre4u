@@ -95,7 +95,7 @@ function CommunityPostForm({initial, onSave, onCancel, saving=false}) {
     <div className="fg fu"><label className="fl">Title *</label><input className="fi" value={f.title} onChange={e=>upd("title",e.target.value)} placeholder={f.type==="show"?"e.g. Tickets now available for our spring show":f.type==="audition"?"e.g. Now seeking performers, members, and crew":f.type==="wanted"?"e.g. Looking for a specific costume, prop, or instrument":"Title"} autoFocus/></div>
     {(f.type==="show"||f.type==="audition")&&<>
       <div className="fg"><label className="fl">Event / Production Title</label><input className="fi" value={f.show_title||""} onChange={e=>upd("show_title",e.target.value)} placeholder="Your show, concert, or exhibition"/></div>
-      <div className="fg"><label className="fl">Venue</label><input className="fi" value={f.venue||""} onChange={e=>upd("venue",e.target.value)} placeholder="Lincoln High Auditorium"/></div>
+      <div className="fg"><label className="fl">Venue</label><input className="fi" value={f.venue||""} onChange={e=>upd("venue",e.target.value)} placeholder="Sondheim High Auditorium"/></div>
     </>}
     {f.type==="show"&&<>
       <div className="fg"><label className="fl">Opening Date</label><input className="fi" type="date" value={f.start_date||""} onChange={e=>upd("start_date",e.target.value)}/></div>

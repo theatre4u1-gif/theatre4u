@@ -309,7 +309,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
               <input value={ownerName} onChange={e=>setOwnerName(e.target.value)} placeholder="e.g. Jane Smith" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
             </div>
             <div><label style={labelStyle}>Program / Organization Name *</label>
-              <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High School Drama" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
+              <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="William Shakespeare High School Drama" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
             </div>
             <div style={{display:"flex",gap:10}}>
               <div style={{flex:1,minWidth:0}}><label style={labelStyle}>State *</label>
@@ -534,7 +534,7 @@ export function GoogleProfileSetup({user, onDone}){
             <input value={ownerName} onChange={e=>setOwnerName(e.target.value)} placeholder="e.g. Jane Smith" style={inputStyle}/>
           </div>
           <div><label style={labelStyle}>Program / Organization Name *</label>
-            <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High School Drama" style={inputStyle} onKeyDown={e=>e.key==="Enter"&&submit()}/>
+            <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Carol Channing High School Drama" style={inputStyle} onKeyDown={e=>e.key==="Enter"&&submit()}/>
           </div>
           <div style={{display:"flex",gap:10}}>
             <div style={{flex:1,minWidth:0}}><label style={labelStyle}>State *</label>
@@ -705,7 +705,7 @@ export function AuthScreen({onAuth}){
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
                 <div>
                   <label style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",display:"block",marginBottom:4}}>Organization Name</label>
-                  <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Lincoln High Drama Dept." style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--linen)",borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"'Raleway',sans-serif",color:"var(--ink)",outline:"none",boxSizing:"border-box"}}
+                  <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Harold Pinter High School Drama" style={{width:"100%",background:"var(--parch)",border:"1.5px solid var(--linen)",borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"'Raleway',sans-serif",color:"var(--ink)",outline:"none",boxSizing:"border-box"}}
                     onFocus={e=>e.target.style.borderColor="var(--gold)"} onBlur={e=>e.target.style.borderColor="var(--linen)"}/>
                 </div>
                 <div>
