@@ -16,6 +16,7 @@ import { ItemForm, ItemDetail } from "./items.jsx";
 import { BulkPhotoAdd } from "./bulk-photo-add.jsx";
 import { LocationsPanel } from "./locations.jsx";
 import { ExternalLoans } from "./external-loans.jsx";
+import { RentalsPage } from "./rentals.jsx";
 import { UpgradePrompt } from "./billing.jsx";
 
 export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null, enableLoans=false, onImported=null}){
@@ -307,10 +308,13 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
       <div className="vtog" style={{margin:"0 0 14px"}}>
         <button className={invView==="items"?"on":""} onClick={()=>setInvView("items")}>📦 Inventory</button>
         <button className={invView==="loans"?"on":""} onClick={()=>setInvView("loans")}>🔄 Borrowed & Lent</button>
+        <button className={invView==="rentals"?"on":""} onClick={()=>setInvView("rentals")}>🧾 Rentals</button>
       </div>
     )}
     {enableLoans&&invView==="loans" ? (
       <div style={{padding:"8px 0 56px"}}><ExternalLoans userId={userId} org={org} items={items}/></div>
+    ) : enableLoans&&invView==="rentals" ? (
+      <div style={{padding:"8px 0 56px"}}><RentalsPage userId={userId} org={org} plan={plan} items={items}/></div>
     ) : (<>
     {upgradeReason&&<UpgradePrompt reason={upgradeReason} onClose={()=>setUpgradeReason(null)} userId={userId} userEmail={org?.email}/>}
     {locFilter!=="all"&&locFilterName&&(

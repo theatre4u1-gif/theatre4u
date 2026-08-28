@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { SB } from "./supabase.js";
 import { APP_NAME } from "./config.js";
+import { doorUrl } from "./helpers.js";
 import { UpgradePlans } from "./billing.jsx";
 
 // Pull a code out of a scanned value. QR codes encode a URL like
@@ -213,6 +214,16 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
     flash("Deleted");
   };
 
+  // Invite the customer/borrower to join, so they can see your inventory and request items.
+  const inviteCustomer = () => {
+    if (!current) return;
+    const brand = APP_NAME.replace("™", "");
+    const subject = encodeURIComponent("An invitation to " + brand);
+    const body = encodeURIComponent(`Hi ${current.customer_name || "there"},\n\nWe use ${brand} to manage our inventory and rentals. If you create a free account, you can browse what we have available and request items more easily.\n\nYou can sign up here: ${doorUrl(org)}\n\nThank you,\n${org?.name || ""}`);
+    const to = (current.customer_contact && current.customer_contact.includes("@")) ? current.customer_contact : "";
+    window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+  };
+
   const printOrder = () => {
     if (!current) return;
     const esc = s => String(s == null ? "" : s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
@@ -301,6 +312,7 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               <button onClick={printOrder} className="btn btn-o btn-sm" style={{ fontSize: 11 }}>🖨 Print</button>
+              <button onClick={inviteCustomer} className="btn btn-o btn-sm" style={{ fontSize: 11 }}>✉️ Invite customer</button>
               {outN > 0 && <button onClick={returnAll} className="btn btn-o btn-sm" style={{ fontSize: 11 }}>Return all</button>}
               {current.status === "closed"
                 ? <button onClick={() => setOrderStatus(current, "open")} className="btn btn-o btn-sm" style={{ fontSize: 11 }}>Reopen</button>

@@ -21,7 +21,6 @@ import { CreditsPage } from "./points.jsx";
 import { Reports } from "./reports.jsx";
 import { FundingPage } from "./funding.jsx";
 import { ExternalLoans } from "./external-loans.jsx";
-import { RentalsPage } from "./rentals.jsx";
 import { HOSTNAME, IS_THEATRE4U, IS_ARTSTRACKER, APP_NAME, APP_SUBTITLE, APP_EMAIL, APP_URL, ADMIN_EMAILS, isAdminEmail, ADMIN_EMAIL, LOGO_ICON, FAVICON, TOUCH_ICON, LOGO_FULL, LOGO_MARK } from "./config.js";
 import { POINT_EARN_RATES, POINTS_PER_DOLLAR, POINTS_FREE_MONTH, POINTS_MAX_BALANCE, POINTS_EXPIRE_DAYS, PLATFORM_FEE_PCT, POINTS_MIN_REDEEM, MILESTONE_POINTS } from "./points-config.js";
 import { Ic } from "./icons.jsx";
@@ -768,7 +767,6 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       { id:"productions", label:getTerm(curVertical,"productions"), ico:getVertical(curVertical)?.icon || "🎭" },
       ...(!isMember? [{ id:"reports",     label:"Reports",     ico:Ic.chart   }] : []),
       ...(!isMember? [{ id:"funding",     label:"Funding Tracker", ico:"💰"  }] : []),
-      ...(!isMember? [{ id:"rentals",     label:"Rentals",         ico:"🧾"  }] : []),
       // Prop 28 nav hidden — legacy data accessible via Funding Tracker migration banner
       { id:"profile",     label:"My Profile",  ico:"👤"       },
       ...(!isMember ? [{ id:"labels",  label:"QR Labels",    ico:"🏷" }] : []),
@@ -778,7 +776,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
     ];
   })();
-  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(curVertical), productions:getTerm(curVertical,"productions"), reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:getPointsName(curVertical), points:getPointsName(curVertical), community:"Community Board", labels:"QR Labels", rentals:"Rental Checkout", facschools:"District Schools" };
+  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(curVertical), productions:getTerm(curVertical,"productions"), reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:getPointsName(curVertical), points:getPointsName(curVertical), community:"Community Board", labels:"QR Labels", facschools:"District Schools" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicOrgSlug) return <PublicOrgPage slug={publicOrgSlug} />;
@@ -1103,7 +1101,6 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                   {page==="productions" && <Productions userId={org?.id || user?.id} allItems={vItems} org={viewOrg} onNavigateTo={nav}/>}
                   {page==="reports"     && <Reports     items={activeSchool ? schoolItems : vItems} plan={plan} org={viewOrg} userId={org?.id || user?.id} userEmail={user?.email}/>}
                   {page==="funding"     && <FundingPage userId={org?.id || user?.id} org={viewOrg} plan={plan}/>}
-                  {page==="rentals"     && <RentalsPage userId={org?.id || user?.id} org={viewOrg} plan={plan} items={vItems}/>}
                   {page==="prop28"      && <Prop28Page  userId={org?.id || user?.id} org={viewOrg} onNav={nav}/>}
                   {page==="profile"     && <OrgProfilePage userId={org?.id || user?.id} org={org} setOrg={setOrg} plan={plan} items={items}/>}
               {page==="settings"    && <Settings    org={org} setOrg={setOrg} onSeed={seed} user={user} userId={org?.id || user?.id} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
