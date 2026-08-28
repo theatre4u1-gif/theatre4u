@@ -111,6 +111,10 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
   const [rentalTerms, setRentalTerms] = useState("");  // subscriber's saved terms (empty = use default)
   const [showTerms, setShowTerms]     = useState(false);
   const [termsDraft, setTermsDraft]   = useState("");
+  const [returnScan, setReturnScan]   = useState(false);  // camera scan-to-return mode
+  const [showAmounts, setShowAmounts] = useState(false);
+  const [amtDeposit, setAmtDeposit]   = useState("");
+  const [amtTotal, setAmtTotal]       = useState("");
   const [filter, setFilter]   = useState("open");    // open | closed | all
   const [msg, setMsg]         = useState("");
   const flash = m => { setMsg(m); setTimeout(() => setMsg(""), 3200); };
@@ -193,6 +197,34 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
     }
     if (!it) { flash("❌ No item found for " + c); return; }
     await addLine(it);
+  };
+
+  // Scan or type a code to mark a matching out item on this order as returned.
+  const resolveAndReturn = async (raw) => {
+    const c = codeFromScan(raw);
+    if (!c) return;
+    const lc = c.toLowerCase();
+    let line = lines.find(l => l.status !== "returned" && ((l.item_display_id && l.item_display_id.toLowerCase() === lc) || (l.item_id && l.item_id === c)));
+    if (!line) {
+      let it = null;
+      const q1 = await SB.from("items").select("id,display_id").eq("org_id", userId).eq("id", c).limit(1);
+      it = q1.data && q1.data[0];
+      if (!it) { const q2 = await SB.from("items").select("id,display_id").eq("org_id", userId).ilike("display_id", c).limit(1); it = q2.data && q2.data[0]; }
+      if (it) line = lines.find(l => l.status !== "returned" && l.item_id === it.id);
+    }
+    if (!line) { flash("❌ No out item on this order matches " + c); return; }
+    await setLineStatus(line, "returned");
+    flash("✓ Returned " + (line.item_name || "item"));
+  };
+
+  const saveAmounts = async () => {
+    const toCents = v => { const s = String(v).trim(); if (s === "") return null; const n = parseFloat(s); return isNaN(n) ? null : Math.round(n * 100); };
+    const { data, error } = await SB.from("rental_orders").update({ deposit_cents: toCents(amtDeposit), total_cents: toCents(amtTotal), updated_at: new Date().toISOString() }).eq("id", current.id).select().single();
+    if (error || !data) { flash("❌ Could not save amounts"); return; }
+    setCurrent(data);
+    setOrders(p => p.map(x => x.id === data.id ? data : x));
+    setShowAmounts(false);
+    flash("✓ Amounts saved");
   };
 
   const onCodeSubmit = async () => {
@@ -279,6 +311,9 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
           <td style="padding:2px 0"><strong>Contact:</strong> ${esc(current.customer_contact || "")}</td></tr>
           <tr><td style="padding:2px 0"><strong>Date out:</strong> ${esc(current.date_out || "")}</td>
           <td style="padding:2px 0"><strong>Due back:</strong> ${esc(current.due_date || "")}</td></tr>
+          ${(current.total_cents != null || current.deposit_cents != null) ? `<tr>
+          <td style="padding:2px 0">${current.total_cents != null ? `<strong>Rental total:</strong> $${(current.total_cents / 100).toFixed(2)}` : ""}</td>
+          <td style="padding:2px 0">${current.deposit_cents != null ? `<strong>Deposit:</strong> $${(current.deposit_cents / 100).toFixed(2)}` : ""}</td></tr>` : ""}
         </table>
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead><tr style="background:#f5f0e8">
@@ -356,6 +391,21 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <Flash />
         {scanning && <CameraScanner onCode={resolveAndAdd} onClose={() => setScanning(false)} />}
+        {returnScan && <CameraScanner onCode={resolveAndReturn} onClose={() => setReturnScan(false)} />}
+        {showAmounts && (
+          <div onClick={() => setShowAmounts(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 9200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 12, padding: 20, width: "100%", maxWidth: 400 }}>
+              <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 18, marginBottom: 12 }}>Order amounts</h3>
+              <div style={{ marginBottom: 10 }}><label style={lbl}>Rental total ($)</label><input style={inp} type="number" min="0" step="0.01" value={amtTotal} onChange={e => setAmtTotal(e.target.value)} placeholder="0.00" /></div>
+              <div style={{ marginBottom: 12 }}><label style={lbl}>Deposit ($)</label><input style={inp} type="number" min="0" step="0.01" value={amtDeposit} onChange={e => setAmtDeposit(e.target.value)} placeholder="0.00" /></div>
+              <div style={{ fontSize: 11, color: "var(--faint)", marginBottom: 12, lineHeight: 1.5 }}>Recorded for your agreement only. No payment is processed by the app.</div>
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button onClick={() => setShowAmounts(false)} className="btn btn-o" style={{ fontSize: 13 }}>Cancel</button>
+                <button onClick={saveAmounts} className="btn btn-g" style={{ fontSize: 13 }}>Save</button>
+              </div>
+            </div>
+          </div>
+        )}
         {browse && (
           <div onClick={() => setBrowse(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 9200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
             <div onClick={e => e.stopPropagation()} style={{ background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 12, padding: 18, width: "100%", maxWidth: 560, maxHeight: "86vh", display: "flex", flexDirection: "column" }}>
@@ -392,10 +442,13 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
               </div>
               <div style={{ fontSize: 12, color: "var(--faint)" }}>{current.customer_contact ? current.customer_contact + " · " : ""}{current.date_out ? "Out " + current.date_out : ""}{current.due_date ? " · Due " + current.due_date : ""}</div>
               <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>{lines.length} items · {outN} out · {retN} returned</div>
+              {(current.total_cents != null || current.deposit_cents != null) && <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{current.total_cents != null ? "Total $" + (current.total_cents / 100).toFixed(2) : ""}{current.total_cents != null && current.deposit_cents != null ? " · " : ""}{current.deposit_cents != null ? "Deposit $" + (current.deposit_cents / 100).toFixed(2) : ""}</div>}
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               <button onClick={printOrder} className="btn btn-o btn-sm" style={{ fontSize: 11 }}>🖨 Print</button>
+              <button onClick={() => { setAmtDeposit(current.deposit_cents != null ? (current.deposit_cents / 100).toString() : ""); setAmtTotal(current.total_cents != null ? (current.total_cents / 100).toString() : ""); setShowAmounts(true); }} className="btn btn-o btn-sm" style={{ fontSize: 11 }}>💵 Amounts</button>
               <button onClick={inviteCustomer} className="btn btn-o btn-sm" style={{ fontSize: 11 }}>✉️ Invite customer</button>
+              {outN > 0 && <button onClick={() => setReturnScan(true)} className="btn btn-o btn-sm" style={{ fontSize: 11 }}>📷 Scan to return</button>}
               {outN > 0 && <button onClick={returnAll} className="btn btn-o btn-sm" style={{ fontSize: 11 }}>Return all</button>}
               {current.status === "closed"
                 ? <button onClick={() => setOrderStatus(current, "open")} className="btn btn-o btn-sm" style={{ fontSize: 11 }}>Reopen</button>
@@ -453,6 +506,7 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
   }
 
   // ── LIST VIEW ──
+  const today = new Date().toISOString().slice(0, 10);
   const shown = orders.filter(o => filter === "all" ? true : filter === "closed" ? o.status === "closed" : o.status !== "closed");
   return (
     <div style={{ maxWidth: 900, margin: "0 auto" }}>
@@ -482,6 +536,7 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span style={{ fontWeight: 700, fontSize: 15 }}>{o.customer_name}</span>
               <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: o.status === "closed" ? "rgba(120,120,120,.15)" : "rgba(212,168,67,.15)", color: o.status === "closed" ? "var(--muted)" : "var(--gold)" }}>{o.status === "closed" ? "Closed" : "Open"}</span>
+              {o.status !== "closed" && o.due_date && o.due_date < today && <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: "rgba(229,57,53,.15)", color: "var(--red)" }}>Overdue</span>}
             </div>
             <div style={{ fontSize: 12, color: "var(--faint)", marginTop: 2 }}>{o.date_out ? "Out " + o.date_out : ""}{o.due_date ? " · Due " + o.due_date : ""}</div>
           </div>
