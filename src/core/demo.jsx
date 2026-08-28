@@ -84,7 +84,8 @@ function createDemoStore() {
         chain._filters.push(r => val === null ? (r[col] == null) : r[col] === val);
         return chain;
       },
-      single: () => { chain._single = true; return chain; },
+      single:      () => { chain._single = true; return chain; },
+      maybeSingle: () => { chain._single = true; return chain; },
 
       insert: (data) => {
         const rows = Array.isArray(data) ? data : [data];
