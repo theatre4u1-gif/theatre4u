@@ -19,7 +19,7 @@ import { ExternalLoans } from "./external-loans.jsx";
 import { RentalsPage } from "./rentals.jsx";
 import { UpgradePrompt } from "./billing.jsx";
 
-export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null, enableLoans=false, onImported=null}){
+export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null, enableLoans=false, onImported=null, onItemSync=null}){
     const[upgradeReason,setUpgradeReason]=useState(null);
   const[pendingMsg,setPendingMsg]=useState("");
   const vVertical=org?.vertical||"theatre";
@@ -314,7 +314,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
     {enableLoans&&invView==="loans" ? (
       <div style={{padding:"8px 0 56px"}}><ExternalLoans userId={userId} org={org} items={items}/></div>
     ) : enableLoans&&invView==="rentals" ? (
-      <div style={{padding:"8px 0 56px"}}><RentalsPage userId={userId} org={org} plan={plan} items={items}/></div>
+      <div style={{padding:"8px 0 56px"}}><RentalsPage userId={userId} org={org} plan={plan} items={items} onItemSync={onItemSync}/></div>
     ) : (<>
     {upgradeReason&&<UpgradePrompt reason={upgradeReason} onClose={()=>setUpgradeReason(null)} userId={userId} userEmail={org?.email}/>}
     {locFilter!=="all"&&locFilterName&&(

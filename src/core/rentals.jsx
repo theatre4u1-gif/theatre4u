@@ -91,7 +91,7 @@ function CameraScanner({ onCode, onClose }) {
   );
 }
 
-export function RentalsPage({ userId, org, plan = "free", items = [] }) {
+export function RentalsPage({ userId, org, plan = "free", items = [], onItemSync }) {
   const [orders, setOrders]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [view, setView]       = useState("list");   // list | detail
@@ -168,7 +168,8 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
   // never clobbers a status the subscriber set by hand (In Use, Being Repaired, etc). ──
   const markItemOut = async (itemId) => {
     if (!itemId) return;
-    await SB.from("items").update({ avail: "Checked Out" }).eq("org_id", userId).eq("id", itemId).eq("avail", "In Stock");
+    const { data } = await SB.from("items").update({ avail: "Checked Out" }).eq("org_id", userId).eq("id", itemId).eq("avail", "In Stock").select("id");
+    if (data && data.length && onItemSync) onItemSync(itemId, "Checked Out"); // keep the inventory list live
   };
   // Free an item back to In Stock, but only if it is not still out on another open order.
   const markItemInIfClear = async (itemId, excludeOrderId) => {
@@ -179,7 +180,8 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
       const { data: openOnes } = await SB.from("rental_orders").select("id").in("id", otherIds).neq("status", "closed");
       if (openOnes && openOnes.length) return; // still out on another open order — leave as Checked Out
     }
-    await SB.from("items").update({ avail: "In Stock" }).eq("org_id", userId).eq("id", itemId).eq("avail", "Checked Out");
+    const { data } = await SB.from("items").update({ avail: "In Stock" }).eq("org_id", userId).eq("id", itemId).eq("avail", "Checked Out").select("id");
+    if (data && data.length && onItemSync) onItemSync(itemId, "In Stock");
   };
 
   const addLine = async (item) => {
