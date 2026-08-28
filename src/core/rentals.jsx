@@ -97,6 +97,8 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
   const [scanning, setScanning] = useState(false);
   const [codeInput, setCodeInput] = useState("");
   const [search, setSearch]   = useState("");
+  const [browse, setBrowse]   = useState(false);     // browse-inventory picker modal
+  const [browseQ, setBrowseQ] = useState("");
   const [filter, setFilter]   = useState("open");    // open | closed | all
   const [msg, setMsg]         = useState("");
   const flash = m => { setMsg(m); setTimeout(() => setMsg(""), 3200); };
@@ -297,6 +299,30 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <Flash />
         {scanning && <CameraScanner onCode={resolveAndAdd} onClose={() => setScanning(false)} />}
+        {browse && (
+          <div onClick={() => setBrowse(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 9200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 12, padding: 18, width: "100%", maxWidth: 560, maxHeight: "86vh", display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 18 }}>Add from inventory</h3>
+                <button onClick={() => setBrowse(false)} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "var(--muted)", lineHeight: 1 }}>×</button>
+              </div>
+              <input style={inp} value={browseQ} onChange={e => setBrowseQ(e.target.value)} placeholder="Filter by name, ID, or category" autoFocus />
+              <div style={{ marginTop: 10, overflowY: "auto", flex: 1 }}>
+                {(items || []).filter(it => { const q = browseQ.trim().toLowerCase(); return !q || (it.name || "").toLowerCase().includes(q) || (it.display_id || "").toLowerCase().includes(q) || (it.category || "").toLowerCase().includes(q); }).slice(0, 300).map(it => (
+                  <div key={it.id} onClick={() => addLine(it)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 8px", borderBottom: "1px solid var(--border)", cursor: "pointer" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>{it.name}</div>
+                      <div style={{ fontSize: 11, color: "var(--faint)" }}>{[it.display_id, it.category, it.location].filter(Boolean).join(" · ")}</div>
+                    </div>
+                    <span className="btn btn-g btn-sm" style={{ fontSize: 11, pointerEvents: "none" }}>＋ Add</span>
+                  </div>
+                ))}
+                {(items || []).length === 0 && <div style={{ textAlign: "center", padding: 30, color: "var(--faint)", fontSize: 13 }}>No items in your inventory yet.</div>}
+              </div>
+              <div style={{ marginTop: 12, textAlign: "right" }}><button onClick={() => setBrowse(false)} className="btn btn-g" style={{ fontSize: 13 }}>Done</button></div>
+            </div>
+          </div>
+        )}
 
         <button onClick={() => { setView("list"); setCurrent(null); }} className="btn btn-o btn-sm" style={{ fontSize: 12, marginBottom: 14 }}>← All orders</button>
 
@@ -327,6 +353,7 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
           <div style={lbl}>Add items to this order</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
             <button onClick={() => setScanning(true)} className="btn btn-g" style={{ fontSize: 13 }}>📷 Scan with camera</button>
+            <button onClick={() => { setBrowse(true); setBrowseQ(""); }} className="btn btn-o" style={{ fontSize: 13 }}>📦 Browse inventory</button>
             <div style={{ flex: 1, minWidth: 200, display: "flex", gap: 6 }}>
               <input style={inp} value={codeInput} onChange={e => setCodeInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter") onCodeSubmit(); }} placeholder="Scan or type an item code, then Enter" />
               <button onClick={onCodeSubmit} className="btn btn-o btn-sm" style={{ fontSize: 12 }}>Add</button>
