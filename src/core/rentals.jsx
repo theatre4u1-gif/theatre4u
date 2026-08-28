@@ -12,7 +12,7 @@ import { DEFAULT_RENTAL_TERMS as DEFAULT_TERMS, platformNotice } from "./agreeme
 
 // Pull a code out of a scanned value. QR codes encode a URL like
 // theatre4u.org/#/item/OVHS-PROP-042, so grab the segment after /item/.
-function codeFromScan(raw) {
+export function codeFromScan(raw) {
   const s = (raw || "").trim();
   const m = s.match(/\/item\/([^/?#]+)/i);
   return m ? decodeURIComponent(m[1]) : s;
@@ -22,7 +22,7 @@ function codeFromScan(raw) {
 // Rental Checkout and Borrowed & Lent stay identical.
 
 // ── Live camera scanner (progressive enhancement) ──────────────────────────────
-function CameraScanner({ onCode, onClose }) {
+export function CameraScanner({ onCode, onClose }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [err, setErr] = useState(false);

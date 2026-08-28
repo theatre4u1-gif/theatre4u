@@ -6,6 +6,7 @@ import { APP_NAME } from "./config.js";
 import { doorUrl } from "./helpers.js";
 import { SB } from "./supabase.js";
 import { DEFAULT_LOAN_TERMS, platformNotice } from "./agreements.js";
+import { CameraScanner, codeFromScan } from "./rentals.jsx";
 
 export function ExternalLoans({ userId, org, items=[] }){
   const [loans,   setLoans]   = useState([]);
@@ -17,6 +18,9 @@ export function ExternalLoans({ userId, org, items=[] }){
   const [loanTerms, setLoanTerms] = useState("");   // subscriber's saved terms (empty = use default)
   const [showTerms, setShowTerms] = useState(false);
   const [termsDraft, setTermsDraft] = useState("");
+  const [pickBrowse, setPickBrowse] = useState(false); // choose the item from inventory
+  const [pickQ,      setPickQ]      = useState("");
+  const [pickScan,   setPickScan]   = useState(false); // scan an item's QR with the phone camera
   const [msg,     setMsg]     = useState("");
   const flash = m => { setMsg(m); setTimeout(()=>setMsg(""),3500); };
 
@@ -40,6 +44,17 @@ export function ExternalLoans({ userId, org, items=[] }){
     const { error } = await SB.from("orgs").update({ loan_terms: t || null }).eq("id",userId);
     if(error){ flash("❌ Could not save terms"); return; }
     setLoanTerms(t); setShowTerms(false); flash("✓ Loan terms saved");
+  };
+
+  // Pick the item straight from your inventory (like rentals) instead of typing it.
+  const pickItem = (it) => { setForm(f=>({...f, item_name: it.name })); setPickBrowse(false); };
+  const resolveScan = async (raw) => {
+    const c = codeFromScan(raw); if(!c) return;
+    let it = null;
+    const q1 = await SB.from("items").select("id,name,display_id").eq("org_id",userId).eq("id",c).limit(1); it = q1.data && q1.data[0];
+    if(!it){ const q2 = await SB.from("items").select("id,name,display_id").eq("org_id",userId).ilike("display_id",c).limit(1); it = q2.data && q2.data[0]; }
+    if(!it){ flash("❌ No item found for "+c); return; }
+    setForm(f=>({...f, item_name: it.name })); setPickScan(false); flash("✓ Selected "+it.name);
   };
 
   const openAdd  = (dir="out") => { setActive(null); setForm({...blank, direction:dir}); setModal("add"); };
@@ -263,7 +278,11 @@ export function ExternalLoans({ userId, org, items=[] }){
             <div style={row2}>
               <div>
                 <label style={label}>Item</label>
-                <input style={inp} list="t4u-my-items" value={form.item_name} onChange={e=>setForm(f=>({...f,item_name:e.target.value}))} placeholder="e.g. Victorian dress"/>
+                <div style={{display:"flex",gap:6,marginBottom:6,flexWrap:"wrap"}}>
+                  <button type="button" onClick={()=>{setPickBrowse(true);setPickQ("");}} className="btn btn-o btn-sm" style={{fontSize:11}}>📦 Choose from inventory</button>
+                  <button type="button" onClick={()=>setPickScan(true)} className="btn btn-o btn-sm" style={{fontSize:11}}>📷 Scan</button>
+                </div>
+                <input style={inp} list="t4u-my-items" value={form.item_name} onChange={e=>setForm(f=>({...f,item_name:e.target.value}))} placeholder="Pick from inventory, scan, or type"/>
                 <datalist id="t4u-my-items">{(items||[]).slice(0,300).map(it=><option key={it.id} value={it.name}/>)}</datalist>
               </div>
               <div>
@@ -288,6 +307,32 @@ export function ExternalLoans({ userId, org, items=[] }){
             <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
               <button onClick={()=>{setModal(null);setActive(null);}} className="btn btn-o" style={{fontSize:13}}>Cancel</button>
               <button onClick={save} disabled={saving} className="btn btn-g" style={{fontSize:13}}>{saving?"Saving…":active?"Save changes":"Add"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pickScan && <CameraScanner onCode={resolveScan} onClose={()=>setPickScan(false)} />}
+
+      {pickBrowse && (
+        <div onClick={()=>setPickBrowse(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:9600,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"var(--cream)",border:"1px solid var(--border)",borderRadius:12,padding:18,width:"100%",maxWidth:560,maxHeight:"86vh",display:"flex",flexDirection:"column"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+              <h3 style={{fontFamily:"'Playfair Display',serif",fontSize:18}}>Choose from inventory</h3>
+              <button onClick={()=>setPickBrowse(false)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"var(--muted)",lineHeight:1}}>×</button>
+            </div>
+            <input style={inp} value={pickQ} onChange={e=>setPickQ(e.target.value)} placeholder="Filter by name, ID, or category" autoFocus/>
+            <div style={{marginTop:10,overflowY:"auto",flex:1}}>
+              {(items||[]).filter(it=>{ const q=pickQ.trim().toLowerCase(); return !q || (it.name||"").toLowerCase().includes(q) || (it.display_id||"").toLowerCase().includes(q) || (it.category||"").toLowerCase().includes(q); }).slice(0,300).map(it=>(
+                <div key={it.id} onClick={()=>pickItem(it)} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 8px",borderBottom:"1px solid var(--border)",cursor:"pointer"}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:600,fontSize:14}}>{it.name}</div>
+                    <div style={{fontSize:11,color:"var(--faint)"}}>{[it.display_id,it.category,it.location].filter(Boolean).join(" · ")}</div>
+                  </div>
+                  <span className="btn btn-g btn-sm" style={{fontSize:11,pointerEvents:"none"}}>Select</span>
+                </div>
+              ))}
+              {(items||[]).length===0 && <div style={{textAlign:"center",padding:30,color:"var(--faint)",fontSize:13}}>No items in your inventory yet.</div>}
             </div>
           </div>
         </div>

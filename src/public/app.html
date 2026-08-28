@@ -1540,6 +1540,7 @@ function LoansMobile({userId, org, items=[], flash}){
   const [active,setActive]=useState(null);
   const [tab,setTab]=useState("active");
   const [loanTerms,setLoanTerms]=useState(""); const [showTerms,setShowTerms]=useState(false); const [termsDraft,setTermsDraft]=useState("");
+  const [pickBrowse,setPickBrowse]=useState(false); const [pickQ,setPickQ]=useState(""); const [pickScan,setPickScan]=useState(false);
   const blank={direction:"out",counterparty_name:"",counterparty_contact:"",item_name:"",quantity:1,date_out:new Date().toISOString().slice(0,10),due_date:"",notes:""};
   const [form,setForm]=useState(blank);
   const today=new Date().toISOString().slice(0,10);
@@ -1561,6 +1562,8 @@ function LoansMobile({userId, org, items=[], flash}){
   const remove=async(l)=>{ if(!confirm("Delete this record?"))return; await SB.from("external_loans").delete().eq("id",l.id); setLoans(p=>p.filter(x=>x.id!==l.id)); flash("Deleted"); };
   const invite=(l)=>{ const brand=APP_NAME.replace("™",""); const subject=encodeURIComponent("Join us on "+brand); const body=encodeURIComponent("Hi "+l.counterparty_name+",\n\nWe use "+APP_NAME+" to track our program's inventory and to borrow, lend, and rent items with other programs. It would make sharing between us much easier if you joined too, it is free to start.\n\nYou can sign up here: "+BRAND_URL+"\n\nThanks!\n"+((org&&org.name)||"")); const to=(l.counterparty_contact&&l.counterparty_contact.includes("@"))?l.counterparty_contact:""; window.location.href="mailto:"+to+"?subject="+subject+"&body="+body; };
   const saveTerms=async()=>{ const t=termsDraft.trim(); const {error}=await SB.from("orgs").update({loan_terms:t||null}).eq("id",userId); if(error){flash("Could not save terms","err");return;} setLoanTerms(t); setShowTerms(false); flash("Loan terms saved"); };
+  const pickItem=(it)=>{ setForm(f=>({...f,item_name:it.name})); setPickBrowse(false); };
+  const resolveScan=async(raw)=>{ const c=codeFromScan(raw); if(!c)return; let it=null; const q1=await SB.from("items").select("id,name,display_id").eq("org_id",userId).eq("id",c).limit(1); it=q1.data&&q1.data[0]; if(!it){const q2=await SB.from("items").select("id,name,display_id").eq("org_id",userId).ilike("display_id",c).limit(1);it=q2.data&&q2.data[0];} if(!it){flash("No item found for "+c,"err");return;} setForm(f=>({...f,item_name:it.name})); setPickScan(false); flash("Selected "+it.name); };
   const printLoan=(l)=>{ const brand=APP_NAME.replace("™",""); const bizName=(org&&org.name)||brand; const bizContact=[org&&org.email,org&&org.phone,org&&org.location].filter(Boolean).map(escHTML).join(" &middot; "); const out=l.direction==="out"; const lender=out?escHTML(bizName):escHTML(l.counterparty_name); const borrower=out?escHTML(l.counterparty_name):escHTML(bizName); const rows="<thead><tr style='background:#f5f0e8'><th style='text-align:left;padding:6px 8px'>Item</th><th style='text-align:left;padding:6px 8px'>Qty</th><th style='text-align:left;padding:6px 8px'>Status</th></tr></thead><tbody><tr><td style='padding:6px 8px;border-bottom:1px solid #ddd'>"+escHTML(l.item_name)+"</td><td style='padding:6px 8px;border-bottom:1px solid #ddd'>"+(l.quantity||1)+"</td><td style='padding:6px 8px;border-bottom:1px solid #ddd'>"+(l.returned?"Returned":"Out")+"</td></tr></tbody>"; const meta="<tr><td style='padding:2px 0'><strong>Lender:</strong> "+lender+"</td><td style='padding:2px 0'><strong>Borrower:</strong> "+borrower+"</td></tr><tr><td style='padding:2px 0'><strong>Contact:</strong> "+escHTML(l.counterparty_contact||"")+"</td><td style='padding:2px 0'></td></tr><tr><td style='padding:2px 0'><strong>Date out:</strong> "+escHTML(l.date_out||"")+"</td><td style='padding:2px 0'><strong>Due back:</strong> "+escHTML(l.due_date||"")+"</td></tr>"; printHTML(agreementHTML({title:"Loan Agreement",bizName,bizContact,rows,meta,notes:l.notes,terms:loanTerms||DEFAULT_LOAN_TERMS,sigLeft:"Borrower signature",sigRight:"Lender signature",brand})); };
 
   const sheet=(title,onClose,body)=>h("div",{className:"sheet-overlay",style:{zIndex:1250},onClick:onClose},
@@ -1624,10 +1627,15 @@ function LoansMobile({userId, org, items=[], flash}){
       )),
       h("div",{className:"fg"},h("label",{className:"fl"},form.direction==="out"?"Lent to (organization or person)":"Borrowed from (organization or person)"),h("input",{className:"fi",value:form.counterparty_name,onChange:e=>setForm(f=>({...f,counterparty_name:e.target.value})),placeholder:"e.g. August Wilson Community Theatre"})),
       h("div",{className:"fg"},h("label",{className:"fl"},"Their email or phone (optional)"),h("input",{className:"fi",value:form.counterparty_contact,onChange:e=>setForm(f=>({...f,counterparty_contact:e.target.value})),placeholder:"name@example.com"})),
-      h("div",{style:{display:"grid",gridTemplateColumns:"2fr 1fr",gap:10}},
-        h("div",{className:"fg"},h("label",{className:"fl"},"Item"),h("input",{className:"fi",list:"t4u-mob-items",value:form.item_name,onChange:e=>setForm(f=>({...f,item_name:e.target.value})),placeholder:"e.g. Victorian dress"}),h("datalist",{id:"t4u-mob-items"},(items||[]).slice(0,300).map(it=>h("option",{key:it.id,value:it.name})))),
-        h("div",{className:"fg"},h("label",{className:"fl"},"Qty"),h("input",{className:"fi",type:"number",inputMode:"numeric",min:"1",value:form.quantity,onChange:e=>setForm(f=>({...f,quantity:e.target.value}))}))
+      h("div",{className:"fg"},h("label",{className:"fl"},"Item"),
+        h("div",{style:{display:"flex",gap:6,marginBottom:6}},
+          h("button",{type:"button",className:"btn btn-ghost btn-sm",style:{flex:1},onClick:()=>{setPickBrowse(true);setPickQ("");}},"📦 Browse inventory"),
+          h("button",{type:"button",className:"btn btn-ghost btn-sm",style:{flex:1},onClick:()=>setPickScan(true)},"📷 Scan")
+        ),
+        h("input",{className:"fi",list:"t4u-mob-items",value:form.item_name,onChange:e=>setForm(f=>({...f,item_name:e.target.value})),placeholder:"Pick from inventory, scan, or type"}),
+        h("datalist",{id:"t4u-mob-items"},(items||[]).slice(0,300).map(it=>h("option",{key:it.id,value:it.name})))
       ),
+      h("div",{className:"fg"},h("label",{className:"fl"},"Quantity"),h("input",{className:"fi",type:"number",inputMode:"numeric",min:"1",value:form.quantity,onChange:e=>setForm(f=>({...f,quantity:e.target.value}))})),
       h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
         h("div",{className:"fg"},h("label",{className:"fl"},"Date out"),h("input",{className:"fi",type:"date",value:form.date_out,onChange:e=>setForm(f=>({...f,date_out:e.target.value}))})),
         h("div",{className:"fg"},h("label",{className:"fl"},"Due back"),h("input",{className:"fi",type:"date",value:form.due_date,onChange:e=>setForm(f=>({...f,due_date:e.target.value}))}))
@@ -1641,6 +1649,14 @@ function LoansMobile({userId, org, items=[], flash}){
       h("div",{style:{display:"flex",gap:8,marginTop:12}},
         h("button",{className:"btn btn-ghost btn-sm",onClick:()=>setTermsDraft(DEFAULT_LOAN_TERMS)},"Reset"),
         h("button",{className:"btn btn-gold btn-sm",style:{flex:1},onClick:saveTerms},"Save terms")
+      )
+    )),
+    pickScan&&h(MobileScanner,{onCode:resolveScan,onClose:()=>setPickScan(false),label:"Scan an item to select"}),
+    pickBrowse&&sheet("Choose from inventory",()=>setPickBrowse(false),h("div",null,
+      h("input",{className:"fi",value:pickQ,onChange:e=>setPickQ(e.target.value),placeholder:"Filter by name, ID, or category",autoFocus:true}),
+      h("div",{style:{marginTop:10,maxHeight:"52vh",overflowY:"auto"}},
+        (items||[]).filter(it=>{const q=pickQ.trim().toLowerCase();return !q||(it.name||"").toLowerCase().includes(q)||(it.display_id||"").toLowerCase().includes(q)||(it.category||"").toLowerCase().includes(q);}).slice(0,300).map(it=>h("div",{key:it.id,onClick:()=>pickItem(it),className:"item-row"},h("div",{className:"item-info"},h("div",{className:"item-name"},it.name),h("div",{className:"item-sub"},[it.display_id,it.category,it.location].filter(Boolean).join(" · "))),h("span",{className:"btn btn-gold btn-sm",style:{pointerEvents:"none"}},"Select"))),
+        ((items||[]).length===0)?h("div",{style:{textAlign:"center",padding:24,color:"var(--muted)",fontSize:13}},"No items in your inventory yet."):null
       )
     ))
   );
