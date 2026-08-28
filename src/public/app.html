@@ -467,6 +467,106 @@ const Ic = {
   loc:    (s=24)=>h("svg",{width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2"},h("path",{d:"M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"}),h("circle",{cx:"12",cy:"10",r:"3"})),
 };
 
+// ── Rentals / Borrowed & Lent shared helpers (mirror src/core/agreements.js + rentals.jsx) ──
+function codeFromScan(raw){ const s=(raw||"").trim(); const m=s.match(/\/item\/([^/?#]+)/i); return m?decodeURIComponent(m[1]):s; }
+function escHTML(s){ return String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+const DEFAULT_RENTAL_TERMS =
+  "1. The renter is responsible for every item listed above from the time it leaves until it is returned.\n"+
+  "2. Items are due back by the date shown. Late returns may be charged a late fee.\n"+
+  "3. The renter agrees to return all items in the same condition, and to pay for cleaning, repair, or replacement of any item returned damaged, altered, or not at all.\n"+
+  "4. A security deposit may be required and is returned once all items come back in good condition.\n"+
+  "5. Items may not be resold, sublet, or loaned to anyone else without written permission.\n"+
+  "6. By signing below, the renter agrees to these terms.";
+const DEFAULT_LOAN_TERMS =
+  "1. The item(s) above remain the property of the lender and are shared as a courtesy.\n"+
+  "2. Items are due back by the date shown. Please return them on time so others can use them.\n"+
+  "3. The borrower agrees to return items in the same condition, and to pay for cleaning, repair, or replacement of any item that is lost or returned damaged.\n"+
+  "4. Items may not be resold, sublet, or loaned to anyone else without the lender's permission.\n"+
+  "5. By signing below, the borrower agrees to these terms.";
+function platformNotice(bizName, brand){ return "This agreement is solely between "+bizName+" and the other party named above. "+brand+" (a product of Artstracker LLC) provides inventory software only. It is not a party to this agreement, makes no warranties about any item, and is not responsible for the condition, use, return, loss, or damage of any item or for any dispute between the parties. All responsibility for this agreement rests with the parties named above."; }
+
+// Print via a hidden iframe — works in mobile Safari, Chrome, and installed PWAs where window.open is blocked.
+function printHTML(html){
+  const ifr=document.createElement("iframe");
+  ifr.setAttribute("aria-hidden","true");
+  ifr.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0";
+  document.body.appendChild(ifr);
+  const go=()=>{ try{ ifr.contentWindow.focus(); ifr.contentWindow.print(); }catch(_){} };
+  const d=ifr.contentWindow.document; d.open(); d.write(html); d.close();
+  ifr.onload=()=>setTimeout(go,300);
+  setTimeout(go,700);
+  setTimeout(()=>{ try{ ifr.remove(); }catch(_){} },60000);
+}
+
+// Build the printable agreement HTML shared by rentals and loans.
+function agreementHTML({title, bizName, bizContact, rows, meta, notes, terms, sigLeft, sigRight, brand}){
+  const bn=escHTML(bizName);
+  return "<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>"+escHTML(title)+"</title></head>"+
+    "<body style='font-family:Arial,Helvetica,sans-serif;color:#1a0f00;max-width:720px;margin:24px auto;padding:0 16px'>"+
+    "<div style='display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #d4a843;padding-bottom:10px;margin-bottom:16px'>"+
+      "<div><div style='font-size:22px;font-weight:700'>"+bn+"</div>"+
+      (bizContact?"<div style='font-size:12px;color:#666;margin-top:2px'>"+bizContact+"</div>":"")+
+      "<div style='font-size:13px;font-weight:700;color:#8b6914;margin-top:6px'>"+escHTML(title)+"</div></div>"+
+      "<div style='text-align:right;font-size:12px;color:#666'>Date "+new Date().toLocaleDateString()+"</div></div>"+
+    "<table style='width:100%;font-size:13px;margin-bottom:16px'>"+meta+"</table>"+
+    "<table style='width:100%;border-collapse:collapse;font-size:13px'>"+rows+"</table>"+
+    (notes?"<p style='font-size:12px;color:#555;margin-top:8px'>Notes: "+escHTML(notes)+"</p>":"")+
+    "<div style='margin-top:20px;border-top:1px solid #eee;padding-top:14px'><div style='font-size:13px;font-weight:700;margin-bottom:6px'>Terms and Conditions</div>"+
+      "<div style='font-size:12px;color:#333;line-height:1.6'>"+escHTML(terms).replace(/\n/g,"<br>")+"</div></div>"+
+    "<table style='width:100%;font-size:12px;margin-top:34px'><tr>"+
+      "<td style='width:50%;padding-right:20px'><div style='border-top:1px solid #333;padding-top:4px'>"+escHTML(sigLeft)+"</div></td>"+
+      "<td style='width:50%'><div style='border-top:1px solid #333;padding-top:4px'>Date</div></td></tr>"+
+      "<tr><td style='padding-top:26px;padding-right:20px'><div style='border-top:1px solid #333;padding-top:4px'>"+escHTML(sigRight)+"</div></td>"+
+      "<td style='padding-top:26px'><div style='border-top:1px solid #333;padding-top:4px'>Date</div></td></tr></table>"+
+    "<p style='font-size:10px;color:#999;margin-top:26px;border-top:1px solid #eee;padding-top:10px;line-height:1.6'>"+escHTML(platformNotice(bizName, brand))+"</p>"+
+    "</body></html>";
+}
+
+// Live QR scanner (progressive enhancement via BarcodeDetector). Full-screen overlay.
+function MobileScanner({onCode, onClose, label}){
+  const videoRef=useRef(null), streamRef=useRef(null), lastRef=useRef({code:"",at:0});
+  const [err,setErr]=useState(false);
+  useEffect(()=>{
+    let active=true, raf=0, detector=null;
+    const stop=()=>{ const s=streamRef.current; if(s){s.getTracks().forEach(t=>t.stop());streamRef.current=null;} if(raf)cancelAnimationFrame(raf); };
+    (async()=>{
+      try{
+        if(!("BarcodeDetector" in window) || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ setErr(true); return; }
+        detector=new window.BarcodeDetector({formats:["qr_code"]});
+        const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
+        if(!active){ s.getTracks().forEach(t=>t.stop()); return; }
+        streamRef.current=s; const v=videoRef.current; if(v){ v.srcObject=s; await v.play().catch(()=>{}); }
+        const tick=async()=>{
+          if(!active) return;
+          try{ if(v&&v.videoWidth){ const codes=await detector.detect(v); if(codes&&codes.length){ const raw=codes[0].rawValue||""; const now=Date.now(); if(raw && !(raw===lastRef.current.code && now-lastRef.current.at<1500)){ lastRef.current={code:raw,at:now}; onCode(raw); } } } }catch(_){}
+          raf=requestAnimationFrame(tick);
+        };
+        raf=requestAnimationFrame(tick);
+      }catch(_){ setErr(true); }
+    })();
+    return ()=>{ active=false; stop(); };
+  },[onCode]);
+  const ov={position:"fixed",inset:0,zIndex:1300,background:"#000",display:"flex",flexDirection:"column"};
+  if(err) return h("div",{style:ov},
+    h("div",{style:{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",color:"#fff",padding:24,textAlign:"center",gap:12}},
+      h("div",{style:{fontSize:16,fontWeight:700}},"Camera scanning not available"),
+      h("div",{style:{fontSize:13,opacity:.8,maxWidth:280,lineHeight:1.5}},"This device does not support live QR scanning. You can type or use a handheld scanner in the code box, or search by name."),
+      h("button",{className:"btn btn-gold",style:{marginTop:8},onClick:onClose},"Got it")
+    )
+  );
+  return h("div",{style:ov},
+    h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"calc(var(--safe-top) + 14px) 16px 14px",color:"#fff"}},
+      h("span",{style:{fontSize:14,fontWeight:700}},label||"Point at a QR label"),
+      h("button",{style:{background:"none",border:"none",color:"#fff",cursor:"pointer"},onClick:onClose},Ic.x(24))
+    ),
+    h("div",{style:{flex:1,position:"relative",overflow:"hidden"}},
+      h("video",{ref:videoRef,autoPlay:true,playsInline:true,muted:true,style:{width:"100%",height:"100%",objectFit:"cover"}}),
+      h("div",{style:{position:"absolute",left:"12%",right:"12%",top:"24%",bottom:"24%",border:"2px solid rgba(212,168,67,.85)",borderRadius:12}})
+    ),
+    h("div",{style:{padding:"14px 20px calc(var(--safe-bot) + 24px)",textAlign:"center",color:"#bbb",fontSize:12,background:"#111"}},"Each scan is added instantly. Tap × when done.")
+  );
+}
+
 // ── Toast ─────────────────────────────────────────────────────────────────────
 function useToast() {
   const [toast, setToast] = useState(null);
@@ -1253,11 +1353,306 @@ function HomeTab({items, org, pointBalance=0, onAddItem, onViewItem}) {
 }
 
 // ── ══════════════════════════════════════════
+// ── RENTALS (mobile) — mirrors src/core/rentals.jsx
+// ── ══════════════════════════════════════════
+function RentalsMobile({userId, org, items=[], flash, onItemSync}){
+  const [orders,setOrders]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [current,setCurrent]=useState(null);
+  const [lines,setLines]=useState([]);
+  const [filter,setFilter]=useState("open");
+  const [rentalTerms,setRentalTerms]=useState("");
+  const [showNew,setShowNew]=useState(false);
+  const [showTerms,setShowTerms]=useState(false); const [termsDraft,setTermsDraft]=useState("");
+  const [showAmounts,setShowAmounts]=useState(false); const [amtTotal,setAmtTotal]=useState(""); const [amtDeposit,setAmtDeposit]=useState("");
+  const [browse,setBrowse]=useState(false); const [browseQ,setBrowseQ]=useState("");
+  const [scanning,setScanning]=useState(false); const [returnScan,setReturnScan]=useState(false);
+  const [codeInput,setCodeInput]=useState(""); const [search,setSearch]=useState("");
+  const blank={customer_name:"",customer_contact:"",date_out:new Date().toISOString().slice(0,10),due_date:"",notes:""};
+  const [form,setForm]=useState(blank);
+  const today=new Date().toISOString().slice(0,10);
+
+  useEffect(()=>{ if(!userId){setLoading(false);return;} (async()=>{
+    setLoading(true);
+    const {data}=await SB.from("rental_orders").select("*").eq("org_id",userId).order("created_at",{ascending:false});
+    setOrders(data||[]);
+    const {data:o}=await SB.from("orgs").select("rental_terms").eq("id",userId).maybeSingle();
+    setRentalTerms((o&&o.rental_terms)||"");
+    setLoading(false);
+  })(); },[userId]);
+
+  const loadLines=async(orderId)=>{ const {data}=await SB.from("rental_order_items").select("*").eq("order_id",orderId).order("created_at",{ascending:true}); setLines(data||[]); };
+  const openOrder=async(o)=>{ setCurrent(o); setCodeInput(""); setSearch(""); await loadLines(o.id); };
+
+  const markItemOut=async(itemId)=>{ if(!itemId)return; const {data}=await SB.from("items").update({avail:"Checked Out"}).eq("org_id",userId).eq("id",itemId).eq("avail","In Stock").select("id"); if(data&&data.length&&onItemSync)onItemSync(itemId,"Checked Out"); };
+  const markItemInIfClear=async(itemId,excludeOrderId)=>{ if(!itemId)return; const {data:outLines}=await SB.from("rental_order_items").select("order_id").eq("org_id",userId).eq("item_id",itemId).eq("status","out"); const otherIds=[...new Set((outLines||[]).map(x=>x.order_id).filter(id=>id!==excludeOrderId))]; if(otherIds.length){ const {data:openOnes}=await SB.from("rental_orders").select("id").in("id",otherIds).neq("status","closed"); if(openOnes&&openOnes.length)return; } const {data}=await SB.from("items").update({avail:"In Stock"}).eq("org_id",userId).eq("id",itemId).eq("avail","Checked Out").select("id"); if(data&&data.length&&onItemSync)onItemSync(itemId,"In Stock"); };
+
+  const createOrder=async()=>{ if(!form.customer_name.trim()){flash("Add a customer or borrower name","err");return;} const payload={org_id:userId,customer_name:form.customer_name.trim(),customer_contact:form.customer_contact.trim()||null,date_out:form.date_out||null,due_date:form.due_date||null,notes:form.notes.trim()||null}; const {data,error}=await SB.from("rental_orders").insert(payload).select().single(); if(error||!data){flash("Could not create the order","err");return;} setOrders(p=>[data,...p]); setShowNew(false); setForm(blank); setLines([]); setCurrent(data); };
+  const addLine=async(item)=>{ if(!current)return; const payload={order_id:current.id,org_id:userId,item_id:item.id||null,item_name:item.name||"Item",item_display_id:item.display_id||null,qty:1,status:"out"}; const {data,error}=await SB.from("rental_order_items").insert(payload).select().single(); if(error||!data){flash("Could not add item","err");return;} setLines(p=>[...p,data]); if(current.status!=="closed")markItemOut(payload.item_id); flash("Added "+(item.name||"item")); };
+  const resolveAndAdd=async(raw)=>{ const c=codeFromScan(raw); if(!c)return; let it=null; const q1=await SB.from("items").select("id,name,display_id").eq("org_id",userId).eq("id",c).limit(1); it=q1.data&&q1.data[0]; if(!it){ const q2=await SB.from("items").select("id,name,display_id").eq("org_id",userId).ilike("display_id",c).limit(1); it=q2.data&&q2.data[0]; } if(!it){flash("No item found for "+c,"err");return;} await addLine(it); };
+  const resolveAndReturn=async(raw)=>{ const c=codeFromScan(raw); if(!c)return; const lc=c.toLowerCase(); let line=lines.find(l=>l.status!=="returned"&&((l.item_display_id&&l.item_display_id.toLowerCase()===lc)||(l.item_id&&l.item_id===c))); if(!line){ let it=null; const q1=await SB.from("items").select("id,display_id").eq("org_id",userId).eq("id",c).limit(1); it=q1.data&&q1.data[0]; if(!it){const q2=await SB.from("items").select("id,display_id").eq("org_id",userId).ilike("display_id",c).limit(1);it=q2.data&&q2.data[0];} if(it)line=lines.find(l=>l.status!=="returned"&&l.item_id===it.id); } if(!line){flash("No out item matches "+c,"err");return;} await setLineStatus(line,"returned"); flash("Returned "+(line.item_name||"item")); };
+  const onCodeSubmit=async()=>{ const v=codeInput.trim(); if(!v)return; setCodeInput(""); await resolveAndAdd(v); };
+  const setLineStatus=async(line,status)=>{ const patch=status==="returned"?{status:"returned",returned_at:new Date().toISOString()}:{status:"out",returned_at:null}; const {data,error}=await SB.from("rental_order_items").update(patch).eq("id",line.id).select().single(); if(!error&&data){ setLines(p=>p.map(x=>x.id===data.id?data:x)); if(status==="returned")markItemInIfClear(line.item_id,current.id); else if(current.status!=="closed")markItemOut(line.item_id); } };
+  const returnAll=async()=>{ const out=lines.filter(l=>l.status!=="returned"); if(!out.length)return; const now=new Date().toISOString(); await SB.from("rental_order_items").update({status:"returned",returned_at:now}).eq("order_id",current.id).neq("status","returned"); setLines(p=>p.map(l=>l.status==="returned"?l:{...l,status:"returned",returned_at:now})); for(const id of [...new Set(out.map(l=>l.item_id).filter(Boolean))]) await markItemInIfClear(id,current.id); flash("All items marked returned"); };
+  const removeLine=async(line)=>{ await SB.from("rental_order_items").delete().eq("id",line.id); setLines(p=>p.filter(x=>x.id!==line.id)); if(line.status!=="returned")markItemInIfClear(line.item_id,current.id); };
+  const setOrderStatus=async(o,status)=>{ const {data,error}=await SB.from("rental_orders").update({status,updated_at:new Date().toISOString()}).eq("id",o.id).select().single(); if(!error&&data){ setOrders(p=>p.map(x=>x.id===data.id?data:x)); setCurrent(data); flash(status==="closed"?"Order closed":"Order reopened"); } };
+  const deleteOrder=async(o)=>{ if(!confirm("Delete this rental order and its item list?"))return; const outIds=[...new Set(lines.filter(l=>l.status!=="returned").map(l=>l.item_id).filter(Boolean))]; await SB.from("rental_orders").delete().eq("id",o.id); for(const id of outIds) await markItemInIfClear(id,o.id); setOrders(p=>p.filter(x=>x.id!==o.id)); setCurrent(null); setLines([]); flash("Deleted"); };
+  const saveAmounts=async()=>{ const toCents=v=>{const s=String(v).trim();if(s==="")return null;const n=parseFloat(s);return isNaN(n)?null:Math.round(n*100);}; const {data,error}=await SB.from("rental_orders").update({deposit_cents:toCents(amtDeposit),total_cents:toCents(amtTotal),updated_at:new Date().toISOString()}).eq("id",current.id).select().single(); if(error||!data){flash("Could not save amounts","err");return;} setCurrent(data); setOrders(p=>p.map(x=>x.id===data.id?data:x)); setShowAmounts(false); flash("Amounts saved"); };
+  const saveTerms=async()=>{ const t=termsDraft.trim(); const {error}=await SB.from("orgs").update({rental_terms:t||null}).eq("id",userId); if(error){flash("Could not save terms","err");return;} setRentalTerms(t); setShowTerms(false); flash("Rental terms saved"); };
+  const inviteCustomer=()=>{ if(!current)return; const brand=APP_NAME.replace("™",""); const subject=encodeURIComponent("An invitation to "+brand); const body=encodeURIComponent("Hi "+(current.customer_name||"there")+",\n\nWe use "+brand+" to manage our inventory and rentals. If you create a free account, you can browse what we have available and request items more easily.\n\nYou can sign up here: "+BRAND_URL+"\n\nThank you,\n"+((org&&org.name)||"")); const to=(current.customer_contact&&current.customer_contact.includes("@"))?current.customer_contact:""; window.location.href="mailto:"+to+"?subject="+subject+"&body="+body; };
+  const printOrder=()=>{ if(!current)return; const brand=APP_NAME.replace("™",""); const bizName=(org&&org.name)||brand; const bizContact=[org&&org.email,org&&org.phone,org&&org.location].filter(Boolean).map(escHTML).join(" &middot; "); const body=lines.map((l,i)=>"<tr><td style='padding:6px 8px;border-bottom:1px solid #ddd'>"+(i+1)+"</td><td style='padding:6px 8px;border-bottom:1px solid #ddd'>"+escHTML(l.item_name)+"</td><td style='padding:6px 8px;border-bottom:1px solid #ddd'>"+escHTML(l.item_display_id||"")+"</td><td style='padding:6px 8px;border-bottom:1px solid #ddd'>"+(l.qty||1)+"</td><td style='padding:6px 8px;border-bottom:1px solid #ddd'>"+(l.status==="returned"?"Returned":"Out")+"</td></tr>").join(""); const rows="<thead><tr style='background:#f5f0e8'><th style='text-align:left;padding:6px 8px'>#</th><th style='text-align:left;padding:6px 8px'>Item</th><th style='text-align:left;padding:6px 8px'>ID</th><th style='text-align:left;padding:6px 8px'>Qty</th><th style='text-align:left;padding:6px 8px'>Status</th></tr></thead><tbody>"+(body||"<tr><td colspan='5' style='padding:10px;color:#999'>No items yet</td></tr>")+"</tbody>"; const amt=(current.total_cents!=null||current.deposit_cents!=null)?"<tr><td style='padding:2px 0'>"+(current.total_cents!=null?"<strong>Rental total:</strong> $"+(current.total_cents/100).toFixed(2):"")+"</td><td style='padding:2px 0'>"+(current.deposit_cents!=null?"<strong>Deposit:</strong> $"+(current.deposit_cents/100).toFixed(2):"")+"</td></tr>":""; const meta="<tr><td style='padding:2px 0'><strong>Renter:</strong> "+escHTML(current.customer_name)+"</td><td style='padding:2px 0'><strong>Contact:</strong> "+escHTML(current.customer_contact||"")+"</td></tr><tr><td style='padding:2px 0'><strong>Date out:</strong> "+escHTML(current.date_out||"")+"</td><td style='padding:2px 0'><strong>Due back:</strong> "+escHTML(current.due_date||"")+"</td></tr>"+amt; printHTML(agreementHTML({title:"Rental Agreement",bizName,bizContact,rows,meta,notes:current.notes,terms:rentalTerms||DEFAULT_RENTAL_TERMS,sigLeft:"Renter signature",sigRight:"For "+bizName,brand})); };
+
+  const sheet=(title,onClose,body)=>h("div",{className:"sheet-overlay",style:{zIndex:1250},onClick:onClose},
+    h("div",{className:"sheet",onClick:e=>e.stopPropagation()},
+      h("div",{className:"sheet-handle"}),
+      h("div",{className:"sheet-hd"},h("h2",null,title),h("button",{style:{background:"none",border:"none",color:"var(--muted)",cursor:"pointer"},onClick:onClose},Ic.x(22))),
+      h("div",{className:"sheet-bd"},body)
+    )
+  );
+
+  if(loading) return h("div",{className:"loading",style:{padding:40,justifyContent:"center"}},h("div",{className:"spin"}),h("span",{style:{color:"var(--muted)"}},"Loading…"));
+
+  const shown=orders.filter(o=>filter==="all"?true:filter==="closed"?o.status==="closed":o.status!=="closed");
+  const listNode=h("div",{style:{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}},
+    h("div",{style:{flexShrink:0,paddingTop:2}},
+      h("div",{style:{display:"flex",gap:8,marginBottom:10}},
+        h("button",{className:"btn btn-gold btn-sm",style:{flex:1},onClick:()=>{setForm(blank);setShowNew(true);}},"＋ New order"),
+        h("button",{className:"btn btn-ghost btn-sm",onClick:()=>{setTermsDraft(rentalTerms||DEFAULT_RENTAL_TERMS);setShowTerms(true);}},"📝 Terms")
+      ),
+      h("div",{style:{display:"flex",gap:6,marginBottom:8}},
+        [["open","Open"],["closed","Closed"],["all","All"]].map(([t,l])=>h("button",{key:t,className:filter===t?"btn btn-gold btn-sm":"btn btn-ghost btn-sm",style:{flex:1},onClick:()=>setFilter(t)},l))
+      )
+    ),
+    h("div",{className:"screen",style:{padding:0}},
+      shown.length===0?h("div",{style:{textAlign:"center",padding:40,color:"var(--muted)",fontSize:14}},"No rental orders yet. Tap New order to start."):
+      h("div",{className:"card"},shown.map(o=>h("div",{key:o.id,className:"item-row",onClick:()=>openOrder(o)},
+        h("div",{className:"item-info"},
+          h("div",{className:"item-name"},o.customer_name),
+          h("div",{className:"item-sub"},(o.date_out?"Out "+o.date_out:"")+(o.due_date?" · Due "+o.due_date:""))
+        ),
+        h("div",{style:{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4,flexShrink:0}},
+          h("span",{className:"item-badge "+(o.status==="closed"?"mb-none":"mb-both")},o.status==="closed"?"Closed":"Open"),
+          (o.status!=="closed"&&o.due_date&&o.due_date<today)?h("span",{style:{fontSize:11,color:"var(--red)",fontWeight:700}},"Overdue"):null
+        )
+      )))
+    )
+  );
+
+  let detailNode=null;
+  if(current){
+    const outN=lines.filter(l=>l.status!=="returned").length;
+    const matches=search.trim()?(items||[]).filter(it=>{const q=search.toLowerCase();return (it.name||"").toLowerCase().includes(q)||(it.display_id||"").toLowerCase().includes(q);}).slice(0,8):[];
+    detailNode=h("div",{className:"full-overlay"},
+      h("div",{style:{padding:"calc(var(--safe-top) + 12px) 16px 10px",display:"flex",alignItems:"center",gap:10,borderBottom:"1px solid var(--border)",flexShrink:0}},
+        h("button",{style:{background:"none",border:"none",color:"var(--text)",cursor:"pointer"},onClick:()=>{setCurrent(null);setLines([]);}},Ic.back(24)),
+        h("div",{style:{flex:1,minWidth:0}},
+          h("div",{style:{fontWeight:700,fontSize:17,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},current.customer_name),
+          h("div",{style:{fontSize:12,color:"var(--muted)"}},(current.status==="closed"?"Closed":"Open")+" · "+lines.length+" items · "+outN+" out")
+        )
+      ),
+      h("div",{className:"screen",style:{padding:"12px 16px"}},
+        h("div",{style:{fontSize:13,color:"var(--muted)",marginBottom:10}},
+          (current.date_out?"Out "+current.date_out:"")+(current.due_date?" · Due "+current.due_date:""),
+          (current.total_cents!=null||current.deposit_cents!=null)?h("div",{style:{marginTop:2}},(current.total_cents!=null?"Total $"+(current.total_cents/100).toFixed(2):"")+(current.total_cents!=null&&current.deposit_cents!=null?" · ":"")+(current.deposit_cents!=null?"Deposit $"+(current.deposit_cents/100).toFixed(2):"")):null
+        ),
+        h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}},
+          h("button",{className:"btn btn-ghost btn-sm",onClick:printOrder},"🖨 Print"),
+          h("button",{className:"btn btn-ghost btn-sm",onClick:()=>{setAmtDeposit(current.deposit_cents!=null?(current.deposit_cents/100).toString():"");setAmtTotal(current.total_cents!=null?(current.total_cents/100).toString():"");setShowAmounts(true);}},"💵 Amounts"),
+          h("button",{className:"btn btn-ghost btn-sm",onClick:inviteCustomer},"✉️ Invite"),
+          outN>0?h("button",{className:"btn btn-ghost btn-sm",onClick:()=>setReturnScan(true)},"📷 Scan return"):null,
+          outN>0?h("button",{className:"btn btn-ghost btn-sm",onClick:returnAll},"Return all"):null,
+          current.status==="closed"?h("button",{className:"btn btn-ghost btn-sm",onClick:()=>setOrderStatus(current,"open")},"Reopen"):h("button",{className:"btn btn-gold btn-sm",onClick:()=>setOrderStatus(current,"closed")},"Close order"),
+          h("button",{className:"btn btn-danger btn-sm",onClick:()=>deleteOrder(current)},"Delete")
+        ),
+        h("div",{className:"card card-p",style:{marginBottom:14}},
+          h("div",{className:"fl",style:{marginBottom:8}},"Add items"),
+          h("div",{style:{display:"flex",gap:8,marginBottom:8}},
+            h("button",{className:"btn btn-gold btn-sm",style:{flex:1},onClick:()=>setScanning(true)},"📷 Scan"),
+            h("button",{className:"btn btn-ghost btn-sm",style:{flex:1},onClick:()=>{setBrowse(true);setBrowseQ("");}},"📦 Browse")
+          ),
+          h("div",{style:{display:"flex",gap:8,marginBottom:8}},
+            h("input",{className:"fi",value:codeInput,onChange:e=>setCodeInput(e.target.value),onKeyDown:e=>{if(e.key==="Enter")onCodeSubmit();},placeholder:"Scan or type a code"}),
+            h("button",{className:"btn btn-ghost btn-sm",onClick:onCodeSubmit},"Add")
+          ),
+          h("input",{className:"fi",value:search,onChange:e=>setSearch(e.target.value),placeholder:"…or search by name"}),
+          matches.length>0?h("div",{style:{marginTop:6,border:"1px solid var(--border)",borderRadius:8,overflow:"hidden"}},
+            matches.map(it=>h("div",{key:it.id,onClick:()=>{addLine(it);setSearch("");},style:{padding:"10px 12px",borderBottom:"1px solid var(--border)",cursor:"pointer",fontSize:14}},h("span",{style:{fontWeight:600}},it.name),it.display_id?h("span",{style:{color:"var(--faint)",marginLeft:8,fontSize:12}},it.display_id):null))
+          ):null
+        ),
+        lines.length===0?h("div",{style:{textAlign:"center",padding:30,color:"var(--muted)",fontSize:14}},"No items on this order yet."):
+          h("div",{className:"card"},lines.map(l=>h("div",{key:l.id,className:"item-row",style:{cursor:"default",opacity:l.status==="returned"?.6:1}},
+            h("div",{className:"item-info"},h("div",{className:"item-name"},l.item_name+(l.qty>1?" ×"+l.qty:"")),h("div",{className:"item-sub"},(l.item_display_id||"")+(l.status==="returned"&&l.returned_at?" · returned "+l.returned_at.slice(0,10):""))),
+            h("div",{style:{display:"flex",gap:6,flexShrink:0}},
+              l.status==="returned"?h("button",{className:"btn btn-ghost btn-sm",onClick:()=>setLineStatus(l,"out")},"Undo"):h("button",{className:"btn btn-gold btn-sm",onClick:()=>setLineStatus(l,"returned")},"Return"),
+              h("button",{className:"btn btn-ghost btn-sm",style:{color:"var(--red)"},onClick:()=>removeLine(l)},"✕")
+            )
+          )))
+      )
+    );
+  }
+
+  return h("div",{style:{height:"100%",display:"flex",flexDirection:"column",overflow:"hidden"}},
+    current?detailNode:listNode,
+    scanning&&h(MobileScanner,{onCode:resolveAndAdd,onClose:()=>setScanning(false),label:"Scan items to add"}),
+    returnScan&&h(MobileScanner,{onCode:resolveAndReturn,onClose:()=>setReturnScan(false),label:"Scan items to return"}),
+    showNew&&sheet("New rental order",()=>setShowNew(false),h("div",null,
+      h("div",{className:"fg"},h("label",{className:"fl"},"Customer or borrower name"),h("input",{className:"fi",value:form.customer_name,onChange:e=>setForm(f=>({...f,customer_name:e.target.value})),placeholder:"e.g. Carol Channing High School, or Jane Smith"})),
+      h("div",{className:"fg"},h("label",{className:"fl"},"Their email or phone (optional)"),h("input",{className:"fi",value:form.customer_contact,onChange:e=>setForm(f=>({...f,customer_contact:e.target.value})),placeholder:"name@example.com"})),
+      h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
+        h("div",{className:"fg"},h("label",{className:"fl"},"Date out"),h("input",{className:"fi",type:"date",value:form.date_out,onChange:e=>setForm(f=>({...f,date_out:e.target.value}))})),
+        h("div",{className:"fg"},h("label",{className:"fl"},"Due back"),h("input",{className:"fi",type:"date",value:form.due_date,onChange:e=>setForm(f=>({...f,due_date:e.target.value}))}))
+      ),
+      h("div",{className:"fg"},h("label",{className:"fl"},"Notes (optional)"),h("textarea",{className:"ft",value:form.notes,onChange:e=>setForm(f=>({...f,notes:e.target.value})),placeholder:"Deposit, show name, anything to remember"})),
+      h("button",{className:"btn btn-gold btn-full",onClick:createOrder},"Create order")
+    )),
+    showAmounts&&sheet("Order amounts",()=>setShowAmounts(false),h("div",null,
+      h("div",{className:"fg"},h("label",{className:"fl"},"Rental total ($)"),h("input",{className:"fi",type:"number",inputMode:"decimal",value:amtTotal,onChange:e=>setAmtTotal(e.target.value),placeholder:"0.00"})),
+      h("div",{className:"fg"},h("label",{className:"fl"},"Deposit ($)"),h("input",{className:"fi",type:"number",inputMode:"decimal",value:amtDeposit,onChange:e=>setAmtDeposit(e.target.value),placeholder:"0.00"})),
+      h("div",{style:{fontSize:12,color:"var(--muted)",marginBottom:12}},"Recorded for your agreement only. No payment is processed by the app."),
+      h("button",{className:"btn btn-gold btn-full",onClick:saveAmounts},"Save")
+    )),
+    showTerms&&sheet("Rental terms",()=>setShowTerms(false),h("div",null,
+      h("p",{style:{fontSize:12,color:"var(--muted)",marginBottom:10,lineHeight:1.5}},"These print on your rental agreement. A short notice that "+APP_NAME.replace("™","")+" is only the software provider is always added at the bottom."),
+      h("textarea",{className:"ft",style:{minHeight:200,lineHeight:1.5},value:termsDraft,onChange:e=>setTermsDraft(e.target.value)}),
+      h("div",{style:{display:"flex",gap:8,marginTop:12}},
+        h("button",{className:"btn btn-ghost btn-sm",onClick:()=>setTermsDraft(DEFAULT_RENTAL_TERMS)},"Reset"),
+        h("button",{className:"btn btn-gold btn-sm",style:{flex:1},onClick:saveTerms},"Save terms")
+      )
+    )),
+    browse&&sheet("Add from inventory",()=>setBrowse(false),h("div",null,
+      h("input",{className:"fi",value:browseQ,onChange:e=>setBrowseQ(e.target.value),placeholder:"Filter by name, ID, or category",autoFocus:true}),
+      h("div",{style:{marginTop:10,maxHeight:"52vh",overflowY:"auto"}},
+        (items||[]).filter(it=>{const q=browseQ.trim().toLowerCase();return !q||(it.name||"").toLowerCase().includes(q)||(it.display_id||"").toLowerCase().includes(q)||(it.category||"").toLowerCase().includes(q);}).slice(0,300).map(it=>h("div",{key:it.id,onClick:()=>addLine(it),className:"item-row"},h("div",{className:"item-info"},h("div",{className:"item-name"},it.name),h("div",{className:"item-sub"},[it.display_id,it.category,it.location].filter(Boolean).join(" · "))),h("span",{className:"btn btn-gold btn-sm",style:{pointerEvents:"none"}},"＋"))),
+        ((items||[]).length===0)?h("div",{style:{textAlign:"center",padding:24,color:"var(--muted)",fontSize:13}},"No items in your inventory yet."):null
+      )
+    ))
+  );
+}
+
+// ── ══════════════════════════════════════════
+// ── BORROWED & LENT (mobile) — mirrors src/core/external-loans.jsx
+// ── ══════════════════════════════════════════
+function LoansMobile({userId, org, items=[], flash}){
+  const [loans,setLoans]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [saving,setSaving]=useState(false);
+  const [modal,setModal]=useState(null);
+  const [active,setActive]=useState(null);
+  const [tab,setTab]=useState("active");
+  const [loanTerms,setLoanTerms]=useState(""); const [showTerms,setShowTerms]=useState(false); const [termsDraft,setTermsDraft]=useState("");
+  const blank={direction:"out",counterparty_name:"",counterparty_contact:"",item_name:"",quantity:1,date_out:new Date().toISOString().slice(0,10),due_date:"",notes:""};
+  const [form,setForm]=useState(blank);
+  const today=new Date().toISOString().slice(0,10);
+
+  useEffect(()=>{ if(!userId){setLoading(false);return;} (async()=>{
+    setLoading(true);
+    const {data}=await SB.from("external_loans").select("*").eq("org_id",userId).order("created_at",{ascending:false});
+    if(data)setLoans(data);
+    const {data:o}=await SB.from("orgs").select("loan_terms").eq("id",userId).maybeSingle();
+    setLoanTerms((o&&o.loan_terms)||"");
+    setLoading(false);
+  })(); },[userId]);
+
+  const openAdd=(dir="out")=>{ setActive(null); setForm({...blank,direction:dir}); setModal("form"); };
+  const openEdit=(l)=>{ setActive(l); setForm({direction:l.direction,counterparty_name:l.counterparty_name||"",counterparty_contact:l.counterparty_contact||"",item_name:l.item_name||"",quantity:l.quantity||1,date_out:l.date_out||"",due_date:l.due_date||"",notes:l.notes||""}); setModal("form"); };
+  const save=async()=>{ if(!form.counterparty_name.trim()){flash("Add the organization or person's name","err");return;} if(!form.item_name.trim()){flash("Add what was borrowed or lent","err");return;} setSaving(true); const payload={direction:form.direction,counterparty_name:form.counterparty_name.trim(),counterparty_contact:form.counterparty_contact.trim()||null,item_name:form.item_name.trim(),quantity:parseInt(form.quantity,10)||1,date_out:form.date_out||null,due_date:form.due_date||null,notes:form.notes.trim()||null}; if(active){ const {data,error}=await SB.from("external_loans").update({...payload,updated_at:new Date().toISOString()}).eq("id",active.id).select().single(); if(error){flash("Could not save","err");} else {setLoans(p=>p.map(x=>x.id===data.id?data:x));flash("Updated");setModal(null);setActive(null);} } else { const {data,error}=await SB.from("external_loans").insert({...payload,org_id:userId}).select().single(); if(error){flash("Could not save","err");} else {setLoans(p=>[data,...p]);flash("Added");setModal(null);} } setSaving(false); };
+  const markReturned=async(l)=>{ const {data,error}=await SB.from("external_loans").update({returned:true,returned_at:new Date().toISOString()}).eq("id",l.id).select().single(); if(!error&&data){setLoans(p=>p.map(x=>x.id===data.id?data:x));flash("Marked returned");} };
+  const reopen=async(l)=>{ const {data,error}=await SB.from("external_loans").update({returned:false,returned_at:null}).eq("id",l.id).select().single(); if(!error&&data){setLoans(p=>p.map(x=>x.id===data.id?data:x));flash("Reopened");} };
+  const remove=async(l)=>{ if(!confirm("Delete this record?"))return; await SB.from("external_loans").delete().eq("id",l.id); setLoans(p=>p.filter(x=>x.id!==l.id)); flash("Deleted"); };
+  const invite=(l)=>{ const brand=APP_NAME.replace("™",""); const subject=encodeURIComponent("Join us on "+brand); const body=encodeURIComponent("Hi "+l.counterparty_name+",\n\nWe use "+APP_NAME+" to track our program's inventory and to borrow, lend, and rent items with other programs. It would make sharing between us much easier if you joined too, it is free to start.\n\nYou can sign up here: "+BRAND_URL+"\n\nThanks!\n"+((org&&org.name)||"")); const to=(l.counterparty_contact&&l.counterparty_contact.includes("@"))?l.counterparty_contact:""; window.location.href="mailto:"+to+"?subject="+subject+"&body="+body; };
+  const saveTerms=async()=>{ const t=termsDraft.trim(); const {error}=await SB.from("orgs").update({loan_terms:t||null}).eq("id",userId); if(error){flash("Could not save terms","err");return;} setLoanTerms(t); setShowTerms(false); flash("Loan terms saved"); };
+  const printLoan=(l)=>{ const brand=APP_NAME.replace("™",""); const bizName=(org&&org.name)||brand; const bizContact=[org&&org.email,org&&org.phone,org&&org.location].filter(Boolean).map(escHTML).join(" &middot; "); const out=l.direction==="out"; const lender=out?escHTML(bizName):escHTML(l.counterparty_name); const borrower=out?escHTML(l.counterparty_name):escHTML(bizName); const rows="<thead><tr style='background:#f5f0e8'><th style='text-align:left;padding:6px 8px'>Item</th><th style='text-align:left;padding:6px 8px'>Qty</th><th style='text-align:left;padding:6px 8px'>Status</th></tr></thead><tbody><tr><td style='padding:6px 8px;border-bottom:1px solid #ddd'>"+escHTML(l.item_name)+"</td><td style='padding:6px 8px;border-bottom:1px solid #ddd'>"+(l.quantity||1)+"</td><td style='padding:6px 8px;border-bottom:1px solid #ddd'>"+(l.returned?"Returned":"Out")+"</td></tr></tbody>"; const meta="<tr><td style='padding:2px 0'><strong>Lender:</strong> "+lender+"</td><td style='padding:2px 0'><strong>Borrower:</strong> "+borrower+"</td></tr><tr><td style='padding:2px 0'><strong>Contact:</strong> "+escHTML(l.counterparty_contact||"")+"</td><td style='padding:2px 0'></td></tr><tr><td style='padding:2px 0'><strong>Date out:</strong> "+escHTML(l.date_out||"")+"</td><td style='padding:2px 0'><strong>Due back:</strong> "+escHTML(l.due_date||"")+"</td></tr>"; printHTML(agreementHTML({title:"Loan Agreement",bizName,bizContact,rows,meta,notes:l.notes,terms:loanTerms||DEFAULT_LOAN_TERMS,sigLeft:"Borrower signature",sigRight:"Lender signature",brand})); };
+
+  const sheet=(title,onClose,body)=>h("div",{className:"sheet-overlay",style:{zIndex:1250},onClick:onClose},
+    h("div",{className:"sheet",onClick:e=>e.stopPropagation()},
+      h("div",{className:"sheet-handle"}),
+      h("div",{className:"sheet-hd"},h("h2",null,title),h("button",{style:{background:"none",border:"none",color:"var(--muted)",cursor:"pointer"},onClick:onClose},Ic.x(22))),
+      h("div",{className:"sheet-bd"},body)
+    )
+  );
+
+  if(loading) return h("div",{className:"loading",style:{padding:40,justifyContent:"center"}},h("div",{className:"spin"}),h("span",{style:{color:"var(--muted)"}},"Loading…"));
+
+  const isOverdue=l=>!l.returned&&l.due_date&&l.due_date<today;
+  const visible=loans.filter(l=>tab==="all"?true:tab==="returned"?l.returned:!l.returned);
+  const activeOut=loans.filter(l=>!l.returned&&l.direction==="out").length;
+  const activeIn=loans.filter(l=>!l.returned&&l.direction==="in").length;
+  const overdueN=loans.filter(isOverdue).length;
+
+  return h("div",{style:{height:"100%",display:"flex",flexDirection:"column",overflow:"hidden"}},
+    h("div",{style:{flexShrink:0,paddingTop:2}},
+      h("div",{style:{display:"flex",gap:8,marginBottom:10}},
+        h("button",{className:"btn btn-gold btn-sm",style:{flex:1},onClick:()=>openAdd("out")},"＋ Lent out"),
+        h("button",{className:"btn btn-ghost btn-sm",style:{flex:1},onClick:()=>openAdd("in")},"＋ Borrowed"),
+        h("button",{className:"btn btn-ghost btn-sm",onClick:()=>{setTermsDraft(loanTerms||DEFAULT_LOAN_TERMS);setShowTerms(true);}},"📝")
+      ),
+      h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}},
+        [["Lent out",activeOut,"var(--gold)"],["Borrowed",activeIn,"var(--blue)"],["Overdue",overdueN,overdueN>0?"var(--red)":"var(--text)"]].map(s=>h("div",{key:s[0],className:"card",style:{padding:"10px 8px",textAlign:"center"}},
+          h("div",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:700,color:s[2]}},s[1]),
+          h("div",{style:{fontSize:10,color:"var(--muted)",textTransform:"uppercase",letterSpacing:.5}},s[0])
+        ))
+      ),
+      h("div",{style:{display:"flex",gap:6,marginBottom:8}},
+        [["active","Active"],["returned","Returned"],["all","All"]].map(([t,l])=>h("button",{key:t,className:tab===t?"btn btn-gold btn-sm":"btn btn-ghost btn-sm",style:{flex:1},onClick:()=>setTab(t)},l))
+      )
+    ),
+    h("div",{className:"screen",style:{padding:0}},
+      visible.length===0?h("div",{style:{textAlign:"center",padding:40,color:"var(--muted)",fontSize:14}},"Nothing here yet. Use Lent out or Borrowed to add your first record."):
+      visible.map(l=>h("div",{key:l.id,className:"card card-p",style:{marginBottom:10}},
+        h("div",{style:{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:4}},
+          h("span",{className:"item-badge "+(l.direction==="out"?"mb-both":"mb-rent")},l.direction==="out"?"Lent out →":"← Borrowed"),
+          l.returned?h("span",{className:"item-badge mb-sale"},"Returned"):null,
+          isOverdue(l)?h("span",{style:{fontSize:11,fontWeight:700,color:"var(--red)"}},"Overdue"):null
+        ),
+        h("div",{style:{fontWeight:700,fontSize:16}},l.item_name+(l.quantity>1?" ×"+l.quantity:"")),
+        h("div",{style:{fontSize:13,color:"var(--muted)",marginTop:2}},(l.direction==="out"?"To":"From")+": "+l.counterparty_name+(l.counterparty_contact?" · "+l.counterparty_contact:"")),
+        h("div",{style:{fontSize:12,color:"var(--faint)",marginTop:2}},(l.date_out?"Out "+l.date_out:"")+(l.due_date?" · Due "+l.due_date:"")+(l.returned&&l.returned_at?" · Returned "+l.returned_at.slice(0,10):"")),
+        l.notes?h("div",{style:{fontSize:12,color:"var(--muted)",marginTop:6,fontStyle:"italic"}},l.notes):null,
+        h("div",{style:{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}},
+          l.returned?h("button",{className:"btn btn-ghost btn-sm",onClick:()=>reopen(l)},"Reopen"):h("button",{className:"btn btn-gold btn-sm",onClick:()=>markReturned(l)},"Mark returned"),
+          h("button",{className:"btn btn-ghost btn-sm",onClick:()=>printLoan(l)},"🖨 Print"),
+          h("button",{className:"btn btn-ghost btn-sm",onClick:()=>invite(l)},"✉️ Invite"),
+          h("button",{className:"btn btn-ghost btn-sm",onClick:()=>openEdit(l)},"Edit"),
+          h("button",{className:"btn btn-ghost btn-sm",style:{color:"var(--red)"},onClick:()=>remove(l)},"Delete")
+        )
+      ))
+    ),
+    modal&&sheet(active?"Edit record":form.direction==="out"?"Item lent out":"Item borrowed",()=>{setModal(null);setActive(null);},h("div",null,
+      h("div",{className:"fg"},h("label",{className:"fl"},"Type"),h("div",{style:{display:"flex",gap:8}},
+        h("button",{className:form.direction==="out"?"btn btn-gold btn-sm":"btn btn-ghost btn-sm",style:{flex:1},onClick:()=>setForm(f=>({...f,direction:"out"}))},"Lent out"),
+        h("button",{className:form.direction==="in"?"btn btn-gold btn-sm":"btn btn-ghost btn-sm",style:{flex:1},onClick:()=>setForm(f=>({...f,direction:"in"}))},"Borrowed")
+      )),
+      h("div",{className:"fg"},h("label",{className:"fl"},form.direction==="out"?"Lent to (organization or person)":"Borrowed from (organization or person)"),h("input",{className:"fi",value:form.counterparty_name,onChange:e=>setForm(f=>({...f,counterparty_name:e.target.value})),placeholder:"e.g. August Wilson Community Theatre"})),
+      h("div",{className:"fg"},h("label",{className:"fl"},"Their email or phone (optional)"),h("input",{className:"fi",value:form.counterparty_contact,onChange:e=>setForm(f=>({...f,counterparty_contact:e.target.value})),placeholder:"name@example.com"})),
+      h("div",{style:{display:"grid",gridTemplateColumns:"2fr 1fr",gap:10}},
+        h("div",{className:"fg"},h("label",{className:"fl"},"Item"),h("input",{className:"fi",list:"t4u-mob-items",value:form.item_name,onChange:e=>setForm(f=>({...f,item_name:e.target.value})),placeholder:"e.g. Victorian dress"}),h("datalist",{id:"t4u-mob-items"},(items||[]).slice(0,300).map(it=>h("option",{key:it.id,value:it.name})))),
+        h("div",{className:"fg"},h("label",{className:"fl"},"Qty"),h("input",{className:"fi",type:"number",inputMode:"numeric",min:"1",value:form.quantity,onChange:e=>setForm(f=>({...f,quantity:e.target.value}))}))
+      ),
+      h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
+        h("div",{className:"fg"},h("label",{className:"fl"},"Date out"),h("input",{className:"fi",type:"date",value:form.date_out,onChange:e=>setForm(f=>({...f,date_out:e.target.value}))})),
+        h("div",{className:"fg"},h("label",{className:"fl"},"Due back"),h("input",{className:"fi",type:"date",value:form.due_date,onChange:e=>setForm(f=>({...f,due_date:e.target.value}))}))
+      ),
+      h("div",{className:"fg"},h("label",{className:"fl"},"Notes (optional)"),h("textarea",{className:"ft",value:form.notes,onChange:e=>setForm(f=>({...f,notes:e.target.value})),placeholder:"Condition, who arranged it, etc."})),
+      h("button",{className:"btn btn-gold btn-full",disabled:saving,onClick:save},saving?"Saving…":active?"Save changes":"Add")
+    )),
+    showTerms&&sheet("Loan terms",()=>setShowTerms(false),h("div",null,
+      h("p",{style:{fontSize:12,color:"var(--muted)",marginBottom:10,lineHeight:1.5}},"These print on the loan agreement. A short notice that "+APP_NAME.replace("™","")+" is only the software provider is always added at the bottom."),
+      h("textarea",{className:"ft",style:{minHeight:200,lineHeight:1.5},value:termsDraft,onChange:e=>setTermsDraft(e.target.value)}),
+      h("div",{style:{display:"flex",gap:8,marginTop:12}},
+        h("button",{className:"btn btn-ghost btn-sm",onClick:()=>setTermsDraft(DEFAULT_LOAN_TERMS)},"Reset"),
+        h("button",{className:"btn btn-gold btn-sm",style:{flex:1},onClick:saveTerms},"Save terms")
+      )
+    ))
+  );
+}
+
+// ── ══════════════════════════════════════════
 // ── INVENTORY TAB
 // ── ══════════════════════════════════════════
-function InventoryTab({items, onViewItem, onAddItem}) {
+function InventoryTab({items, onViewItem, onAddItem, userId, org, flash, onItemSync}) {
   const [search, setSearch] = useState("");
   const [catF, setCatF]     = useState("all");
+  const [sub, setSub]       = useState("items");
 
   const filtered = useMemo(()=>{
     let f=items;
@@ -1266,9 +1661,25 @@ function InventoryTab({items, onViewItem, onAddItem}) {
     return f;
   },[items,search,catF]);
 
+  const SubBar = ()=>h("div",{style:{display:"flex",gap:6,margin:"0 0 10px"}},
+    [["items","Items"],["rentals","Rentals"],["loans","Borrowed & Lent"]].map(([k,l])=>h("button",{key:k,onClick:()=>setSub(k),
+      style:{flex:1,padding:"7px 6px",borderRadius:9,border:"1.5px solid",fontFamily:"'DM Sans',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",
+        background:sub===k?"var(--gold)":"var(--card)",color:sub===k?"#1a1000":"var(--muted)",borderColor:sub===k?"var(--gold)":"var(--border)"}},l))
+  );
+  if(sub!=="items") return h("div",{style:{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}},
+    h("div",{style:{padding:"calc(var(--safe-top) + 12px) 16px 0",flexShrink:0}},
+      h("h1",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:700,marginBottom:12}},"Inventory"),
+      h(SubBar,null)
+    ),
+    h("div",{style:{flex:1,overflow:"hidden",padding:"0 16px"}},
+      sub==="rentals"?h(RentalsMobile,{userId,org,items,flash,onItemSync}):h(LoansMobile,{userId,org,items,flash})
+    )
+  );
+
   return h("div",{style:{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}},
     h("div",{style:{padding:"calc(var(--safe-top) + 12px) 16px 4px",flexShrink:0}},
       h("h1",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:700,marginBottom:12}},"Inventory"),
+      h(SubBar,null),
       h("div",{className:"search-wrap",style:{padding:0,marginBottom:10}},
         h("div",{className:"si"},
           Ic.search(17),
@@ -1745,6 +2156,11 @@ function App() {
     setViewItem(item); setTab("home");
   },[]);
 
+  // Keep the inventory list live when Rentals flips an item's availability.
+  const handleItemSync = useCallback((id,avail)=>{
+    setItems(p=>p.map(i=>i.id===id?{...i,avail}:i));
+  },[]);
+
   const signOut = async()=>{await SB.auth.signOut();setUser(null);};
 
   if(!authChk) return h("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",flexDirection:"column",gap:16}},
@@ -1789,7 +2205,7 @@ function App() {
     !viewItem && h("div",{style:{flex:1,overflow:"hidden",display:"flex",flexDirection:"column"}},
       !isStandalone && h(InstallBanner,null),
       tab==="home"      && h(HomeTab,{items,org,pointBalance,onAddItem:()=>setAddOpen(true),onViewItem:handleViewItem}),
-      tab==="inventory" && h(InventoryTab,{items,onViewItem:handleViewItem,onAddItem:()=>setAddOpen(true)}),
+      tab==="inventory" && h(InventoryTab,{items,onViewItem:handleViewItem,onAddItem:()=>setAddOpen(true),userId:org?.id||user.id,org,flash:showT,onItemSync:handleItemSync}),
       tab==="funding"   && h(FundingMobileTab,{userId:org?.id||user.id}),
       tab==="points"    && h(PointsTab,{userId:user?.id,pointBalance,setPointBalance}),
       tab==="profile"   && h(ProfileTab,{user,org,onSignOut:signOut})
