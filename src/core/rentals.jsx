@@ -17,6 +17,15 @@ function codeFromScan(raw) {
   return m ? decodeURIComponent(m[1]) : s;
 }
 
+// Default rental terms, prefilled and fully editable by each subscriber.
+const DEFAULT_TERMS =
+  "1. The renter is responsible for every item listed above from the time it leaves until it is returned.\n" +
+  "2. Items are due back by the date shown. Late returns may be charged a late fee.\n" +
+  "3. The renter agrees to return all items in the same condition, and to pay for cleaning, repair, or replacement of any item returned damaged, altered, or not at all.\n" +
+  "4. A security deposit may be required and is returned once all items come back in good condition.\n" +
+  "5. Items may not be resold, sublet, or loaned to anyone else without written permission.\n" +
+  "6. By signing below, the renter agrees to these terms.";
+
 // ── Live camera scanner (progressive enhancement) ──────────────────────────────
 function CameraScanner({ onCode, onClose }) {
   const videoRef = useRef(null);
@@ -99,6 +108,9 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
   const [search, setSearch]   = useState("");
   const [browse, setBrowse]   = useState(false);     // browse-inventory picker modal
   const [browseQ, setBrowseQ] = useState("");
+  const [rentalTerms, setRentalTerms] = useState("");  // subscriber's saved terms (empty = use default)
+  const [showTerms, setShowTerms]     = useState(false);
+  const [termsDraft, setTermsDraft]   = useState("");
   const [filter, setFilter]   = useState("open");    // open | closed | all
   const [msg, setMsg]         = useState("");
   const flash = m => { setMsg(m); setTimeout(() => setMsg(""), 3200); };
@@ -113,9 +125,20 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
       setLoading(true);
       const { data } = await SB.from("rental_orders").select("*").eq("org_id", userId).order("created_at", { ascending: false });
       setOrders(data || []);
+      const { data: o } = await SB.from("orgs").select("rental_terms").eq("id", userId).maybeSingle();
+      setRentalTerms((o && o.rental_terms) || "");
       setLoading(false);
     })();
   }, [userId, isPro]);
+
+  const saveTerms = async () => {
+    const t = termsDraft.trim();
+    const { error } = await SB.from("orgs").update({ rental_terms: t || null }).eq("id", userId);
+    if (error) { flash("❌ Could not save terms"); return; }
+    setRentalTerms(t);
+    setShowTerms(false);
+    flash("✓ Rental terms saved");
+  };
 
   const loadLines = useCallback(async (orderId) => {
     const { data } = await SB.from("rental_order_items").select("*").eq("order_id", orderId).order("created_at", { ascending: true });
@@ -237,15 +260,22 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
       <td style="padding:6px 8px;border-bottom:1px solid #ddd">${l.status === "returned" ? "Returned" : "Out"}</td>
     </tr>`).join("");
     const outN = lines.filter(l => l.status !== "returned").length;
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Rental Order</title></head>
+    const brand = APP_NAME.replace("™", "");
+    const bizName = esc(org?.name || brand);
+    const bizContact = [org?.email, org?.phone, org?.location].filter(Boolean).map(esc).join(" &middot; ");
+    const termsText = esc(rentalTerms || DEFAULT_TERMS).replace(/\n/g, "<br>");
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Rental Agreement</title></head>
       <body style="font-family:Arial,Helvetica,sans-serif;color:#1a0f00;max-width:720px;margin:24px auto;padding:0 16px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #d4a843;padding-bottom:10px;margin-bottom:16px">
-          <div><div style="font-size:22px;font-weight:700">${esc(org?.name || APP_NAME)}</div>
-          <div style="font-size:12px;color:#666">Rental Order</div></div>
-          <div style="text-align:right;font-size:12px;color:#666">Printed ${new Date().toLocaleDateString()}</div>
+          <div>
+            <div style="font-size:22px;font-weight:700">${bizName}</div>
+            ${bizContact ? `<div style="font-size:12px;color:#666;margin-top:2px">${bizContact}</div>` : ""}
+            <div style="font-size:13px;font-weight:700;color:#8b6914;margin-top:6px">Rental Agreement</div>
+          </div>
+          <div style="text-align:right;font-size:12px;color:#666">Date ${new Date().toLocaleDateString()}</div>
         </div>
         <table style="width:100%;font-size:13px;margin-bottom:16px"><tr>
-          <td style="padding:2px 0"><strong>Customer:</strong> ${esc(current.customer_name)}</td>
+          <td style="padding:2px 0"><strong>Renter:</strong> ${esc(current.customer_name)}</td>
           <td style="padding:2px 0"><strong>Contact:</strong> ${esc(current.customer_contact || "")}</td></tr>
           <tr><td style="padding:2px 0"><strong>Date out:</strong> ${esc(current.date_out || "")}</td>
           <td style="padding:2px 0"><strong>Due back:</strong> ${esc(current.due_date || "")}</td></tr>
@@ -257,9 +287,36 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
             <th style="text-align:left;padding:6px 8px">Status</th></tr></thead>
           <tbody>${rows || '<tr><td colspan="5" style="padding:10px;color:#999">No items yet</td></tr>'}</tbody>
         </table>
-        <p style="font-size:13px;margin-top:14px"><strong>${lines.length}</strong> items total, <strong>${outN}</strong> currently out.</p>
-        ${current.notes ? `<p style="font-size:12px;color:#555;margin-top:10px">Notes: ${esc(current.notes)}</p>` : ""}
-        <p style="font-size:11px;color:#999;margin-top:28px;border-top:1px solid #eee;padding-top:10px">Generated by ${APP_NAME}</p>
+        <p style="font-size:13px;margin-top:12px"><strong>${lines.length}</strong> items total, <strong>${outN}</strong> currently out.</p>
+        ${current.notes ? `<p style="font-size:12px;color:#555;margin-top:8px">Notes: ${esc(current.notes)}</p>` : ""}
+
+        <div style="margin-top:20px;border-top:1px solid #eee;padding-top:14px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:6px">Terms and Conditions</div>
+          <div style="font-size:12px;color:#333;line-height:1.6">${termsText}</div>
+        </div>
+
+        <table style="width:100%;font-size:12px;margin-top:34px">
+          <tr>
+            <td style="width:50%;padding-right:20px">
+              <div style="border-top:1px solid #333;padding-top:4px">Renter signature</div>
+            </td>
+            <td style="width:50%">
+              <div style="border-top:1px solid #333;padding-top:4px">Date</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding-top:26px;padding-right:20px">
+              <div style="border-top:1px solid #333;padding-top:4px">For ${bizName}</div>
+            </td>
+            <td style="padding-top:26px">
+              <div style="border-top:1px solid #333;padding-top:4px">Date</div>
+            </td>
+          </tr>
+        </table>
+
+        <p style="font-size:10px;color:#999;margin-top:26px;border-top:1px solid #eee;padding-top:10px;line-height:1.6">
+          This agreement is solely between ${bizName} and the renter named above. ${brand} (a product of Artstracker LLC) provides inventory and rental software only. It is not a party to this rental, makes no warranties about any item, and is not responsible for the condition, use, return, loss, or damage of any item or for any dispute between the parties. All responsibility for this rental rests with the parties named above.
+        </p>
       </body></html>`;
     const w = window.open("", "_blank");
     if (!w) { flash("❌ Allow pop-ups to print"); return; }
@@ -405,7 +462,10 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
           <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 4 }}>Rental Checkout</h2>
           <p style={{ color: "var(--faint)", fontSize: 13, maxWidth: 560, lineHeight: 1.5 }}>Create a rental order, scan items onto it, mark items returned as they come back, and print a sheet. Great for renting many costumes and props at once.</p>
         </div>
-        <button onClick={() => { setForm(blankOrder); setShowNew(true); }} className="btn btn-g" style={{ fontSize: 13 }}>＋ New rental order</button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button onClick={() => { setTermsDraft(rentalTerms || DEFAULT_TERMS); setShowTerms(true); }} className="btn btn-o" style={{ fontSize: 13 }}>📝 Edit rental terms</button>
+          <button onClick={() => { setForm(blankOrder); setShowNew(true); }} className="btn btn-g" style={{ fontSize: 13 }}>＋ New rental order</button>
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
@@ -452,6 +512,23 @@ export function RentalsPage({ userId, org, plan = "free", items = [] }) {
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button onClick={() => setShowNew(false)} className="btn btn-o" style={{ fontSize: 13 }}>Cancel</button>
               <button onClick={createOrder} className="btn btn-g" style={{ fontSize: 13 }}>Create order</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTerms && (
+        <div onClick={() => setShowTerms(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 12, padding: 20, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto" }}>
+            <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 19, marginBottom: 6 }}>Rental terms</h3>
+            <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 12, lineHeight: 1.5 }}>These print on your rental agreement, below the item list. Edit them to fit your shop. A short notice that {APP_NAME.replace("™", "")} is only the software provider, and not a party to your rental, is always added at the bottom to protect both of us.</p>
+            <textarea style={{ ...inp, minHeight: 220, resize: "vertical", lineHeight: 1.5 }} value={termsDraft} onChange={e => setTermsDraft(e.target.value)} />
+            <div style={{ display: "flex", gap: 8, justifyContent: "space-between", marginTop: 14, flexWrap: "wrap" }}>
+              <button onClick={() => setTermsDraft(DEFAULT_TERMS)} className="btn btn-o btn-sm" style={{ fontSize: 12 }}>Reset to default</button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setShowTerms(false)} className="btn btn-o" style={{ fontSize: 13 }}>Cancel</button>
+                <button onClick={saveTerms} className="btn btn-g" style={{ fontSize: 13 }}>Save terms</button>
+              </div>
             </div>
           </div>
         </div>
