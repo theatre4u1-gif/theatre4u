@@ -197,6 +197,7 @@ function createDemoStore() {
       if (fn === "award_milestone_points")  return Promise.resolve({ data: null, error: null });
       if (fn === "award_referral_points")   return Promise.resolve({ data: null, error: null });
       if (fn === "get_my_credit_balance")   return Promise.resolve({ data: 150, error: null });
+      if (fn === "get_credit_balance")      return Promise.resolve({ data: 150, error: null });
       if (fn === "points_eligible_in_days") return Promise.resolve({ data: 0,   error: null });
       if (fn === "lookup_label")            return Promise.resolve({ data: null, error: null });
       if (fn === "is_org_member")           return Promise.resolve({ data: false, error: null });

@@ -386,7 +386,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
         .eq("status", "pending");
       setPendingReqCount(reqCount || 0);
       // Stage Points balance — loaded at login so it shows in nav/dashboard
-      SB.rpc("get_my_credit_balance").then(({data})=>{ if(data!=null) setCreditBalance(data||0); }).catch(()=>{});
+      SB.rpc("get_credit_balance", { p_org_id: targetOrgId }).then(({data})=>{ if(data!=null) setCreditBalance(data||0); }).catch(()=>{});
       // Stage Points balance — also refreshed on Credits page visit
       // (removed from startup to reduce login query count)
     })();

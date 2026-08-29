@@ -1130,7 +1130,7 @@ function PointsTab({userId, pointBalance=0, setPointBalance}) {
         .select("*").eq("org_id", userId)
         .order("created_at",{ascending:false}).limit(50);
       setLedger(data||[]);
-      const {data:bal} = await SB.rpc("get_my_credit_balance");
+      const {data:bal} = await SB.rpc("get_credit_balance", { p_org_id: userId });
       if(bal!=null) setPointBalance(bal||0);
       setLoading(false);
     })();
@@ -2150,7 +2150,7 @@ function App() {
       const{data:itemData}=await SB.from("items").select("*").eq("org_id",targetOrgId).order("added",{ascending:false}).limit(300);
       if(itemData) setItems(itemData);
       // Load Stage Points balance
-      SB.rpc("get_my_credit_balance").then(({data})=>{ if(data!=null) setPointBalance(data||0); }).catch(()=>{});
+      SB.rpc("get_credit_balance", { p_org_id: targetOrgId }).then(({data})=>{ if(data!=null) setPointBalance(data||0); }).catch(()=>{});
       setLoading(false);
     })();
   },[user]);
@@ -2227,7 +2227,7 @@ function App() {
       tab==="home"      && h(HomeTab,{items,org,pointBalance,onAddItem:()=>setAddOpen(true),onViewItem:handleViewItem}),
       tab==="inventory" && h(InventoryTab,{items,onViewItem:handleViewItem,onAddItem:()=>setAddOpen(true),userId:org?.id||user.id,org,flash:showT,onItemSync:handleItemSync}),
       tab==="funding"   && h(FundingMobileTab,{userId:org?.id||user.id}),
-      tab==="points"    && h(PointsTab,{userId:user?.id,pointBalance,setPointBalance}),
+      tab==="points"    && h(PointsTab,{userId:org?.id||user?.id,pointBalance,setPointBalance}),
       tab==="profile"   && h(ProfileTab,{user,org,onSignOut:signOut})
     ),
     // Bottom nav

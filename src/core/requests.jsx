@@ -60,7 +60,7 @@ export function RequestItemModal({ item, currentUserId, currentOrgName, currentO
   useEffect(()=>{
     SB.from("availability_blocks").select("*").eq("item_id", item.id)
       .then(({data})=>setBlocks(data||[]));
-    SB.rpc("get_my_credit_balance").then(({data})=>setMyCredits(data||0));
+    SB.rpc("get_credit_balance", { p_org_id: currentUserId }).then(({data})=>setMyCredits(data||0));
   },[item.id]);
 
   // Recalculate credit amount when toggled (50% cap, whole credits only)

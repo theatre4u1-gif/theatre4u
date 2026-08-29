@@ -29,7 +29,7 @@ export function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
     const [{ data: ledgerData }, { data: bal }, { data: daysData }] = await Promise.all([
       SB.from("credit_ledger").select("*").eq("org_id", userId)
         .order("created_at", { ascending: false }).limit(100),
-      SB.rpc("get_my_credit_balance"),
+      SB.rpc("get_credit_balance", { p_org_id: userId }),
       SB.rpc("points_eligible_in_days", { p_org_id: userId }),
     ]);
     setLedger(ledgerData || []);
