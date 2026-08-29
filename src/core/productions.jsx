@@ -1002,10 +1002,12 @@ function ProductionNeedsChecklist({ prod, allItems, userId, org, onNavigateToExc
         />
       )}
 
-      {/* Add / Edit form */}
-      {!showImport && (adding || editing) && (
-        <NeedForm onDone={()=>{ setAdding(false); setEditing(null); setForm(blank()); }}/>
-      )}
+      {/* Add / Edit form. NeedForm is invoked as a render helper (not <NeedForm/>) so its
+          inputs are part of this component's tree and do NOT remount on each keystroke — a
+          remount was stealing focus back to the autoFocus Item Name field after one character. */}
+      {!showImport && (adding || editing) &&
+        NeedForm({ onDone:()=>{ setAdding(false); setEditing(null); setForm(blank()); } })
+      }
 
       {/* Exchange shortcut callout */}
       {needs.some(n=>n.status==="needed"||n.status==="searching") && org?.marketplace_enabled && (

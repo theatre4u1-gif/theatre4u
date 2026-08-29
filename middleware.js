@@ -85,7 +85,7 @@ async function itemPage(request, host) {
   const price = priceBits.join(' · ') || (item.mkt || '');
   const sub = [item.category, item.condition].filter(Boolean).join(' · ');
   const img = item.img || defImg;
-  const ogDesc = [sub, price].filter(Boolean).join(' — ') + ' · Shared on ' + appName;
+  const ogDesc = [sub, price].filter(Boolean).join(' · ') + ' · Shared on ' + appName;
   const openUrl = homeUrl + '/#/item/' + encodeURIComponent(item.display_id || raw);
 
   const body = `<div class="card">
