@@ -83,7 +83,7 @@ export function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
           <div className="hero-body">
             <div className="hero-eyebrow">🪙 Stage Economy</div>
             <h1 className="hero-title" style={{ fontSize: 44 }}>{getPointsName(org?.vertical)}</h1>
-            <p className="hero-sub">Earn points by sharing inventory and completing Exchange deals. Spend them for discounts — or save up for a free month.</p>
+            <p className="hero-sub">Earn points through the Backstage Exchange, by sharing inventory and completing Exchange deals with other programs. Spend them for Exchange discounts, or save up for a free month.</p>
           </div>
           <div className="hero-bar" />
         </div>
@@ -126,6 +126,9 @@ export function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
         </div>
 
         {/* How to earn — always visible */}
+        <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12, lineHeight: 1.6 }}>
+          Points are earned through the Backstage Exchange, by sharing inventory with other programs. Renting your own items to your own customers in Rental Checkout does not earn or spend points.
+        </div>
         <div className="card card-p" style={{ marginBottom: 22, display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 12 }}>
           {[
             { icon: "🎉", title: "Join & Welcome",      earn: "+25 pts",      note: "Awarded automatically on signup." },
@@ -136,11 +139,11 @@ export function CreditsPage({ userId, org, plan, balance, onBalanceChange }) {
             { icon: "📨", title: "First Exchange Request",earn: "+10 pts",    note: "Send your first request to another program." },
             { icon: "👥", title: "Invite a Team Member", earn: "+15 pts",     note: "Per member who signs in." },
             { icon: "👋", title: "Refer a Program",     earn: "+50 pts",      note: "Per program that creates an account using your referral link." },
-            { icon: "🤝", title: "Loan Completed",       earn: isAnnual ? "+15–75 pts ⭐" : "+10–50 pts",
-              note: isAnnual ? "1.5× annual rate. Lighting/Sound = 75 pts." : "Varies by item category. Lighting/Sound = 50 pts." },
-            { icon: "🔑", title: "Rental Completed",     earn: isAnnual ? "+$1 = 1.5 pts ⭐" : "+$1 = 1 pt",
-              note: isAnnual ? "1.5× annual rate — 1.5 pts per dollar of rental price." : "1 point per dollar of rental price." },
-            { icon: "🛒", title: "Exchange Discount", earn: "Up to 50% off", note: "Apply points when requesting any rental or purchase." },
+            { icon: "🤝", title: "Exchange Loan Completed", earn: isAnnual ? "+15 to 75 pts ⭐" : "+10 to 50 pts",
+              note: isAnnual ? "When another program borrows your item on the Exchange. 1.5× annual rate. Lighting/Sound = 75 pts." : "When another program borrows your item on the Exchange. Varies by category. Lighting/Sound = 50 pts." },
+            { icon: "🔑", title: "Exchange Rental Completed", earn: isAnnual ? "+$1 = 1.5 pts ⭐" : "+$1 = 1 pt",
+              note: isAnnual ? "When another program rents your item on the Exchange. 1.5× annual rate, 1.5 pts per dollar of the rental price." : "When another program rents your item on the Exchange. 1 point per dollar of the rental price." },
+            { icon: "🛒", title: "Exchange Discount", earn: "Up to 50% off", note: "Apply points when requesting a rental or purchase on the Backstage Exchange." },
             { icon: "🎟️", title: "Free Pro Month",    earn: "1,500 pts",   note: "Redeem 1,500 points for one free month of Pro." },
           ].map(s => (
             <div key={s.title} style={{ padding: "12px 14px", background: "var(--parch)", borderRadius: 10, border: "1px solid var(--linen)" }}>

@@ -399,7 +399,7 @@ export function RentalsPage({ userId, org, plan = "free", items = [], onItemSync
     <div style={{ maxWidth: 640, margin: "0 auto", textAlign: "center", padding: "40px 16px" }}>
       <div style={{ fontSize: 40, marginBottom: 10 }}>🧾</div>
       <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 24, marginBottom: 8 }}>Rental Checkout</h2>
-      <p style={{ color: "var(--muted)", fontSize: 14, maxWidth: 460, margin: "0 auto 24px", lineHeight: 1.6 }}>Build a rental order, scan items onto it with a phone or handheld scanner, mark items returned as they come back, and print a rental sheet. Upgrade to Pro to use Rental Checkout.</p>
+      <p style={{ color: "var(--muted)", fontSize: 14, maxWidth: 460, margin: "0 auto 24px", lineHeight: 1.6 }}>Rent your items to your own customers. Build a rental order, add items with your phone camera or by search, mark items returned as they come back, and print an agreement. This is separate from the Backstage Exchange. Upgrade to Pro to use Rental Checkout.</p>
       <UpgradePlans compact={true} userId={org?.id} userEmail={org?.email} />
     </div>
   );
@@ -541,7 +541,7 @@ export function RentalsPage({ userId, org, plan = "free", items = [], onItemSync
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
         <div>
           <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 4 }}>Rental Checkout</h2>
-          <p style={{ color: "var(--faint)", fontSize: 13, maxWidth: 560, lineHeight: 1.5 }}>Create a rental order, scan items onto it, mark items returned as they come back, and print a sheet. Great for renting many costumes and props at once.</p>
+          <p style={{ color: "var(--faint)", fontSize: 13, maxWidth: 620, lineHeight: 1.5 }}>Rent your items to your own customers. Create a rental order, add items, mark them returned as they come back, and print an agreement. Great for renting many costumes and props at once. This is your own checkout, separate from the Backstage Exchange, and it does not use Stage Points.</p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button onClick={() => { setTermsDraft(rentalTerms || DEFAULT_TERMS); setShowTerms(true); }} className="btn btn-o" style={{ fontSize: 13 }}>📝 Edit rental terms</button>
