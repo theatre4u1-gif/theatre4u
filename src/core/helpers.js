@@ -108,7 +108,9 @@ export const doorHost = (org) => doorOf(org) === "artstracker" ? "artstracker.or
 export const doorUrl  = (org) => "https://" + doorHost(org);
 
 export function itemShareUrl(item) {
-  return "https://" + APP_HOST + "/#/item/" + (item.display_id || item.id);
+  // Path-based (not hash) so Facebook and other crawlers can read the item's Open Graph
+  // preview — the Edge middleware serves /item/:id with per-item og tags (photo, name, price).
+  return "https://" + APP_HOST + "/item/" + encodeURIComponent(item.display_id || item.id);
 }
 
 export function itemShareText(item, orgName) {
