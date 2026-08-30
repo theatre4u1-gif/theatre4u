@@ -9,8 +9,19 @@ import { doorOf } from "../lib/admin-metrics.js";
 const fmtC = (c) => "$" + ((c || 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 });
 const fmtN = (n) => "$" + (n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
-const PLAN_PRICE = { pro: 15, district: 49 }; // standard monthly $, estimate only
-const monthlyFor = (o) => o.founding_member ? (Number(o.founding_rate_monthly) || 9.99) : o.stripe_subscription_id ? (PLAN_PRICE[o.plan] || 0) : 0;
+// Door and tier aware list prices (mirror admin-breakeven.jsx). The plan string is only
+// "pro" or "district"; a district's tier comes from its max_schools, and the price differs by
+// door (Theatre4u vs ArtsTracker). Estimate for the recurring-at-launch figure only.
+const PRO_PRICE = { theatre4u: 15, artstracker: 59 };
+const DISTRICT_PRICE = { theatre4u: { S: 49, M: 99, L: 179 }, artstracker: { S: 199, M: 399, L: 699 } };
+const tierOf = (maxSchools) => { const m = maxSchools || 6; return m <= 6 ? "S" : m <= 15 ? "M" : "L"; };
+const monthlyFor = (o, districtMap = {}) => {
+  if (o.founding_member) return Number(o.founding_rate_monthly) || 9.99;
+  if (!o.stripe_subscription_id) return 0;
+  const door = doorOf(o) === "artstracker" ? "artstracker" : "theatre4u";
+  if ((o.plan || "").startsWith("district")) return DISTRICT_PRICE[door][tierOf(districtMap[o.district_id])];
+  return PRO_PRICE[door];
+};
 const planTxt = (o) => o.stripe_subscription_id ? "Paying" : o.founding_member ? "Founding" : o.temp_pro ? "Beta" : (o.plan || "free");
 
 function Card({ label, value, sub, accent, onClick }) {
@@ -37,16 +48,18 @@ export function BillingDashboard({ door = "all" }) {
   const [detailOrg, setDetailOrg] = useState(null);
   const [tab, setTab] = useState("money"); // money | founding | beta
   const [paused, setPaused] = useState(null); // billing kill-switch (site_content global/billing_paused)
+  const [distMap, setDistMap] = useState({}); // district_id -> max_schools, for tier pricing
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const [orgsRes, revRes, payRes, flagRes] = await Promise.all([
-          SB.from("orgs").select("id,name,email,plan,vertical,signup_domain,temp_pro,founding_member,founding_rate_monthly,stripe_subscription_id,subscription_status,plan_expires_at,beta_end_date,account_status,deleted_at,created_at"),
+        const [orgsRes, revRes, payRes, flagRes, distRes] = await Promise.all([
+          SB.from("orgs").select("id,name,email,plan,vertical,signup_domain,temp_pro,founding_member,founding_rate_monthly,stripe_subscription_id,subscription_status,plan_expires_at,beta_end_date,account_status,deleted_at,created_at,district_id"),
           SB.from("stripe_revenue_summary").select("month,revenue_cents,refunded_cents,successful_payments,unique_customers"),
           SB.from("stripe_payments_current").select("org_name,customer_name,customer_email,amount_cents,plan,status,refunded,stripe_created_at").order("stripe_created_at", { ascending: false }).limit(100),
           SB.from("site_content").select("cvalue").eq("vertical", "global").eq("ckey", "billing_paused").maybeSingle(),
+          SB.from("districts").select("id,max_schools"),
         ]);
         if (!alive) return;
         if (orgsRes.error) throw orgsRes.error;
@@ -54,6 +67,7 @@ export function BillingDashboard({ door = "all" }) {
         setRev((revRes.data || []).slice().sort((a, b) => new Date(a.month) - new Date(b.month)));
         setPays(payRes.data || []);
         setPaused(flagRes.data?.cvalue === "1");
+        const dm = {}; (distRes.data || []).forEach(d => { dm[d.id] = d.max_schools; }); setDistMap(dm);
       } catch (e) { if (alive) setErr(e.message || String(e)); }
     })();
     return () => { alive = false; };
@@ -64,6 +78,7 @@ export function BillingDashboard({ door = "all" }) {
   if (!orgs) return <div style={{ padding: 24, color: "#888" }}>Loading billing…</div>;
 
   const now = new Date();
+  const preLaunch = now < new Date("2026-09-01T07:00:00Z");
   const curRow = rev.find(r => { const m = new Date(r.month); return m.getFullYear() === now.getFullYear() && m.getMonth() === now.getMonth(); });
   const revThisMonth = curRow ? (curRow.revenue_cents - (curRow.refunded_cents || 0)) : 0;
   const rev6 = rev.slice(-6).reduce((a, r) => a + (r.revenue_cents - (r.refunded_cents || 0)), 0);
@@ -71,12 +86,12 @@ export function BillingDashboard({ door = "all" }) {
   const paying = shown.filter(o => o.stripe_subscription_id);
   const founding = shown.filter(o => o.founding_member);
   const betaExp = shown.filter(o => o.beta_end_date);
-  const committed = shown.reduce((a, o) => a + monthlyFor(o), 0);
+  const committed = shown.reduce((a, o) => a + monthlyFor(o, distMap), 0);
   const nearestBeta = betaExp.map(o => o.beta_end_date).sort()[0];
 
   const exportCsv = () => {
     const head = ["Program", "Email", "Plan", "Status", "Founding", "Monthly($est)", "Beta ends", "Stripe sub"];
-    const rows = orgs.map(o => [o.name || "", o.email || "", o.plan || "", o.subscription_status || (o.stripe_subscription_id ? "active" : (o.account_status || "")), o.founding_member ? "yes" : "", monthlyFor(o) || "", o.beta_end_date || "", o.stripe_subscription_id || ""]);
+    const rows = orgs.map(o => [o.name || "", o.email || "", o.plan || "", o.subscription_status || (o.stripe_subscription_id ? "active" : (o.account_status || "")), o.founding_member ? "yes" : "", monthlyFor(o, distMap) || "", o.beta_end_date || "", o.stripe_subscription_id || ""]);
     const csv = [head, ...rows].map(r => r.map(v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"').join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -103,7 +118,7 @@ export function BillingDashboard({ door = "all" }) {
 
   return (
     <div style={{ maxWidth: 1080, margin: "0 auto" }}>
-      <p style={{ color: "#777", fontSize: 13, margin: "0 0 4px" }}>Revenue and the money-relevant cohorts. Billing begins September 1, so revenue stays near zero until then and the recurring figure is an estimate. Click a program to open its console.</p>
+      <p style={{ color: "#777", fontSize: 13, margin: "0 0 4px" }}>Revenue and the money-relevant cohorts. {preLaunch ? "Billing begins September 1, so revenue stays near zero until then and the recurring figure is an estimate. " : "The recurring figure is an estimate. "}Click a program to open its console.</p>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", background: paused ? "#fdecea" : "#f1f7f1", border: "1px solid " + (paused ? "#e6b0aa" : "#c8e0c8"), borderRadius: 12, padding: "12px 16px", margin: "8px 0 4px" }}>
         <div>
           <div style={{ fontWeight: 800, fontSize: 14, color: paused ? "#a5342b" : "#1a7f37" }}>{paused === null ? "Billing switch…" : paused ? "⏸ Billing is PAUSED" : "● Billing is live"}</div>
@@ -158,7 +173,7 @@ export function BillingDashboard({ door = "all" }) {
           <tbody>
             {cohort.length === 0 && <tr><td style={td} colSpan={4}>None yet.</td></tr>}
             {cohort.map(o => (
-              <tr key={o.id}><td style={td}>{nameLink(o)}<div style={{ fontSize: 11.5, color: "#9a9284" }}>{o.email || ""}</div></td><td style={td}>{planTxt(o)}</td><td style={td}>{monthlyFor(o) ? fmtN(monthlyFor(o)) : "—"}</td><td style={td}>{tab === "beta" ? fmtDate(o.beta_end_date) : (o.subscription_status || (o.stripe_subscription_id ? "active" : o.account_status || "—"))}</td></tr>
+              <tr key={o.id}><td style={td}>{nameLink(o)}<div style={{ fontSize: 11.5, color: "#9a9284" }}>{o.email || ""}</div></td><td style={td}>{planTxt(o)}</td><td style={td}>{monthlyFor(o, distMap) ? fmtN(monthlyFor(o, distMap)) : "—"}</td><td style={td}>{tab === "beta" ? fmtDate(o.beta_end_date) : (o.subscription_status || (o.stripe_subscription_id ? "active" : o.account_status || "—"))}</td></tr>
             ))}
           </tbody>
         </table>

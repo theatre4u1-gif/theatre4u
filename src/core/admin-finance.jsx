@@ -98,6 +98,7 @@ export function BusinessFinance({ userId }) {
   if (!rows) return <div style={{ padding: 24, color: "#888" }}>Loading finance…</div>;
 
   const thisMonth = ym(new Date().toISOString());
+  const preLaunch = new Date() < new Date("2026-09-01T07:00:00Z");
   const sum = (pred) => rows.filter(pred).reduce((a, r) => a + (r.amount_cents || 0), 0);
   const income = sum(r => r.type === "income");
   const expense = sum(r => r.type === "expense");
@@ -154,7 +155,7 @@ export function BusinessFinance({ userId }) {
         <div><div style={{ fontSize: 22, fontWeight: 800 }}>{fmt(stripeNetAll)}</div><div style={{ fontSize: 12, color: "#9a9284" }}>net Stripe revenue on record (all months)</div></div>
         <button onClick={importStripe} disabled={busy} style={S.btn("#c4922a", busy)}>⭳ Import Stripe revenue as income</button>
       </div>
-      <div style={{ fontSize: 11.5, color: "#9a9284", marginTop: 6 }}>Adds one income entry per month not already imported (won't double-count). Billing begins Sept 1, so this stays near $0 until then.</div>
+      <div style={{ fontSize: 11.5, color: "#9a9284", marginTop: 6 }}>Adds one income entry per month not already imported (won't double-count).{preLaunch ? " Billing begins Sept 1, so this stays near $0 until then." : ""}</div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "26px 0 12px" }}>
         <h3 style={{ fontSize: 13, fontWeight: 800, color: "#6b6459", textTransform: "uppercase", letterSpacing: .5, margin: 0 }}>Entries ({rows.length})</h3>

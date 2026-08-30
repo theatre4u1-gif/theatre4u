@@ -242,6 +242,7 @@ export function OverviewDashboard({ door = "all" }) {
   if (err) return <div style={{ padding: 24, color: "#c0392b" }}>Couldn't load Pulse: {err}</div>;
   if (!orgs) return <div style={{ padding: 24, color: "#888" }}>Loading Pulse…</div>;
 
+  const preLaunch = new Date() < new Date("2026-09-01T07:00:00Z");
   const weekAgo = new Date(Date.now() - 7 * DAY).toISOString();
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
   const bucketOf = (o) => activeBucket(lastActiveTs(o, usageMap[o.id]));
@@ -382,7 +383,7 @@ export function OverviewDashboard({ door = "all" }) {
       </div>
 
       <p style={{ color: "#9a9284", fontSize: 11.5, marginTop: 22, lineHeight: 1.5 }}>
-        Billing begins September 1, so revenue is expected to be minimal until then. The radar at top pulls live from reports, feedback, leads, label orders, and account health each time you open Pulse.
+        {preLaunch ? "Billing begins September 1, so revenue is expected to be minimal until then. " : ""}The radar at top pulls live from reports, feedback, leads, label orders, and account health each time you open Pulse.
       </p>
     </div>
   );
