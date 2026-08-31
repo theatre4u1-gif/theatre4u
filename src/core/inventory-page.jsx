@@ -683,11 +683,11 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
       />}
       {modal==="a"&&(<Modal title="Add New Item" onClose={()=>setModal(null)}
          >
-          <ItemForm onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={org?.vertical||"theatre"} plan={plan}/>
+          <ItemForm onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={org?.vertical||"theatre"} plan={plan} suggestedTags={allTags}/>
         </Modal>)}
       {modal==="e"&&active&&(<Modal title="Edit Item" onClose={()=>setModal(null)}
          >
-          <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={org?.vertical||"theatre"} plan={plan}/>
+          <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={org?.vertical||"theatre"} plan={plan} suggestedTags={allTags}/>
         </Modal>)}
       {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{onDelete(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete}/></Modal>}
       {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",userId).order("added",{ascending:false});if(data&&onImported)onImported(data);}}/>}

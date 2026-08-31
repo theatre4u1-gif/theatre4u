@@ -139,7 +139,7 @@ export async function uploadPhoto(file, userId) {
   } catch(e) { console.error("uploadPhoto failed:", e); return null; }
 }
 
-export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical="theatre",plan="free"}){
+export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical="theatre",plan="free",suggestedTags=[]}){
   const vConfig = getVertical(vertical);
   // Per-vertical example text (QA-4, 2026-07-04)
   const EX_ITEM = {theatre:"Victorian Ball Gown", music:"Yamaha Trumpet", dance:"Ballet Slippers (Pair)", art:"Acrylic Paint Set", booster:"Folding Table"}[vertical] || "Storage Bin";
@@ -350,7 +350,14 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
       <div className="fg fu">
         <div className="slbl">🏷 Tags</div>
         <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>{(f.tags||[]).map(t=><span key={t} className="tc" onClick={()=>upd("tags",f.tags.filter(x=>x!==t))}>#{t} ×</span>)}</div>
-        <div style={{display:"flex",gap:7}}><input className="fi" style={{flex:1}} value={ti} onChange={e=>setTi(e.target.value)} placeholder="Add tag…" onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addTag()}}}/><button className="btn btn-o btn-sm" onClick={addTag}>Add</button></div>
+        <div style={{display:"flex",gap:7}}><input className="fi" style={{flex:1}} list="itemtaglist" value={ti} onChange={e=>setTi(e.target.value)} placeholder="Add tag…" onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addTag()}}}/><button className="btn btn-o btn-sm" onClick={addTag}>Add</button></div>
+        <datalist id="itemtaglist">{suggestedTags.map(t=><option key={t} value={t}/>)}</datalist>
+        {(()=>{const avail=suggestedTags.filter(t=>!(f.tags||[]).includes(t)).slice(0,12);return avail.length>0?(
+          <div style={{marginTop:8}}>
+            <div style={{fontSize:11,color:"#9a9284",marginBottom:5}}>Tap to add from tags you already use</div>
+            <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{avail.map(t=><span key={t} className="tc" style={{cursor:"pointer",opacity:.85}} onClick={()=>{if(!(f.tags||[]).includes(t))upd("tags",[...(f.tags||[]),t]);}}>+ {t}</span>)}</div>
+          </div>
+        ):null;})()}
       </div>
       <div className="fg fu"><label className="fl">Notes</label><textarea className="ft" value={f.notes} onChange={e=>upd("notes",e.target.value)} placeholder="Usage history, care instructions…"/></div>
       <div className="fg fu sdiv"><div className="slbl">🏪 {getExchangeName(vertical)}</div></div>
