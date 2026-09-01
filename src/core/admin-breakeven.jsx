@@ -17,6 +17,7 @@ const RECURRING_COST_CATS = ["Software / SaaS", "Hosting", "Payment fees"];
 const FREE_ITEM_LIMIT = 25;
 
 const PRO = { theatre4u: 15, artstracker: 59 };
+const PRO_FOUNDING = 9.99; // founding Pro rate when a specific rate isn't stored on the org
 const DISTRICT = { theatre4u: { S: 49, M: 99, L: 179 }, artstracker: { S: 199, M: 399, L: 699 } };
 const money = (n) => "$" + (Math.round(n * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 });
 
@@ -27,12 +28,18 @@ function orgMonthly(o, itemCount, districtMap) {
   if (o.deleted_at || o.absorbed_into_district || o.account_status === "closed") return { amt: 0, kind: "excluded" };
   if (o.admin_notes && o.admin_notes.includes("[COMPED]")) return { amt: 0, kind: "excluded" }; // e.g. HBUHSD
   const door = doorOf(o) === "artstracker" ? "artstracker" : "theatre4u";
-  // Locked founding rate always wins (committed).
-  if (o.founding_rate_monthly) return { amt: Number(o.founding_rate_monthly), kind: "founding" };
+  const isDistrict = (o.plan || "").startsWith("district");
+  // Founding members are committed at their founding rate. Use the stored rate if we have one;
+  // a founding grant with no stored rate is Pro founding ($9.99), or the standard district price.
+  if (o.founding_member || o.founding_rate_monthly) {
+    const amt = o.founding_rate_monthly ? Number(o.founding_rate_monthly)
+      : (isDistrict ? DISTRICT[door][tierOf(districtMap[o.district_id])] : PRO_FOUNDING);
+    return { amt, kind: "founding" };
+  }
   const paying = !!o.stripe_subscription_id;
   const over = (itemCount || 0) >= FREE_ITEM_LIMIT;
   if (!paying && !over) return { amt: 0, kind: "free" };
-  if ((o.plan || "").startsWith("district")) {
+  if (isDistrict) {
     const ms = districtMap[o.district_id];
     return { amt: DISTRICT[door][tierOf(ms)], kind: paying ? "paying" : "projected" };
   }

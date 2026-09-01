@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { APP_HOST } from "./config.js";
 import { SB } from "./supabase.js";
-import { Modal, Pager, HeroImg, CatCard, CatThumb } from "./ui.jsx";
+import { Modal, HeroImg, CatCard, CatThumb } from "./ui.jsx";
 import { Ic } from "./icons.jsx";
 import { EM } from "./messages.js";
 import { fmt$, uid, doorUrl } from "./helpers.js";
@@ -45,8 +45,8 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
   const items = (itemsRaw||[]).filter(i => (i.review_status || "approved") !== "pending");
   const pendingItems = (itemsRaw||[]).filter(i => i.review_status === "pending");
 
-  const approveItem = async (it) => { await onEdit({ ...it, review_status: "approved" }); };
-  const rejectItem  = async (it) => { if (window.confirm("Reject and delete this submission? This cannot be undone.")) await onDelete(it.id); };
+  const approveItem = async (it) => { await onEdit({ ...it, review_status: "approved" }); refetch(); };
+  const rejectItem  = async (it) => { if (window.confirm("Reject and delete this submission? This cannot be undone.")) { await onDelete(it.id); refetch(); } };
 
   // ── Storage location deep link — filter items when QR scanned ────────────────
   const [locFilter,     setLocFilter]     = useState(deepLinkLocationId || "all");
@@ -84,7 +84,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
   const[hoverImg,setHoverImg]=useState(null); // full-size photo shown on card hover
   const[tagF,setTagF]=useState(()=>new Set()); // active tag filters (item must have ALL selected)
   const toggleTag=(t)=>setTagF(prev=>{const n=new Set(prev);n.has(t)?n.delete(t):n.add(t);return n;});
-  const[showF,setShowF]=useState(false);const[pg,setPg]=useState(1);
+  const[showF,setShowF]=useState(false);
   const[modal,setModal]=useState(null);const[active,setActive]=useState(null);
   const[showImport,setShowImport]=useState(false);
   const[showBulk,setShowBulk]=useState(false);
@@ -93,6 +93,19 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
   const[gsHide,setGsHide]=useState(()=>{try{return localStorage.getItem(gsKey)==="1"}catch{return false}});
   const dismissGs=()=>{try{localStorage.setItem(gsKey,"1")}catch(e){}setGsHide(true)};
   const[invView,setInvView]=useState("items"); // items | loans (Borrowed & Lent tab)
+
+  // ── Server-side list state. Large catalogs page and search in the database, so a shop with
+  //    100k items loads one page at a time instead of pulling everything into the browser. ──
+  const[rows,setRows]=useState([]);        // the accumulated loaded page(s) for the current filter
+  const[total,setTotal]=useState(0);        // total matching the current filter (from the DB count)
+  const[loadingRows,setLoadingRows]=useState(true);
+  const[loadingMore,setLoadingMore]=useState(false);
+  const[fetchErr,setFetchErr]=useState("");
+  const[srvTags,setSrvTags]=useState([]);   // all of this org's tags (not just the loaded page)
+  const[reloadKey,setReloadKey]=useState(0);
+  const[dsearch,setDsearch]=useState("");   // debounced search term that actually drives the query
+  useEffect(()=>{const t=setTimeout(()=>setDsearch(search.trim()),300);return()=>clearTimeout(t);},[search]);
+  useEffect(()=>{ if(!userId) return; (async()=>{ const {data}=await SB.rpc("get_org_item_tags",{p_org_id:userId}); if(Array.isArray(data)) setSrvTags(data); })(); },[userId,reloadKey]);
 
   // ── Bulk / mass edit state ───────────────────────────────────────────────
   const[selectMode, setSelectMode] = useState(false);
@@ -110,7 +123,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
     setAutoCatRunning(true);
     setAutoCatMsg("Analyzing items…");
     const ids = [...selected];
-    const toProcess = items.filter(i => ids.includes(i.id));
+    const toProcess = rows.filter(i => ids.includes(i.id));
     let updated = 0, failed = 0;
 
     for (const item of toProcess) {
@@ -134,7 +147,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
         const cat   = VALID.find(c => raw.includes(c));
         if (cat && cat !== item.category) {
           const { error } = await SB.from("items").update({ category: cat }).eq("id", item.id);
-          if (!error) { onEdit({ ...item, category: cat }); updated++; }
+          if (!error) { onEdit({ ...item, category: cat }); setRows(prev=>prev.map(r=>r.id===item.id?{...r,category:cat}:r)); updated++; }
           else failed++;
         } else {
           updated++; // already correct or no change needed
@@ -155,7 +168,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
     n.has(id) ? n.delete(id) : n.add(id);
     return n;
   });
-  const selectAll  = () => setSelected(new Set(filtered.map(i=>i.id)));
+  const selectAll  = () => setSelected(new Set(rows.map(i=>i.id)));
   const clearSelect = () => { setSelected(new Set()); };
 
   const applyBulkEdit = async () => {
@@ -179,7 +192,8 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
     if (error) {
       setBulkMsg("❌ Update failed: " + error.message);
     } else {
-      ids.forEach(id => onEdit({ ...items.find(i=>i.id===id), [col]: bulkValue }));
+      ids.forEach(id => onEdit({ ...rows.find(i=>i.id===id), [col]: bulkValue }));
+      setRows(prev=>prev.map(r=>ids.includes(r.id)?{...r,[col]:bulkValue}:r));
       setBulkMsg("✅ Updated " + ids.length + " item" + (ids.length!==1?"s":""));
       setSelected(new Set());
       setBulkField("");
@@ -188,46 +202,65 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
     }
     setBulkSaving(false);
   };
-  const PP=20;
+  const PAGE=48;
   const mktCls=m=>m==="For Rent"?"mb-rent":m==="For Sale"?"mb-sale":m==="Rent or Sale"?"mb-both":m==="For Loan"?"mb-loan":"mb-none";
-  // Every tag in use across this inventory, most-used first (for the filter chips).
-  const allTags=useMemo(()=>{const m=new Map();items.forEach(i=>(i.tags||[]).forEach(t=>{if(t)m.set(t,(m.get(t)||0)+1);}));return[...m.keys()].sort((a,b)=>(m.get(b)-m.get(a))||a.localeCompare(b));},[items]);
-  const filtered=useMemo(()=>{
-    let f=items;
-    if(search){const q=search.toLowerCase();f=f.filter(i=>i.name.toLowerCase().includes(q)||(i.notes||"").toLowerCase().includes(q)||(i.location||"").toLowerCase().includes(q)||(i.display_id||"").toLowerCase().includes(q)||(i.tags||[]).some(t=>t.includes(q)))}
-    if(catF!=="all")f=f.filter(i=>i.category===catF);
-    if(condF!=="all")f=f.filter(i=>i.condition===condF);
-    if(availF!=="all")f=f.filter(i=>i.avail===availF);
-    if(mktF!=="all")f=f.filter(i=>i.mkt===mktF);
-    if(tagF.size)f=f.filter(i=>{const it=new Set(i.tags||[]);for(const t of tagF)if(!it.has(t))return false;return true;});
-    if(locFilter!=="all")f=f.filter(i=>
-      i.location_id===locFilter ||
-      (i.location&&locFilterName&&i.location.toLowerCase()===locFilterName.name.toLowerCase())
-    );
-    // Sort (copy first so we never mutate the items prop)
-    const byNum=(a,b)=>{
-      const na=a.item_number, nb=b.item_number;
-      if(na!=null&&nb!=null) return na-nb;
-      if(na!=null) return -1; if(nb!=null) return 1;
-      return String(a.display_id||"").localeCompare(String(b.display_id||""),undefined,{numeric:true});
-    };
-    const sorters={
-      newest:(a,b)=>new Date(b.added||0)-new Date(a.added||0),
-      number:byNum,
-      name:(a,b)=>String(a.name||"").localeCompare(String(b.name||"")),
-      location:(a,b)=>String(a.location||"").localeCompare(String(b.location||"")) || byNum(a,b),
-    };
-    return [...f].sort(sorters[sortBy]||sorters.newest);
-  },[items,search,catF,condF,availF,mktF,tagF,locFilter,locFilterName,sortBy]);
-  const paged=useMemo(()=>filtered.slice((pg-1)*PP,pg*PP),[filtered,pg]);
-  useEffect(()=>setPg(1),[search,catF,condF,availF,mktF,tagF]);
+  // Tag chips + add-form suggestions come from the server (every tag in this org, not just the
+  // items currently on screen), so filtering by tag works even when the catalog is huge.
+  const allTags=srvTags;
+
+  // ── Build the item query with the active search/filters/sort, then page it in the database. ──
+  // Strip characters that are special in the PostgREST filter grammar (its delimiters and the
+  // ILIKE wildcards) so a search like 3.5" heel or a comma cannot break the query.
+  const qstr=(dsearch||"").replace(/[,()*%:."'\\]/g," ").replace(/\s+/g," ").trim();
+  const buildQuery=(withCount)=>{
+    let q=SB.from("items").select("*", withCount?{count:"exact"}:undefined)
+      .eq("org_id",userId)
+      .or("review_status.is.null,review_status.eq.approved");
+    if(qstr) q=q.or(`name.ilike.*${qstr}*,notes.ilike.*${qstr}*,location.ilike.*${qstr}*,display_id.ilike.*${qstr}*`);
+    if(catF!=="all") q=q.eq("category",catF);
+    if(condF!=="all") q=q.eq("condition",condF);
+    if(availF!=="all") q=q.eq("avail",availF);
+    if(mktF!=="all") q=q.eq("mkt",mktF);
+    if(tagF.size) q=q.contains("tags",[...tagF]);
+    if(locFilter!=="all") q=q.eq("location_id",locFilter);
+    if(sortBy==="name") q=q.order("name",{ascending:true});
+    else if(sortBy==="location") q=q.order("location",{ascending:true,nullsFirst:false}).order("item_number",{ascending:true,nullsFirst:false});
+    else if(sortBy==="number") q=q.order("item_number",{ascending:true,nullsFirst:false}).order("display_id",{ascending:true});
+    else q=q.order("added",{ascending:false});
+    return q;
+  };
+  useEffect(()=>{
+    if(!userId) return;
+    let alive=true; setLoadingRows(true); setFetchErr("");
+    (async()=>{
+      const {data,count,error}=await buildQuery(true).range(0,PAGE-1);
+      if(!alive) return;
+      if(error){ setFetchErr(error.message||String(error)); setRows([]); setTotal(0); }
+      else { setRows(data||[]); setTotal(count||0); }
+      setLoadingRows(false);
+    })();
+    return ()=>{alive=false;};
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[userId,dsearch,catF,condF,availF,mktF,tagF,locFilter,sortBy,reloadKey]);
+  const loadMore=async()=>{
+    if(loadingMore) return; setLoadingMore(true);
+    const {data,error}=await buildQuery(false).range(rows.length,rows.length+PAGE-1);
+    if(!error&&data) setRows(prev=>[...prev,...data]);
+    setLoadingMore(false);
+  };
+  const hasMore=rows.length<total;
+  const anyFilter=!!qstr||catF!=="all"||condF!=="all"||availF!=="all"||mktF!=="all"||tagF.size>0||locFilter!=="all";
+  const refetch=()=>setReloadKey(k=>k+1);
   const openD=item=>{setActive(item);setModal("d")};
   const openE=item=>{setActive(item);setModal("e")};
+  const del=async(id)=>{ await onDelete(id); setRows(prev=>prev.filter(r=>r.id!==id)); setTotal(t=>Math.max(0,t-1)); };
   const handleSave=async form=>{
     if(active&&modal==="e"){
       await onEdit({...active,...form,id:active.id});
+      setRows(prev=>prev.map(r=>r.id===active.id?{...r,...form,id:active.id}:r));
     } else {
       await onAdd({...form,id:uid(),added:new Date().toISOString(),review_status: submitsForReview?"pending":"approved"});
+      refetch();
       if(submitsForReview){
         setPendingMsg("📨 Sent to your Program Director for approval. It will appear in the catalog once approved.");
         setTimeout(()=>setPendingMsg(""),7000);
@@ -248,7 +281,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
   const [printingQR, setPrintingQR] = useState(false);
 
   const printQRFiltered = async () => {
-    const toPrint = filtered.length > 0 ? filtered : items;
+    const toPrint = rows.length > 0 ? rows : items;
     if (!toPrint.length) { alert("No items to print."); return; }
     setPrintingQR(true);
     try {
@@ -322,7 +355,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
         <span style={{fontSize:20}}>📦</span>
         <div style={{flex:1}}>
           <div style={{fontWeight:700,fontSize:14,color:"var(--goldink)"}}>{locFilterName.name}{locFilterName.code?` · ${locFilterName.code}`:""}</div>
-          <div style={{fontSize:12,color:"var(--t2)",marginTop:1}}>{filtered.length} item{filtered.length!==1?"s":""} in this location</div>
+          <div style={{fontSize:12,color:"var(--t2)",marginTop:1}}>{total} item{total!==1?"s":""} in this location</div>
           {locFilterName.description&&<div style={{fontSize:11,color:"var(--t3)",marginTop:1,fontStyle:"italic"}}>{locFilterName.description}</div>}
         </div>
         <button onClick={()=>{setLocFilter("all");setLocFilterName(null);}} style={{background:"none",border:"1px solid rgba(232,184,93,.3)",borderRadius:6,color:"var(--t2)",padding:"4px 10px",cursor:"pointer",fontSize:12,fontFamily:"inherit",whiteSpace:"nowrap"}}>Show All</button>
@@ -374,7 +407,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
           <div style={{marginLeft:"auto",display:"flex",gap:7}}>
             <button className="btn btn-o" style={{fontSize:12,padding:"6px 12px"}} disabled={printingQR}
               onClick={printQRFiltered} title="Print QR labels for visible items">
-              {printingQR ? "Generating…" : ("🖨 Print QR" + (filtered.length < items.length ? " ("+filtered.length+")" : ""))}
+              {printingQR ? "Generating…" : ("🖨 Print QR" + (rows.length ? " ("+rows.length+")" : ""))}
             </button>
             {canAdd&&<div style={{position:"relative"}}>
               <button className="btn btn-g" onClick={()=>setAddMenu(m=>!m)} title="Add items">
@@ -402,7 +435,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
               <button onClick={selectAll}
                 style={{padding:"5px 11px",borderRadius:6,border:"1px solid var(--border)",
                   background:"transparent",color:"var(--muted)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
-                Select All ({filtered.length})
+                Select All ({rows.length})
               </button>
               {selected.size>0&&<button onClick={clearSelect}
                 style={{padding:"5px 11px",borderRadius:6,border:"1px solid var(--border)",
@@ -595,11 +628,13 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
             </div>
           </div>
         )}
-        <div style={{fontSize:13,fontWeight:700,color:"var(--faint)",marginBottom:12}}>{filtered.length} item{filtered.length!==1?"s":""}</div>
-        {view==="grid"&&(paged.length===0
-          ?<div className="empty"><div className="empty-ico">{vCfg.icon}</div><h3>No Items Found</h3><p>{items.length===0?"Add your first item to build your catalog.":"Try adjusting search or filters."}</p>{items.length===0&&canAdd&&<button className="btn btn-g" onClick={()=>{setActive(null);setModal("a")}}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add First Item</button>}</div>
+        <div style={{fontSize:13,fontWeight:700,color:"var(--faint)",marginBottom:12}}>{total.toLocaleString()} item{total!==1?"s":""}{fetchErr?" · couldn't load: "+fetchErr:""}</div>
+        {view==="grid"&&(loadingRows
+          ?<div className="empty"><div className="empty-ico">⏳</div><h3>Loading…</h3></div>
+          :rows.length===0
+          ?<div className="empty"><div className="empty-ico">{vCfg.icon}</div><h3>No Items Found</h3><p>{anyFilter?"Try adjusting search or filters.":"Add your first item to build your catalog."}</p>{!anyFilter&&canAdd&&<button className="btn btn-g" onClick={()=>{setActive(null);setModal("a")}}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add First Item</button>}</div>
           :<div className="inv-grid">
-              {paged.map(item=>{
+              {rows.map(item=>{
                 const cat=vCAT[item.category]||vCAT.other||CAT.other;
                 return(
                   <div key={item.id} className="inv-card"
@@ -633,7 +668,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
                 <th style={{width:60}}>#</th><th></th><th>Item</th><th>Category</th><th>Cond.</th><th>Qty</th><th>Location</th><th>Avail.</th><th>Market</th><th></th>
               </tr></thead>
               <tbody>
-                {paged.map(item=>{
+                {rows.map(item=>{
                   const cat=vCAT[item.category]||vCAT.other||CAT.other;
                   const isSel = selectMode && selected.has(item.id);
                   return(
@@ -662,24 +697,31 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
                       <td><span className={"mkt-badge "+mktCls(item.mkt)}>{item.mkt}</span></td>
                       <td><div style={{display:"flex",gap:4}}>
                         {!selectMode&&<button className="ico-btn" aria-label="Edit item" onClick={e=>{e.stopPropagation();openE(item)}}>{Ic.edit}</button>}
-                        {!selectMode&&canDelete&&<button className="ico-btn" aria-label="Delete item" style={{color:"var(--red)"}} onClick={e=>{e.stopPropagation();if(window.confirm("Delete?"))onDelete(item.id)}}>{Ic.trash}</button>}
+                        {!selectMode&&canDelete&&<button className="ico-btn" aria-label="Delete item" style={{color:"var(--red)"}} onClick={e=>{e.stopPropagation();if(window.confirm("Delete?"))del(item.id)}}>{Ic.trash}</button>}
                       </div></td>
                     </tr>
                   );
                 })}
-                {paged.length===0&&<tr><td colSpan={selectMode?10:9} style={{textAlign:"center",color:"var(--faint)",padding:40,fontFamily:"'Lora',serif",fontStyle:"italic"}}>No items found</td></tr>}
+                {rows.length===0&&<tr><td colSpan={selectMode?10:9} style={{textAlign:"center",color:"var(--faint)",padding:40,fontFamily:"'Lora',serif",fontStyle:"italic"}}>{loadingRows?"Loading…":"No items found"}</td></tr>}
               </tbody>
             </table>
           </div>
         )}
-        <Pager total={filtered.length} page={pg} per={PP} onPage={setPg}/>
+        {hasMore&&view!=="locations"&&(
+          <div style={{textAlign:"center",margin:"22px 0 4px"}}>
+            <button className="btn btn-o" disabled={loadingMore} onClick={loadMore}>
+              {loadingMore?"Loading…":("Load more ("+(total-rows.length).toLocaleString()+" more)")}
+            </button>
+          </div>
+        )}
+        {!loadingRows&&rows.length>0&&view!=="locations"&&<div style={{textAlign:"center",fontSize:12,color:"var(--faint)",marginTop:10}}>Showing {rows.length.toLocaleString()} of {total.toLocaleString()}</div>}
       </div>
       {view==="locations"&&<LocationsPanel
         userId={userId}
         items={items}
         vertical={vVertical}
         onEditItem={item=>{setActive(item);setModal("e");}}
-        onDeleteItem={id=>{onDelete(id);}}
+        onDeleteItem={id=>{del(id);}}
       />}
       {modal==="a"&&(<Modal title="Add New Item" onClose={()=>setModal(null)}
          >
@@ -689,9 +731,9 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
          >
           <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={org?.vertical||"theatre"} plan={plan} suggestedTags={allTags}/>
         </Modal>)}
-      {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{onDelete(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete}/></Modal>}
-      {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",userId).order("added",{ascending:false});if(data&&onImported)onImported(data);}}/>}
-      {showBulk&&<BulkPhotoAdd userId={userId} vertical={vVertical} cats={vCATS} onClose={()=>setShowBulk(false)} onImport={(data)=>{if(onImported)onImported(data);}}/>}
+      {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{del(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete}/></Modal>}
+      {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",userId).order("added",{ascending:false}).limit(2000);if(data&&onImported)onImported(data);refetch();}}/>}
+      {showBulk&&<BulkPhotoAdd userId={userId} vertical={vVertical} cats={vCATS} onClose={()=>setShowBulk(false)} onImport={(data)=>{if(onImported)onImported(data);refetch();}}/>}
     </div>
     </>)}
   </>
