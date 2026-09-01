@@ -218,9 +218,9 @@ export function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMa
                     You've earned the Founding Member Rate — $9.99/month!
                   </div>
                   <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
-                    You added 25+ items and shared your feedback during beta. When {APP_NAME} launches,
-                    your rate is locked at <strong style={{color:"var(--text)"}}>$9.99/month</strong> for
-                    as long as you subscribe — 33% less than the standard $15 rate. Thank you for being
+                    You added 25+ items and shared your feedback as a founding member. Your rate is
+                    locked at <strong style={{color:"var(--text)"}}>$9.99/month</strong> for
+                    as long as you subscribe, 33% less than the standard $15 rate. Thank you for being
                     a founding member of {APP_NAME}.
                   </div>
                 </div>
@@ -237,7 +237,7 @@ export function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMa
                 <span style={{fontSize:20,flexShrink:0}}>⭐</span>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:13,color:"var(--goldink)",marginBottom:3}}>
-                    Full Pro access — complimentary during the {APP_NAME} beta
+                    Full Pro access, complimentary while you get started
                   </div>
                   <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
                     When {APP_NAME} launches you'll have the option to subscribe.

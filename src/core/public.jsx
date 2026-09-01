@@ -125,11 +125,11 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
         <div style={{display:"inline-flex",alignItems:"center",gap:7,padding:"4px 14px",background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.3)",borderRadius:20,fontSize:12,fontWeight:700,color:"var(--gold)",textTransform:"uppercase",letterSpacing:1,marginBottom:14}}>
           {c("landing.hero.eyebrow", IS_ARTSTRACKER ? "🎨 The Platform for Arts & Activity Programs" : "🎭 The Platform for Theatre Programs")}
         </div>
-        {/* Announcement (beta) ribbon — editable in the admin Content editor; clear the "Show" toggle to hide it (e.g. at Sept 1 launch). */}
+        {/* Announcement ribbon — editable in the admin Content editor; clear the "Show" toggle to hide it. */}
         {content["landing.announcement.show"]!=="0" && (
         <div style={{marginBottom:20}}>
           <span style={{display:"inline-flex",alignItems:"center",gap:8,padding:"7px 18px",background:"rgba(76,175,80,.13)",border:"1px solid rgba(76,175,80,.4)",borderRadius:22,fontSize:13.5,fontWeight:700,color:"#82d68c"}}>
-            {c("landing.announcement.text", "⭐ Free during our beta — paid plans begin September 1")}
+            {c("landing.announcement.text", "⭐ Now live. Start free, upgrade to Pro any time.")}
           </span>
         </div>
         )}
@@ -228,7 +228,7 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
         {content["landing.pricing.banner_show"]!=="0" && (
         <div style={{marginTop:14,marginBottom:4}}>
           <span style={{display:"inline-flex",alignItems:"center",gap:8,padding:"7px 18px",background:"rgba(76,175,80,.13)",border:"1px solid rgba(76,175,80,.4)",borderRadius:22,fontSize:13.5,fontWeight:700,color:"#82d68c"}}>
-            {c("landing.pricing.banner","⭐ Everything is free during our beta — these prices begin September 1")}
+            {c("landing.pricing.banner","⭐ Start free with up to 25 items. Upgrade to Pro any time.")}
           </span>
         </div>
         )}

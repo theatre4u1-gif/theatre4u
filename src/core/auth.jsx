@@ -325,22 +325,6 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             <div style={{fontSize:11,color:"rgba(255,255,255,.4)",marginTop:-6,lineHeight:1.5}}>
               Used to connect you with nearby programs in the Exchange.
             </div>
-            {/* Beta access notice — only while the beta/founding window is open (pre-launch) */}
-            {(new Date() < new Date('2026-09-01T07:00:00Z')) && (
-            <div style={{background:"rgba(212,168,67,.08)",border:"1px solid rgba(212,168,67,.25)",
-              borderRadius:9,padding:"12px 14px"}}>
-              <div style={{fontWeight:700,fontSize:13,color:"#d4a843",marginBottom:6}}>
-                ⭐ Founding Member Opportunity
-              </div>
-              <div style={{fontSize:12,color:"rgba(255,255,255,.65)",lineHeight:1.7}}>
-                Create your free {APP_NAME} account by August 31 and receive full Pro access during beta.
-                Add at least 25 inventory items and share feedback during beta to qualify for the{" "}
-                <strong style={{color:"rgba(255,255,255,.85)"}}>Founding Member rate of $9.99/month</strong>{" "}
-                when paid plans begin, rather than the standard $15/month. Your rate remains locked in
-                for as long as your subscription stays active.
-              </div>
-            </div>
-            )}
           </>)}
           <div><label style={labelStyle}>Email</label>
             <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@school.edu" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"} onKeyDown={e=>e.key==="Enter"&&submit()}/>
@@ -396,7 +380,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
         </div>
         {mode==="signup"&&(
           <p style={{textAlign:"center",fontSize:11,color:"#685f76",marginTop:14,lineHeight:1.5}}>
-            Full Pro access during beta · No credit card required · Cancel anytime
+            Free plan to start · No credit card required · Cancel anytime
           </p>
         )}
       </div>

@@ -192,6 +192,27 @@ Deno.serve(async (req: Request) => {
     );
   }
 
+  // Real-time internal alert so cancellations are seen immediately (owner self-closes only;
+  // admin closes are our own action). Includes the reason so we can learn from churn.
+  if (!is_admin_action) {
+    const esc = (s: unknown) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
+    const { count: itemCount } = await sb.from("items").select("id", { count: "exact", head: true }).eq("org_id", org_id);
+    const signup = org.created_at ? new Date(org.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "unknown";
+    await sendEmail(
+      "admin@theatre4u.org",
+      `Account closed: ${org.name || org.email || org_id}`,
+      `<div style="font-family:sans-serif;max-width:520px">
+         <h2 style="margin:0 0 8px;font-family:Georgia,serif">Account closed</h2>
+         <p style="margin:0 0 4px"><strong>${esc(org.name || "Unnamed")}</strong> &middot; ${esc(org.email || "no email")}</p>
+         <p style="margin:0 0 4px;color:#555">Plan: ${esc(org.plan || "free")} &middot; Signed up: ${signup} &middot; Items: ${itemCount ?? 0}</p>
+         <p style="margin:14px 0 4px"><strong>Reason given:</strong></p>
+         <p style="margin:0;padding:10px 12px;background:#f7f2ea;border-left:3px solid #d4a843;border-radius:4px">${reason ? esc(reason) : "(none provided)"}</p>
+         <p style="margin:14px 0 0;font-size:12px;color:#999">Recoverable for 30 days. Internal alert.</p>
+       </div>`,
+      B.from, B.reply
+    );
+  }
+
   console.log(`soft_close complete: ${org_id} stripe=${stripeCanceled} hard_delete_at=${hardDeleteAt}`);
   return ok({ success: true, action: "soft_closed", stripe_canceled: stripeCanceled, hard_delete_at: hardDeleteAt });
 });

@@ -974,7 +974,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                     ? <div style={{display:"flex",alignItems:"center",justifyContent:"center",textAlign:"center",
                         gap:6,padding:"9px 12px",borderRadius:8,fontSize:12,fontWeight:700,lineHeight:1.3,
                         background:"rgba(212,168,67,.14)",border:"1px solid rgba(212,168,67,.35)",color:"rgba(240,230,211,.85)"}}>
-                        {billingPaused && !beforeLaunch ? "Subscriptions paused — check back soon" : "Free during beta · billing begins Sept 1"}
+                        {billingPaused && !beforeLaunch ? "Subscriptions paused — check back soon" : "Free plan available"}
                       </div>
                     : <a href={stripeLink(STRIPE_LINKS.pro?.monthly, user?.id, user?.email)}
                         target="_blank" rel="noreferrer"
@@ -1057,7 +1057,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                   <span style={{fontSize:22,flexShrink:0}}>{expired ? "🔔" : "⭐"}</span>
                   <div style={{flex:1, minWidth:220}}>
                     <div style={{fontWeight:800, fontSize:14, color: expired ? "#e08a8a" : "var(--goldink)"}}>
-                      {expired ? "Your beta has ended — your account is now on the Free plan" : "Your free beta has ended"}
+                      {expired ? "Your complimentary period has ended — your account is now on the Free plan" : "Your complimentary period has ended"}
                     </div>
                     <div style={{fontSize:12.5, color:"var(--muted)", lineHeight:1.55, marginTop:3}}>
                       {expired

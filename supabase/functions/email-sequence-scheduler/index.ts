@@ -41,15 +41,16 @@ Deno.serve(async(req:Request)=>{
     // ── Emails 2-7: send to orgs based on days since signup
     const cutoff=new Date(now.getTime()-36*24*60*60*1000).toISOString();
     const{data:orgs}=await SB.from('orgs')
-      .select('id,name,email,created_at,email_opt_out')
-      .gte('created_at',cutoff);
+      .select('id,name,email,created_at,email_opt_out,account_status,deleted_at')
+      .gte('created_at',cutoff)
+      .is('deleted_at',null);
 
     if(orgs?.length){
       const ids=orgs.map((o:any)=>o.id);
       const{data:sent}=await SB.from('email_sequence').select('org_id,email_num').in('org_id',ids);
       const sentSet=new Set((sent||[]).map((s:any)=>`${s.org_id}:${s.email_num}`));
       for(const org of orgs){
-        if(SKIP.includes(org.email?.toLowerCase())||org.email_opt_out)continue;
+        if(SKIP.includes(org.email?.toLowerCase())||org.email_opt_out||org.deleted_at||['closed','deleted'].includes(org.account_status))continue;
         const days=Math.floor((now.getTime()-new Date(org.created_at).getTime())/86400000);
         for(const[n,threshold] of Object.entries(SCHEDULE)){
           const num=Number(n);

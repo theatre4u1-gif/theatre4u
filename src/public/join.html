@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Theatre4u™ — Free Beta Access for Theatre Programs</title>
-<meta name="description" content="Theatre4u gives your program a searchable, photo-tagged inventory with QR labels. Share gear through the Backstage Exchange. Free during beta for K–12, community theatre, and college programs.">
+<title>Theatre4u™ — Free Inventory Software for Theatre Programs</title>
+<meta name="description" content="Theatre4u gives your program a searchable, photo-tagged inventory with QR labels. Share gear through the Backstage Exchange. Free to start for K–12, community theatre, and college programs.">
 <meta property="og:title" content="Do you know where your fog machine is right now?">
-<meta property="og:description" content="Theatre4u™ gives your program a searchable inventory, QR labels, and a marketplace to share gear with nearby programs. Free beta access — no credit card.">
+<meta property="og:description" content="Theatre4u™ gives your program a searchable inventory, QR labels, and a marketplace to share gear with nearby programs. Free to start, no credit card.">
 <meta property="og:image" content="https://theatre4u.org/og-theatre4u.png">
 <meta property="og:url" content="https://theatre4u.org/join.html">
 <meta name="twitter:card" content="summary_large_image">
@@ -108,13 +108,13 @@ src="https://www.facebook.com/tr?id=1706264944009516&ev=PageView&noscript=1"
 
 <section class="hero">
   <div class="hero-inner">
-    <div class="badge">🎭 Free Beta Access — No Credit Card Required</div>
+    <div class="badge">🎭 Free to Start — No Credit Card Required</div>
     <h1>Do you know where your<br><em>fog machine</em> is right now?</h1>
     <p class="sub">Theatre4u™ gives your program a searchable, photo-tagged inventory with QR labels on every item. Find anything from your phone. Share gear with nearby programs.</p>
 
     <div class="signup-card">
-      <h2>Join the Beta — It's Free</h2>
-      <p>K–12 schools, community theatres, and college programs. Full Pro access during beta.</p>
+      <h2>Create Your Free Account</h2>
+      <p>K–12 schools, community theatres, and college programs. Start free, upgrade to Pro anytime.</p>
       <div class="err" id="err"></div>
       <div class="success" id="success">
         🎭 You're in! Check your email for your welcome message.<br><br>
@@ -156,8 +156,8 @@ src="https://www.facebook.com/tr?id=1706264944009516&ev=PageView&noscript=1"
           <input type="checkbox" id="termsOk" style="margin-top:2px;accent-color:var(--gold);flex-shrink:0;width:15px;height:15px">
           <span>I agree to the <a href="/terms.html" target="_blank" style="color:var(--gold)">Terms of Service</a> and acknowledge the <a href="/privacy.html" target="_blank" style="color:var(--gold)">Privacy Policy</a>.</span>
         </label>
-        <button class="cta-btn" onclick="handleSignup()">Start Free Beta Access →</button>
-        <p class="small-print">Free during beta · Founding member rate when we launch · No contracts</p>
+        <button class="cta-btn" onclick="handleSignup()">Create Your Free Account →</button>
+        <p class="small-print">Free plan to start · Upgrade to Pro anytime · No contracts</p>
       </div>
     </div>
 
@@ -225,7 +225,7 @@ src="https://www.facebook.com/tr?id=1706264944009516&ev=PageView&noscript=1"
 
 <div class="bottom-cta">
   <h2>Ready to know what you own?</h2>
-  <p>Free full access during beta. Founding member rate when we launch — locked in for life.</p>
+  <p>Start free with up to 25 items. Upgrade to Pro anytime for unlimited inventory.</p>
   <a class="bottom-btn" href="https://theatre4u.org?signup=1">Join Free →</a>
 </div>
 
@@ -354,7 +354,7 @@ function showErr(msg) {
   const err = document.getElementById('err');
   err.textContent = msg;
   err.style.display = 'block';
-  document.querySelector('.cta-btn').textContent = 'Start Free Beta Access →';
+  document.querySelector('.cta-btn').textContent = 'Create Your Free Account →';
   document.querySelector('.cta-btn').disabled = false;
 }
 

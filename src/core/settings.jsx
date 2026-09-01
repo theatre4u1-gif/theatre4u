@@ -767,11 +767,11 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
               </div>
             </div>
           )}
-          {/* Beta / temp_pro (or comped) with no Stripe subscription — honest free-during-beta status */}
+          {/* temp_pro (or comped) with no Stripe subscription — honest complimentary-access status */}
           {!org?.stripe_subscription_id && plan !== "free" && !isAdminEmail(userEmail) && (
             <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid var(--bd)",fontSize:12,color:"var(--muted)",lineHeight:1.7}}>
-              <span style={{fontWeight:700,color:"var(--goldink)"}}>Free during beta.</span> Billing begins September 1, 2026.
-              You have full <strong style={{textTransform:"capitalize",color:"var(--text)"}}>{plan}</strong> access at no cost right now, and no card is on file, so nothing is charged automatically. When billing begins you can choose a plan or stay on Free.
+              <span style={{fontWeight:700,color:"var(--goldink)"}}>Complimentary access.</span>
+              You have full <strong style={{textTransform:"capitalize",color:"var(--text)"}}>{plan}</strong> access at no cost right now, and no card is on file, so nothing is charged automatically. You can choose a paid plan any time, or stay on Free.
               <div style={{marginTop:10,fontSize:11,color:"var(--faint)"}}>Questions about billing, or paying by check or PO for a district? Email <a href={"mailto:"+APP_EMAIL} style={{color:"var(--goldink)"}}>{APP_EMAIL}</a>.</div>
             </div>
           )}

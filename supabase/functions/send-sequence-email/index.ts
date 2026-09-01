@@ -231,9 +231,9 @@ Deno.serve(async(req:Request)=>{
     if(!org_id||!email_num)return new Response(JSON.stringify({error:'org_id and email_num required'}),{status:400,headers:{...CORS,'Content-Type':'application/json'}});
     const{data:ex}=await SB.from('email_sequence').select('id').eq('org_id',org_id).eq('email_num',email_num).maybeSingle();
     if(ex)return new Response(JSON.stringify({ok:true,skipped:'already sent'}),{headers:{...CORS,'Content-Type':'application/json'}});
-    const{data:org}=await SB.from('orgs').select('id,name,email,director_name,plan,vertical,signup_domain,email_opt_out,unsubscribe_token').eq('id',org_id).single();
+    const{data:org}=await SB.from('orgs').select('id,name,email,director_name,plan,vertical,signup_domain,email_opt_out,unsubscribe_token,account_status,deleted_at').eq('id',org_id).single();
     if(!org)return new Response(JSON.stringify({error:'org not found'}),{status:404,headers:{...CORS,'Content-Type':'application/json'}});
-    if(org.email_opt_out)return new Response(JSON.stringify({ok:true,skipped:'opted out'}),{headers:{...CORS,'Content-Type':'application/json'}});
+    if(org.email_opt_out||org.deleted_at||['closed','deleted'].includes(org.account_status))return new Response(JSON.stringify({ok:true,skipped:'opted out or closed'}),{headers:{...CORS,'Content-Type':'application/json'}});
     const B=brandFor(org.signup_domain,org.vertical), V=vertFor(org.vertical);
     const name=org.director_name||org.name||'there';
     const unsubUrl=`${Deno.env.get('SUPABASE_URL')}/functions/v1/unsubscribe/${org.unsubscribe_token}`;

@@ -1,7 +1,12 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 const SYSTEM = `You are the ArtsTracker Help Assistant, a friendly, knowledgeable support agent for ArtsTracker (artstracker.org) and Theatre4u (theatre4u.org), operated by Artstracker LLC.
 
@@ -21,11 +26,12 @@ Keep answers brief, warm, and plain. Users are often on phones, busy, and not te
 - Productions / show folders: organize items and needs by production
 - QR Labels: print from an item's detail page, scan with the phone camera; printable label packs are available
 - Backstage Exchange: peer-to-peer rent, sell, or loan between programs (Pro, opt-in in Settings)
-- Borrowed & Lent: log items you have borrowed or lent, with returns and reminders
+- Rental Checkout (Inventory, Rentals tab): build a rental order for a customer, scan or search items onto it, record a deposit and rental total, mark items returned one at a time or by scanning or all at once, invite the customer to join, and print a rental agreement with your own editable terms. Items switch to Checked Out while out and back to In Stock when returned. Great for costume and prop shops renting many pieces at once (Pro)
+- Borrowed & Lent (Inventory, Borrowed & Lent tab): log items you have borrowed or lent, with returns, overdue flags, editable loan terms, and a printable loan agreement. Both Rental and Loan agreements carry a fixed notice that Theatre4u is the software provider only and not a party to the agreement
 - Community Board: share events, opportunities, announcements (Pro, opt-in in Settings)
 - Funding Tracker: grants, allocations, expenditures, including Prop 28 reporting and students served (Pro)
 - Reports: CSV export, category breakdown, print all QR labels
-- Stage Points (ArtsPoints on the ArtsTracker door): earn points for activity and referrals, spend on perks
+- Stage Points (ArtsPoints on the ArtsTracker door): earned through the Backstage Exchange by sharing inventory with other programs, plus referrals and onboarding milestones; spent on Exchange discounts or a free Pro month. IMPORTANT: Rental Checkout and Borrowed & Lent do NOT earn or use Stage Points. Points come from the Exchange only. Renting your own items to your own customers is separate from the points economy.
 - Team: invite colleagues by email with roles, or share a Join Code for students and groups; Departments for multi-department programs
 - District tools: district dashboard across schools, arts facilitator roles, district-wide funding rollup, internal loans between sites, storage maps at every site
 - Mobile App: install via Add to Home Screen (iPhone and Android)
@@ -69,58 +75,54 @@ Districts pay standard rates (no founding discount). Purchase orders are accepte
 
 If you are unsure about something, say so honestly and suggest emailing hello@theatre4u.org.`;
 
+const reply = (text: string) =>
+  new Response(JSON.stringify({ reply: text }), { status: 200, headers: { ...CORS, "Content-Type": "application/json" } });
+
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: CORS });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: CORS });
 
   try {
-    const { messages } = await req.json();
-    const key = Deno.env.get("ANTHROPIC_API_KEY");
-
-    if (!key) {
-      return new Response(
-        JSON.stringify({ reply: "Service temporarily unavailable. Please email hello@theatre4u.org for help." }),
-        { status: 200, headers: { ...CORS, "Content-Type": "application/json" } }
-      );
+    // Per-IP rate limit (40 requests / 10 min) so the shared Anthropic key can't be abused.
+    const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+    if (SERVICE_KEY) {
+      try {
+        const sb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
+        const { data: allowed } = await sb.rpc("ai_help_rate_check", { p_ip: ip });
+        if (allowed === false) {
+          return reply("I'm getting a lot of questions right now. Please try again in a few minutes, or email hello@theatre4u.org and we'll help right away.");
+        }
+      } catch (_) { /* if the check fails, fall through — never block real help on a limiter error */ }
     }
+
+    const body = await req.json().catch(() => ({}));
+    let messages = Array.isArray(body?.messages) ? body.messages : [];
+    // Cap input size to bound cost: last 6 turns, each trimmed.
+    messages = messages.slice(-6).map((m: Record<string, unknown>) => ({
+      role: m?.role === "assistant" ? "assistant" : "user",
+      content: String(m?.content ?? "").slice(0, 2000),
+    }));
+    if (messages.length === 0) return reply("Ask me anything about using the platform, and I'll help.");
+
+    const key = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!key) return reply("Service temporarily unavailable. Please email hello@theatre4u.org for help.");
 
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-      },
+      headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 400,
         system: SYSTEM,
-        messages: (messages || []).slice(-6),
+        messages,
       }),
     });
 
-    const responseText = await r.text();
+    if (!r.ok) return reply("I ran into a technical issue. Please email hello@theatre4u.org and we'll help right away.");
 
-    if (!r.ok) {
-      return new Response(
-        JSON.stringify({ reply: "I ran into a technical issue. Please email hello@theatre4u.org and we'll help right away." }),
-        { status: 200, headers: { ...CORS, "Content-Type": "application/json" } }
-      );
-    }
+    const d = JSON.parse(await r.text());
+    return reply(d.content?.[0]?.text || "I couldn't generate a response. Please email hello@theatre4u.org.");
 
-    const d = JSON.parse(responseText);
-    const reply = d.content?.[0]?.text || "I couldn't generate a response. Please email hello@theatre4u.org.";
-
-    return new Response(
-      JSON.stringify({ reply }),
-      { status: 200, headers: { ...CORS, "Content-Type": "application/json" } }
-    );
-
-  } catch (e) {
-    return new Response(
-      JSON.stringify({ reply: "Connection error. Please try again or email hello@theatre4u.org." }),
-      { status: 200, headers: { ...CORS, "Content-Type": "application/json" } }
-    );
+  } catch (_e) {
+    return reply("Connection error. Please try again or email hello@theatre4u.org.");
   }
 });

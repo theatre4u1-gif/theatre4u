@@ -1,4 +1,4 @@
-// signup-notify v9
+// signup-notify v10
 // Sends admin alert + welcome email for directors
 // Sends "You're in" team email for team members — no org created, no sequence
 // v9: the team "You're in" email is now brand/door aware (Theatre4u vs ArtsTracker).
@@ -110,17 +110,23 @@ Deno.serve(async(req:Request)=>{
     ]);
     const stats={total_orgs:totalOrgs||0,paid_orgs:paidOrgs||0,total_items:totalItems||0};
 
-    // Admin notification
+    // Admin notification. A malformed org.email used to be passed straight through as
+    // reply_to, which Resend rejects with a 422 — the admin alert then failed, notified
+    // stayed false, and the 5-minute sweep retried that row forever (one typo'd test
+    // signup burned ~576 calls a day for weeks). Only set reply_to when the address is
+    // plausibly valid, so the admin still gets told about the bad signup.
+    const validEmail=(e?:string|null)=>!!e&&/^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test(e);
+    const replyOk=validEmail(org.email);
     const adminRes=await fetch('https://api.resend.com/emails',{
       method:'POST',
       headers:{'Authorization':`Bearer ${KEY}`,'Content-Type':'application/json'},
-      body:JSON.stringify({from:'Theatre4u Alerts <hello@theatre4u.org>',reply_to:org.email,to:[NOTIFY_EMAIL],
-        subject:`New signup: ${org.name||org.email}`,html:adminHtml(org,stats,false)}),
+      body:JSON.stringify({from:'Theatre4u Alerts <hello@theatre4u.org>',...(replyOk?{reply_to:org.email}:{}),to:[NOTIFY_EMAIL],
+        subject:`New signup: ${org.name||org.email}${replyOk?'':' (invalid email)'}`,html:adminHtml(org,stats,false)}),
     });
     console.log('Admin email:',adminRes.status);
 
-    // Welcome sequence #1 for directors only
-    if(!SKIP_EMAILS.includes(org.email?.toLowerCase())){
+    // Welcome sequence #1 for directors only — skipped for unmailable addresses
+    if(replyOk&&!SKIP_EMAILS.includes(org.email?.toLowerCase())){
       const seqRes=await fetch(`${BASE}/functions/v1/send-sequence-email`,{
         method:'POST',
         headers:{'Authorization':`Bearer ${SVC}`,'Content-Type':'application/json'},
