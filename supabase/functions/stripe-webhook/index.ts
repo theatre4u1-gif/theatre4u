@@ -250,7 +250,7 @@ Deno.serve(async (req: Request) => {
 
         if (STRIPE_KEY && subscriptionId) {
           try {
-            const subRes = await fetch("https://api.stripe.com/v1/subscriptions/" + subscriptionId,
+            const subRes = await fetch("https://api.stripe.com/v1/subscriptions/" + subscriptionId + "?expand[]=discounts",
               { headers: { "Authorization": "Bearer " + STRIPE_KEY } });
             if (subRes.ok) {
               const sub = await subRes.json();
@@ -362,29 +362,36 @@ Deno.serve(async (req: Request) => {
         break;
       }
 
+      // Stripe sends "invoice.paid" (that is what our endpoint subscribes to). Older code only
+      // matched "invoice.payment_succeeded", so recurring charges fell through unhandled — no log,
+      // no alert. Handle both. We only log + alert the recurring cycle invoices (monthly/annual
+      // renewals, and the first real charge after a free trial). The very first charge on a direct
+      // checkout is already captured by checkout.session.completed, so skipping it here avoids
+      // double counting revenue.
+      case "invoice.paid":
       case "invoice.payment_succeeded": {
         const customerId = (data.customer ?? "") as string;
-        const org        = await findOrg(customerId);
         const isRenewal  = data.billing_reason === "subscription_cycle";
         const total      = (data.total ?? 0) as number;
+        const org        = await findOrg(customerId);
+
+        if (org) await sb.from("orgs").update({ subscription_status: "active" }).eq("id", org.id);
+        if (!isRenewal) break;
 
         await logPayment({ stripe_event_id: eventId, stripe_event_type: eventType,
           stripe_customer_id: customerId, stripe_subscription_id: data.subscription,
           stripe_invoice_id: data.id, stripe_payment_intent: data.payment_intent,
           amount_cents: total, currency: "usd", status: "succeeded",
-          description: isRenewal ? "Subscription renewal" : "Invoice paid",
+          description: "Subscription renewal",
           customer_email: data.customer_email, org_id: org?.id ?? null, org_name: org?.name ?? null,
           period_start: data.period_start ? new Date((data.period_start as number) * 1000).toISOString() : null,
           period_end: data.period_end ? new Date((data.period_end as number) * 1000).toISOString() : null,
           stripe_created_at: event.created ? new Date((event.created as number) * 1000).toISOString() : null });
 
         if (org) {
-          await sb.from("orgs").update({ subscription_status: "active" }).eq("id", org.id);
-          if (isRenewal) {
-            if (total >= 15000) await sb.rpc("award_milestone_points", { p_org_id: org.id, p_type: "annual_renewal_bonus", p_amount: 300, p_desc: "Annual renewal bonus" }).catch(() => {});
-            await sendPaymentAlert({ eventType, orgName: org.name, orgEmail: org.email,
-              plan: "renewal", interval: "", amountCents: total });
-          }
+          if (total >= 15000) await sb.rpc("award_milestone_points", { p_org_id: org.id, p_type: "annual_renewal_bonus", p_amount: 300, p_desc: "Annual renewal bonus" }).catch(() => {});
+          await sendPaymentAlert({ eventType, orgName: org.name, orgEmail: org.email,
+            plan: "renewal", interval: "", amountCents: total });
         }
         break;
       }
