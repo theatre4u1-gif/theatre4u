@@ -25,6 +25,121 @@ const EDIT_FIELDS = [
   { key: "phone", label: "Phone" },
 ];
 
+// Pro monthly list price in cents. Founding is a fixed $9.99; percent presets discount this.
+const PRO_CENTS = 1500;
+const money = (cents) => "$" + (cents / 100).toFixed(2);
+const pctPrice = (pct) => money(Math.round(PRO_CENTS * (1 - pct / 100)));
+
+// ── Rate & discounts — assign a founding rate or a special/percent discount to one program.
+// Writes the intent onto the org (founding_member for the fixed $9.99, or assigned_discount_* for a
+// percent). The generalized founding-checkout edge fn turns that intent into the right Stripe coupon
+// when the program subscribes. Changing a rate here does NOT alter an already-active subscription's
+// coupon in Stripe — it sets what they get at their next checkout. Every change is audited.
+function DiscountPanel({ org, patch, flash }) {
+  const [adminId, setAdminId] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState(null); // {percent, label} awaiting duration choice
+  const [customPct, setCustomPct] = useState("");
+  const [customLabel, setCustomLabel] = useState("");
+
+  useEffect(() => { SB.auth.getUser().then(({ data }) => setAdminId(data?.user?.id || null)); }, []);
+
+  const write = async (fields, action, detail, okMsg) => {
+    setBusy(true);
+    const full = { ...fields, assigned_discount_at: new Date().toISOString(), assigned_discount_by: adminId };
+    const { error } = await SB.from("orgs").update(full).eq("id", org.id);
+    setBusy(false); setPending(null);
+    if (error) { flash("Error: " + error.message); return; }
+    patch(full, action, detail);
+    flash("✓ " + okMsg);
+  };
+
+  const grantFounding = () => write(
+    { founding_member: true, founding_member_granted_at: new Date().toISOString(), founding_rate_monthly: 9.99,
+      assigned_discount_percent: null, assigned_discount_label: null, assigned_discount_duration: null, assigned_discount_months: null },
+    "admin_grant_founding", "Founding rate $9.99 assigned", "Founding member — $9.99/mo locked"
+  );
+
+  const applyPercent = (percent, label, duration) => write(
+    { assigned_discount_percent: percent, assigned_discount_label: label, assigned_discount_duration: duration,
+      assigned_discount_months: duration === "repeating" ? 12 : null, founding_member: false, founding_rate_monthly: null },
+    "admin_assign_discount", `${label} (${percent}% off, ${duration === "repeating" ? "12 months" : "forever"})`,
+    `${label} — ${pctPrice(percent)}/mo`
+  );
+
+  const removeDiscount = () => write(
+    { founding_member: false, founding_rate_monthly: null, assigned_discount_percent: null,
+      assigned_discount_label: null, assigned_discount_duration: null, assigned_discount_months: null },
+    "admin_remove_discount", "Discount removed — standard rate", "Discount removed — standard $15/mo"
+  );
+
+  const startCustom = () => {
+    const p = Math.round(Number(customPct));
+    if (!(p >= 1 && p <= 100)) { flash("Enter a percent between 1 and 100"); return; }
+    setPending({ percent: p, label: (customLabel.trim() || `${p}% discount`) });
+  };
+
+  // Current-rate summary line
+  const cur = org.founding_member
+    ? { txt: "Founding member — $9.99/mo locked", color: "#c4922a" }
+    : Number(org.assigned_discount_percent) > 0
+      ? { txt: `${org.assigned_discount_label || org.assigned_discount_percent + "% off"} — ${pctPrice(org.assigned_discount_percent)}/mo` +
+              (org.assigned_discount_duration === "repeating" ? " for 12 months" : " (forever)"), color: "#7a5cc0" }
+      : { txt: "Standard rate — $15.00/mo", color: "#8a8272" };
+
+  const presetBtn = (label, onClick, active) => (
+    <button onClick={onClick} disabled={busy}
+      style={{ padding: "9px 14px", borderRadius: 8, border: "1px solid " + (active ? "#c4922a" : "#d5cfc4"),
+        background: active ? "rgba(212,168,67,.12)" : "#fff", color: active ? "#a5731f" : "#555",
+        fontWeight: 700, fontSize: 13, cursor: busy ? "default" : "pointer", fontFamily: "inherit", opacity: busy ? .6 : 1 }}>
+      {label}
+    </button>
+  );
+
+  return (
+    <div style={box}>
+      <h3 style={h3}>Rate &amp; discounts</h3>
+      <div style={{ fontSize: 13, marginBottom: 12 }}>
+        <span style={{ color: "#8a8272" }}>Current rate: </span>
+        <strong style={{ color: cur.color }}>{cur.txt}</strong>
+      </div>
+
+      {pending ? (
+        <div style={{ background: "#faf7f0", border: "1px solid #e6e0d6", borderRadius: 10, padding: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#333", marginBottom: 4 }}>{pending.label} — {pctPrice(pending.percent)}/mo</div>
+          <div style={{ fontSize: 12.5, color: "#8a8272", marginBottom: 10 }}>How long should this rate last?</div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button onClick={() => applyPercent(pending.percent, pending.label, "forever")} disabled={busy} style={btn("#1a7f37", busy)}>Forever</button>
+            <button onClick={() => applyPercent(pending.percent, pending.label, "repeating")} disabled={busy} style={btn("#8a6e1e", busy)}>First 12 months</button>
+            <button onClick={() => setPending(null)} disabled={busy} style={{ ...btn("#fff", busy), color: "#777", border: "1px solid #d5cfc4" }}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+            {presetBtn("⭐ Grant founding ($9.99)", grantFounding, org.founding_member)}
+            {presetBtn("🎭 CETA 20% (" + pctPrice(20) + ")", () => setPending({ percent: 20, label: "CETA Conference 20%" }))}
+            {presetBtn("🏫 Teacher / School 15% (" + pctPrice(15) + ")", () => setPending({ percent: 15, label: "Teacher / School 15%" }))}
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap", marginBottom: 6 }}>
+            <div><label style={lab}>Custom %</label><input type="number" min="1" max="100" value={customPct} onChange={e => setCustomPct(e.target.value)} placeholder="e.g. 30" style={{ ...inp, width: 90 }} /></div>
+            <div style={{ flex: 1, minWidth: 160 }}><label style={lab}>Label (shown to them)</label><input value={customLabel} onChange={e => setCustomLabel(e.target.value)} placeholder="e.g. Conference special" style={inp} /></div>
+            <button onClick={startCustom} disabled={busy} style={btn("#1a7f37", busy)}>Assign custom →</button>
+          </div>
+          {(org.founding_member || Number(org.assigned_discount_percent) > 0) && (
+            <div style={{ marginTop: 4 }}>
+              <button onClick={removeDiscount} disabled={busy} style={{ padding: "7px 13px", borderRadius: 8, border: "1px solid #d5cfc4", background: "#fff", color: "#a5342b", fontWeight: 700, fontSize: 12.5, cursor: busy ? "default" : "pointer", fontFamily: "inherit" }}>Remove discount — back to standard rate</button>
+            </div>
+          )}
+        </>
+      )}
+      <div style={{ fontSize: 11.5, color: "#9a9284", marginTop: 10, lineHeight: 1.5 }}>
+        Sets the rate the program gets at their next checkout. It does not change a subscription that is already active in Stripe. Founding locks $9.99 forever; percent presets discount the $15.00 Pro monthly.
+      </div>
+    </div>
+  );
+}
+
 export function ProgramDetail({ org: seed, onBack, onChanged }) {
   const [org, setOrg] = useState(null);
   const [usage, setUsage] = useState(null);
@@ -92,7 +207,7 @@ export function ProgramDetail({ org: seed, onBack, onChanged }) {
   if (!org) return <div style={{ padding: 24, color: "#888" }}>Loading program…</div>;
   if (viewing) return <ViewAsProgram orgId={seed.id} orgName={org.name} onBack={() => setViewing(false)} />;
 
-  const planTxt = org.stripe_subscription_id ? "Paying" : org.founding_member ? "Founding member" : org.temp_pro ? "Beta (free Pro)" : (org.plan || "free");
+  const planTxt = org.stripe_subscription_id ? "Paying" : org.founding_member ? "Founding member" : Number(org.assigned_discount_percent) > 0 ? (org.assigned_discount_label || org.assigned_discount_percent + "% off") : org.temp_pro ? "Beta (free Pro)" : (org.plan || "free");
   const U = usage || {};
 
   return (
@@ -161,6 +276,9 @@ export function ProgramDetail({ org: seed, onBack, onChanged }) {
         </div>
         <button onClick={saveEdits} disabled={busy === "save"} style={btn("#1a7f37", busy === "save")}>{busy === "save" ? "Saving…" : "Save changes"}</button>
       </div>
+
+      {/* Rate & discounts — founding / CETA / teacher / custom */}
+      <DiscountPanel org={org} patch={patch} flash={flash} />
 
       {/* Support actions */}
       <div style={box}>

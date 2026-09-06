@@ -133,6 +133,7 @@ export function UpgradePlans({ compact = false, userId = null, userEmail = null,
   // Founding members (flagged in orgs.founding_member) get a one-click $9.99 Pro checkout
   // with the forever coupon pre-applied (leak-proof server-side check in the founding-checkout fn).
   const [founding, setFounding] = useState(false);
+  const [disc, setDisc] = useState(null); // admin-assigned percent discount {percent,label,duration}
   const [foundingBusy, setFoundingBusy] = useState(false);
   const [billingPaused, setBillingPaused] = useState(false); // admin kill-switch (site_content global/billing_paused)
   // Billing begins Sept 1, 2026 (midnight PT). Until then, no standard credit-card charge — the
@@ -143,8 +144,12 @@ export function UpgradePlans({ compact = false, userId = null, userEmail = null,
   useEffect(() => {
     if (!userId) return;
     let alive = true;
-    SB.from("orgs").select("founding_member").eq("id", userId).single()
-      .then(({ data }) => { if (alive && data?.founding_member) setFounding(true); });
+    SB.from("orgs").select("founding_member,assigned_discount_percent,assigned_discount_label,assigned_discount_duration").eq("id", userId).single()
+      .then(({ data }) => {
+        if (!alive || !data) return;
+        if (data.founding_member) { setFounding(true); return; }
+        if (Number(data.assigned_discount_percent) > 0) setDisc({ percent: Number(data.assigned_discount_percent), label: data.assigned_discount_label || (data.assigned_discount_percent + "% off"), duration: data.assigned_discount_duration });
+      });
     return () => { alive = false; };
   }, [userId]);
   useEffect(() => {
@@ -159,10 +164,10 @@ export function UpgradePlans({ compact = false, userId = null, userEmail = null,
       const { data } = await SB.auth.getSession();
       const r = await callEdgeFn("founding-checkout", { org_id: userId, origin: window.location.origin }, data?.session?.access_token);
       if (r?.checkout_url) { window.location.href = r.checkout_url; return; }
-      alert(r?.error === "not_founding"
-        ? "This program isn't marked as a founding member yet."
-        : "Couldn't start founding checkout — please try again or email " + APP_EMAIL + ".");
-    } catch (e) { alert("Couldn't start founding checkout — please try again."); }
+      alert(r?.error === "not_founding" || r?.error === "no_discount"
+        ? "This program doesn't have a special rate assigned yet."
+        : "Couldn't start checkout — please try again or email " + APP_EMAIL + ".");
+    } catch (e) { alert("Couldn't start checkout — please try again."); }
     setFoundingBusy(false);
   };
   return (
@@ -218,6 +223,8 @@ export function UpgradePlans({ compact = false, userId = null, userEmail = null,
                 ? null
                 : (founding && p.id==="pro" && billing!=="invoice")
                 ? <button className="btn btn-full btn-g" onClick={claimFounding} disabled={foundingBusy} style={{marginTop:"auto",fontWeight:800,whiteSpace:"normal",textAlign:"center",lineHeight:1.25}}>{foundingBusy?"Starting…":"⭐ Claim your $9.99 founding rate →"}</button>
+                : (disc && p.id==="pro" && billing!=="invoice")
+                ? <button className="btn btn-full btn-g" onClick={claimFounding} disabled={foundingBusy} style={{marginTop:"auto",fontWeight:800,whiteSpace:"normal",textAlign:"center",lineHeight:1.25}}>{foundingBusy?"Starting…":"⭐ Claim your "+disc.label+" — $"+(15*(1-disc.percent/100)).toFixed(2)+"/mo →"}</button>
                 : p.id.endsWith("enterprise")
                   ? <a href={"mailto:"+APP_EMAIL+"?subject=Enterprise District Inquiry"} className="btn btn-full" style={{textDecoration:"none",display:"flex",justifyContent:"center",marginTop:"auto",background:"linear-gradient(135deg,#1565c0,#0d47a1)",border:"1px solid rgba(66,133,244,.4)",color:"#fff",fontWeight:700,boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>Contact Us →</a>
                   : billing === "invoice"
