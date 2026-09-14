@@ -25,6 +25,66 @@ const ROLES = [
 ];
 const ROLE_MAP = Object.fromEntries(ROLES.map(r => [r.id, r]));
 
+// Owner-only: hand this program to another account. Runs through the secure
+// transfer_program_owner RPC (checks the caller is the owner/facilitator/admin server-side).
+function TransferOwnership({ orgId, orgName }) {
+  const [open, setOpen]   = useState(false);
+  const [email, setEmail] = useState("");
+  const [keepDir, setKeepDir] = useState(true);
+  const [busy, setBusy]   = useState(false);
+  const [msg, setMsg]     = useState("");
+  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(""), 6000); };
+
+  const doTransfer = async () => {
+    const to = email.trim().toLowerCase();
+    if (!to) { flash("Enter the new owner's email"); return; }
+    if (!confirm(`Transfer ownership of "${orgName}" to ${to}?\n\nThey become the owner with full control. ` +
+      (keepDir ? "You will stay on as a Director." : "You will lose access to this program.") +
+      `\n\nTo undo, the new owner would have to transfer it back.`)) return;
+    setBusy(true);
+    const { data, error } = await SB.rpc("transfer_program_owner", {
+      p_org_id: orgId, p_new_owner_email: to, p_keep_previous_as_director: keepDir });
+    setBusy(false);
+    if (error) {
+      const m = /no_account/.test(error.message) ? "No account found for that email. Ask them to sign up first, then transfer."
+        : /already_owner/.test(error.message) ? "That person already owns this program."
+        : /not_authorized/.test(error.message) ? "You do not have permission to transfer this program."
+        : "Transfer failed: " + error.message;
+      flash(m); return;
+    }
+    flash("✓ Ownership transferred to " + to + (keepDir ? ". You remain a Director." : ". You no longer have access; reloading…"));
+    if (!keepDir) { setTimeout(() => window.location.reload(), 1800); }
+    else { setOpen(false); setEmail(""); }
+  };
+
+  return (
+    <div className="card card-p">
+      <div className="sh">
+        <h2>Transfer Ownership</h2>
+        <p>Hand this program to another {APP_NAME} account, for when a new teacher takes over. The new owner must already have an account.</p>
+      </div>
+      {!open
+        ? <button className="btn btn-o" style={{ marginTop: 8 }} onClick={() => setOpen(true)}>Transfer this program…</button>
+        : <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 12, maxWidth: 460 }}>
+            <div className="fg">
+              <label className="fl">New owner's account email</label>
+              <input className="fi" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="successor@school.edu" />
+            </div>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--muted)" }}>
+              <input type="checkbox" checked={keepDir} onChange={e => setKeepDir(e.target.checked)} />
+              Keep me on as a Director after the transfer
+            </label>
+            {msg && <div style={{ fontSize: 13, fontWeight: 600, color: msg.startsWith("✓") ? "var(--green,#1a7f37)" : "var(--red,#c0392b)" }}>{msg}</div>}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="btn btn-o" onClick={() => { setOpen(false); setEmail(""); }} disabled={busy}>Cancel</button>
+              <button className="btn btn-g" onClick={doTransfer} disabled={busy || !email.trim()}>{busy ? "Transferring…" : "Transfer ownership →"}</button>
+            </div>
+          </div>}
+      {!open && msg && <div style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: msg.startsWith("✓") ? "var(--green,#1a7f37)" : "var(--red,#c0392b)" }}>{msg}</div>}
+    </div>
+  );
+}
+
 function TeamSettings({ userId, orgName, plan }) {
   const [members,  setMembers]  = useState([]);
   const [invites,  setInvites]  = useState([]);
@@ -805,6 +865,8 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
         )}
 
         {!memberRole&&<TeamSettings userId={userId} orgName={org?.name||"Your Program"} plan={plan}/>}
+
+        {!memberRole&&<TransferOwnership orgId={userId} orgName={org?.name||"Your Program"}/>}
 
         {/* ── Participation Toggles ─────────────────────────────────────── */}
         {!memberRole&&(

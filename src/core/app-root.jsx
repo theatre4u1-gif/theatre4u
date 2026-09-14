@@ -298,7 +298,13 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       const targetOrgId = activeEntry ? activeEntry.org_id : user.id;
       const memberRole  = realMembership ? realMembership.role : null;
 
-      const{data:orgData}=await SB.from("orgs").select("*").eq("id",targetOrgId).single();
+      const{data:orgRow}=await SB.from("orgs").select("*").eq("id",targetOrgId).single();
+      // Guard the legacy "org.id === user.id ⇒ owner" fallback. If the user owns no orgs
+      // (owner_id) and holds no membership, and the org that happens to share their user id
+      // has been handed to someone else (owner_id now points to another user), it is no
+      // longer theirs — don't grant back-door owner access to a transferred-away program.
+      const notMine = !activeEntry && orgRow && orgRow.owner_id && orgRow.owner_id !== user.id;
+      const orgData = notMine ? null : orgRow;
       // Google-OAuth signups arrive authenticated but with NO org row and no
       // memberships — send them to the finish-setup step instead of an empty app.
       // (Password signups always create the org at signup, so they never hit this.)

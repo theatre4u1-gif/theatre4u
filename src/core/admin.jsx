@@ -1637,6 +1637,27 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
     setTimeout(() => setMsg(""), 2500);
   };
 
+  // Reassign a program's owner (e.g. a teacher leaves). Scoped RPC checks the caller is a
+  // facilitator/owner of this district (or admin) server-side before moving anything.
+  const changeSchoolOwner = async (school) => {
+    const to = window.prompt(`Transfer ownership of "${school.name || "this program"}" to another account.\n\nEnter the new owner's login email. They must already have an account.`, "");
+    if (to === null) return;
+    const email = to.trim().toLowerCase();
+    if (!email) return;
+    const keep = window.confirm("Keep the PREVIOUS owner on as a Director?\n\nOK = keep them as a Director\nCancel = remove their access");
+    const { error } = await SB.rpc("transfer_program_owner", { p_org_id: school.id, p_new_owner_email: email, p_keep_previous_as_director: keep });
+    if (error) {
+      const m = /no_account/.test(error.message) ? "No account found for " + email + ". Ask them to sign up first."
+        : /already_owner/.test(error.message) ? "That account already owns this program."
+        : /not_authorized/.test(error.message) ? "You are not authorized to transfer this program."
+        : error.message;
+      setMsg("❌ " + m); return;
+    }
+    setMsg("✓ Ownership transferred to " + email + (keep ? " (previous owner kept as Director)" : ""));
+    setTimeout(() => setMsg(""), 3500);
+    load();
+  };
+
   const saveDistrict = async (updates) => {
     await SB.from("districts").update(updates).eq("id", district.id);
     setDistrict(p => ({ ...p, ...updates }));
@@ -1780,6 +1801,9 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
                     <div style={{ display: "flex", gap: 6 }}>
                       <button className="btn btn-o btn-sm" style={{ flex: 1, minWidth: 0 }} onClick={() => openDirectors(school)}>
                         👤 Directors
+                      </button>
+                      <button className="btn btn-o btn-sm" style={{ flex: 1, minWidth: 0 }} onClick={() => changeSchoolOwner(school)}>
+                        🔑 Owner
                       </button>
                       <button className="btn btn-o btn-sm" style={{ flex: 1, minWidth: 0, color: "rgba(255,100,100,.7)", borderColor: "rgba(255,100,100,.2)" }}
                         onClick={() => removeSchool(school.id)}>
@@ -3519,19 +3543,21 @@ export function AdminProgramsTab({ orgs, currentUser, flash }) {
 
   const transferOwnership = async (newEmail) => {
     if (!newEmail.trim()) return;
-    if (!confirm(`Transfer ownership of "${selected?.name}" to ${newEmail}?\n\nThis will:\n• Change the org's primary email to the new director\n• Keep all inventory and team members\n• The previous director loses owner access`)) return;
+    if (!confirm(`Transfer ownership of "${selected?.name}" to ${newEmail}?\n\nThe new owner gets full control and the program moves to their account (owner_id, contact email, and switcher).`)) return;
+    const keepDir = confirm("Keep the PREVIOUS owner on as a Director?\n\nOK = keep them as a Director\nCancel = remove their access");
     setSaving(true);
-    // Find the new owner's auth user
-    const { data: newOwnerOrg } = await SB.from("orgs").select("id,name").eq("email", newEmail.trim()).single();
-    if (!newOwnerOrg) { showMsg("❌ No account found for "+newEmail+". They need to sign up first."); setSaving(false); return; }
-    // Update the org's email to the new director
-    const { error } = await SB.from("orgs").update({
-      email: newEmail.trim(),
-      director_name: editOrg?.director_name || "",
-    }).eq("id", selected.id);
+    // Secure RPC moves owner_id (and optionally keeps the old owner as a Director) with audit.
+    const { error } = await SB.rpc("transfer_program_owner", {
+      p_org_id: selected.id, p_new_owner_email: newEmail.trim(), p_keep_previous_as_director: keepDir });
     setSaving(false);
-    if (error) { showMsg("❌ "+error.message); return; }
-    showMsg("✅ Ownership transfer initiated. Note: full transfer may require manual DB steps for auth.users.");
+    if (error) {
+      const m = /no_account/.test(error.message) ? "No account found for "+newEmail+". They need to sign up first."
+        : /already_owner/.test(error.message) ? "That account already owns this program."
+        : /not_authorized/.test(error.message) ? "Not authorized to transfer this program."
+        : error.message;
+      showMsg("❌ "+m); return;
+    }
+    showMsg("✅ Ownership transferred to "+newEmail+(keepDir?" (previous owner kept as Director)":""));
   };
 
   const planColor = p => p==="district"?"#42a5f5":p==="pro"?"#91592c":p==="free"?"var(--muted)":"var(--muted)";
