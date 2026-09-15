@@ -35,6 +35,7 @@ export function BusinessFinance({ userId }) {
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState(null);
   const [form, setForm] = useState({ entry_date: new Date().toISOString().slice(0, 10), type: "expense", category: "", amount: "", note: "" });
 
   const load = async () => {
@@ -45,8 +46,17 @@ export function BusinessFinance({ userId }) {
     if (error) { setErr(error.message); return; }
     setRows(l || []);
     setStripeRev(r || []);
+    setUpdatedAt(new Date());
   };
-  useEffect(() => { load(); }, []);
+  // Auto-refresh: pull fresh figures every minute while the tab is visible, and
+  // immediately when the tab regains focus, so an open finance page stays live.
+  useEffect(() => {
+    load();
+    const iv = setInterval(() => { if (typeof document === "undefined" || document.visibilityState === "visible") load(); }, 60000);
+    const onVis = () => { if (document.visibilityState === "visible") load(); };
+    if (typeof document !== "undefined") document.addEventListener("visibilitychange", onVis);
+    return () => { clearInterval(iv); if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVis); };
+  }, []);
 
   const flash = (t) => { setMsg(t); setTimeout(() => setMsg(""), 3500); };
 
@@ -119,6 +129,10 @@ export function BusinessFinance({ userId }) {
   return (
     <div style={{ maxWidth: 1080, margin: "0 auto" }}>
       <p style={{ color: "#777", fontSize: 13, margin: "0 0 4px" }}>Bookkeeping for the business (Artstracker LLC) — separate from programs' own Funding Tracker.</p>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "#9a9284", margin: "0 0 6px" }}>
+        <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#1a7f37", display: "inline-block" }} />
+        Live · updates every minute{updatedAt ? " · last updated " + updatedAt.toLocaleTimeString() : ""}
+      </div>
       {msg && <div style={{ marginTop: 8, fontWeight: 700, fontSize: 13, color: msg.startsWith("Error") ? "#c0392b" : "#1a7f37" }}>{msg}</div>}
 
       <H>Profit &amp; loss</H>
