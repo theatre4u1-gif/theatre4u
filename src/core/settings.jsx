@@ -9,7 +9,7 @@ import { Ic } from "./icons.jsx";
 import { UpgradePlans } from "./billing.jsx";
 import { isAdminEmail, APP_NAME, APP_EMAIL, APP_HOST } from "./config.js";
 import { setCustomCats } from "./inventory.js";
-import { VERTICALS_LIST } from "../lib/verticals.js";
+import { VERTICALS_LIST, getCats } from "../lib/verticals.js";
 import { PLANS_DEF } from "./plans.js";
 import { QR } from "./qr.js";
 import { BG, usp } from "../lib/backgrounds.js";
@@ -615,15 +615,21 @@ function SelfServiceDeleteAccount({ user, org }) {
   );
 }
 
-function CustomCategoriesManager({ org, userId, memberRole=null }){
-  const vertical = org?.vertical || "theatre";
-  const CAT_EXAMPLE = { theatre:"Concessions", music:"Sheet Music", dance:"Recital Props", art:"Canvases", booster:"Merchandise" };
-  const catExample = CAT_EXAMPLE[vertical] || "Concessions";
+function CustomCategoriesManager({ org, setOrg, userId, memberRole=null }){
+  const primary = org?.vertical || "theatre";
+  const enabled = (org?.verticals_enabled?.length ? org.verticals_enabled : [primary]);
   const canManage = !memberRole || memberRole==="director" || memberRole==="program_director";
+  const [vertical,setVertical] = useState(primary);
   const [list,setList] = useState([]);
   const [label,setLabel] = useState("");
   const [busy,setBusy] = useState(false);
   const [err,setErr] = useState("");
+  const CAT_EXAMPLE = { theatre:"Concessions", music:"Sheet Music", dance:"Recital Props", art:"Canvases", booster:"Merchandise" };
+  const catExample = CAT_EXAMPLE[vertical] || "Concessions";
+  const clabels = org?.category_labels || {};
+  const biLabel = (id, def) => clabels[vertical+":"+id] || def;
+  const vName = (vid) => (org?.vertical_labels && org.vertical_labels[vid] && org.vertical_labels[vid].label) || (VERTICALS_LIST.find(x=>x.id===vid)||{}).label || vid;
+
   const refresh = async()=>{
     if(!org?.id) return;
     const { data } = await SB.from("org_categories").select("id,vertical,label").eq("org_id", org.id);
@@ -632,6 +638,7 @@ function CustomCategoriesManager({ org, userId, memberRole=null }){
     setList(all.filter(c=>c.vertical===vertical));
   };
   useEffect(()=>{ refresh(); },[org?.id, vertical]);
+
   const add = async()=>{
     const name = label.trim();
     if(!name) return;
@@ -646,26 +653,64 @@ function CustomCategoriesManager({ org, userId, memberRole=null }){
     const { error } = await SB.from("org_categories").delete().eq("id", id);
     if(!error) refresh();
   };
-  if(!canManage) return <p style={{fontSize:13,color:"var(--muted)"}}>Only the account owner or a director can manage custom categories.</p>;
+  const renameCustom = async(id,cur)=>{
+    const nx = window.prompt("Rename this category.", cur);
+    if(nx===null) return; const val=nx.trim(); if(!val||val===cur) return;
+    const { error } = await SB.from("org_categories").update({ label: val }).eq("id", id);
+    if(!error) refresh();
+  };
+  const renameBuiltin = async(id,def)=>{
+    const cur = biLabel(id,def);
+    const nx = window.prompt(`Rename the "${def}" category for this account. Leave blank to reset to the default.`, cur);
+    if(nx===null) return; const val=nx.trim();
+    const map = { ...(org?.category_labels||{}) }; const key = vertical+":"+id;
+    if(!val || val===def) delete map[key]; else map[key]=val;
+    const { error } = await SB.from("orgs").update({ category_labels: map }).eq("id", org.id);
+    if(!error && setOrg) setOrg(p=>({ ...p, category_labels: map }));
+  };
+
+  if(!canManage) return <p style={{fontSize:13,color:"var(--muted)"}}>Only the account owner or a director can manage categories.</p>;
+
+  const builtins = getCats(vertical);
+  const rowStyle = {display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",background:"rgba(255,255,255,.04)",borderRadius:6};
+  const renameBtn = {background:"none",border:"none",cursor:"pointer",color:"var(--muted)",fontSize:12,fontFamily:"inherit",padding:2};
   return(
     <div>
+      {enabled.length>1 && (
+        <div style={{marginBottom:12}}>
+          <label style={{fontSize:12,fontWeight:700,color:"var(--muted)",display:"block",marginBottom:4}}>Department</label>
+          <select className="fs" value={vertical} onChange={e=>setVertical(e.target.value)}>
+            {enabled.map(vid=><option key={vid} value={vid}>{vName(vid)}</option>)}
+          </select>
+        </div>
+      )}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
         <input className="fs" style={{flex:1,minWidth:200}} placeholder={`New category name (e.g. ${catExample})`} value={label}
           onChange={e=>setLabel(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")add();}} maxLength={40}/>
         <button className="btn btn-p" disabled={busy||!label.trim()} onClick={add}>Add</button>
       </div>
       {err&&<p style={{fontSize:12,color:"var(--red)",marginBottom:8}}>{err}</p>}
-      {list.length===0
-        ? <p style={{fontSize:13,color:"var(--muted)"}}>No custom categories yet. Add one above — it'll appear alongside the built-in categories when you add or edit items.</p>
-        : <div style={{display:"flex",flexDirection:"column",gap:6}}>
-            {list.map(c=>(
-              <div key={c.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",background:"rgba(255,255,255,.04)",borderRadius:6}}>
-                <span style={{fontSize:14}}>📦 {c.label}</span>
-                <button className="btn btn-d btn-sm" onClick={()=>del(c.id,c.label)}>Remove</button>
-              </div>
-            ))}
-          </div>}
-      <p style={{fontSize:11,color:"var(--muted)",marginTop:12,fontStyle:"italic"}}>Custom categories use a default 📦 icon and apply to this program's {vertical} inventory.</p>
+      {list.length>0 && <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
+        {list.map(c=>(
+          <div key={c.id} style={rowStyle}>
+            <span style={{fontSize:14}}>📦 {c.label}</span>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <button style={renameBtn} onClick={()=>renameCustom(c.id,c.label)}>✏️ Rename</button>
+              <button className="btn btn-d btn-sm" onClick={()=>del(c.id,c.label)}>Remove</button>
+            </div>
+          </div>
+        ))}
+      </div>}
+      <div style={{fontSize:12,fontWeight:700,color:"var(--muted)",marginBottom:6}}>Built-in categories <span style={{fontWeight:400}}>— rename any to fit your program</span></div>
+      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+        {builtins.map(c=>{ const cur=biLabel(c.id,c.label); const changed=cur!==c.label; return(
+          <div key={c.id} style={rowStyle}>
+            <span style={{fontSize:14}}>{c.icon} {cur}{changed&&<span style={{fontSize:11,color:"var(--muted)",marginLeft:6}}>· was {c.label}</span>}</span>
+            <button style={renameBtn} onClick={()=>renameBuiltin(c.id,c.label)}>✏️ Rename</button>
+          </div>
+        );})}
+      </div>
+      <p style={{fontSize:11,color:"var(--muted)",marginTop:12,fontStyle:"italic"}}>Renames apply to this program's {vName(vertical)} department. Custom categories use a default 📦 icon.</p>
     </div>
   );
 }
@@ -684,12 +729,28 @@ function DepartmentsManager({ org, setOrg, userId, plan="free", memberRole=null 
     setSaving(null);
     if(!error) setOrg(p=>({ ...p, verticals_enabled: next }));
   };
+  const vlabels = org?.vertical_labels || {};
+  const dLabel = (v)=> (vlabels[v.id] && vlabels[v.id].label) || v.label;
+  const dIcon  = (v)=> (vlabels[v.id] && vlabels[v.id].icon)  || v.icon;
+  const rename = async(v)=>{
+    const nm = window.prompt(`Rename the "${v.label}" department as it appears in this account. Leave blank to reset to the default.`, dLabel(v));
+    if(nm===null) return;
+    const label = nm.trim();
+    let icon = dIcon(v);
+    const ic = window.prompt("Optional: set an emoji/icon for this department. Leave as is to keep the current one.", icon);
+    if(ic!==null && ic.trim()) icon = ic.trim();
+    const next = { ...(org?.vertical_labels||{}) };
+    if(!label || (label===v.label && icon===v.icon)) delete next[v.id];
+    else next[v.id] = { label: label||v.label, icon };
+    const { error } = await SB.from("orgs").update({ vertical_labels: next }).eq("id", userId);
+    if(!error) setOrg(p=>({ ...p, vertical_labels: next }));
+  };
   if(!canManage) return <p style={{fontSize:13,color:"var(--muted)"}}>Only the account owner or a director can manage departments.</p>;
   return(
     <div>
       <p style={{fontSize:13,color:"var(--muted)",marginBottom:12}}>
         {multiAllowed
-          ? "Choose which arts departments are open in your account. Toggle any on or off — your home department always stays on. Switch between open departments from the sidebar."
+          ? "Choose which arts departments are open in your account. Toggle any on or off — your home department always stays on, and you can rename any open department (for example, Organization to CTE Woodshop). Switch between open departments from the sidebar."
           : "Your plan includes one department. Upgrade to ArtsTracker to open Music, Dance, Visual Art, and Organizations too."}
       </p>
       <div style={{display:"flex",flexDirection:"column",gap:6}}>
@@ -697,15 +758,18 @@ function DepartmentsManager({ org, setOrg, userId, plan="free", memberRole=null 
           const isPrimary=v.id===primary, isOn=enabled.includes(v.id), locked=!multiAllowed&&!isPrimary;
           return(
             <div key={v.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 12px",background:"rgba(255,255,255,.04)",borderRadius:6,opacity:locked?0.6:1}}>
-              <span style={{fontSize:14}}>{v.icon} {v.label}{isPrimary&&<span style={{fontSize:11,color:"var(--muted)",marginLeft:6}}>· home</span>}</span>
-              {locked
-                ? <span style={{fontSize:11,color:"var(--goldink)",fontWeight:700}}>🔒 ArtsTracker</span>
-                : <button onClick={()=>toggle(v.id)} disabled={isPrimary||saving===v.id}
-                    title={isPrimary?"Your home department is always open":(isOn?"Turn off":"Turn on")}
-                    style={{width:44,height:24,borderRadius:99,border:"none",cursor:isPrimary?"default":"pointer",position:"relative",flexShrink:0,
-                      background:isOn?"var(--gold)":"rgba(255,255,255,.18)",transition:"background .2s",opacity:isPrimary?0.7:1}}>
-                    <span style={{position:"absolute",top:2,left:isOn?22:2,width:20,height:20,borderRadius:"50%",background:"#fff",transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.3)"}}/>
-                  </button>}
+              <span style={{fontSize:14}}>{dIcon(v)} {dLabel(v)}{isPrimary&&<span style={{fontSize:11,color:"var(--muted)",marginLeft:6}}>· home</span>}</span>
+              <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+                {isOn && !locked && <button onClick={()=>rename(v)} title="Rename this department" style={{background:"none",border:"none",cursor:"pointer",color:"var(--muted)",fontSize:12,fontFamily:"inherit",padding:2}}>✏️ Rename</button>}
+                {locked
+                  ? <span style={{fontSize:11,color:"var(--goldink)",fontWeight:700}}>🔒 ArtsTracker</span>
+                  : <button onClick={()=>toggle(v.id)} disabled={isPrimary||saving===v.id}
+                      title={isPrimary?"Your home department is always open":(isOn?"Turn off":"Turn on")}
+                      style={{width:44,height:24,borderRadius:99,border:"none",cursor:isPrimary?"default":"pointer",position:"relative",flexShrink:0,
+                        background:isOn?"var(--gold)":"rgba(255,255,255,.18)",transition:"background .2s",opacity:isPrimary?0.7:1}}>
+                      <span style={{position:"absolute",top:2,left:isOn?22:2,width:20,height:20,borderRadius:"50%",background:"#fff",transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.3)"}}/>
+                    </button>}
+              </div>
             </div>
           );
         })}
@@ -953,7 +1017,7 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
 
         <div className="card card-p">
           <div className="sh"><h2>🗂️ Custom Categories</h2><p>Add your own inventory categories alongside the built-in ones.</p></div>
-          <CustomCategoriesManager org={org} userId={userId} memberRole={memberRole}/>
+          <CustomCategoriesManager org={org} setOrg={setOrg} userId={userId} memberRole={memberRole}/>
         </div>
 
         <div className="sc">

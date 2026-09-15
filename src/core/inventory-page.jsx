@@ -318,7 +318,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
       w.document.close();
       const srcs = await Promise.all(toPrint.map(i => QR.toDataURL(doorUrl(org) + "/#/item/" + i.id, 140)));
       const labels = toPrint.map((item, n) => {
-        const cat = CAT[item.category] || CAT.other;
+        const cat = vCAT[item.category] || CAT[item.category] || CAT.other;
         const dispId = item.display_id || item.id.slice(0,8).toUpperCase();
         return "<div class=\"lbl\">"
           + "<div class=\"lbl-cat\" style=\"color:"+( cat.color||"#888")+"\">" + cat.icon + " " + cat.label + "</div>"

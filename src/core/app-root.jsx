@@ -11,7 +11,7 @@ import { authErrKey, getRefCode, isDemoMode, fmt$, parseCSV, autoMatch, postShar
 import { AuthOverlay, GoogleProfileSetup } from "./auth.jsx";
 import { STRIPE_LINKS, stripeLink, PLANS_DEF, UPGRADE_PLANS, betaPhase, graceEndDate } from "./plans.js";
 import { UpgradePrompt, UpgradePlans } from "./billing.jsx";
-import { CAT_GFX, CATS, CAT, CAT_MAP, CONDS, SIZES, AVAIL, MKT, setCustomCats, customCatsFor, getCatsMerged } from "./inventory.js";
+import { CAT_GFX, CATS, CAT, CAT_MAP, CONDS, SIZES, AVAIL, MKT, setCustomCats, customCatsFor, getCatsMerged, setOrgLabels, vLabelOf, vIconOf, catLabelOf } from "./inventory.js";
 import { AdminHub, DistrictDashboard } from "./admin.jsx";
 import { LabelsPage } from "./labels.jsx";
 import { OrgProfilePage } from "./profile.jsx";
@@ -634,11 +634,17 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   // (own account OR a district school being viewed) — so switching never needs a page refresh.
   useEffect(()=>{
     const oid = activeSchool?.id || org?.id;
-    if(!oid){ setCustomCats([]); return; }
+    if(!oid){ setCustomCats([]); setOrgLabels(null,null); return; }
     let cancelled=false;
     SB.from("org_categories").select("id,vertical,label").eq("org_id", oid).then(({data})=>{
       if(cancelled) return;
       setCustomCats(data||[]);
+      setCustCatVer(v=>v+1);
+    });
+    // Per-org department/category name overrides for the active org.
+    SB.from("orgs").select("vertical_labels,category_labels").eq("id", oid).maybeSingle().then(({data})=>{
+      if(cancelled) return;
+      setOrgLabels(data?.vertical_labels||null, data?.category_labels||null);
       setCustCatVer(v=>v+1);
     });
     return ()=>{ cancelled=true; };
@@ -853,7 +859,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                   </span>
                   {IS_ARTSTRACKER && org?.vertical && (
                     <span style={{padding:"2px 8px",background:"rgba(212,168,67,.15)",color:"var(--goldink)",borderRadius:9,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:1,display:"inline-flex",alignItems:"center",gap:4}}>
-                      {getVertical(org.vertical).icon} {getVertical(org.vertical).label}
+                      {vIconOf(org.vertical)} {vLabelOf(org.vertical)}
                     </span>
                   )}
                 </div>
@@ -877,7 +883,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                     style={{marginTop:8,width:"100%",padding:"6px 8px",borderRadius:7,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--linen)",fontSize:12,fontFamily:"inherit",cursor:"pointer"}}
                     title="Switch between departments">
                     {enabledVerticals.map(v=>(
-                      <option key={v} value={v}>{getVertical(v).icon} {getVertical(v).label}</option>
+                      <option key={v} value={v}>{vIconOf(v)} {vLabelOf(v)}</option>
                     ))}
                   </select>
                 )}

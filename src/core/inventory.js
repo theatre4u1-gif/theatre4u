@@ -1,5 +1,5 @@
 // Built-in (theatre) inventory vocabulary: categories, conditions, sizes, availability, market — extracted from App.jsx.
-import { getCats } from "../lib/verticals.js";
+import { getCats, getVertical } from "../lib/verticals.js";
 
 export const CAT_GFX = {
   costumes:  {grad:"linear-gradient(135deg,#7b1560,#c2185b,#e91e8c)",    icon:"👗"},
@@ -50,4 +50,36 @@ export const MKT   = ["Not Listed","For Rent","For Sale","Rent or Sale","For Loa
 let CUSTOM_CATS = [];
 export function setCustomCats(rows){ CUSTOM_CATS = Array.isArray(rows) ? rows.map(r=>({id:r.id,vertical:r.vertical,label:r.label})) : []; }
 export function customCatsFor(vertical){ return CUSTOM_CATS.filter(c=>c.vertical===(vertical||"theatre")).map(c=>({id:c.id,label:c.label,icon:"📦",color:"#4a2e1a",custom:true})); }
-export function getCatsMerged(vertical){ return [...getCats(vertical), ...customCatsFor(vertical)]; }
+
+// ── Per-org label overrides (ADD-TO model, like CUSTOM_CATS) ────────────────
+// Schools can rename a department (vertical) label/icon and rename built-in
+// category names. setOrgLabels() is called after the org loads; the resolvers
+// below apply overrides everywhere, falling back to the built-in defaults.
+let ORG_VLABELS = {};   // { "<vertical>": { label, icon } }
+let ORG_CATLABELS = {}; // { "<vertical>:<catId>": "New Name" }
+export function setOrgLabels(vLabels, cLabels){
+  ORG_VLABELS   = (vLabels && typeof vLabels === "object") ? vLabels : {};
+  ORG_CATLABELS = (cLabels && typeof cLabels === "object") ? cLabels : {};
+}
+// Department (vertical) display name / icon, honoring the org's override.
+export function vLabelOf(vertical){ const v = vertical||"theatre"; return (ORG_VLABELS[v] && ORG_VLABELS[v].label) || getVertical(v).label; }
+export function vIconOf(vertical){  const v = vertical||"theatre"; return (ORG_VLABELS[v] && ORG_VLABELS[v].icon)  || getVertical(v).icon;  }
+// Category display name for any id (custom label, built-in override, or default).
+export function catLabelOf(vertical, catId){
+  const v = vertical||"theatre";
+  const custom = CUSTOM_CATS.find(c => c.id === catId && c.vertical === v);
+  if (custom) return custom.label;
+  const ov = ORG_CATLABELS[v + ":" + catId];
+  if (ov) return ov;
+  const bi = getCats(v).find(c => c.id === catId);
+  return bi ? bi.label : (CAT[catId] ? CAT[catId].label : catId);
+}
+// Built-in categories with any per-org name overrides applied.
+function applyCatOverrides(vertical, cats){
+  const v = vertical||"theatre";
+  return cats.map(c => { const ov = ORG_CATLABELS[v + ":" + c.id]; return ov ? { ...c, label: ov } : c; });
+}
+export function getCatsMerged(vertical){
+  const v = vertical||"theatre";
+  return [...applyCatOverrides(v, getCats(v)), ...customCatsFor(v)];
+}

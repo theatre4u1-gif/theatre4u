@@ -9,6 +9,13 @@ export function authErrKey(msg) {
   const m = (msg || "").toLowerCase();
   if (m.includes("invalid login") || m.includes("invalid credentials") || m.includes("email not confirmed") || m.includes("wrong password") || m.includes("incorrect password")) return "loginBadPassword";
   if (m.includes("user not found") || m.includes("no user") || m.includes("email not found") || m.includes("no account")) return "loginNoEmail";
+  // Supabase rejects some addresses outright (error_code email_address_invalid) — most often a
+  // typo, or a brand-new work domain whose mail records aren't set up yet. Without this mapping the
+  // user fell through to the generic "check your internet connection" message, which is misleading
+  // and pushes them to retry immediately (which then trips the email rate limit below).
+  if (m.includes("email address") && m.includes("invalid")) return "signupEmailInvalid";
+  if (m.includes("email_address_invalid")) return "signupEmailInvalid";
+  if (m.includes("rate limit") || m.includes("over_email_send_rate_limit") || m.includes("too many requests")) return "signupRateLimit";
   if (m.includes("expired") || m.includes("jwt") || m.includes("refresh_token")) return "sessionExpired";
   return null;
 }

@@ -125,7 +125,10 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
           // Meta Pixel: confirmed brand-new account (password signup). No PII.
           try { if (typeof window!=="undefined" && window.fbq) window.fbq("track","CompleteRegistration"); } catch(e) {}
           await SB.from("orgs").upsert({
-            id:data.user.id, name:orgName, email, director_name: ownerName.trim()||null,
+            // Use the normalized address (em), not the raw input. Auth stores the trimmed/lowercased
+            // form, so writing the raw value here left orgs.email with stray whitespace or mixed case,
+            // which Resend rejects with a 422 "Invalid `to` field" on the welcome + admin emails.
+            id:data.user.id, name:orgName, email:em, director_name: ownerName.trim()||null,
             type:"", phone:"", location:"", bio:"",
             state: stateCode, zipcode: zipcode,
             vertical: vertical, verticals_enabled: [vertical],
@@ -145,7 +148,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 org_id:       data.user.id,
-                org_email:    email,
+                org_email:    em,
                 is_team_member: false,
               }),
             }).catch(()=>{}); // fire and forget — never block signup
@@ -583,6 +586,7 @@ export function AuthScreen({onAuth}){
     setErr("");
     if(!email.trim()){setErr("Please enter your email address.");return;}
     if(!pass){setErr("Please enter a password.");return;}
+    const em = email.trim().toLowerCase(); // normalize so login matches signup (same as AuthOverlay)
     if(mode==="signup"&&pass.length<6){setErr("Password must be at least 6 characters.");return;}
     if(mode==="signup"&&!ageConfirmed){setErr("Please confirm you are an adult or an authorized user.");return;}
     if(mode==="signup"&&!termsAccepted){setErr("Please agree to the Terms of Service and Privacy Policy to continue.");return;}
@@ -619,11 +623,11 @@ export function AuthScreen({onAuth}){
           if(cd.used_count>=cd.max_uses){throw new Error("This access code has reached its limit. Contact "+APP_EMAIL+".");}
           codeData = cd;
         }
-        const{data,error}=await SB.auth.signUp({email,password:pass,options:{data:{org_name:orgName},emailRedirectTo:APP_URL}});
+        const{data,error}=await SB.auth.signUp({email:em,password:pass,options:{data:{org_name:orgName},emailRedirectTo:APP_URL}});
         if(error)throw error;
         if(data.user){
           const isLeadingPlayer = !!code;
-          await SB.from("orgs").upsert({id:data.user.id,name:orgName,email,type:"",phone:"",location:"",bio:"",beta_code:code||null,is_leading_player:isLeadingPlayer,terms_accepted_at:new Date().toISOString(),terms_version:"2026-08"},{onConflict:"id",ignoreDuplicates:false});
+          await SB.from("orgs").upsert({id:data.user.id,name:orgName,email:em,type:"",phone:"",location:"",bio:"",beta_code:code||null,is_leading_player:isLeadingPlayer,terms_accepted_at:new Date().toISOString(),terms_version:"2026-08"},{onConflict:"id",ignoreDuplicates:false});
           if(code&&codeData){
             await SB.from("beta_codes").update({used_count:codeData.used_count+1}).eq("code",code);
           }
@@ -635,7 +639,7 @@ export function AuthScreen({onAuth}){
           }
         }
       } else {
-        const{data,error}=await SB.auth.signInWithPassword({email,password:pass});
+        const{data,error}=await SB.auth.signInWithPassword({email:em,password:pass});
         if(error)throw error;
         onAuth(data.user);
       }

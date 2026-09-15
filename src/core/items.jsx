@@ -9,7 +9,7 @@ import { EM } from "./messages.js";
 import { Ic } from "./icons.jsx";
 import { FbShareBtn } from "./ui.jsx";
 import { resizeImg, itemShareUrl, itemShareText, fmt$ } from "./helpers.js";
-import { CAT, CAT_GFX, MKT, customCatsFor } from "./inventory.js";
+import { CAT, CAT_GFX, MKT, customCatsFor, getCatsMerged } from "./inventory.js";
 import { QR } from "./qr.js";
 import { ROW_LABELS, COL_LABELS } from "./storage-map.js";
 import { AddToProductionPicker } from "./productions.jsx";
@@ -144,7 +144,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
   // Per-vertical example text (QA-4, 2026-07-04)
   const EX_ITEM = {theatre:"Victorian Ball Gown", music:"Yamaha Trumpet", dance:"Ballet Slippers (Pair)", art:"Acrylic Paint Set", booster:"Folding Table"}[vertical] || "Storage Bin";
   const EX_LOC  = {theatre:"Costume Closet A", music:"Instrument Room, Shelf 2", dance:"Costume Rack B", art:"Supply Cabinet 3", booster:"Storage Room A"}[vertical] || "Storage Room A";
-  const vCATS   = [...vConfig.categories, ...customCatsFor(vertical)];
+  const vCATS   = getCatsMerged(vertical);
   const vCONDS  = vConfig.conditions;
   const vSIZES  = vConfig.sizes;
   const vAVAIL  = vConfig.availability;
