@@ -110,10 +110,20 @@ export function BusinessFinance({ userId }) {
   const thisMonth = ym(new Date().toISOString());
   const preLaunch = new Date() < new Date("2026-09-01T07:00:00Z");
   const sum = (pred) => rows.filter(pred).reduce((a, r) => a + (r.amount_cents || 0), 0);
-  const income = sum(r => r.type === "income");
+  // Stripe revenue for months not yet booked into the ledger (the importer only books CLOSED
+  // months). Overlay their live net so the P&L reflects real revenue immediately, updating with
+  // the auto-refresh. Once a month closes and is booked as a 'stripe' income row, it drops out of
+  // this overlay, so nothing is double counted.
+  const bookedStripeMonths = new Set(rows.filter(r => r.type === "income" && r.source === "stripe").map(r => ym(r.entry_date)));
+  const stripeNet = (r) => Math.max(0, (r.revenue_cents || 0) - (r.refunded_cents || 0));
+  const stripeUnbooked = stripeRev.filter(r => !bookedStripeMonths.has(ym(r.month))).reduce((a, r) => a + stripeNet(r), 0);
+  const stripeUnbookedThisMonth = stripeRev.filter(r => ym(r.month) === thisMonth && !bookedStripeMonths.has(ym(r.month))).reduce((a, r) => a + stripeNet(r), 0);
+
+  const ledgerIncome = sum(r => r.type === "income");
+  const income = ledgerIncome + stripeUnbooked;
   const expense = sum(r => r.type === "expense");
   const net = income - expense;
-  const mIncome = sum(r => r.type === "income" && ym(r.entry_date) === thisMonth);
+  const mIncome = sum(r => r.type === "income" && ym(r.entry_date) === thisMonth) + stripeUnbookedThisMonth;
   const mExpense = sum(r => r.type === "expense" && ym(r.entry_date) === thisMonth);
   const stripeNetAll = stripeRev.reduce((a, r) => a + ((r.revenue_cents || 0) - (r.refunded_cents || 0)), 0);
 
@@ -138,7 +148,7 @@ export function BusinessFinance({ userId }) {
       <H>Profit &amp; loss</H>
       <div style={grid}>
         <Stat label="Net (all-time)" value={fmt(net)} accent={net >= 0 ? "#1a7f37" : "#c0392b"} sub="income − expenses" />
-        <Stat label="Income (all-time)" value={fmt(income)} accent="#1a7f37" />
+        <Stat label="Income (all-time)" value={fmt(income)} accent="#1a7f37" sub={stripeUnbooked > 0 ? "includes live Stripe not yet closed" : null} />
         <Stat label="Expenses (all-time)" value={fmt(expense)} accent="#c07a00" />
         <Stat label="This month" value={fmt(mIncome - mExpense)} accent={(mIncome - mExpense) >= 0 ? "#1a7f37" : "#c0392b"} sub={fmt(mIncome) + " in · " + fmt(mExpense) + " out"} />
       </div>

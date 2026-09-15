@@ -32,10 +32,17 @@ export function Reports({ items, plan="free", org=null, userId=null, userEmail=n
   ).sort((a,b)=>b[1].qty-a[1].qty);
 
   const csv = () => {
-    const h=["Name","Category","Condition","Size","Qty","Location","Availability","Market","Rent","Sale","Loan Period (wks)","Deposit","Tags","Image URL","Notes","ID","Added"];
-    const rows=items.map(i=>[i.name,i.category,i.condition,i.size,i.qty,i.location,i.avail,i.mkt,i.rent,i.sale,i.loan_period||"",i.deposit||"",(i.tags||[]).join(";"),i.img||"",`"${(i.notes||"").replace(/"/g,'""')}"`,i.id,i.added]);
-    const csv=[h,...rows].map(r=>r.join(",")).join("\n");
-    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=(IS_ARTSTRACKER?"artstracker":"theatre4u")+"_inventory.csv";a.click();
+    // Every field is quoted and escaped — item names and locations routinely contain
+    // commas, quotes and line breaks, which used to split a row across columns.
+    const esc = v => '"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+    const h=["Label ID","Name","Category","Condition","Size","Qty","Location","Availability","Market","Rent","Sale","Loan Period (wks)","Deposit","Tags","QR URL","Image URL","Notes","ID","Added"];
+    const rows=items.map(i=>[
+      i.display_id||"",i.name,i.category,i.condition,i.size,i.qty,i.location,i.avail,i.mkt,
+      i.rent,i.sale,i.loan_period||"",i.deposit||"",(i.tags||[]).join(";"),
+      doorUrl(org)+"/#/item/"+i.id,i.img||"",i.notes||"",i.id,i.added
+    ]);
+    const csv="﻿"+[h,...rows].map(r=>r.map(esc).join(",")).join("\r\n");
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download=(IS_ARTSTRACKER?"artstracker":"theatre4u")+"_inventory.csv";a.click();
   };
 
   const printAllQR = async () => {

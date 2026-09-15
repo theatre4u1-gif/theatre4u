@@ -238,7 +238,10 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
       <div className="fg fu"><label className="fl">Item Name *</label><input className="fi" value={f.name} onChange={e=>upd("name",e.target.value)} placeholder={"e.g. "+EX_ITEM} autoFocus/></div>
       <div className="fg"><label className="fl">Category</label><select className="fs" value={f.category} onChange={e=>upd("category",e.target.value)}>{vCATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</select></div>
       <div className="fg"><label className="fl">Condition</label><select className="fs" value={f.condition} onChange={e=>upd("condition",e.target.value)}>{vCONDS.map(c=><option key={c}>{c}</option>)}</select></div>
-      <div className="fg"><label className="fl">Size</label><select className="fs" value={f.size} onChange={e=>upd("size",e.target.value)}>{vSIZES.map(s=><option key={s}>{s}</option>)}</select></div>
+      <div className="fg"><label className="fl">Size</label>
+        <input className="fi" list="t4u-size-opts" value={f.size||""} onChange={e=>upd("size",e.target.value)} placeholder="e.g. M, 6, 42 Long, 44 Waist"/>
+        <datalist id="t4u-size-opts">{vSIZES.map(s=><option key={s} value={s}/>)}</datalist>
+      </div>
       <div className="fg"><label className="fl">Quantity</label><input className="fi" type="number" min="0" step="1" placeholder="1" value={f.qty||""} onChange={e=>upd("qty",parseInt(e.target.value)||0)}/></div>
       {(vertical==="art"||vertical==="booster") && (
         <div className="fg"><label className="fl">Low-stock alert at <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:10,color:"var(--muted)"}}>(0 = off)</span></label><input className="fi" type="number" min="0" step="1" placeholder="0" value={f.low_stock_threshold||""} onChange={e=>upd("low_stock_threshold",parseInt(e.target.value)||0)}/></div>

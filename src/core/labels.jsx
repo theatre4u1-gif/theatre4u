@@ -75,7 +75,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
     (async()=>{
       setLoadingItems(true);
       const {data} = await SB.from("items")
-        .select("id,name,category,location,display_id,added,condition,qty,img")
+        .select("id,name,category,location,display_id,added,condition,qty,img,size")
         .eq("org_id",userId).order("added",{ascending:false}).limit(500);
 
       // Also load claimed labels so we know which items already have a physical label
@@ -110,18 +110,19 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
   const clearSel  = () => setSelected([]);
 
   // Export a CSV for Brother P-touch Editor (matches the merge template's columns exactly:
-  // Label_ID, Item_Name, Location, QR_URL, Label_Type). Uses selected items, or all filtered if none.
+  // Label_ID, Item_Name, Size, Location, QR_URL, Label_Type). Uses selected items, or all filtered if none.
   const exportPtouchCsv = () => {
     const rows = selected.length ? myItems.filter(i=>selected.includes(i.id)) : filtered;
     if(!rows.length) return;
     const brandHost = doorOf(org) === "artstracker" ? "artstracker.org" : "theatre4u.org";
     const esc = v => '"'+String(v==null?"":v).replace(/"/g,'""')+'"';
-    const lines = [["Label_ID","Item_Name","Location","QR_URL","Label_Type"].join(",")];
+    const lines = [["Label_ID","Item_Name","Size","Location","QR_URL","Label_Type"].join(",")];
     rows.forEach(i=>{
       const dispId = i.display_id || i.id.slice(0,8).toUpperCase();
       const cat = CAT[i.category] || CAT.other;
       lines.push([
-        esc(dispId), esc(i.name), esc(i.location||""),
+        esc(dispId), esc(i.name), esc(i.size && i.size !== "N/A" ? i.size : ""),
+        esc(i.location||""),
         esc("https://"+brandHost+"/#/item/"+i.id),
         esc(cat.label || i.category || "")
       ].join(","));
@@ -426,7 +427,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
           <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:14,fontSize:12,color:"var(--muted)"}}>
             <span>Using a Brother P-touch label printer?</span>
             <button onClick={exportPtouchCsv} disabled={filtered.length===0}
-              title="Download a CSV for Brother P-touch Editor (Label_ID, Item_Name, Location, QR_URL). Uses selected items, or all if none are selected."
+              title="Download a CSV for Brother P-touch Editor (Label_ID, Item_Name, Size, Location, QR_URL). Uses selected items, or all if none are selected."
               style={{padding:"6px 12px",borderRadius:7,border:"1px solid var(--border)",fontFamily:"inherit",fontSize:12,fontWeight:700,
                 cursor:filtered.length?"pointer":"not-allowed",background:"transparent",color:"var(--goldink)"}}>
               ⬇ Export for P-touch (CSV){selected.length?(" ("+selected.length+")"):""}
@@ -676,7 +677,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
             <ol style={{margin:"0 0 0 20px",padding:0,fontSize:13,color:"var(--muted)",lineHeight:1.8}}>
               <li>In the <strong style={{color:"var(--text)"}}>Print Labels</strong> tab, select your items and click <strong style={{color:"var(--text)"}}>Export for P-touch</strong>. A CSV downloads to your computer.</li>
               <li>Open your label template (the .lbx file) in P-touch Editor.</li>
-              <li>Connect the CSV: <strong style={{color:"var(--text)"}}>File → Database → Connect</strong>, choose the CSV, and confirm "first row contains field names." The fields (Label_ID, Item_Name, Location, QR_URL) line up automatically.</li>
+              <li>Connect the CSV: <strong style={{color:"var(--text)"}}>File → Database → Connect</strong>, choose the CSV, and confirm "first row contains field names." The fields (Label_ID, Item_Name, Size, Location, QR_URL) line up automatically.</li>
               <li><strong style={{color:"var(--text)"}}>To print every label:</strong> in the database list at the bottom, click the first row and Shift-click the last row so all rows are highlighted (or Cmd+A). Then <strong style={{color:"var(--text)"}}>File → Print</strong>, choose <strong style={{color:"var(--text)"}}>Brother PT-P710BT</strong>, turn on Auto Cut, and Print. (Keep Copies = 1; Copies makes duplicates, not one per item. If it still prints one, open Detailed Settings and set the range to All records.)</li>
             </ol>
           </div>

@@ -377,8 +377,10 @@ function coerce(key, raw) {
       return match || "Good";
     }
     case "size": {
+      // Sizes are free text (numeric/measurement sizes are common in costume shops).
+      // Normalise to a preset when it matches one, otherwise keep what they typed.
       const match = SIZES.find(s=>s.toLowerCase()===v.toLowerCase());
-      return match || "N/A";
+      return match || String(v).trim() || "N/A";
     }
     case "avail": {
       const match = AVAIL.find(a=>a.toLowerCase()===v.toLowerCase());
