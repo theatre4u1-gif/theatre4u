@@ -230,6 +230,66 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
     } finally { setPrinting(false); }
   };
 
+  // Print each selected item as its own 24mm P-touch tape segment. Sizes the print
+  // document to the tape so the browser dialog prints correctly at 100% with no
+  // scaling. Works wherever the Cube is a selectable system printer (USB, or Brother's
+  // desktop driver). Over Bluetooth-only, use Export for P-touch (CSV) into P-touch Editor.
+  const printPtouch = async () => {
+    const toPrint = myItems.filter(i=>selected.includes(i.id));
+    if(!toPrint.length) return;
+    setPrinting(true);
+    try {
+      const brandHost = doorOf(org) === "artstracker" ? "artstracker.org" : "theatre4u.org";
+      const srcs = await Promise.all(toPrint.map(i=>QR.toDataURL("https://"+brandHost+"/#/item/"+i.id, 240)));
+      const esc = (s)=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+      const labels = toPrint.map((item,n)=>{
+        const dispId = item.display_id||item.id.slice(0,8).toUpperCase();
+        const eName = esc(item.name), eId = esc(dispId), eLoc = esc(item.location);
+        return `<div class="tl">
+          ${srcs[n]?`<img class="tl-qr" src="${srcs[n]}"/>`:""}
+          <div class="tl-txt">
+            <div class="tl-name">${eName}</div>
+            ${item.location?`<div class="tl-loc">${eLoc}</div>`:""}
+            <div class="tl-id">${eId}</div>
+          </div>
+        </div>`;
+      }).join("");
+      const html = `<!DOCTYPE html><html><head><title>P-touch Labels — ${org?.name||APP_NAME}</title>
+      <style>
+        @page { size: 54mm 24mm; margin: 0; }
+        *{margin:0;padding:0;box-sizing:border-box}
+        html,body{background:#fff}
+        body{font-family:Arial,Helvetica,sans-serif;color:#000}
+        .tl{width:54mm;height:24mm;display:flex;align-items:center;gap:1.5mm;padding:1mm 1.5mm;overflow:hidden;page-break-after:always;break-after:page}
+        .tl:last-child{page-break-after:auto;break-after:auto}
+        .tl-qr{width:21mm;height:21mm;flex-shrink:0}
+        .tl-txt{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:.4mm}
+        .tl-name{font-size:9pt;font-weight:700;line-height:1.05;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
+        .tl-loc{font-size:6.5pt;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .tl-id{font-size:7pt;font-weight:800;font-family:monospace;letter-spacing:.3px}
+      </style></head><body>${labels}</body></html>`;
+      // Print through a hidden iframe so there is no stray popup window: clicking the button
+      // goes straight to printing. With Chrome kiosk printing enabled and the Cube set as the
+      // default printer, this prints silently — click the button, the label comes out.
+      const ifr = document.createElement("iframe");
+      ifr.setAttribute("aria-hidden","true");
+      ifr.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
+      document.body.appendChild(ifr);
+      const idoc = ifr.contentWindow.document;
+      idoc.open(); idoc.write(html); idoc.close();
+      let fired = false;
+      const fire = () => {
+        if (fired) return; fired = true;
+        try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch(e){}
+        setTimeout(()=>{ try{ document.body.removeChild(ifr); }catch(e){} }, 60000);
+      };
+      // Give the QR images a moment to render, then print. The fallback covers the case where
+      // onload does not fire for a document written via document.write; the guard prevents a double print.
+      ifr.onload = () => setTimeout(fire, 250);
+      setTimeout(fire, 900);
+    } finally { setPrinting(false); }
+  };
+
   // ── ASSIGN TAB ───────────────────────────────────────────────────────────
   const doAssign = async () => {
     const code = assignCode.trim().toUpperCase();
@@ -426,6 +486,12 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
           {/* Secondary path: printing on a Brother P-touch label printer */}
           <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:14,fontSize:12,color:"var(--muted)"}}>
             <span>Using a Brother P-touch label printer?</span>
+            <button onClick={printPtouch} disabled={selected.length===0||printing}
+              title="Print the selected items straight to a P-touch Cube, sized for 24mm tape (one label per tape segment). Pick the Cube in the print dialog. Bluetooth-only Cubes may not appear there; use the CSV into P-touch Editor instead."
+              style={{padding:"6px 12px",borderRadius:7,border:"1px solid var(--goldink)",fontFamily:"inherit",fontSize:12,fontWeight:700,
+                cursor:selected.length&&!printing?"pointer":"not-allowed",background:"rgba(212,168,67,.12)",color:"var(--goldink)"}}>
+              🏷 Print to P-touch (24mm){selected.length?(" ("+selected.length+")"):""}
+            </button>
             <button onClick={exportPtouchCsv} disabled={filtered.length===0}
               title="Download a CSV for Brother P-touch Editor (Label_ID, Item_Name, Size, Location, QR_URL). Uses selected items, or all if none are selected."
               style={{padding:"6px 12px",borderRadius:7,border:"1px solid var(--border)",fontFamily:"inherit",fontSize:12,fontWeight:700,
