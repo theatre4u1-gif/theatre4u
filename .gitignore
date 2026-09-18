@@ -18,3 +18,5 @@ npm-debug.log*
 
 .gate.eslint.mjs
 .gate_modules
+
+eslint.triage.config.mjs

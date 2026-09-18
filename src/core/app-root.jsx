@@ -416,9 +416,13 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
     let stopped = false;
     const nowIso = () => new Date().toISOString();
     // Create the session row once; no-op if it already exists (preserves started_at).
-    SB.from("app_sessions").upsert(
-      { session_id: sid, org_id: activeOrgId || user.id, email: user?.email || null, plan: org?.plan || null, vertical: org?.vertical || null, user_agent: navigator.userAgent, started_at: nowIso(), last_seen_at: nowIso() },
-      { onConflict: "session_id", ignoreDuplicates: true }
+    // Plain insert, NOT upsert: PostgREST's upsert emits INSERT ... ON CONFLICT, and the
+    // ON CONFLICT arbiter is rejected by RLS for non-admin users (app_sessions has only an
+    // is_platform_admin() SELECT policy), so every heartbeat row was silently dropped. A plain
+    // insert passes the permissive INSERT policy; a repeat session_id just fails on the unique
+    // key, which the ignored rejection below swallows — started_at is preserved either way.
+    SB.from("app_sessions").insert(
+      { session_id: sid, org_id: activeOrgId || user.id, email: user?.email || null, plan: org?.plan || null, vertical: org?.vertical || null, user_agent: navigator.userAgent, started_at: nowIso(), last_seen_at: nowIso() }
     ).then(() => {}, () => {});
     const beat = () => {
       if (stopped || (typeof document !== "undefined" && document.visibilityState !== "visible")) return;

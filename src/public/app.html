@@ -442,8 +442,22 @@ function PhotoGallery({imgs, max, uploading, onAdd, onRemove, onCover, onCapture
 // Per-department category sets (generated from src/lib/verticals.js — resync if that changes)
 const VCATS = {"theatre":[{"id":"costumes","label":"Costumes","icon":"👗"},{"id":"props","label":"Props","icon":"🎭"},{"id":"sets","label":"Sets & Scenery","icon":"🏛️"},{"id":"lighting","label":"Lighting","icon":"💡"},{"id":"sound","label":"Sound","icon":"🔊"},{"id":"scripts","label":"Scripts & Music","icon":"📜"},{"id":"makeup","label":"Makeup & Wigs","icon":"💄"},{"id":"furniture","label":"Stage Furniture","icon":"🪑"},{"id":"fabrics","label":"Fabrics & Drapes","icon":"🧵"},{"id":"tools","label":"Tools","icon":"🔧"},{"id":"effects","label":"Special Effects","icon":"✨"},{"id":"other","label":"Other","icon":"📦"}],"music":[{"id":"strings","label":"Strings","icon":"🎻"},{"id":"woodwinds","label":"Woodwinds","icon":"🎶"},{"id":"brass","label":"Brass","icon":"🎺"},{"id":"percussion","label":"Percussion","icon":"🥁"},{"id":"keyboard","label":"Keyboard","icon":"🎹"},{"id":"vocal","label":"Vocal","icon":"🎤"},{"id":"sheet_music","label":"Sheet Music","icon":"🎼"},{"id":"amplification","label":"Amplification","icon":"🔊"},{"id":"other","label":"Other","icon":"📦"}],"dance":[{"id":"costumes","label":"Costumes","icon":"👗"},{"id":"footwear","label":"Footwear","icon":"👠"},{"id":"props","label":"Props","icon":"🌂"},{"id":"sound","label":"Sound & Music","icon":"🎵"},{"id":"lighting","label":"Lighting","icon":"💡"},{"id":"mirrors","label":"Mirrors & Barres","icon":"🪞"},{"id":"other","label":"Other","icon":"📦"}],"art":[{"id":"painting","label":"Painting Supplies","icon":"🖌️"},{"id":"drawing","label":"Drawing","icon":"✏️"},{"id":"sculpture","label":"Sculpture","icon":"🗿"},{"id":"printmaking","label":"Printmaking","icon":"🖨️"},{"id":"ceramics","label":"Ceramics","icon":"🏺"},{"id":"digital","label":"Digital Media","icon":"💻"},{"id":"textiles","label":"Textiles","icon":"🧵"},{"id":"equipment","label":"Equipment","icon":"📷"},{"id":"other","label":"Other","icon":"📦"}],"booster":[{"id":"equipment","label":"Equipment","icon":"🎒"},{"id":"supplies","label":"Supplies","icon":"🧰"},{"id":"uniforms","label":"Apparel & Uniforms","icon":"👕"},{"id":"event_supplies","label":"Events","icon":"🎪"},{"id":"fundraising","label":"Fundraising","icon":"💰"},{"id":"storage","label":"Storage","icon":"🗄️"},{"id":"awards","label":"Awards","icon":"🏆"},{"id":"other","label":"Other","icon":"📦"}]};
 let CATS = VCATS.theatre; // reselected from the org's department after login
+let CAT = Object.fromEntries(CATS.map(c=>[c.id,c]));
 
-const CAT = Object.fromEntries(CATS.map(c=>[c.id,c]));
+// Per-org category config, loaded after login so the mobile app matches the website:
+// custom categories (org_categories) plus built-in name overrides (orgs.category_labels).
+let CUSTOM_CATS_M = [];   // [{id, vertical, label}]
+let CAT_LABELS_M  = {};   // {"<vertical>:<catId>": "New Name"}
+function buildCats(vertical){
+  const v = vertical || "theatre";
+  const base = (VCATS[v] || VCATS.theatre).map(c => {
+    const ov = CAT_LABELS_M[v + ":" + c.id];
+    return ov ? { ...c, label: ov } : c;
+  });
+  const custom = CUSTOM_CATS_M.filter(c => c.vertical === v).map(c => ({ id: c.id, label: c.label, icon: "📦" }));
+  CATS = [...base, ...custom];
+  CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
+}
 const CONDS = ["New","Excellent","Good","Fair","Poor","For Parts"];
 const AVAIL = ["In Stock","In Use","Checked Out","Being Repaired","Lost","Retired"];
 const MKT   = ["Not Listed","For Rent","For Sale","Rent or Sale","For Loan"];
@@ -1863,6 +1877,83 @@ function StorageLocationsManager({userId}) {
   );
 }
 
+// Manage inventory categories on mobile, matching the website's Settings.
+// Add / rename / remove custom categories, and rename built-in ones. Owner or director only.
+function CategoriesManager({ org, userId }) {
+  const vertical = org?.vertical || "theatre";
+  const role = org?._memberRole;
+  const canManage = !role || role === "director" || role === "program_director";
+  const [custom, setCustom]   = useState([]);
+  const [label, setLabel]     = useState("");
+  const [busy, setBusy]       = useState(false);
+  const [catLabels, setCatLabels] = useState(org?.category_labels || {});
+  const builtins = (VCATS[vertical] || VCATS.theatre);
+  const biLabel = (id, def) => catLabels[vertical + ":" + id] || def;
+
+  const refresh = async () => {
+    const { data } = await SB.from("org_categories").select("id,vertical,label").eq("org_id", userId);
+    const all = data || [];
+    CUSTOM_CATS_M = all; buildCats(vertical);
+    setCustom(all.filter(c => c.vertical === vertical));
+  };
+  useEffect(() => { refresh(); }, [userId, vertical]);
+
+  const add = async () => {
+    const n = label.trim(); if (!n) return;
+    setBusy(true);
+    const { error } = await SB.from("org_categories").insert({ org_id: userId, vertical, label: n, created_by: userId });
+    setBusy(false);
+    if (error) { alert(/duplicate/i.test(error.message||"") ? "That category already exists." : "Could not add category."); return; }
+    setLabel(""); refresh();
+  };
+  const rename = async (id, cur) => {
+    const nx = prompt("Rename this category.", cur); if (nx === null) return;
+    const val = nx.trim(); if (!val || val === cur) return;
+    const { error } = await SB.from("org_categories").update({ label: val }).eq("id", id);
+    if (!error) refresh();
+  };
+  const del = async (id, nm) => {
+    if (!confirm('Delete "' + nm + '"? Items in it will show as Other until you recategorize them.')) return;
+    const { error } = await SB.from("org_categories").delete().eq("id", id);
+    if (!error) refresh();
+  };
+  const renameBuiltin = async (id, def) => {
+    const cur = biLabel(id, def);
+    const nx = prompt('Rename the "' + def + '" category. Leave blank to reset to the default.', cur);
+    if (nx === null) return;
+    const val = nx.trim();
+    const map = { ...(catLabels || {}) }; const key = vertical + ":" + id;
+    if (!val || val === def) delete map[key]; else map[key] = val;
+    const { error } = await SB.from("orgs").update({ category_labels: map }).eq("id", userId);
+    if (!error) { setCatLabels(map); CAT_LABELS_M = map; buildCats(vertical); }
+  };
+
+  if (!canManage) return null;
+  const row = { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 0", borderBottom:"1px solid var(--border)" };
+  return h("div", { className:"card card-p", style:{ marginBottom:16 } },
+    h("div", { style:{ fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:1, color:"var(--muted)", marginBottom:14 } }, "Inventory categories"),
+    h("div", { style:{ display:"flex", gap:8, marginBottom:14 } },
+      h("input", { className:"fi", style:{ flex:1 }, placeholder:"New category name", value:label, maxLength:40, onChange:e=>setLabel(e.target.value) }),
+      h("button", { className:"btn btn-gold btn-sm", disabled:busy||!label.trim(), onClick:add }, "Add")
+    ),
+    custom.length>0 && h("div", { style:{ marginBottom:16 } },
+      custom.map(c => h("div", { key:c.id, style:row },
+        h("span", { style:{ fontSize:14 } }, "📦 " + c.label),
+        h("span", { style:{ display:"flex", gap:12 } },
+          h("button", { className:"btn btn-ghost btn-sm", onClick:()=>rename(c.id,c.label) }, "Rename"),
+          h("button", { className:"btn btn-ghost btn-sm", style:{ color:"var(--red)" }, onClick:()=>del(c.id,c.label) }, "Remove")
+        )
+      ))
+    ),
+    h("div", { style:{ fontSize:11, fontWeight:700, color:"var(--muted)", margin:"0 0 4px" } }, "Built-in categories"),
+    builtins.map(c => { const cur = biLabel(c.id, c.label); return h("div", { key:c.id, style:row },
+      h("span", { style:{ fontSize:14 } }, c.icon + " " + cur),
+      h("button", { className:"btn btn-ghost btn-sm", onClick:()=>renameBuiltin(c.id,c.label) }, "Rename")
+    ); }),
+    h("div", { style:{ fontSize:11, color:"var(--muted)", marginTop:10, fontStyle:"italic" } }, "Categories apply to this program and show across the app and the website.")
+  );
+}
+
 function ProfileTab({user, org, onSignOut}) {
   const [f, setF]     = useState(org||{});
   const [saved, setSaved] = useState(false);
@@ -1892,6 +1983,7 @@ function ProfileTab({user, org, onSignOut}) {
         )
       ),
       h(StorageLocationsManager,{userId:org?.id||user?.id}),
+      h(CategoriesManager,{org,userId:org?.id||user?.id}),
 
       h("div",{className:"card card-p",style:{marginBottom:16}},
         h("div",{style:{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:14}},"Platform"),
@@ -2146,7 +2238,14 @@ function App() {
       const targetOrgId = memberData ? memberData.org_id : user.id;
       const memberRole  = memberData ? memberData.role   : null;
       const{data:orgData}=await SB.from("orgs").select("*").eq("id",targetOrgId).single();
-      if(orgData){ setOrg({...orgData, _memberRole:memberRole}); CATS = VCATS[orgData.vertical] || VCATS.theatre; }
+      if(orgData){
+        setOrg({...orgData, _memberRole:memberRole});
+        // Build the category list from the org's department, its custom categories, and any renames.
+        CAT_LABELS_M = orgData.category_labels || {};
+        const{data:catRows}=await SB.from("org_categories").select("id,vertical,label").eq("org_id",targetOrgId);
+        CUSTOM_CATS_M = catRows || [];
+        buildCats(orgData.vertical);
+      }
       const{data:itemData}=await SB.from("items").select("*").eq("org_id",targetOrgId).order("added",{ascending:false}).limit(300);
       if(itemData) setItems(itemData);
       // Load Stage Points balance
