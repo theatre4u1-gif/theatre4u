@@ -26,6 +26,15 @@ const PHOTO_SIZES = [
   { id:"photo",  label:'Photo · 4" x 6"',           w:4,   h:6   },
 ];
 
+// Avery label sheets (US Letter 8.5 x 11). Dimensions in inches. Left margin is derived by
+// centering the grid horizontally (Avery sheets are symmetric), which keeps these robust.
+// cols/rows = grid; lw/lh = one label; gx/gy = gaps between labels; mt = top margin.
+const AVERY = {
+  "5160":  { name:"Avery 5160 / 5260 — 30 per sheet", cols:3, rows:10, lw:2.625, lh:1.0,  gx:0.125,  gy:0,   mt:0.5 },
+  "22806": { name:"Avery 22806 square — 12 per sheet", cols:3, rows:4,  lw:2.0,   lh:2.0,  gx:0.5,    gy:0.5, mt:0.5 },
+  "5164":  { name:"Avery 5164 — 6 per sheet",          cols:2, rows:3,  lw:4.0,   lh:3.33, gx:0.1875, gy:0,   mt:0.5 },
+};
+
 
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -45,6 +54,9 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
   const [search, setSearch]     = useState("");
   const [selected, setSelected] = useState([]);
   const [printing, setPrinting] = useState(false);
+  const [averyType, setAveryType] = useState("5160");
+  const [avNudgeX, setAvNudgeX]   = useState(0); // mm, correct printer drift left/right
+  const [avNudgeY, setAvNudgeY]   = useState(0); // mm, correct printer drift up/down
   const [withPhoto, setWithPhoto] = useState(false);
   const [cardSize, setCardSize]   = useState(1); // index into PHOTO_SIZES (default: Card 2.5x3.5)
   const [fitMode, setFitMode]     = useState("cover"); // cover = crop to fill, contain = show whole photo
@@ -290,6 +302,67 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
     } finally { setPrinting(false); }
   };
 
+  // Print onto an Avery label sheet (US Letter). Lays each label into the chosen product's exact
+  // grid so it lines up with the pre-cut sheet. The nudge (mm) shifts everything to correct a
+  // printer that drifts; users should run one test sheet first.
+  const printAvery = async () => {
+    const toPrint = myItems.filter(i=>selected.includes(i.id));
+    if(!toPrint.length) return;
+    setPrinting(true);
+    try {
+      const p = AVERY[averyType] || AVERY["5160"];
+      const brandHost = doorOf(org) === "artstracker" ? "artstracker.org" : "theatre4u.org";
+      const srcs = await Promise.all(toPrint.map(i=>QR.toDataURL("https://"+brandHost+"/#/item/"+i.id, 300)));
+      const esc = (s)=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+      const ml = (8.5 - (p.cols*p.lw + (p.cols-1)*p.gx)) / 2;        // centered left margin
+      const qrSize = Math.max(0.6, Math.min(p.lw, p.lh) - 0.22);    // QR square in inches
+      const perPage = p.cols * p.rows;
+      let pages = "";
+      for (let start=0; start<toPrint.length; start+=perPage) {
+        const cells = toPrint.slice(start, start+perPage).map((item,k)=>{
+          const n = start+k;
+          const dispId = item.display_id||item.id.slice(0,8).toUpperCase();
+          const eName = esc(item.name), eId = esc(dispId), eLoc = esc(item.location);
+          return `<div class="av-cell">
+            ${srcs[n]?`<img class="av-qr" src="${srcs[n]}"/>`:""}
+            <div class="av-txt"><div class="av-name">${eName}</div>${item.location?`<div class="av-loc">${eLoc}</div>`:""}<div class="av-id">${eId}</div></div>
+          </div>`;
+        }).join("");
+        pages += `<div class="av-page"><div class="av-grid">${cells}</div></div>`;
+      }
+      const html = `<!DOCTYPE html><html><head><title>Avery ${averyType} — ${org?.name||APP_NAME}</title>
+      <style>
+        @page{ size:letter; margin:0; }
+        *{margin:0;padding:0;box-sizing:border-box}
+        html,body{background:#fff}
+        body{font-family:Arial,Helvetica,sans-serif;color:#000}
+        .av-page{width:8.5in;height:11in;padding:${p.mt}in 0 0 ${ml}in;page-break-after:always;overflow:hidden;position:relative;left:${avNudgeX||0}mm;top:${avNudgeY||0}mm}
+        .av-page:last-child{page-break-after:auto}
+        .av-grid{display:grid;grid-template-columns:repeat(${p.cols}, ${p.lw}in);column-gap:${p.gx}in;row-gap:${p.gy}in}
+        .av-cell{width:${p.lw}in;height:${p.lh}in;display:flex;align-items:center;gap:.08in;padding:.06in;overflow:hidden}
+        .av-qr{width:${qrSize}in;height:${qrSize}in;flex-shrink:0}
+        .av-txt{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:.02in}
+        .av-name{font-size:8.5pt;font-weight:700;line-height:1.05;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
+        .av-loc{font-size:6.5pt;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .av-id{font-size:7pt;font-weight:800;font-family:monospace;letter-spacing:.3px}
+      </style></head><body>${pages}</body></html>`;
+      const ifr = document.createElement("iframe");
+      ifr.setAttribute("aria-hidden","true");
+      ifr.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
+      document.body.appendChild(ifr);
+      const idoc = ifr.contentWindow.document;
+      idoc.open(); idoc.write(html); idoc.close();
+      let fired = false;
+      const fire = () => {
+        if (fired) return; fired = true;
+        try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch(e){}
+        setTimeout(()=>{ try{ document.body.removeChild(ifr); }catch(e){} }, 60000);
+      };
+      ifr.onload = () => setTimeout(fire, 300);
+      setTimeout(fire, 1000);
+    } finally { setPrinting(false); }
+  };
+
   // ── ASSIGN TAB ───────────────────────────────────────────────────────────
   const doAssign = async () => {
     const code = assignCode.trim().toUpperCase();
@@ -502,6 +575,33 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
               style={{background:"none",border:"none",padding:0,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:600,color:"var(--goldink)",textDecoration:"underline"}}>
               See the P-touch how-to →
             </button>
+          </div>
+
+          {/* Third path: printing on Avery label sheets (any regular printer) */}
+          <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:6,fontSize:12,color:"var(--muted)"}}>
+            <span>Printing on Avery label sheets?</span>
+            <select value={averyType} onChange={e=>setAveryType(e.target.value)}
+              title="Pick the Avery product number printed on your label box"
+              style={{padding:"6px 10px",borderRadius:7,border:"1px solid var(--border)",background:"transparent",color:"var(--text)",fontFamily:"inherit",fontSize:12}}>
+              {Object.entries(AVERY).map(([k,v])=><option key={k} value={k}>{v.name}</option>)}
+            </select>
+            <button onClick={printAvery} disabled={selected.length===0||printing}
+              title="Lay the selected items onto the chosen Avery sheet and print. Print one test sheet first, then nudge if it drifts."
+              style={{padding:"6px 12px",borderRadius:7,border:"1px solid var(--goldink)",fontFamily:"inherit",fontSize:12,fontWeight:700,
+                cursor:selected.length&&!printing?"pointer":"not-allowed",background:"rgba(212,168,67,.12)",color:"var(--goldink)"}}>
+              🗒 Print Avery{selected.length?(" ("+selected.length+")"):""}
+            </button>
+            <span style={{display:"flex",alignItems:"center",gap:4}} title="If a test sheet prints slightly off, shift right (X) or down (Y) in millimeters and reprint">
+              nudge
+              <input type="number" step="0.5" value={avNudgeX} onChange={e=>setAvNudgeX(parseFloat(e.target.value)||0)} aria-label="Nudge right (mm)"
+                style={{width:48,padding:"4px 6px",borderRadius:6,border:"1px solid var(--border)",background:"transparent",color:"var(--text)",fontFamily:"inherit",fontSize:12}}/>
+              <input type="number" step="0.5" value={avNudgeY} onChange={e=>setAvNudgeY(parseFloat(e.target.value)||0)} aria-label="Nudge down (mm)"
+                style={{width:48,padding:"4px 6px",borderRadius:6,border:"1px solid var(--border)",background:"transparent",color:"var(--text)",fontFamily:"inherit",fontSize:12}}/>
+              mm
+            </span>
+          </div>
+          <div style={{fontSize:11,color:"var(--faint)",marginBottom:14,lineHeight:1.5}}>
+            Tip: print one test sheet on plain paper first, hold it over the Avery sheet to check alignment, then adjust the nudge (mm) and print for real. Turn off Headers and footers and set Scale to 100% in the print dialog.
           </div>
 
           {loadingItems?(
