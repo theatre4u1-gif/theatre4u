@@ -17,13 +17,17 @@ const LABEL_PACKS = [
 ];
 const LOGO_ADDON_CENTS = 500; // $5 to include program logo on labels
 
-// Photo-card print sizes (inches). Used only when "Photo card" is on.
-const PHOTO_SIZES = [
-  { id:"tag",    label:'Small tag · 2" x 3"',       w:2,   h:3   },
-  { id:"card",   label:'Card · 2.5" x 3.5"',        w:2.5, h:3.5 },  // default
-  { id:"square", label:'Square · 3" x 3"',          w:3,   h:3   },
-  { id:"index",  label:'Large · 3" x 4"',           w:3,   h:4   },
-  { id:"photo",  label:'Photo · 4" x 6"',           w:4,   h:6   },
+// Plain-paper label sizes (inches). The print engine tiles as many as fit on a US Letter
+// page at the chosen size, so a small size fills the page and a big size prints one or a few.
+const PAPER_SIZES = [
+  { id:"2x2",   label:'Small square · 2" × 2" (most per page)', w:2,   h:2   },
+  { id:"2x3",   label:'Tag · 2" × 3"',                          w:2,   h:3   },
+  { id:"25x35", label:'Card · 2.5" × 3.5"',                     w:2.5, h:3.5 },
+  { id:"3x3",   label:'Medium square · 3" × 3"',                w:3,   h:3   },
+  { id:"3x4",   label:'Large · 3" × 4"',                        w:3,   h:4   },
+  { id:"4x6",   label:'Photo · 4" × 6"',                        w:4,   h:6   },
+  { id:"85x10", label:'Full page · 8" × 10" (one per page)',    w:8,   h:10  },
+  { id:"custom",label:'Custom size…',                           w:0,   h:0   },
 ];
 
 // Avery label sheets (US Letter 8.5 x 11). Dimensions in inches. Left margin is derived by
@@ -58,7 +62,9 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
   const [avNudgeX, setAvNudgeX]   = useState(0); // mm, correct printer drift left/right
   const [avNudgeY, setAvNudgeY]   = useState(0); // mm, correct printer drift up/down
   const [withPhoto, setWithPhoto] = useState(false);
-  const [cardSize, setCardSize]   = useState(1); // index into PHOTO_SIZES (default: Card 2.5x3.5)
+  const [paperSize, setPaperSize] = useState(0); // index into PAPER_SIZES (default: 2" x 2")
+  const [customW, setCustomW]     = useState(2); // custom label width, inches
+  const [customH, setCustomH]     = useState(2); // custom label height, inches
   const [fitMode, setFitMode]     = useState("cover"); // cover = crop to fill, contain = show whole photo
   const [mode, setMode]           = useState("items");   // "items" | "locations" — what are you labeling
   const [printLane, setPrintLane] = useState("avery");   // "avery" | "plain" | "ptouch" | "order" — how will you print
@@ -191,20 +197,35 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
     URL.revokeObjectURL(url);
   };
 
-  const printSelected = async () => {
+  // Print onto plain paper at a size the user chooses. Tiles as many labels as fit on a US
+  // Letter page at that size (so a small size fills the page, a big size prints one or a few),
+  // with page breaks between full pages. Fonts and the QR scale to the label size.
+  const printPaper = async () => {
     const toPrint = selectedEntries();
     if(!toPrint.length) return;
     setPrinting(true);
     try {
+      const ps = PAPER_SIZES[paperSize] || PAPER_SIZES[0];
+      let W = ps.id==="custom" ? (parseFloat(customW)||2) : ps.w;
+      let H = ps.id==="custom" ? (parseFloat(customH)||2) : ps.h;
+      W = Math.max(1, Math.min(8,   W));   // keep within a Letter page (0.5in margins)
+      H = Math.max(1, Math.min(10,  H));
+      const margin = 0.5, gap = 0.12;
+      const cols = Math.max(1, Math.floor((8.5 - 2*margin + gap) / (W + gap)));
+      const rows = Math.max(1, Math.floor((11  - 2*margin + gap) / (H + gap)));
+      const cw = W*96, ch = H*96, m = Math.min(cw, ch);
       // Point the QR at the program's own door (music/dance/art/booster => ArtsTracker;
       // theatre follows its signup domain). Both doors resolve /#/item/ and /#/location/ the same way.
-      const srcs = await Promise.all(toPrint.map(e=>
-        QR.toDataURL("https://"+host+e.qrPath, 160)
-      ));
-      const w = window.open("","_blank","width=900,height=700");
-      if(!w){setPrinting(false);return;}
-      // Escape user-entered fields before writing them into the print document.
+      const srcs = await Promise.all(toPrint.map(e=> QR.toDataURL("https://"+host+e.qrPath, 400)));
       const esc = (s)=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+      // Sizes scale with the label but stay within sane bounds.
+      const fName = Math.max(10, Math.min(48, Math.round(cw*0.062)));
+      const fCat  = Math.max(7,  Math.min(22, Math.round(cw*0.032)));
+      const fId   = Math.max(9,  Math.min(30, Math.round(cw*0.045)));
+      const pad   = Math.max(6,  Math.round(cw*0.04));
+      const qrPlain = Math.min(360, Math.round(m*0.5));   // big centered QR when no photo
+      const qrFoot  = Math.min(220, Math.round(cw*0.26)); // corner QR when photo is on
+      const ph      = Math.round(ch*0.5);                 // photo band height
       const labels = toPrint.map((e,n)=>{
         const eName = esc(e.title), eId = esc(e.code), eImg = esc(e.img), eCat = esc(e.catLabel);
         const subTxt = e.kind==="location"
@@ -214,135 +235,67 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
           const photo = e.img
             ? `<img src="${eImg}" class="pc-img"/>`
             : `<div class="pc-noimg">${e.icon}</div>`;
-          return `<div class="pcard">
+          return `<div class="cell"><div class="pcard">
             ${photo}
             <div class="pc-body">
               <div class="pc-cat" style="color:${e.color}">${e.icon} ${eCat}</div>
               <div class="pc-name">${eName}</div>
-              ${subTxt?`<div class="pc-loc">${subTxt}</div>`:""}
+              ${subTxt?`<div class="pc-sub">${subTxt}</div>`:""}
               <div class="pc-foot">
                 <div class="pc-id">${eId}</div>
                 ${srcs[n]?`<img src="${srcs[n]}" class="pc-qr"/>`:""}
               </div>
             </div>
-          </div>`;
+          </div></div>`;
         }
-        return `<div class="lbl">
+        return `<div class="cell"><div class="lbl">
           <div class="lbl-cat" style="color:${e.color}">${e.icon} ${eCat}</div>
           <div class="lbl-name">${eName}</div>
-          ${subTxt?`<div class="lbl-loc">${subTxt}</div>`:""}
-          <div class="lbl-id">${eId}</div>
+          ${subTxt?`<div class="lbl-sub">${subTxt}</div>`:""}
           ${srcs[n]?`<img src="${srcs[n]}" class="lbl-qr"/>`:""}
-          <div class="lbl-brand">${host}</div>
-        </div>`;
+          <div class="lbl-id">${eId}</div>
+        </div></div>`;
       }).join("");
-      const noun = withPhoto ? "card" : "label";
-      const S   = PHOTO_SIZES[cardSize] || PHOTO_SIZES[1];
-      const cw  = Math.round(S.w*96), ch = Math.round(S.h*96);
-      const ph  = Math.round(ch*0.56);                       // photo height
-      const fName = Math.max(11, Math.round(cw*0.066));      // item name
-      const fCat  = Math.max(8,  Math.round(fName*0.62));    // category / location
-      const fId   = Math.max(9,  Math.round(fName*0.8));     // id code
-      const qrs   = Math.round(cw*0.27);                     // QR square
-      const pad   = Math.max(7,  Math.round(cw*0.045));      // body padding
-      w.document.write(`<!DOCTYPE html><html><head><title>${withPhoto?"Photo Cards":"QR Labels"} — ${org?.name||APP_NAME}</title>
+      const w = window.open("","_blank","width=900,height=700");
+      if(!w){setPrinting(false);return;}
+      w.document.write(`<!DOCTYPE html><html><head><title>Labels — ${org?.name||APP_NAME}</title>
       <style>
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:Arial,sans-serif;background:#fff;padding:12px}
-        .controls{text-align:center;margin-bottom:12px;font-size:13px}
-        .grid{display:flex;flex-wrap:wrap;gap:8px}
-        .lbl{width:160px;height:160px;border:1.5px solid #222;border-radius:6px;padding:8px;
-          display:flex;flex-direction:column;gap:2px;page-break-inside:avoid;background:#fff}
-        .lbl-cat{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-        .lbl-name{font-size:10px;font-weight:700;color:#111;line-height:1.2;flex:1;overflow:hidden;word-break:break-word}
-        .lbl-loc{font-size:8px;color:#555}
-        .lbl-id{font-size:9px;font-weight:800;color:#c4761a;font-family:monospace;letter-spacing:.5px}
-        .lbl-qr{width:56px;height:56px;margin-top:auto}
-        .lbl-brand{font-size:7px;color:#aaa}
-        .pcard{width:${cw}px;height:${ch}px;border:1.5px solid #222;border-radius:8px;overflow:hidden;
-          display:flex;flex-direction:column;page-break-inside:avoid;background:#fff}
-        .pc-img{width:100%;height:${ph}px;object-fit:${fitMode};display:block;background:#f2f2f2}
-        .pc-noimg{width:100%;height:${ph}px;display:flex;align-items:center;justify-content:center;font-size:${Math.round(ph*0.34)}px;background:#f2f2f2}
-        .pc-body{padding:${pad}px ${pad+2}px;display:flex;flex-direction:column;gap:3px;flex:1;min-height:0}
-        .pc-cat{font-size:${fCat}px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-        .pc-name{font-size:${fName}px;font-weight:700;color:#111;line-height:1.2;flex:1;overflow:hidden;word-break:break-word}
-        .pc-loc{font-size:${fCat}px;color:#555}
-        .pc-foot{display:flex;align-items:flex-end;justify-content:space-between;margin-top:auto;gap:6px}
-        .pc-id{font-size:${fId}px;font-weight:800;color:#c4761a;font-family:monospace;letter-spacing:.5px}
-        .pc-qr{width:${qrs}px;height:${qrs}px;flex-shrink:0}
-        @media print{.controls{display:none}.grid{gap:6px}.lbl{width:150px;height:150px}}
-      </style></head><body>
-      <div class="controls">
-        <strong>${org?.name||APP_NAME}</strong> — ${toPrint.length} ${noun}${toPrint.length!==1?"s":""}${withPhoto?` · ${S.w}" x ${S.h}"`:""}
-        <button onclick="window.print()" style="margin-left:16px;padding:5px 14px;background:#d4a843;border:none;border-radius:5px;font-weight:700;cursor:pointer">🖨 Print</button>
-        <button onclick="window.close()" style="margin-left:6px;padding:5px 14px;border:1px solid #ccc;border-radius:5px;cursor:pointer">Close</button>
-        <span style="margin-left:12px;color:#888;font-size:12px">Tip: In print dialog choose "Fit to page" or "No scaling" for best results</span>
-      </div>
-      <div class="grid">${labels}</div>
-      <script>setTimeout(function(){window.print()},600)<\/script>
-      </body></html>`);
-      w.document.close();
-    } finally { setPrinting(false); }
-  };
-
-  // Print each selected item as its own 24mm P-touch tape segment. Sizes the print
-  // document to the tape so the browser dialog prints correctly at 100% with no
-  // scaling. Works wherever the Cube is a selectable system printer (USB, or Brother's
-  // desktop driver). Over Bluetooth-only, use Export for P-touch (CSV) into P-touch Editor.
-  const printPtouch = async () => {
-    const toPrint = selectedEntries();
-    if(!toPrint.length) return;
-    setPrinting(true);
-    try {
-      const srcs = await Promise.all(toPrint.map(e=>QR.toDataURL("https://"+host+e.qrPath, 240)));
-      const esc = (s)=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-      const labels = toPrint.map((e,n)=>{
-        const eName = esc(e.title), eId = esc(e.code);
-        const subTxt = e.kind==="location"
-          ? (e.count!=null ? `${e.count} item${e.count!==1?"s":""}` : "")
-          : esc(e.loc);
-        return `<div class="tl">
-          ${srcs[n]?`<img class="tl-qr" src="${srcs[n]}"/>`:""}
-          <div class="tl-txt">
-            <div class="tl-name">${eName}</div>
-            ${subTxt?`<div class="tl-loc">${subTxt}</div>`:""}
-            <div class="tl-id">${eId}</div>
-          </div>
-        </div>`;
-      }).join("");
-      const html = `<!DOCTYPE html><html><head><title>P-touch Labels — ${org?.name||APP_NAME}</title>
-      <style>
-        @page { size: 54mm 24mm; margin: 0; }
+        @page{ size:letter; margin:0; }
         *{margin:0;padding:0;box-sizing:border-box}
         html,body{background:#fff}
         body{font-family:Arial,Helvetica,sans-serif;color:#000}
-        .tl{width:54mm;height:24mm;display:flex;align-items:center;gap:1.5mm;padding:1mm 1.5mm;overflow:hidden;page-break-after:always;break-after:page}
-        .tl:last-child{page-break-after:auto;break-after:auto}
-        .tl-qr{width:21mm;height:21mm;flex-shrink:0}
-        .tl-txt{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:.4mm}
-        .tl-name{font-size:9pt;font-weight:700;line-height:1.05;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
-        .tl-loc{font-size:6.5pt;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .tl-id{font-size:7pt;font-weight:800;font-family:monospace;letter-spacing:.3px}
-      </style></head><body>${labels}</body></html>`;
-      // Print through a hidden iframe so there is no stray popup window: clicking the button
-      // goes straight to printing. With Chrome kiosk printing enabled and the Cube set as the
-      // default printer, this prints silently — click the button, the label comes out.
-      const ifr = document.createElement("iframe");
-      ifr.setAttribute("aria-hidden","true");
-      ifr.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
-      document.body.appendChild(ifr);
-      const idoc = ifr.contentWindow.document;
-      idoc.open(); idoc.write(html); idoc.close();
-      let fired = false;
-      const fire = () => {
-        if (fired) return; fired = true;
-        try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch(e){}
-        setTimeout(()=>{ try{ document.body.removeChild(ifr); }catch(e){} }, 60000);
-      };
-      // Give the QR images a moment to render, then print. The fallback covers the case where
-      // onload does not fire for a document written via document.write; the guard prevents a double print.
-      ifr.onload = () => setTimeout(fire, 250);
-      setTimeout(fire, 900);
+        .controls{text-align:center;padding:10px;font-size:13px;background:#faf7ef;border-bottom:1px solid #eee}
+        .sheet{padding:${margin}in;display:grid;grid-template-columns:repeat(${cols}, ${W}in);column-gap:${gap}in;row-gap:${gap}in;justify-content:center;align-content:start}
+        .cell{width:${W}in;height:${H}in;page-break-inside:avoid;break-inside:avoid}
+        .lbl{width:100%;height:100%;border:1px dashed #bbb;border-radius:6px;padding:${pad}px;
+          display:flex;flex-direction:column;align-items:center;text-align:center;gap:${Math.round(pad*0.4)}px;background:#fff;overflow:hidden}
+        .lbl-cat{font-size:${fCat}px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;align-self:flex-start}
+        .lbl-name{font-size:${fName}px;font-weight:700;color:#111;line-height:1.15;word-break:break-word}
+        .lbl-sub{font-size:${fCat}px;color:#555}
+        .lbl-qr{width:${qrPlain}px;height:${qrPlain}px;max-width:90%;max-height:60%;margin-top:auto}
+        .lbl-id{font-size:${fId}px;font-weight:800;color:#c4761a;font-family:monospace;letter-spacing:.5px;margin-top:${Math.round(pad*0.4)}px}
+        .pcard{width:100%;height:100%;border:1px dashed #bbb;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;background:#fff}
+        .pc-img{width:100%;height:${ph}px;object-fit:${fitMode};display:block;background:#f2f2f2}
+        .pc-noimg{width:100%;height:${ph}px;display:flex;align-items:center;justify-content:center;font-size:${Math.round(ph*0.34)}px;background:#f2f2f2}
+        .pc-body{padding:${pad}px;display:flex;flex-direction:column;gap:${Math.round(pad*0.3)}px;flex:1;min-height:0}
+        .pc-cat{font-size:${fCat}px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+        .pc-name{font-size:${fName}px;font-weight:700;color:#111;line-height:1.15;flex:1;overflow:hidden;word-break:break-word}
+        .pc-sub{font-size:${fCat}px;color:#555}
+        .pc-foot{display:flex;align-items:flex-end;justify-content:space-between;margin-top:auto;gap:6px}
+        .pc-id{font-size:${fId}px;font-weight:800;color:#c4761a;font-family:monospace;letter-spacing:.5px}
+        .pc-qr{width:${qrFoot}px;height:${qrFoot}px;flex-shrink:0}
+        @media print{.controls{display:none}}
+      </style></head><body>
+      <div class="controls">
+        <strong>${org?.name||APP_NAME}</strong> — ${toPrint.length} label${toPrint.length!==1?"s":""} · ${W}" × ${H}" · ${cols*rows} per page
+        <button onclick="window.print()" style="margin-left:16px;padding:5px 14px;background:#d4a843;border:none;border-radius:5px;font-weight:700;cursor:pointer">🖨 Print</button>
+        <button onclick="window.close()" style="margin-left:6px;padding:5px 14px;border:1px solid #ccc;border-radius:5px;cursor:pointer">Close</button>
+        <span style="margin-left:12px;color:#888;font-size:12px">In the print dialog, set Scale to 100% (not "Fit"), and turn off headers and footers.</span>
+      </div>
+      <div class="sheet">${labels}</div>
+      <script>setTimeout(function(){window.print()},600)<\/script>
+      </body></html>`);
+      w.document.close();
     } finally { setPrinting(false); }
   };
 
@@ -408,11 +361,12 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
     } finally { setPrinting(false); }
   };
 
-  // Run the print action for whichever lane is active.
+  // Run the action for whichever lane is active. P-touch is CSV-only (into the Brother app),
+  // since direct browser printing to the Cube is unreliable.
   const doPrint = () => {
     if(printLane==="avery")  return printAvery();
-    if(printLane==="ptouch") return printPtouch();
-    return printSelected(); // plain paper (standard squares or photo card)
+    if(printLane==="ptouch") return exportPtouchCsv();
+    return printPaper(); // plain paper, at the chosen size
   };
 
   // ── ASSIGN TAB ───────────────────────────────────────────────────────────
@@ -507,11 +461,11 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
   // Print-tab helpers (two-step chooser)
   const LANES = [
     { id:"avery",  ico:"🗒", t:"Label sheets (Avery)",          d:"Peel and stick on any printer. Cheapest and easiest.", rec:true },
-    { id:"plain",  ico:"🖨", t:"Plain paper",                    d:"Print, cut out, and tape on. No special supplies." },
-    { id:"ptouch", ico:"🏷", t:"Label printer (Brother P-touch)", d:"Durable laminated tape. For programs that own one." },
+    { id:"plain",  ico:"🖨", t:"Plain paper (any size)",         d:"Pick a size, print, cut out, and tape on. No supplies." },
+    { id:"ptouch", ico:"🏷", t:"Label printer (Brother P-touch)", d:"Download a CSV and print from the Brother app." },
     { id:"order",  ico:"📬", t:"Order pre-printed",              d:"We mail durable labels. Stick now, assign later." },
   ];
-  const printBtnLabel = printLane==="avery" ? "🗒 Print on Avery" : printLane==="ptouch" ? "🏷 Print to P-touch" : "🖨 Print";
+  const printBtnLabel = printLane==="avery" ? "🗒 Print on Avery" : printLane==="ptouch" ? "⬇ Download CSV for Brother app" : "🖨 Print";
   const stepLabel = { fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:8 };
   const miniLbl   = { fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:.6,color:"var(--faint)" };
   const nudgeInp  = { width:48,padding:"4px 6px",borderRadius:6,border:"1px solid var(--border)",background:"var(--white)",color:"var(--text)",fontFamily:"inherit",fontSize:12 };
@@ -640,37 +594,50 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
             </div>
           )}
           {printLane==="plain"&&(
-            <div style={{...card,padding:"12px 14px",marginBottom:14,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
-              <button onClick={()=>setWithPhoto(v=>!v)} title="Print a larger card with a photo on top"
+            <div style={{...card,padding:"12px 14px",marginBottom:14,display:"flex",gap:14,alignItems:"center",flexWrap:"wrap"}}>
+              <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                <span style={miniLbl}>Label size</span>
+                <select value={paperSize} onChange={e=>setPaperSize(Number(e.target.value))} style={selInp}>
+                  {PAPER_SIZES.map((s,i)=><option key={s.id} value={i}>{s.label}</option>)}
+                </select>
+              </div>
+              {PAPER_SIZES[paperSize] && PAPER_SIZES[paperSize].id==="custom" && (
+                <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                  <span style={miniLbl}>Width × height (inches)</span>
+                  <span style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"var(--muted)"}}>
+                    <input type="number" step="0.25" min="1" max="8"  value={customW} onChange={e=>setCustomW(parseFloat(e.target.value)||0)} aria-label="Label width (inches)"  style={nudgeInp}/> ×
+                    <input type="number" step="0.25" min="1" max="10" value={customH} onChange={e=>setCustomH(parseFloat(e.target.value)||0)} aria-label="Label height (inches)" style={nudgeInp}/> in
+                  </span>
+                </div>
+              )}
+              <button onClick={()=>setWithPhoto(v=>!v)} title="Include a picture at the top of each label"
                 style={{padding:"7px 13px",borderRadius:7,border:"1px solid",borderColor:withPhoto?"var(--gold)":"var(--border)",
                   background:withPhoto?"rgba(212,168,67,.12)":"transparent",color:withPhoto?"var(--goldink)":"var(--muted)",
-                  fontSize:12,fontWeight:withPhoto?700:500,cursor:"pointer",fontFamily:"inherit"}}>
-                🖼 Photo card: {withPhoto?"On":"Off"}
+                  fontSize:12,fontWeight:withPhoto?700:500,cursor:"pointer",fontFamily:"inherit",alignSelf:"flex-end"}}>
+                🖼 Photo: {withPhoto?"On":"Off"}
               </button>
-              {withPhoto&&(<select value={cardSize} onChange={e=>setCardSize(Number(e.target.value))} style={selInp}>
-                {PHOTO_SIZES.map((s,i)=><option key={s.id} value={i}>{s.label}</option>)}</select>)}
-              {withPhoto&&(<select value={fitMode} onChange={e=>setFitMode(e.target.value)} style={selInp}>
+              {withPhoto&&(<select value={fitMode} onChange={e=>setFitMode(e.target.value)} style={{...selInp,alignSelf:"flex-end"}}>
                 <option value="cover">Crop to fill</option><option value="contain">Show whole photo</option></select>)}
               <div style={{fontSize:11,color:"var(--faint)",flex:1,minWidth:180,lineHeight:1.5}}>
-                Prints on any printer. Cut out and tape on. Turn on Photo card for a bigger card with the photo, handy on a bin or bag.
+                Prints on any printer and fits as many as it can per page at this size. Cut out and tape on. Pick a big size like 8" × 10" for a single sign, or a small one to get the most per page.
               </div>
             </div>
           )}
           {printLane==="ptouch"&&(
             <div style={{...card,padding:"12px 14px",marginBottom:14,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
-              <span style={{fontSize:12,color:"var(--muted)",fontWeight:600}}>Brother P-touch, 24mm tape.</span>
+              <span style={{fontSize:12,color:"var(--muted)",fontWeight:600}}>Brother P-touch (24mm tape) — print through the Brother P-touch Editor app.</span>
               <button onClick={exportPtouchCsv} disabled={filtered.length===0}
-                title="Download a CSV for Brother P-touch Editor. Uses selected rows, or all if none are selected."
+                title="Download a CSV of ALL rows in the current list (ignores selection) for Brother P-touch Editor."
                 style={{padding:"6px 12px",borderRadius:7,border:"1px solid var(--border)",fontFamily:"inherit",fontSize:12,fontWeight:700,
                   cursor:filtered.length?"pointer":"not-allowed",background:"transparent",color:"var(--goldink)"}}>
-                ⬇ Export CSV{selected.length?(" ("+selected.length+")"):""}
+                ⬇ Download CSV of all ({filtered.length})
               </button>
               <button onClick={()=>setTab("gear")}
                 style={{background:"none",border:"none",padding:0,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:600,color:"var(--goldink)",textDecoration:"underline"}}>
-                See the P-touch how-to →
+                See the step-by-step how-to →
               </button>
-              <div style={{fontSize:11,color:"var(--faint)",flex:1,minWidth:180,lineHeight:1.5}}>
-                Connect the Cube by USB and pick it in the print dialog. Bluetooth-only Cubes may not appear there, so use the CSV into P-touch Editor instead.
+              <div style={{fontSize:11,color:"var(--faint)",flex:1,minWidth:220,lineHeight:1.5}}>
+                Download the CSV, open your label template in Brother P-touch Editor on a computer, connect the CSV as the data source, and print to the Cube. The button on the right downloads just your selected rows; this one downloads the whole list.
               </div>
             </div>
           )}
