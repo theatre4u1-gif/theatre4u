@@ -60,6 +60,9 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
   const [withPhoto, setWithPhoto] = useState(false);
   const [cardSize, setCardSize]   = useState(1); // index into PHOTO_SIZES (default: Card 2.5x3.5)
   const [fitMode, setFitMode]     = useState("cover"); // cover = crop to fill, contain = show whole photo
+  const [mode, setMode]           = useState("items");   // "items" | "locations" — what are you labeling
+  const [printLane, setPrintLane] = useState("avery");   // "avery" | "plain" | "ptouch" | "order" — how will you print
+  const [myLocations, setMyLocations] = useState([]);
 
   // Assign tab state
   const [assignCode, setAssignCode] = useState("");
@@ -87,7 +90,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
     (async()=>{
       setLoadingItems(true);
       const {data} = await SB.from("items")
-        .select("id,name,category,location,display_id,added,condition,qty,img,size")
+        .select("id,name,category,location,location_id,display_id,added,condition,qty,img,size")
         .eq("org_id",userId).order("added",{ascending:false}).limit(500);
 
       // Also load claimed labels so we know which items already have a physical label
@@ -103,6 +106,12 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
       // Attach label_code to each item
       setMyItems((data||[]).map(i => ({ ...i, label_code: labelMap[i.id] || null })));
 
+      // Load storage boxes and locations so they print from the same engine as items
+      const {data:locs} = await SB.from("storage_locations")
+        .select("id,name,code,description,location_type,vertical")
+        .eq("org_id",userId).order("name");
+      setMyLocations(locs||[]);
+
       const {data:ords} = await SB.from("label_orders")
         .select("id,item_count,assigned_count,blank_count,costume_count,equipment_count,label_type,status,created_at,tracking,code_start,code_end,amount_cents,include_logo,vendor,vendor_order_ref,notes,reorder_of")
         .eq("org_id",userId).order("created_at",{ascending:false});
@@ -112,71 +121,105 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
   },[userId]);
 
   // ── PRINT TAB ────────────────────────────────────────────────────────────
-  const filtered = myItems.filter(i=>
-    !search || i.name.toLowerCase().includes(search.toLowerCase()) ||
-    (i.location||"").toLowerCase().includes(search.toLowerCase()) ||
-    (i.display_id||"").toLowerCase().includes(search.toLowerCase())
-  );
+  // The Print tab labels two kinds of thing through one engine: inventory items and
+  // storage boxes/locations. Both are normalized into a common shape so every print
+  // path (plain paper, Avery, P-touch, CSV) works the same for either.
+  const host = doorOf(org) === "artstracker" ? "artstracker.org" : "theatre4u.org";
+  const locCount = (locId) => myItems.filter(i=>i.location_id===locId).length;
+
+  const normItem = (i) => {
+    const cat = CAT[i.category]||CAT.other;
+    return { id:i.id, kind:"item", qrPath:"/#/item/"+i.id, title:i.name,
+      catLabel:cat.label, icon:cat.icon, color:cat.color||"#888",
+      loc:i.location||"", code:i.display_id||i.id.slice(0,8).toUpperCase(),
+      img:i.img||"", size:i.size,
+      search:(i.name+" "+(i.location||"")+" "+(i.display_id||"")).toLowerCase() };
+  };
+  const normLoc = (l) => {
+    const icon = l.location_type==="room"?"🗺️":l.location_type==="rack"?"🏗️":"📦";
+    const type = l.location_type==="room"?"Room":l.location_type==="rack"?"Rack":"Storage location";
+    return { id:l.id, kind:"location", qrPath:"/#/location/"+l.id, title:l.name,
+      catLabel:type, icon, color:"#c4761a", loc:l.description||"", code:l.code||"",
+      img:"", count:locCount(l.id),
+      search:(l.name+" "+(l.code||"")+" "+(l.description||"")).toLowerCase() };
+  };
+
+  const allEntries = mode==="items" ? myItems.map(normItem) : myLocations.map(normLoc);
+  const filtered = allEntries.filter(e => !search || e.search.includes(search.toLowerCase()));
+  const selectedEntries = () => allEntries.filter(e=>selected.includes(e.id));
   const toggleSel = id => setSelected(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
-  const selAll    = () => setSelected(filtered.map(i=>i.id));
+  const selAll    = () => setSelected(filtered.map(e=>e.id));
   const clearSel  = () => setSelected([]);
 
-  // Export a CSV for Brother P-touch Editor (matches the merge template's columns exactly:
-  // Label_ID, Item_Name, Size, Location, QR_URL, Label_Type). Uses selected items, or all filtered if none.
+  // Switch what we are labeling; reset the selection and pick the Avery size that
+  // suits it (small 30-up for items, big square for boxes and locations).
+  const chooseMode = (m) => {
+    if(m===mode) return;
+    setMode(m); setSelected([]); setSearch("");
+    setAveryType(m==="locations" ? "22806" : "5160");
+  };
+  const sub = (e) => e.kind==="location"
+    ? e.catLabel + (e.count!=null ? " · "+e.count+" item"+(e.count!==1?"s":"") : "")
+    : e.catLabel + (e.loc ? " · "+e.loc : "");
+
+  // Export a CSV for Brother P-touch Editor. Columns follow the merge template. Uses the
+  // selected rows, or all filtered if none. Adapts to items or locations.
   const exportPtouchCsv = () => {
-    const rows = selected.length ? myItems.filter(i=>selected.includes(i.id)) : filtered;
+    const rows = selected.length ? allEntries.filter(e=>selected.includes(e.id)) : filtered;
     if(!rows.length) return;
-    const brandHost = doorOf(org) === "artstracker" ? "artstracker.org" : "theatre4u.org";
     const esc = v => '"'+String(v==null?"":v).replace(/"/g,'""')+'"';
-    const lines = [["Label_ID","Item_Name","Size","Location","QR_URL","Label_Type"].join(",")];
-    rows.forEach(i=>{
-      const dispId = i.display_id || i.id.slice(0,8).toUpperCase();
-      const cat = CAT[i.category] || CAT.other;
-      lines.push([
-        esc(dispId), esc(i.name), esc(i.size && i.size !== "N/A" ? i.size : ""),
-        esc(i.location||""),
-        esc("https://"+brandHost+"/#/item/"+i.id),
-        esc(cat.label || i.category || "")
-      ].join(","));
+    const header = mode==="items"
+      ? ["Label_ID","Item_Name","Size","Location","QR_URL","Label_Type"]
+      : ["Label_ID","Location_Name","Item_Count","Description","QR_URL","Label_Type"];
+    const lines = [header.join(",")];
+    rows.forEach(e=>{
+      const url = "https://"+host+e.qrPath;
+      if(mode==="items"){
+        lines.push([ esc(e.code), esc(e.title), esc(e.size && e.size!=="N/A" ? e.size : ""),
+          esc(e.loc), esc(url), esc(e.catLabel) ].join(","));
+      } else {
+        lines.push([ esc(e.code||e.title), esc(e.title), esc(e.count),
+          esc(e.loc), esc(url), esc(e.catLabel) ].join(","));
+      }
     });
     const csv = "﻿" + lines.join("\r\n"); // BOM + CRLF so P-touch Editor / Excel read it cleanly
     const url = URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
     const a = document.createElement("a");
     a.href = url;
-    a.download = (org?.label_prefix || "labels") + "-ptouch-" + new Date().toISOString().slice(0,10) + ".csv";
+    a.download = (org?.label_prefix || "labels") + "-" + mode + "-ptouch-" + new Date().toISOString().slice(0,10) + ".csv";
     a.click();
     URL.revokeObjectURL(url);
   };
 
   const printSelected = async () => {
-    const toPrint = myItems.filter(i=>selected.includes(i.id));
+    const toPrint = selectedEntries();
     if(!toPrint.length) return;
     setPrinting(true);
     try {
       // Point the QR at the program's own door (music/dance/art/booster => ArtsTracker;
-      // theatre follows its signup domain). Both doors resolve /#/item/ the same way.
-      const brandHost = doorOf(org) === "artstracker" ? "artstracker.org" : "theatre4u.org";
-      const srcs = await Promise.all(toPrint.map(i=>
-        QR.toDataURL("https://"+brandHost+"/#/item/"+i.id, 160)
+      // theatre follows its signup domain). Both doors resolve /#/item/ and /#/location/ the same way.
+      const srcs = await Promise.all(toPrint.map(e=>
+        QR.toDataURL("https://"+host+e.qrPath, 160)
       ));
       const w = window.open("","_blank","width=900,height=700");
       if(!w){setPrinting(false);return;}
       // Escape user-entered fields before writing them into the print document.
       const esc = (s)=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-      const labels = toPrint.map((item,n)=>{
-        const cat = CAT[item.category]||CAT.other;
-        const dispId = item.display_id||item.id.slice(0,8).toUpperCase();
-        const eName = esc(item.name), eLoc = esc(item.location), eId = esc(dispId), eImg = esc(item.img), eCat = esc(cat.label);
+      const labels = toPrint.map((e,n)=>{
+        const eName = esc(e.title), eId = esc(e.code), eImg = esc(e.img), eCat = esc(e.catLabel);
+        const subTxt = e.kind==="location"
+          ? (e.count!=null ? `${e.count} item${e.count!==1?"s":""}` : "")
+          : (e.loc ? "📍 "+esc(e.loc) : "");
         if(withPhoto){
-          const photo = item.img
+          const photo = e.img
             ? `<img src="${eImg}" class="pc-img"/>`
-            : `<div class="pc-noimg">${cat.icon}</div>`;
+            : `<div class="pc-noimg">${e.icon}</div>`;
           return `<div class="pcard">
             ${photo}
             <div class="pc-body">
-              <div class="pc-cat" style="color:${cat.color||"#888"}">${cat.icon} ${eCat}</div>
+              <div class="pc-cat" style="color:${e.color}">${e.icon} ${eCat}</div>
               <div class="pc-name">${eName}</div>
-              ${item.location?`<div class="pc-loc">📍 ${eLoc}</div>`:""}
+              ${subTxt?`<div class="pc-loc">${subTxt}</div>`:""}
               <div class="pc-foot">
                 <div class="pc-id">${eId}</div>
                 ${srcs[n]?`<img src="${srcs[n]}" class="pc-qr"/>`:""}
@@ -185,12 +228,12 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
           </div>`;
         }
         return `<div class="lbl">
-          <div class="lbl-cat" style="color:${cat.color||"#888"}">${cat.icon} ${eCat}</div>
+          <div class="lbl-cat" style="color:${e.color}">${e.icon} ${eCat}</div>
           <div class="lbl-name">${eName}</div>
-          ${item.location?`<div class="lbl-loc">📍 ${eLoc}</div>`:""}
+          ${subTxt?`<div class="lbl-loc">${subTxt}</div>`:""}
           <div class="lbl-id">${eId}</div>
           ${srcs[n]?`<img src="${srcs[n]}" class="lbl-qr"/>`:""}
-          <div class="lbl-brand">${brandHost}</div>
+          <div class="lbl-brand">${host}</div>
         </div>`;
       }).join("");
       const noun = withPhoto ? "card" : "label";
@@ -247,21 +290,22 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
   // scaling. Works wherever the Cube is a selectable system printer (USB, or Brother's
   // desktop driver). Over Bluetooth-only, use Export for P-touch (CSV) into P-touch Editor.
   const printPtouch = async () => {
-    const toPrint = myItems.filter(i=>selected.includes(i.id));
+    const toPrint = selectedEntries();
     if(!toPrint.length) return;
     setPrinting(true);
     try {
-      const brandHost = doorOf(org) === "artstracker" ? "artstracker.org" : "theatre4u.org";
-      const srcs = await Promise.all(toPrint.map(i=>QR.toDataURL("https://"+brandHost+"/#/item/"+i.id, 240)));
+      const srcs = await Promise.all(toPrint.map(e=>QR.toDataURL("https://"+host+e.qrPath, 240)));
       const esc = (s)=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-      const labels = toPrint.map((item,n)=>{
-        const dispId = item.display_id||item.id.slice(0,8).toUpperCase();
-        const eName = esc(item.name), eId = esc(dispId), eLoc = esc(item.location);
+      const labels = toPrint.map((e,n)=>{
+        const eName = esc(e.title), eId = esc(e.code);
+        const subTxt = e.kind==="location"
+          ? (e.count!=null ? `${e.count} item${e.count!==1?"s":""}` : "")
+          : esc(e.loc);
         return `<div class="tl">
           ${srcs[n]?`<img class="tl-qr" src="${srcs[n]}"/>`:""}
           <div class="tl-txt">
             <div class="tl-name">${eName}</div>
-            ${item.location?`<div class="tl-loc">${eLoc}</div>`:""}
+            ${subTxt?`<div class="tl-loc">${subTxt}</div>`:""}
             <div class="tl-id">${eId}</div>
           </div>
         </div>`;
@@ -306,26 +350,27 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
   // grid so it lines up with the pre-cut sheet. The nudge (mm) shifts everything to correct a
   // printer that drifts; users should run one test sheet first.
   const printAvery = async () => {
-    const toPrint = myItems.filter(i=>selected.includes(i.id));
+    const toPrint = selectedEntries();
     if(!toPrint.length) return;
     setPrinting(true);
     try {
       const p = AVERY[averyType] || AVERY["5160"];
-      const brandHost = doorOf(org) === "artstracker" ? "artstracker.org" : "theatre4u.org";
-      const srcs = await Promise.all(toPrint.map(i=>QR.toDataURL("https://"+brandHost+"/#/item/"+i.id, 300)));
+      const srcs = await Promise.all(toPrint.map(e=>QR.toDataURL("https://"+host+e.qrPath, 300)));
       const esc = (s)=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
       const ml = (8.5 - (p.cols*p.lw + (p.cols-1)*p.gx)) / 2;        // centered left margin
       const qrSize = Math.max(0.6, Math.min(p.lw, p.lh) - 0.22);    // QR square in inches
       const perPage = p.cols * p.rows;
       let pages = "";
       for (let start=0; start<toPrint.length; start+=perPage) {
-        const cells = toPrint.slice(start, start+perPage).map((item,k)=>{
+        const cells = toPrint.slice(start, start+perPage).map((e,k)=>{
           const n = start+k;
-          const dispId = item.display_id||item.id.slice(0,8).toUpperCase();
-          const eName = esc(item.name), eId = esc(dispId), eLoc = esc(item.location);
+          const eName = esc(e.title), eId = esc(e.code);
+          const subTxt = e.kind==="location"
+            ? (e.count!=null ? `${e.count} item${e.count!==1?"s":""}` : "")
+            : esc(e.loc);
           return `<div class="av-cell">
             ${srcs[n]?`<img class="av-qr" src="${srcs[n]}"/>`:""}
-            <div class="av-txt"><div class="av-name">${eName}</div>${item.location?`<div class="av-loc">${eLoc}</div>`:""}<div class="av-id">${eId}</div></div>
+            <div class="av-txt"><div class="av-name">${eName}</div>${subTxt?`<div class="av-loc">${subTxt}</div>`:""}<div class="av-id">${eId}</div></div>
           </div>`;
         }).join("");
         pages += `<div class="av-page"><div class="av-grid">${cells}</div></div>`;
@@ -361,6 +406,13 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
       ifr.onload = () => setTimeout(fire, 300);
       setTimeout(fire, 1000);
     } finally { setPrinting(false); }
+  };
+
+  // Run the print action for whichever lane is active.
+  const doPrint = () => {
+    if(printLane==="avery")  return printAvery();
+    if(printLane==="ptouch") return printPtouch();
+    return printSelected(); // plain paper (standard squares or photo card)
   };
 
   // ── ASSIGN TAB ───────────────────────────────────────────────────────────
@@ -452,6 +504,19 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
     fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,
     color:"var(--muted)",display:"block",marginBottom:5
   };
+  // Print-tab helpers (two-step chooser)
+  const LANES = [
+    { id:"avery",  ico:"🗒", t:"Label sheets (Avery)",          d:"Peel and stick on any printer. Cheapest and easiest.", rec:true },
+    { id:"plain",  ico:"🖨", t:"Plain paper",                    d:"Print, cut out, and tape on. No special supplies." },
+    { id:"ptouch", ico:"🏷", t:"Label printer (Brother P-touch)", d:"Durable laminated tape. For programs that own one." },
+    { id:"order",  ico:"📬", t:"Order pre-printed",              d:"We mail durable labels. Stick now, assign later." },
+  ];
+  const printBtnLabel = printLane==="avery" ? "🗒 Print on Avery" : printLane==="ptouch" ? "🏷 Print to P-touch" : "🖨 Print";
+  const stepLabel = { fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:8 };
+  const miniLbl   = { fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:.6,color:"var(--faint)" };
+  const nudgeInp  = { width:48,padding:"4px 6px",borderRadius:6,border:"1px solid var(--border)",background:"var(--white)",color:"var(--text)",fontFamily:"inherit",fontSize:12 };
+  const selInp    = { padding:"7px 10px",borderRadius:7,border:"1px solid var(--border)",background:"var(--white)",color:"var(--text)",fontSize:12,cursor:"pointer",fontFamily:"inherit" };
+  const ghostBtn  = { padding:"7px 13px",borderRadius:7,border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",fontSize:12,cursor:"pointer",fontFamily:"inherit" };
 
   return (
     <div style={{padding:"24px 28px 80px",maxWidth:900}}>
@@ -505,156 +570,188 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
       {/* ══ PRINT TAB ══ */}
       {tab==="print"&&(
         <div>
-          <p style={{fontSize:13,color:"var(--muted)",marginBottom:16}}>
-            Select items and click Print — your browser generates QR code labels you can print on any printer.
-            Each label includes the item name, category, location, ID code, and scannable QR code.
-            Any phone camera (no app needed) scans the code and pulls up the item instantly.
-            Flip on <strong>Photo card</strong> to print a larger card with the item&rsquo;s photo on top, then pick a size. Handy for taping on a storage bag or bin so you can see what&rsquo;s inside without opening it.
+          <p style={{fontSize:13,color:"var(--muted)",marginBottom:18}}>
+            Two quick choices and you are printing. Pick what you are labeling, pick how you want to print,
+            then select the rows and hit Print. Every label carries a QR code that any phone camera scans
+            (no app) to pull up that item or location instantly.
           </p>
-          <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search items, locations, codes…"
-              style={{flex:1,minWidth:200,...inputStyle,width:"auto"}}/>
-            <button onClick={()=>setWithPhoto(v=>!v)} title="Print a larger card with the item photo on top"
-              style={{padding:"7px 13px",borderRadius:7,border:"1px solid",
-                borderColor:withPhoto?"var(--gold)":"var(--border)",
-                background:withPhoto?"rgba(212,168,67,.12)":"transparent",
-                color:withPhoto?"var(--goldink)":"var(--muted)",fontSize:12,fontWeight:withPhoto?700:500,
-                cursor:"pointer",fontFamily:"inherit"}}>
-              🖼 Photo card: {withPhoto?"On":"Off"}
-            </button>
-            {withPhoto&&(
-              <select value={cardSize} onChange={e=>setCardSize(Number(e.target.value))}
-                title="Card size for printing"
-                style={{padding:"7px 10px",borderRadius:7,border:"1px solid var(--border)",
-                  background:"var(--white)",color:"var(--text)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
-                {PHOTO_SIZES.map((s,i)=><option key={s.id} value={i}>{s.label}</option>)}
-              </select>
-            )}
-            {withPhoto&&(
-              <select value={fitMode} onChange={e=>setFitMode(e.target.value)}
-                title="How the photo fills the card"
-                style={{padding:"7px 10px",borderRadius:7,border:"1px solid var(--border)",
-                  background:"var(--white)",color:"var(--text)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
-                <option value="cover">Crop to fill</option>
-                <option value="contain">Show whole photo</option>
-              </select>
-            )}
-            <button onClick={selAll} style={{padding:"7px 13px",borderRadius:7,border:"1px solid var(--border)",
-              background:"transparent",color:"var(--muted)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
-              Select All ({filtered.length})
-            </button>
-            <button onClick={clearSel} style={{padding:"7px 13px",borderRadius:7,border:"1px solid var(--border)",
-              background:"transparent",color:"var(--muted)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
-              Clear
-            </button>
-            <button onClick={printSelected} disabled={selected.length===0||printing}
-              style={{padding:"8px 20px",borderRadius:8,border:"none",fontFamily:"inherit",fontSize:13,fontWeight:700,
-                cursor:selected.length&&!printing?"pointer":"not-allowed",
-                background:selected.length&&!printing?"var(--gold)":"var(--border)",
-                color:selected.length&&!printing?"#1a0f00":"var(--muted)"}}>
-              {printing?"Generating…":selected.length?("🖨 Print "+selected.length+" Label"+(selected.length!==1?"s":"")):"Select items to print"}
-            </button>
+
+          {/* Step 1 — What are you labeling? */}
+          <div style={{marginBottom:18}}>
+            <div style={stepLabel}>Step 1 · What are you labeling?</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {[["items","📦","Inventory items"],["locations","🗺","Storage boxes & locations"]].map(([id,ico,lbl])=>{
+                const on = mode===id;
+                return (
+                  <button key={id} onClick={()=>chooseMode(id)}
+                    style={{padding:"9px 16px",borderRadius:9,border:"1.5px solid",
+                      borderColor:on?"var(--gold)":"var(--border)",background:on?"rgba(212,168,67,.12)":"transparent",
+                      color:on?"var(--goldink)":"var(--muted)",fontSize:13,fontWeight:on?700:500,cursor:"pointer",fontFamily:"inherit"}}>
+                    {ico} {lbl}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Secondary path: printing on a Brother P-touch label printer */}
-          <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:14,fontSize:12,color:"var(--muted)"}}>
-            <span>Using a Brother P-touch label printer?</span>
-            <button onClick={printPtouch} disabled={selected.length===0||printing}
-              title="Print the selected items straight to a P-touch Cube, sized for 24mm tape (one label per tape segment). Pick the Cube in the print dialog. Bluetooth-only Cubes may not appear there; use the CSV into P-touch Editor instead."
-              style={{padding:"6px 12px",borderRadius:7,border:"1px solid var(--goldink)",fontFamily:"inherit",fontSize:12,fontWeight:700,
-                cursor:selected.length&&!printing?"pointer":"not-allowed",background:"rgba(212,168,67,.12)",color:"var(--goldink)"}}>
-              🏷 Print to P-touch (24mm){selected.length?(" ("+selected.length+")"):""}
-            </button>
-            <button onClick={exportPtouchCsv} disabled={filtered.length===0}
-              title="Download a CSV for Brother P-touch Editor (Label_ID, Item_Name, Size, Location, QR_URL). Uses selected items, or all if none are selected."
-              style={{padding:"6px 12px",borderRadius:7,border:"1px solid var(--border)",fontFamily:"inherit",fontSize:12,fontWeight:700,
-                cursor:filtered.length?"pointer":"not-allowed",background:"transparent",color:"var(--goldink)"}}>
-              ⬇ Export for P-touch (CSV){selected.length?(" ("+selected.length+")"):""}
-            </button>
-            <button onClick={()=>setTab("gear")}
-              style={{background:"none",border:"none",padding:0,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:600,color:"var(--goldink)",textDecoration:"underline"}}>
-              See the P-touch how-to →
-            </button>
+          {/* Step 2 — How will you print? */}
+          <div style={{marginBottom:16}}>
+            <div style={stepLabel}>Step 2 · How will you print?</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))",gap:10}}>
+              {LANES.map(L=>{
+                const on = printLane===L.id;
+                return (
+                  <button key={L.id} onClick={()=>setPrintLane(L.id)}
+                    style={{textAlign:"left",padding:"12px 14px",borderRadius:10,border:"1.5px solid",
+                      borderColor:on?"var(--gold)":"var(--border)",background:on?"rgba(212,168,67,.1)":"var(--parch)",
+                      cursor:"pointer",fontFamily:"inherit",position:"relative"}}>
+                    {L.rec&&<span style={{position:"absolute",top:10,right:10,fontSize:9,fontWeight:800,
+                      textTransform:"uppercase",letterSpacing:.5,color:"#1a0f00",background:"var(--gold)",padding:"2px 6px",borderRadius:5}}>Recommended</span>}
+                    <div style={{fontSize:14,fontWeight:700,marginBottom:3,color:on?"var(--goldink)":"var(--text)"}}>{L.ico} {L.t}</div>
+                    <div style={{fontSize:11.5,color:"var(--muted)",lineHeight:1.5}}>{L.d}</div>
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{fontSize:11.5,color:"var(--faint)",marginTop:8}}>
+              Not sure? Avery label sheets are the easiest and cheapest for most programs.
+            </div>
           </div>
 
-          {/* Third path: printing on Avery label sheets (any regular printer) */}
-          <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:6,fontSize:12,color:"var(--muted)"}}>
-            <span>Printing on Avery label sheets?</span>
-            <select value={averyType} onChange={e=>setAveryType(e.target.value)}
-              title="Pick the Avery product number printed on your label box"
-              style={{padding:"6px 10px",borderRadius:7,border:"1px solid var(--border)",background:"transparent",color:"var(--text)",fontFamily:"inherit",fontSize:12}}>
-              {Object.entries(AVERY).map(([k,v])=><option key={k} value={k}>{v.name}</option>)}
-            </select>
-            <button onClick={printAvery} disabled={selected.length===0||printing}
-              title="Lay the selected items onto the chosen Avery sheet and print. Print one test sheet first, then nudge if it drifts."
-              style={{padding:"6px 12px",borderRadius:7,border:"1px solid var(--goldink)",fontFamily:"inherit",fontSize:12,fontWeight:700,
-                cursor:selected.length&&!printing?"pointer":"not-allowed",background:"rgba(212,168,67,.12)",color:"var(--goldink)"}}>
-              🗒 Print Avery{selected.length?(" ("+selected.length+")"):""}
-            </button>
-            <span style={{display:"flex",alignItems:"center",gap:4}} title="If a test sheet prints slightly off, shift right (X) or down (Y) in millimeters and reprint">
-              nudge
-              <input type="number" step="0.5" value={avNudgeX} onChange={e=>setAvNudgeX(parseFloat(e.target.value)||0)} aria-label="Nudge right (mm)"
-                style={{width:48,padding:"4px 6px",borderRadius:6,border:"1px solid var(--border)",background:"transparent",color:"var(--text)",fontFamily:"inherit",fontSize:12}}/>
-              <input type="number" step="0.5" value={avNudgeY} onChange={e=>setAvNudgeY(parseFloat(e.target.value)||0)} aria-label="Nudge down (mm)"
-                style={{width:48,padding:"4px 6px",borderRadius:6,border:"1px solid var(--border)",background:"transparent",color:"var(--text)",fontFamily:"inherit",fontSize:12}}/>
-              mm
-            </span>
-          </div>
-          <div style={{fontSize:11,color:"var(--faint)",marginBottom:14,lineHeight:1.5}}>
-            Tip: print one test sheet on plain paper first, hold it over the Avery sheet to check alignment, then adjust the nudge (mm) and print for real. Turn off Headers and footers and set Scale to 100% in the print dialog.
-          </div>
-
-          {loadingItems?(
-            <div style={{textAlign:"center",padding:32,color:"var(--muted)"}}>Loading inventory…</div>
-          ):(
-            <div style={{...card,overflow:"hidden",marginBottom:10}}>
-              {filtered.length===0?(
-                <div style={{padding:32,textAlign:"center",color:"var(--muted)",fontSize:13}}>
-                  {myItems.length===0
-                    ?"Add items to your inventory first — then print labels here."
-                    :"No items match your search."}
-                </div>
-              ):(
-                filtered.map(item=>{
-                  const cat = CAT[item.category]||CAT.other;
-                  const isSel = selected.includes(item.id);
-                  return(
-                    <div key={item.id} onClick={()=>toggleSel(item.id)}
-                      style={{display:"flex",alignItems:"center",gap:12,padding:"9px 14px",
-                        borderBottom:"1px solid var(--border)",cursor:"pointer",
-                        background:isSel?"rgba(212,168,67,.07)":"transparent",transition:"background .1s"}}>
-                      <div style={{width:18,height:18,borderRadius:4,border:"1.5px solid",
-                        borderColor:isSel?"var(--gold)":"var(--border)",
-                        background:isSel?"var(--gold)":"transparent",flexShrink:0,
-                        display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        {isSel&&<span style={{color:"#1a0f00",fontSize:12,fontWeight:900}}>✓</span>}
-                      </div>
-                      <span style={{fontSize:16,flexShrink:0}}>{cat.icon}</span>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                          {item.name}
-                        </div>
-                        <div style={{fontSize:11,color:"var(--muted)"}}>
-                          {cat.label}{item.location?" · "+item.location:""}
-                        </div>
-                      </div>
-                      {item.display_id&&(
-                        <span style={{fontSize:11,fontFamily:"monospace",fontWeight:700,
-                          color:"var(--amber)",background:"rgba(196,118,26,.1)",
-                          padding:"2px 7px",borderRadius:4,flexShrink:0}}>
-                          {item.display_id}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })
-              )}
+          {/* Lane options */}
+          {printLane==="avery"&&(
+            <div style={{...card,padding:"12px 14px",marginBottom:14,display:"flex",gap:14,alignItems:"center",flexWrap:"wrap"}}>
+              <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                <span style={miniLbl}>Avery product (on your box)</span>
+                <select value={averyType} onChange={e=>setAveryType(e.target.value)} style={selInp}>
+                  {Object.entries(AVERY).map(([k,v])=><option key={k} value={k}>{v.name}</option>)}
+                </select>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                <span style={miniLbl}>Alignment nudge</span>
+                <span style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:"var(--muted)"}}>
+                  <input type="number" step="0.5" value={avNudgeX} onChange={e=>setAvNudgeX(parseFloat(e.target.value)||0)} aria-label="Nudge right (mm)" style={nudgeInp}/> right
+                  <input type="number" step="0.5" value={avNudgeY} onChange={e=>setAvNudgeY(parseFloat(e.target.value)||0)} aria-label="Nudge down (mm)" style={nudgeInp}/> down (mm)
+                </span>
+              </div>
+              <div style={{fontSize:11,color:"var(--faint)",flex:1,minWidth:180,lineHeight:1.5}}>
+                Print one test sheet on plain paper first, hold it over the Avery sheet, then nudge if it drifts. Set Scale to 100% and turn off headers and footers.
+              </div>
             </div>
           )}
-          <div style={{fontSize:12,color:"var(--muted)"}}>
-            {selected.length} of {myItems.length} item{myItems.length!==1?"s":""} selected ·{" "}
-            Labels print at ~2" × 2" · 4 per row · PDF or print dialog from your browser
-          </div>
+          {printLane==="plain"&&(
+            <div style={{...card,padding:"12px 14px",marginBottom:14,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+              <button onClick={()=>setWithPhoto(v=>!v)} title="Print a larger card with a photo on top"
+                style={{padding:"7px 13px",borderRadius:7,border:"1px solid",borderColor:withPhoto?"var(--gold)":"var(--border)",
+                  background:withPhoto?"rgba(212,168,67,.12)":"transparent",color:withPhoto?"var(--goldink)":"var(--muted)",
+                  fontSize:12,fontWeight:withPhoto?700:500,cursor:"pointer",fontFamily:"inherit"}}>
+                🖼 Photo card: {withPhoto?"On":"Off"}
+              </button>
+              {withPhoto&&(<select value={cardSize} onChange={e=>setCardSize(Number(e.target.value))} style={selInp}>
+                {PHOTO_SIZES.map((s,i)=><option key={s.id} value={i}>{s.label}</option>)}</select>)}
+              {withPhoto&&(<select value={fitMode} onChange={e=>setFitMode(e.target.value)} style={selInp}>
+                <option value="cover">Crop to fill</option><option value="contain">Show whole photo</option></select>)}
+              <div style={{fontSize:11,color:"var(--faint)",flex:1,minWidth:180,lineHeight:1.5}}>
+                Prints on any printer. Cut out and tape on. Turn on Photo card for a bigger card with the photo, handy on a bin or bag.
+              </div>
+            </div>
+          )}
+          {printLane==="ptouch"&&(
+            <div style={{...card,padding:"12px 14px",marginBottom:14,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+              <span style={{fontSize:12,color:"var(--muted)",fontWeight:600}}>Brother P-touch, 24mm tape.</span>
+              <button onClick={exportPtouchCsv} disabled={filtered.length===0}
+                title="Download a CSV for Brother P-touch Editor. Uses selected rows, or all if none are selected."
+                style={{padding:"6px 12px",borderRadius:7,border:"1px solid var(--border)",fontFamily:"inherit",fontSize:12,fontWeight:700,
+                  cursor:filtered.length?"pointer":"not-allowed",background:"transparent",color:"var(--goldink)"}}>
+                ⬇ Export CSV{selected.length?(" ("+selected.length+")"):""}
+              </button>
+              <button onClick={()=>setTab("gear")}
+                style={{background:"none",border:"none",padding:0,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:600,color:"var(--goldink)",textDecoration:"underline"}}>
+                See the P-touch how-to →
+              </button>
+              <div style={{fontSize:11,color:"var(--faint)",flex:1,minWidth:180,lineHeight:1.5}}>
+                Connect the Cube by USB and pick it in the print dialog. Bluetooth-only Cubes may not appear there, so use the CSV into P-touch Editor instead.
+              </div>
+            </div>
+          )}
+          {printLane==="order"&&(
+            <div style={{...card,padding:"16px 18px",marginBottom:14}}>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>📬 Order pre-printed labels</div>
+              <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.7,marginBottom:12}}>
+                For durable weatherproof labels with no printing on your end. They arrive pre-coded, so you can stick them on bins now and link each code to an item or location later in the Assign tab.
+              </div>
+              <button onClick={()=>setTab("gear")}
+                style={{padding:"9px 18px",borderRadius:8,border:"none",fontFamily:"inherit",fontSize:13,fontWeight:700,cursor:"pointer",background:"var(--gold)",color:"#1a0f00"}}>
+                See label options →
+              </button>
+            </div>
+          )}
+
+          {/* Search + select + print (the order lane has nothing to select) */}
+          {printLane!=="order"&&(<>
+            <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
+              <input value={search} onChange={e=>setSearch(e.target.value)}
+                placeholder={mode==="items"?"Search items, locations, codes…":"Search boxes and locations…"}
+                style={{flex:1,minWidth:200,...inputStyle,width:"auto"}}/>
+              <button onClick={selAll} style={ghostBtn}>Select All ({filtered.length})</button>
+              <button onClick={clearSel} style={ghostBtn}>Clear</button>
+              <button onClick={doPrint} disabled={selected.length===0||printing}
+                style={{padding:"8px 20px",borderRadius:8,border:"none",fontFamily:"inherit",fontSize:13,fontWeight:700,
+                  cursor:selected.length&&!printing?"pointer":"not-allowed",
+                  background:selected.length&&!printing?"var(--gold)":"var(--border)",
+                  color:selected.length&&!printing?"#1a0f00":"var(--muted)"}}>
+                {printing?"Generating…":selected.length?(printBtnLabel+" ("+selected.length+")"):("Select "+(mode==="items"?"items":"locations")+" to print")}
+              </button>
+            </div>
+
+            {loadingItems?(
+              <div style={{textAlign:"center",padding:32,color:"var(--muted)"}}>Loading…</div>
+            ):(
+              <div style={{...card,overflow:"hidden",marginBottom:10}}>
+                {filtered.length===0?(
+                  <div style={{padding:32,textAlign:"center",color:"var(--muted)",fontSize:13}}>
+                    {mode==="items"
+                      ?(myItems.length===0?"Add items to your inventory first — then print labels here.":"No items match your search.")
+                      :(myLocations.length===0?"Add storage boxes and locations in the Locations tab first — then print their labels here.":"No locations match your search.")}
+                  </div>
+                ):(
+                  filtered.map(e=>{
+                    const isSel = selected.includes(e.id);
+                    return(
+                      <div key={e.id} onClick={()=>toggleSel(e.id)}
+                        style={{display:"flex",alignItems:"center",gap:12,padding:"9px 14px",
+                          borderBottom:"1px solid var(--border)",cursor:"pointer",
+                          background:isSel?"rgba(212,168,67,.07)":"transparent",transition:"background .1s"}}>
+                        <div style={{width:18,height:18,borderRadius:4,border:"1.5px solid",
+                          borderColor:isSel?"var(--gold)":"var(--border)",
+                          background:isSel?"var(--gold)":"transparent",flexShrink:0,
+                          display:"flex",alignItems:"center",justifyContent:"center"}}>
+                          {isSel&&<span style={{color:"#1a0f00",fontSize:12,fontWeight:900}}>✓</span>}
+                        </div>
+                        <span style={{fontSize:16,flexShrink:0}}>{e.icon}</span>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                            {e.title}
+                          </div>
+                          <div style={{fontSize:11,color:"var(--muted)"}}>{sub(e)}</div>
+                        </div>
+                        {e.code&&(
+                          <span style={{fontSize:11,fontFamily:"monospace",fontWeight:700,
+                            color:"var(--amber)",background:"rgba(196,118,26,.1)",
+                            padding:"2px 7px",borderRadius:4,flexShrink:0}}>
+                            {e.code}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+            <div style={{fontSize:12,color:"var(--muted)"}}>
+              {selected.length} of {mode==="items"?myItems.length:myLocations.length} {mode==="items"?"item":"location"}{(mode==="items"?myItems.length:myLocations.length)!==1?"s":""} selected
+            </div>
+          </>)}
         </div>
       )}
 
