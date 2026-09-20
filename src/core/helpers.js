@@ -16,6 +16,11 @@ export function authErrKey(msg) {
   if (m.includes("email address") && m.includes("invalid")) return "signupEmailInvalid";
   if (m.includes("email_address_invalid")) return "signupEmailInvalid";
   if (m.includes("rate limit") || m.includes("over_email_send_rate_limit") || m.includes("too many requests")) return "signupRateLimit";
+  // Supabase leaked-password protection (error_code weak_password) rejects breached or too-simple
+  // passwords. Without this mapping it fell through to the generic "check your internet" message,
+  // which is misleading — the real fix is to choose a stronger, unique password.
+  if (m.includes("weak_password") || m.includes("known to be weak") || m.includes("easy to guess") ||
+      (m.includes("password") && (m.includes("pwned") || m.includes("at least 6 characters")))) return "signupWeakPassword";
   if (m.includes("expired") || m.includes("jwt") || m.includes("refresh_token")) return "sessionExpired";
   return null;
 }

@@ -119,7 +119,6 @@ function DiscountPanel({ org, patch, flash }) {
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
             {presetBtn("⭐ Grant founding ($9.99)", grantFounding, org.founding_member)}
             {presetBtn("🎭 CETA 20% (" + pctPrice(20) + ")", () => setPending({ percent: 20, label: "CETA Conference 20%" }))}
-            {presetBtn("🏫 Teacher / School 15% (" + pctPrice(15) + ")", () => setPending({ percent: 15, label: "Teacher / School 15%" }))}
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap", marginBottom: 6 }}>
             <div><label style={lab}>Custom %</label><input type="number" min="1" max="100" value={customPct} onChange={e => setCustomPct(e.target.value)} placeholder="e.g. 30" style={{ ...inp, width: 90 }} /></div>

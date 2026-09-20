@@ -600,7 +600,8 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   useEffect(()=>{
     window.__t4u_nav_messages = (convId) => { setOpenConvId(convId); setPage("messages"); setMob(false); };
     window.__t4u_nav_requests = ()       => { setPage("requests"); setMob(false); };
-    return () => { delete window.__t4u_nav_messages; delete window.__t4u_nav_requests; };
+    window.__t4u_nav_labels   = (opts)   => { window.__t4u_labels_init = opts || {}; setPage("labels"); setMob(false); };
+    return () => { delete window.__t4u_nav_messages; delete window.__t4u_nav_requests; delete window.__t4u_nav_labels; };
   },[]);
   // Back button: intercept popstate and navigate within the app
   useEffect(()=>{

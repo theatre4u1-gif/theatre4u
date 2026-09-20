@@ -490,14 +490,14 @@ export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, ca
   const mktCls=item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="Rent or Sale"?"mb-both":item.mkt==="For Loan"?"mb-loan":"mb-none";
 
   useEffect(()=>{
-    QR.toDataURL(APP_URL+"/#/item/"+(item.display_id||item.id), 200).then(url=>{if(url)setQr(url);});
+    QR.toDataURL(APP_URL+"/#/item/"+item.id, 200).then(url=>{if(url)setQr(url);});
   },[item.id, item.name]);
 
   const printQR=async()=>{
-    // QR encodes the display_id if available — it's human-readable, unique per org,
-    // and the public-item edge function resolves it correctly.
-    // Fall back to item.id for items that predate the display_id system.
-    const qrIdentifier = item.display_id || item.id;
+    // QR encodes the item's permanent UUID (never changes), so a printed label keeps
+    // scanning correctly even if the human-readable display_id is later re-coded. The
+    // display_id is still shown as the visible caption below.
+    const qrIdentifier = item.id;
     const qrUrl = APP_URL+"/#/item/" + qrIdentifier;
     const qrSrc=await QR.toDataURL(qrUrl,200);
     if(!qrSrc)return;
@@ -509,7 +509,7 @@ export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, ca
     w.document.close();
   };
 
-  const dlQR=async()=>{const qId=item.display_id||item.id;const u=await QR.toDataURL(APP_URL+"/#/item/"+qId,300);if(!u)return;const a=document.createElement("a");a.href=u;a.download="T4U-"+(item.display_id||item.id)+".png";a.click();};
+  const dlQR=async()=>{const u=await QR.toDataURL(APP_URL+"/#/item/"+item.id,300);if(!u)return;const a=document.createElement("a");a.href=u;a.download=(item.display_id||item.id)+".png";a.click();};
 
   return(
     <>

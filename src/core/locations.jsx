@@ -477,7 +477,10 @@ export function LocationsPanel({ userId, items, onEditItem, onDeleteItem, vertic
                 </div>
                 <div style={{ display:"flex",gap:6 }}>
                   <button className="btn btn-o bsm" style={{ fontSize:11 }} onClick={() => browseLocation(currentLoc)}>📋 {locItems.length} items</button>
-                  <button className="btn btn-o bsm" style={{ fontSize:11 }} onClick={() => printLocationQR(currentLoc)}>🖨 QR Label</button>
+                  <button className="btn btn-o bsm" style={{ fontSize:11 }} title="Print QR labels for this location — opens the Labels page with sizes and Avery options"
+                    onClick={() => (typeof window!=="undefined" && window.__t4u_nav_labels)
+                      ? window.__t4u_nav_labels({ mode:"locations", selectId: currentLoc.id })
+                      : printLocationQR(currentLoc)}>🖨 Print QR Label</button>
                   <button className="btn btn-o bsm" onClick={() => { setActive(currentLoc); setModal("edit"); }}>Edit</button>
                   <button className="btn btn-d bsm" onClick={() => deleteLocation(currentLoc.id)}>Delete</button>
                 </div>

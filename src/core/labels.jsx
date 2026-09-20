@@ -34,9 +34,9 @@ const PAPER_SIZES = [
 // centering the grid horizontally (Avery sheets are symmetric), which keeps these robust.
 // cols/rows = grid; lw/lh = one label; gx/gy = gaps between labels; mt = top margin.
 const AVERY = {
-  "5160":  { name:"Avery 5160 / 5260 — 30 per sheet", cols:3, rows:10, lw:2.625, lh:1.0,  gx:0.125,  gy:0,   mt:0.5 },
-  "22806": { name:"Avery 22806 square — 12 per sheet", cols:3, rows:4,  lw:2.0,   lh:2.0,  gx:0.5,    gy:0.5, mt:0.5 },
-  "5164":  { name:"Avery 5164 — 6 per sheet",          cols:2, rows:3,  lw:4.0,   lh:3.33, gx:0.1875, gy:0,   mt:0.5 },
+  "5160":  { name:"Avery 5160 / 5260 — 30 per sheet (2.625\" x 1\")", cols:3, rows:10, lw:2.625, lh:1.0,  gx:0.125,  gy:0,   mt:0.5 },
+  "22806": { name:"Avery 22806 square — 12 per sheet (2\" x 2\")", cols:3, rows:4,  lw:2.0,   lh:2.0,  gx:0.5,    gy:0.5, mt:0.5 },
+  "5164":  { name:"Avery 5164 / 6464 / 8464 — 6 per sheet (4\" x 3.33\")", cols:2, rows:3,  lw:4.0,   lh:3.33, gx:0.1875, gy:0,   mt:0.5 },
 };
 
 
@@ -62,7 +62,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
   const [avNudgeX, setAvNudgeX]   = useState(0); // mm, correct printer drift left/right
   const [avNudgeY, setAvNudgeY]   = useState(0); // mm, correct printer drift up/down
   const [withPhoto, setWithPhoto] = useState(false);
-  const [paperSize, setPaperSize] = useState(0); // index into PAPER_SIZES (default: 2" x 2")
+  const [paperSize, setPaperSize] = useState(2); // index into PAPER_SIZES (default: Card 2.5" x 3.5")
   const [customW, setCustomW]     = useState(2); // custom label width, inches
   const [customH, setCustomH]     = useState(2); // custom label height, inches
   const [fitMode, setFitMode]     = useState("cover"); // cover = crop to fill, contain = show whole photo
@@ -117,6 +117,17 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
         .select("id,name,code,description,location_type,vertical")
         .eq("org_id",userId).order("name");
       setMyLocations(locs||[]);
+
+      // Deep link from the Locations screen: open straight into locations mode, on the
+      // recommended big-square Avery size, with the clicked location preselected.
+      try {
+        const init = (typeof window!=="undefined") && window.__t4u_labels_init;
+        if (init && init.mode==="locations") {
+          setTab("print"); setMode("locations"); setAveryType("22806"); setPrintLane("avery");
+          if (init.selectId && (locs||[]).some(l=>l.id===init.selectId)) setSelected([init.selectId]);
+          delete window.__t4u_labels_init;
+        }
+      } catch(e) {}
 
       const {data:ords} = await SB.from("label_orders")
         .select("id,item_count,assigned_count,blank_count,costume_count,equipment_count,label_type,status,created_at,tracking,code_start,code_end,amount_cents,include_logo,vendor,vendor_order_ref,notes,reorder_of")
