@@ -1425,6 +1425,11 @@ export function Productions({ userId, allItems, org, onNavigateTo }) {
   const saveProd = async (form) => {
     // Strip fields that aren't columns (embedded joins, immutable fields)
     const { id: _id, org_id: _org, created_at: _ca, production_items: _pi, ...payload } = form;
+    // Empty date inputs come through as "" which Postgres rejects for a date column
+    // ("invalid input syntax for type date"). Coerce blanks to null so a production
+    // can be created/saved without opening/closing dates filled in.
+    if (payload.opening_date === "") payload.opening_date = null;
+    if (payload.closing_date === "") payload.closing_date = null;
     if (active && modal === "edit") {
       const { data, error } = await SB.from("productions")
         .update({ ...payload, updated_at: new Date().toISOString() })
