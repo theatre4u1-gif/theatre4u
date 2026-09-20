@@ -125,9 +125,9 @@ function CommunitySpotlight({onViewAll}){
               {(post.images||[]).slice(0,4).map((url,i)=>(
                 <div key={i} style={{position:"relative",borderRadius:8,overflow:"hidden",flexShrink:0,
                   width:(post.images||[]).length===1?"100%":"calc(50% - 3px)",
-                  height:(post.images||[]).length===1?240:120,cursor:"pointer"}}
+                  height:(post.images||[]).length===1?320:200,cursor:"pointer",background:"#1a140e"}}
                   onClick={e=>{e.stopPropagation();window.open(url,"_blank");}}>
-                  <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"contain"}}/>
                   {i===3&&(post.images||[]).length>4&&(
                     <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:18}}>
                       +{(post.images||[]).length-4}
