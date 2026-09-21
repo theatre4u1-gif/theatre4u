@@ -343,6 +343,7 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
         <span style={{fontSize:12,color:"rgba(255,255,255,.3)"}}>{c("landing.footer.copyright","© 2026 Artstracker LLC")}</span>
       </div>
       <div style={{display:"flex",gap:18,fontSize:12,color:"rgba(255,255,255,.35)"}}>
+        <a href="/blog/" target="_blank" style={{color:"rgba(255,255,255,.35)",textDecoration:"none"}} onMouseEnter={e=>e.target.style.color="var(--gold)"} onMouseLeave={e=>e.target.style.color="rgba(255,255,255,.35)"}>Blog</a>
         <a href="/help.html" target="_blank" style={{color:"rgba(255,255,255,.35)",textDecoration:"none"}} onMouseEnter={e=>e.target.style.color="var(--gold)"} onMouseLeave={e=>e.target.style.color="rgba(255,255,255,.35)"}>Help Center</a>
         <a href="/contact.html" target="_blank" style={{color:"rgba(255,255,255,.35)",textDecoration:"none"}} onMouseEnter={e=>e.target.style.color="var(--gold)"} onMouseLeave={e=>e.target.style.color="rgba(255,255,255,.35)"}>Contact</a>
         <a href="/terms.html" target="_blank" style={{color:"rgba(255,255,255,.35)",textDecoration:"none"}} onMouseEnter={e=>e.target.style.color="var(--gold)"} onMouseLeave={e=>e.target.style.color="rgba(255,255,255,.35)"}>Terms</a>
