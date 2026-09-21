@@ -119,8 +119,8 @@ export default function middleware(request) {
   // Shareable item page with per-item Open Graph tags (fixes Facebook/social item links).
   if (path.startsWith('/item/')) return itemPage(request, host);
 
-  // Let vercel.json handle these pretty URLs
-  if (path === '/join' || path.startsWith('/org/')) return next();
+  // Let vercel.json / static files handle these pretty URLs
+  if (path === '/join' || path.startsWith('/org/') || path === '/booth' || path === '/blog' || path.startsWith('/blog/')) return next();
   const file = host.includes('artstracker') ? '/home-artstracker.html' : '/home-theatre4u.html';
   // The admin host (admin.artstracker.org) must never be indexed by search engines.
   const init = host.startsWith('admin.') ? { headers: { 'x-robots-tag': 'noindex, nofollow' } } : undefined;
