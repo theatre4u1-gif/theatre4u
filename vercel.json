@@ -44,7 +44,11 @@
       "destination": "/org-profile.html"
     },
     {
-      "source": "/((?!help.html|app.html|join.html|org-profile.html|dpa.pdf|assets/).*)",
+      "source": "/booth",
+      "destination": "/booth.html"
+    },
+    {
+      "source": "/((?!help.html|app.html|join.html|org-profile.html|booth.html|dpa.pdf|assets/).*)",
       "destination": "/home-theatre4u.html"
     }
   ]
