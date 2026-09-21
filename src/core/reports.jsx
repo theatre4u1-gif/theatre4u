@@ -370,11 +370,12 @@ export function ProductionReportTab({ org, allItems }) {
       const { data } = await SB.from("productions")
         .select("*, production_items(id,status), production_needs(id,status)")
         .eq("org_id", org?.id)
+        .eq("vertical", org?.vertical||"theatre")
         .order("created_at",{ascending:false});
       setProductions(data||[]);
       setLoading(false);
     })();
-  },[org?.id]);
+  },[org?.id, org?.vertical]);
 
   const selectProd = async (prod) => {
     setSelected(prod); setLd(true);

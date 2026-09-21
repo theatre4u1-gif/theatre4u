@@ -528,7 +528,7 @@ function normalizeImageUrl(url) {
   return u;
 }
 
-export function CSVImport({ onImport, onClose, userId }) {
+export function CSVImport({ onImport, onClose, userId, vertical="theatre" }) {
   const [step,    setStep]    = useState("upload");   // upload → map → preview → done
   const [headers, setHeaders] = useState([]);
   const [rows,    setRows]    = useState([]);
@@ -614,6 +614,7 @@ export function CSVImport({ onImport, onClose, userId }) {
       const batch = parsed.slice(i, i+BATCH).map(item => ({
         ...item,
         org_id: userId,
+        vertical: item.vertical || vertical || "theatre",
         added: now,
       }));
       const { error } = await SB.from("items").insert(batch);

@@ -535,11 +535,11 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
     if(items.length>0){
       if(!window.confirm("You already have "+items.length+" item(s). Add sample data anyway?")) return;
     }
-    const samples=makeSamples().map(i=>({...i,org_id:activeOrgId}));
+    const samples=makeSamples().map(i=>({...i,org_id:activeOrgId,vertical:i.vertical||activeVertical||org?.vertical||"theatre"}));
     const{data,error}=await SB.from("items").insert(samples).select();
     if(error){alert(EM.sampleLoad.title+"\n\n"+EM.sampleLoad.body);return;}
     if(data) setItems(p=>[...data,...p]);
-  },[user,items,activeOrgId]);
+  },[user,items,activeOrgId,activeVertical,org]);
 
   // setPlan — used by admin test panel to override plan
   const setPlan = useCallback(async(newPlan)=>{

@@ -206,7 +206,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
     if(!qlocName.trim()||qsaving) return;
     setQsaving(true);
     const{data,error}=await SB.from("storage_locations").insert({
-      org_id:userId, vertical, name:qlocName.trim(), code:qlocCode.trim()||null
+      org_id:userId, vertical: vertical || "theatre", name:qlocName.trim(), code:qlocCode.trim()||null
     }).select("id,name,code").single();
     setQsaving(false);
     if(error){alert("Could not create location: "+error.message);return;}

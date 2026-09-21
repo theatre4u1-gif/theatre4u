@@ -23,6 +23,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
     const[upgradeReason,setUpgradeReason]=useState(null);
   const[pendingMsg,setPendingMsg]=useState("");
   const vVertical=org?.vertical||"theatre";
+  const multiV=((org?.verticals_enabled)||[]).length>1;  // multi-department org → scope lists to the active department
   const vCATS=getCatsMerged(vVertical);
   const vCfg=getVertical(vVertical);
   const vCONDS=vCfg.conditions, vAVAIL=vCfg.availability, vMKT=vCfg.marketOptions;
@@ -216,6 +217,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
     let q=SB.from("items").select("*", withCount?{count:"exact"}:undefined)
       .eq("org_id",userId)
       .or("review_status.is.null,review_status.eq.approved");
+    if(multiV) q=q.eq("vertical",vVertical);  // multi-department: show only the active department's items
     if(qstr) q=q.or(`name.ilike.*${qstr}*,notes.ilike.*${qstr}*,location.ilike.*${qstr}*,display_id.ilike.*${qstr}*`);
     if(catF!=="all") q=q.eq("category",catF);
     if(condF!=="all") q=q.eq("condition",condF);
@@ -241,7 +243,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
     })();
     return ()=>{alive=false;};
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[userId,dsearch,catF,condF,availF,mktF,tagF,locFilter,sortBy,reloadKey]);
+  },[userId,dsearch,catF,condF,availF,mktF,tagF,locFilter,sortBy,reloadKey,vVertical,multiV]);
   const loadMore=async()=>{
     if(loadingMore) return; setLoadingMore(true);
     const {data,error}=await buildQuery(false).range(rows.length,rows.length+PAGE-1);
@@ -732,7 +734,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
           <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={org?.vertical||"theatre"} plan={plan} suggestedTags={allTags}/>
         </Modal>)}
       {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{del(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete}/></Modal>}
-      {showImport&&<CSVImport userId={userId} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",userId).order("added",{ascending:false}).limit(2000);if(data&&onImported)onImported(data);refetch();}}/>}
+      {showImport&&<CSVImport userId={userId} vertical={vVertical} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",userId).order("added",{ascending:false}).limit(2000);if(data&&onImported)onImported(data);refetch();}}/>}
       {showBulk&&<BulkPhotoAdd userId={userId} vertical={vVertical} cats={vCATS} onClose={()=>setShowBulk(false)} onImport={(data)=>{if(onImported)onImported(data);refetch();}}/>}
     </div>
     </>)}

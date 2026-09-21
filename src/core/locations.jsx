@@ -373,7 +373,7 @@ export function LocationsPanel({ userId, items, onEditItem, onDeleteItem, vertic
       if (error) { flash("❌ " + EM.fundingSave.body); }
       else { setLocations(p => p.map(x => x.id === data.id ? data : x)); flash("✓ Location updated"); setModal(null); setActive(null); }
     } else {
-      const { data, error } = await SB.from("storage_locations").insert({ org_id: userId, vertical, ...payload, map_pins: [], rack_slots: {} }).select().single();
+      const { data, error } = await SB.from("storage_locations").insert({ org_id: userId, vertical: vertical || "theatre", ...payload, map_pins: [], rack_slots: {} }).select().single();
       if (error) { flash("❌ " + EM.fundingSave.body); }
       else { setLocations(p => [...p, data]); setActiveRoom(data.id); flash("✓ Location added"); setModal(null); }
     }
