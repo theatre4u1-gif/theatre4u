@@ -13,16 +13,40 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, { mon
 // "pro" or "district"; a district's tier comes from its max_schools, and the price differs by
 // door (Theatre4u vs ArtsTracker). Estimate for the recurring-at-launch figure only.
 const PRO_PRICE = { theatre4u: 15, artstracker: 59 };
+const PRO_ANNUAL = { theatre4u: 150, artstracker: 590 };
 const DISTRICT_PRICE = { theatre4u: { S: 49, M: 99, L: 179 }, artstracker: { S: 199, M: 399, L: 699 } };
+const DISTRICT_ANNUAL = { theatre4u: { S: 500, M: 999, L: 1799 }, artstracker: { S: 1990, M: 3990, L: 6990 } };
 const tierOf = (maxSchools) => { const m = maxSchools || 6; return m <= 6 ? "S" : m <= 15 ? "M" : "L"; };
+// Monthly-recurring-equivalent: annual plans are normalized to a per-month figure (annual price / 12)
+// so the recurring/MRR total reflects annual subscribers correctly rather than counting them at the
+// full monthly list price.
 const monthlyFor = (o, districtMap = {}) => {
   if (o.founding_member) return Number(o.founding_rate_monthly) || 9.99;
   if (!o.stripe_subscription_id) return 0;
   const door = doorOf(o) === "artstracker" ? "artstracker" : "theatre4u";
-  if ((o.plan || "").startsWith("district")) return DISTRICT_PRICE[door][tierOf(districtMap[o.district_id])];
-  return PRO_PRICE[door];
+  const annual = (o.plan_interval || "") === "annual";
+  if ((o.plan || "").startsWith("district")) {
+    const t = tierOf(districtMap[o.district_id]);
+    return annual ? DISTRICT_ANNUAL[door][t] / 12 : DISTRICT_PRICE[door][t];
+  }
+  return annual ? PRO_ANNUAL[door] / 12 : PRO_PRICE[door];
 };
-const planTxt = (o) => o.stripe_subscription_id ? "Paying" : o.founding_member ? "Founding" : o.temp_pro ? "Beta" : (o.plan || "free");
+// Full billed amount on the plan's own cycle (what actually hits the card each period).
+const billedFor = (o, districtMap = {}) => {
+  if (!o.stripe_subscription_id) return monthlyFor(o, districtMap);
+  const door = doorOf(o) === "artstracker" ? "artstracker" : "theatre4u";
+  const annual = (o.plan_interval || "") === "annual";
+  if ((o.plan || "").startsWith("district")) {
+    const t = tierOf(districtMap[o.district_id]);
+    return (annual ? DISTRICT_ANNUAL : DISTRICT_PRICE)[door][t];
+  }
+  return annual ? PRO_ANNUAL[door] : PRO_PRICE[door];
+};
+const planTxt = (o) => {
+  const intv = o.stripe_subscription_id && o.plan_interval ? " · " + o.plan_interval : "";
+  if (o.stripe_subscription_id) return (o.plan || "pro") + intv;
+  return o.founding_member ? "Founding" : o.temp_pro ? "Beta" : (o.plan || "free");
+};
 
 function Card({ label, value, sub, accent, onClick }) {
   const [h, setH] = useState(false);
@@ -55,7 +79,7 @@ export function BillingDashboard({ door = "all" }) {
     (async () => {
       try {
         const [orgsRes, revRes, payRes, flagRes, distRes] = await Promise.all([
-          SB.from("orgs").select("id,name,email,plan,vertical,signup_domain,temp_pro,founding_member,founding_rate_monthly,stripe_subscription_id,subscription_status,plan_expires_at,beta_end_date,account_status,deleted_at,created_at,district_id"),
+          SB.from("orgs").select("id,name,email,plan,plan_interval,vertical,signup_domain,temp_pro,founding_member,founding_rate_monthly,stripe_subscription_id,subscription_status,plan_expires_at,beta_end_date,account_status,deleted_at,created_at,district_id"),
           SB.from("stripe_revenue_summary").select("month,revenue_cents,refunded_cents,successful_payments,unique_customers"),
           SB.from("stripe_payments_current").select("org_name,customer_name,customer_email,amount_cents,plan,status,refunded,stripe_created_at").order("stripe_created_at", { ascending: false }).limit(100),
           SB.from("site_content").select("cvalue").eq("vertical", "global").eq("ckey", "billing_paused").maybeSingle(),
@@ -90,8 +114,8 @@ export function BillingDashboard({ door = "all" }) {
   const nearestBeta = betaExp.map(o => o.beta_end_date).sort()[0];
 
   const exportCsv = () => {
-    const head = ["Program", "Email", "Plan", "Status", "Founding", "Monthly($est)", "Beta ends", "Stripe sub"];
-    const rows = orgs.map(o => [o.name || "", o.email || "", o.plan || "", o.subscription_status || (o.stripe_subscription_id ? "active" : (o.account_status || "")), o.founding_member ? "yes" : "", monthlyFor(o, distMap) || "", o.beta_end_date || "", o.stripe_subscription_id || ""]);
+    const head = ["Program", "Email", "Plan", "Interval", "Status", "Founding", "Monthly($est)", "Billed/cycle($)", "Beta ends", "Stripe sub"];
+    const rows = orgs.map(o => [o.name || "", o.email || "", o.plan || "", o.plan_interval || "", o.subscription_status || (o.stripe_subscription_id ? "active" : (o.account_status || "")), o.founding_member ? "yes" : "", monthlyFor(o, distMap) || "", o.stripe_subscription_id ? (billedFor(o, distMap) || "") : "", o.beta_end_date || "", o.stripe_subscription_id || ""]);
     const csv = [head, ...rows].map(r => r.map(v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"').join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -173,7 +197,7 @@ export function BillingDashboard({ door = "all" }) {
           <tbody>
             {cohort.length === 0 && <tr><td style={td} colSpan={4}>None yet.</td></tr>}
             {cohort.map(o => (
-              <tr key={o.id}><td style={td}>{nameLink(o)}<div style={{ fontSize: 11.5, color: "#9a9284" }}>{o.email || ""}</div></td><td style={td}>{planTxt(o)}</td><td style={td}>{monthlyFor(o, distMap) ? fmtN(monthlyFor(o, distMap)) : "—"}</td><td style={td}>{tab === "beta" ? fmtDate(o.beta_end_date) : (o.subscription_status || (o.stripe_subscription_id ? "active" : o.account_status || "—"))}</td></tr>
+              <tr key={o.id}><td style={td}>{nameLink(o)}<div style={{ fontSize: 11.5, color: "#9a9284" }}>{o.email || ""}</div></td><td style={td}>{planTxt(o)}</td><td style={td}>{monthlyFor(o, distMap) ? fmtN(monthlyFor(o, distMap)) : "—"}{o.stripe_subscription_id && o.plan_interval === "annual" ? <div style={{ fontSize: 11, color: "#9a9284" }}>{fmtN(billedFor(o, distMap))}/yr</div> : null}</td><td style={td}>{tab === "beta" ? fmtDate(o.beta_end_date) : (o.subscription_status || (o.stripe_subscription_id ? "active" : o.account_status || "—"))}</td></tr>
             ))}
           </tbody>
         </table>

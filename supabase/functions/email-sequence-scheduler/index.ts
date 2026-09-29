@@ -3,7 +3,7 @@
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2';
 const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type'};
 const SKIP=['hello@theatre4u.org','rzick@hbuhsd.edu','theatre4u1@gmail.com','rzickjr@gmail.com','rachel@daretodreamtheatre.orh'];
-const SCHEDULE:Record<number,number>={2:2,3:5,4:10,5:16,6:22,7:30};
+const SCHEDULE:Record<number,number>={2:2,3:5,4:10,5:16,6:22};
 
 Deno.serve(async(req:Request)=>{
   if(req.method==='OPTIONS')return new Response(null,{status:200,headers:CORS});
@@ -38,7 +38,7 @@ Deno.serve(async(req:Request)=>{
       }
     }
 
-    // ── Emails 2-7: send to orgs based on days since signup
+    // ── Emails 2-6: send to orgs based on days since signup
     const cutoff=new Date(now.getTime()-36*24*60*60*1000).toISOString();
     const{data:orgs}=await SB.from('orgs')
       .select('id,name,email,created_at,email_opt_out,account_status,deleted_at')

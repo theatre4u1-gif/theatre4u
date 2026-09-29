@@ -6,8 +6,9 @@
 //     (sending address stays hello@theatre4u.org — the Resend-verified domain — with
 //      brand reply-to; switch FROM to artstracker.org after that domain is verified in Resend)
 //   - VERTICAL: item examples, exchange name, event words, spaces follow org.vertical
-//   - EMAIL 7: "free first year" promise REMOVED (rescinded 7/4) — founding rate $9.99 only
-//   - Beta framing pinned to the real dates: free through September 1, 2026
+//   - 2026-09-25: founding-member offer retired (no replacement deal); all beta / "free through
+//     September 1" framing removed; Email 7 (beta-end announcement) dropped from the sequence.
+//     Emails now describe the standing model: first 25 items free forever, Pro when ready.
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2';
 
 const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type'};
@@ -63,11 +64,11 @@ const signinBox=(B:Brand)=>parchment(`<p style="font-size:15px;font-weight:700;c
 const ol=(items:string[])=>`<ol style="margin:10px 0 0;padding-left:18px;color:#444;font-size:14px;line-height:1.9">${items.map(i=>`<li style="margin-bottom:4px">${i}</li>`).join('')}</ol>`;
 const ul=(items:string[])=>`<ul style="font-size:14px;color:#444;line-height:1.9;padding-left:18px;margin:0 0 16px">${items.map(i=>`<li style="margin-bottom:4px">${i}</li>`).join('')}</ul>`;
 
-// The founding-member offer — the ONLY beta reward (free-year promise rescinded 7/4/26)
-const FOUNDING=(B:Brand)=>gold([
-  '&#x2713; Free Pro access now, through September 1, 2026 (our beta period)',
-  `&#x2713; Add <strong>25+ items</strong> and share <strong>one piece of feedback</strong> before September 1 &rarr; lock in the <strong>founding member rate: $9.99/month for as long as you subscribe</strong> (standard rate will be ${B.pro})`,
-  '&#x2713; Everything you build carries over &mdash; nothing is lost at launch',
+// Current pricing — free to start, Pro when ready (founding-member offer retired 2026-09; no deal)
+const PRICING=(B:Brand,V:Vert)=>gold([
+  '&#x2713; Free to start &mdash; your first <strong>25 items are free forever</strong>, no credit card',
+  `&#x2713; Upgrade to <strong>Pro (${B.pro}/month, or save with annual billing)</strong> anytime for unlimited items, full reports, and ${V.exchange} sharing`,
+  '&#x2713; Everything you build stays yours &mdash; nothing is lost',
 ]);
 
 type EmailDef={subject:(B:Brand,V:Vert)=>string,html:(B:Brand,V:Vert,name:string,org:string)=>string};
@@ -84,7 +85,7 @@ const EMAILS:Record<number,EmailDef>={
       '&#x1F4B0; Funding Tracker — track grants and donations with built-in expenditure logging',
       `&#x1F465; Team access — invite your ${V.team} so everyone can find things`,
     ])}
-    ${p('Programs signing up during our beta get <strong>free Pro access through September 1</strong> — no credit card. Just sign in and start building.','font-size:14px;color:#555;')}
+    ${p('You can start free — your first <strong>25 items are free forever</strong>, no credit card. Just sign in and start building.','font-size:14px;color:#555;')}
     ${signinBox(B)}
     ${sm("Questions before signing up? Just reply — I'm here.")}
   `)},
@@ -92,7 +93,7 @@ const EMAILS:Record<number,EmailDef>={
   html:(B,V,name,org)=>wrap(B,`
     ${p(`Hi ${name},`)}
     ${p(`You just created your ${B.plain} account, and I'm really glad you're here. ${org} is joining a growing community of programs across the country who are building something genuinely useful together.`)}
-    ${p("As a beta member, you have <strong>free Pro access through September 1</strong> — no credit card, no limits. Here's what's waiting for you:")}
+    ${p("You're on the free plan — your first <strong>25 items are free forever</strong>, no credit card. Here's what's waiting for you:")}
     ${gold([
       `&#x1F4E6; Inventory — add ${V.itemsShort}. Every item gets a QR code.`,
       `&#x1F504; ${V.exchange} — browse and share items with programs in CA, OH, MO, NC, NH, NY, and more.`,
@@ -131,7 +132,7 @@ const EMAILS:Record<number,EmailDef>={
     ${stripe(`&#x1F504; ${V.exchange}`,'Browse what other programs across the country are renting, lending, or selling — and list your own. Programs in CA, OH, MO, NC, NH, NY, VA, GA, and PA are already active.')}
     ${stripe('&#x1F4CA; Reports','Generate inventory reports by category, condition, location, or value. Export to CSV. Useful for grants, audits, and budget conversations.')}
     ${stripe('&#x1F4B0; Funding Tracker','Track grants, donations, and district funding. Log expenditures as you go and see your balance at any time — the documentation builds itself.')}
-    ${FOUNDING(B)}
+    ${PRICING(B,V)}
   `)},
 4:{subject:(B,V)=>`Your ${V.space} has neighbors — meet ${V.exchange}`,
   html:(B,V,name,org)=>wrap(B,`
@@ -182,17 +183,6 @@ const EMAILS:Record<number,EmailDef>={
       'View the summary on screen or click <strong>Export CSV</strong> to download',
     ])}`)}
     ${sm("Need a specific format for a district requirement or grant application? Just reply — I'll add it.")}
-  `)},
-7:{subject:()=>"What's coming September 1 — and what it means for you",
-  html:(B,V,name,org)=>wrap(B,`
-    ${p(`Hi ${name},`)}
-    ${p(`You've been part of ${B.plain} during our beta, and I want to be upfront about where things are headed.`)}
-    ${p('<strong style="color:#1a0f00">What happens September 1</strong>','font-size:15px;margin-bottom:6px;')}
-    ${p(`The beta ends and paid plans begin. ${B.plain} is part of ArtsTracker — a platform for arts programs covering Theatre, Music, Dance, Visual Art, and Organizations. Same platform, same data: ${org}'s account carries over exactly as it is.`,'font-size:14px;color:#555;')}
-    ${p('<strong style="color:#1a0f00">What that means for you</strong>','font-size:15px;margin-bottom:6px;')}
-    ${FOUNDING(B)}
-    ${p("The one thing I'm asking in return: honest feedback. What's working, what's confusing, what's missing? Use the feedback button inside the app or just reply to this email. It goes directly to me.",'font-size:14px;color:#555;')}
-    ${sm(`Know a colleague who runs a program? They can learn more and sign up at ${B.host}.`)}
   `)},
 };
 

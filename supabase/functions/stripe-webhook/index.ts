@@ -292,7 +292,7 @@ Deno.serve(async (req: Request) => {
             // ArtsTracker tiers unlock all five departments; single-vertical tiers leave verticals_enabled untouched.
             ...(planInfo.allVerticals ? { verticals_enabled: ALL_VERTICALS } : {}),
           }).eq("id", org.id);
-          if (isAnnual) await sb.rpc("award_milestone_points", { p_org_id: org.id, p_type: "annual_bonus", p_amount: 300, p_desc: "Annual plan bonus" }).catch(() => {});
+          if (isAnnual) { try { await sb.rpc("award_milestone_points", { p_org_id: org.id, p_type: "annual_bonus", p_amount: 300, p_desc: "Annual plan bonus" }); } catch (_) {} }
           await sendPaymentAlert({ eventType, orgName: org.name, orgEmail: org.email,
             plan: planInfo.plan + (planInfo.allVerticals ? " (ArtsTracker)" : ""), interval: planInfo.interval, amountCents: alertAmountCents });
         } else if (!planInfo) {
@@ -389,7 +389,7 @@ Deno.serve(async (req: Request) => {
           stripe_created_at: event.created ? new Date((event.created as number) * 1000).toISOString() : null });
 
         if (org) {
-          if (total >= 15000) await sb.rpc("award_milestone_points", { p_org_id: org.id, p_type: "annual_renewal_bonus", p_amount: 300, p_desc: "Annual renewal bonus" }).catch(() => {});
+          if (total >= 15000) { try { await sb.rpc("award_milestone_points", { p_org_id: org.id, p_type: "annual_renewal_bonus", p_amount: 300, p_desc: "Annual renewal bonus" }); } catch (_) {} }
           await sendPaymentAlert({ eventType, orgName: org.name, orgEmail: org.email,
             plan: "renewal", interval: "", amountCents: total });
         }
