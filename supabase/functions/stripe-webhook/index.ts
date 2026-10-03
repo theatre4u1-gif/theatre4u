@@ -145,6 +145,67 @@ async function sendErrorAlert(subject: string, detail: string) {
   }).catch((e: Error) => console.error("sendErrorAlert:", e.message));
 }
 
+// Customer-facing heads-up on a failed charge, so subscribers can fix their card before they lapse.
+async function sendCardFailedEmail(toEmail: string) {
+  if (!RESEND_KEY || !toEmail) return;
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f5f0e8;font-family:Arial,sans-serif">
+<div style="max-width:560px;margin:0 auto;background:#fff">
+  <div style="background:#FBF7F0;padding:20px 24px 16px;text-align:center;border-bottom:3px solid #d4a843"><span style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#4C1035">Theatre4u&#x2122;</span></div>
+  <div style="padding:26px 28px 20px">
+    <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 16px">Hi there,</p>
+    <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 16px">Quick heads-up: the latest payment for your Theatre4u Pro plan didn't go through. Usually it's just an expired card or a billing change &mdash; nothing to worry about.</p>
+    <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 12px">Your account is still active, and we'll automatically retry the card over the next few days. To avoid any interruption, you can update your payment method anytime:</p>
+    <ol style="font-size:15px;color:#333;line-height:1.9;margin:0 0 16px;padding-left:20px">
+      <li>Sign in at <a href="https://theatre4u.org" style="color:#a5731f;font-weight:700">theatre4u.org</a></li>
+      <li>Go to <strong>Settings &rarr; Plans &rarr; Manage Billing</strong></li>
+      <li>Update your card</li>
+    </ol>
+    <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 16px">Everything in your inventory is safe. If something has changed or you have any questions, please do not hesitate to let me know.</p>
+    <p style="font-size:15px;color:#333;margin:22px 0 2px">Warmly,</p>
+    <p style="font-size:15px;font-weight:700;color:#1a0f00;margin:0">Bob Zick</p>
+    <p style="font-size:13px;color:#888;margin:2px 0 0">Founder, Theatre4u &middot; hello@theatre4u.org</p>
+  </div>
+  <div style="padding:12px 28px;border-top:1px solid #e8e0d0;text-align:center;font-size:11px;color:#aaa">Theatre4u&#x2122; &middot; Artstracker LLC</div>
+</div></body></html>`;
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: "Bob Zick at Theatre4u <hello@theatre4u.org>", reply_to: "hello@theatre4u.org", to: [toEmail],
+      subject: "Your Theatre4u payment didn't go through — a quick fix keeps your Pro access", html }),
+  }).catch((e: Error) => console.error("sendCardFailedEmail:", e.message));
+}
+
+// Final notice when retries are exhausted and the subscription is canceled for non-payment,
+// so no one lapses to Free without a heads-up. Only sent for payment-failure cancellations.
+async function sendDowngradeEmail(toEmail: string) {
+  if (!RESEND_KEY || !toEmail) return;
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f5f0e8;font-family:Arial,sans-serif">
+<div style="max-width:560px;margin:0 auto;background:#fff">
+  <div style="background:#FBF7F0;padding:20px 24px 16px;text-align:center;border-bottom:3px solid #d4a843"><span style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#4C1035">Theatre4u&#x2122;</span></div>
+  <div style="padding:26px 28px 20px">
+    <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 16px">Hi there,</p>
+    <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 16px">After a few unsuccessful attempts to renew your Theatre4u Pro plan, your subscription has ended and your account has moved to our Free plan.</p>
+    <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 16px">Everything in your inventory is safe &mdash; nothing has been deleted. You still have access to your first 25 items, and you can pick your Pro features back up anytime:</p>
+    <ol style="font-size:15px;color:#333;line-height:1.9;margin:0 0 16px;padding-left:20px">
+      <li>Sign in at <a href="https://theatre4u.org" style="color:#a5731f;font-weight:700">theatre4u.org</a></li>
+      <li>Go to <strong>Settings &rarr; Plans</strong></li>
+      <li>Choose <strong>Pro</strong></li>
+    </ol>
+    <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 16px">If the card trouble was a mistake or something has changed, please do not hesitate to let me know &mdash; I'm happy to help get you back up and running.</p>
+    <p style="font-size:15px;color:#333;margin:22px 0 2px">Warmly,</p>
+    <p style="font-size:15px;font-weight:700;color:#1a0f00;margin:0">Bob Zick</p>
+    <p style="font-size:13px;color:#888;margin:2px 0 0">Founder, Theatre4u &middot; hello@theatre4u.org</p>
+  </div>
+  <div style="padding:12px 28px;border-top:1px solid #e8e0d0;text-align:center;font-size:11px;color:#aaa">Theatre4u&#x2122; &middot; Artstracker LLC</div>
+</div></body></html>`;
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: "Bob Zick at Theatre4u <hello@theatre4u.org>", reply_to: "hello@theatre4u.org", to: [toEmail],
+      subject: "Your Theatre4u plan has switched to Free", html }),
+  }).catch((e: Error) => console.error("sendDowngradeEmail:", e.message));
+}
+
 async function verifyStripeSignature(payload: string, sigHeader: string, secret: string): Promise<boolean> {
   try {
     const parts = sigHeader.split(",");
@@ -358,6 +419,9 @@ Deno.serve(async (req: Request) => {
             // Revoke extra departments on cancellation — back to the home department only.
             verticals_enabled: [org.vertical || "theatre"],
           }).eq("id", org.id);
+          // Only email on involuntary (dunning-exhausted) cancellations, not voluntary ones.
+          const cancelReason = ((data.cancellation_details as Record<string, unknown>)?.reason ?? "") as string;
+          if (cancelReason === "payment_failure") await sendDowngradeEmail(org.email);
         }
         break;
       }
@@ -412,6 +476,8 @@ Deno.serve(async (req: Request) => {
           await sb.from("orgs").update({ subscription_status: "past_due" }).eq("id", org.id);
           await sendPaymentAlert({ eventType, orgName: org.name, orgEmail: org.email,
             plan: "unknown", interval: "", amountCents: amountDue, isFailed: true });
+          // Let the subscriber know so they can fix their card before they lapse.
+          await sendCardFailedEmail(org.email);
         }
         break;
       }
