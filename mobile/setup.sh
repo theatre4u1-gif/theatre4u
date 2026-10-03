@@ -57,6 +57,10 @@ if npm install; then ok "Dependencies installed"; else stop "npm install failed 
 line; printf '  Building the web app...\n'
 if npm run build; then ok "Web app built into dist/"; else stop "Build failed — copy the red text above and send it to me."; fi
 
+# The website's postbuild renames dist/index.html -> dist/home-theatre4u.html.
+# Capacitor needs an index.html entry point, so restore one for the native shell.
+node mobile/fix-index.mjs && ok "Checked app entry point (dist/index.html)"
+
 # ---- 5. Create the native projects ----
 line; printf '  Creating native projects...\n'
 
