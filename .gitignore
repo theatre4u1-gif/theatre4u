@@ -20,3 +20,12 @@ npm-debug.log*
 .gate_modules
 
 eslint.triage.config.mjs
+
+# Capacitor native build artifacts
+/ios/App/Pods/
+/ios/App/build/
+/ios/App/App/public/
+/android/.gradle/
+/android/app/build/
+/android/build/
+/android/app/src/main/assets/public/
