@@ -409,9 +409,10 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
 
       {/* Purchase & Funding Source — optional, links item to Funding Tracker */}
       <div className="fg fu sdiv">
-        <div className="slbl" onClick={()=>setFundOpen(o=>!o)} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:8,userSelect:"none"}}>
+        <div className="slbl" onClick={()=>setFundOpen(o=>!o)} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",userSelect:"none"}}>
           <span style={{fontSize:11,color:"var(--muted)"}}>{fundOpen?"▲":"▼"}</span>
-          💰 Purchase &amp; Funding <span style={{fontSize:11,fontWeight:600,color:"var(--muted)"}}>(optional)</span>
+          <span style={{whiteSpace:"nowrap"}}>💰 Purchase &amp; Funding</span>
+          <span style={{fontSize:11,fontWeight:600,color:"var(--muted)",whiteSpace:"nowrap"}}>(optional)</span>
         </div>
       </div>
       {fundOpen && (<>

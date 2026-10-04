@@ -429,6 +429,7 @@ tr:hover td{background:rgba(243,230,204,.55)}
 .t4u-native .hero-wrap{display:none!important} /* drop the website-style banners in the app */
 .t4u-native .scroll-area{padding-bottom:80px}  /* clear the fixed bottom tab bar */
 .t4u-native .aihelp-fab{bottom:86px!important}  /* lift help bubble above the tab bar */
+.t4u-native .overlay{z-index:9200!important}    /* modals cover the bottom bar so it doesn't compete */
 .t4u-native .srch{flex:1 1 100%}
 .t4u-native .srch input{width:100%!important}
 .t4u-native .vtog{flex:1 1 100%}
