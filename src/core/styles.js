@@ -419,4 +419,28 @@ tr:hover td{background:rgba(243,230,204,.55)}
 @keyframes lp-rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:900px){.lpn{padding:16px 20px}.lpf-row{grid-template-columns:1fr;gap:32px}.lpf-row.rev{direction:ltr}.lp-tg{grid-template-columns:1fr}.lp-pg{grid-template-columns:1fr}.lph-curtl,.lph-curtr{width:40px}.lp-ft{padding:32px 20px 20px}}
 @media(max-width:600px){.lp-cats{grid-template-columns:repeat(3,1fr)}.lph-btns{flex-direction:column;align-items:stretch}.lph-btns button{justify-content:center}}
+
+/* ══════════ NATIVE MOBILE APP (only inside the Capacitor shell) ══════════ */
+/* Scoped to body.t4u-native so NONE of this affects the website. */
+.t4u-native .topbar{padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;gap:10px}
+.t4u-native .topbar-title{font-size:20px}
+.t4u-native .hero-wrap{height:140px!important}
+.t4u-native .hero-title{font-size:26px!important}
+.t4u-native .hero-body{padding:16px 18px!important}
+.t4u-native .hero-sub{font-size:13px;max-width:none}
+.t4u-native .srch{flex:1 1 100%}
+.t4u-native .srch input{width:100%!important}
+.t4u-native .vtog{flex:1 1 100%}
+.t4u-native .vtog button{flex:1;padding:9px 6px;font-size:13px}
+.t4u-native .inv-grid{grid-template-columns:1fr!important;gap:12px}
+.t4u-native .inv-img{height:200px}
+.t4u-native .card-p{padding:16px}
+.t4u-native .fbar{padding:12px;gap:10px}
+.t4u-native .stats{grid-template-columns:repeat(2,1fr)!important}
+/* Modals fill the phone screen instead of floating in a tiny card */
+.t4u-native .overlay{padding:0}
+.t4u-native .modal{max-width:100%;max-height:100%;height:100%;border-radius:0}
+.t4u-native .modal-hd{padding:calc(14px + env(safe-area-inset-top,0px)) 16px 14px}
+.t4u-native .modal-bd{padding:16px}
+.t4u-native .modal-ft{padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px))}
 `;

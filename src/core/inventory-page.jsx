@@ -376,7 +376,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
     )}
     <div style={{position:"relative"}}>
       <HeroImg vertical={vVertical!=="theatre"?vVertical:null} photoId={BG.inventory} w={1400} h={900} className="page-bg-img"/>
-      <div style={{padding:"32px 36px 0"}}>
+      <div style={{padding:"clamp(14px,4vw,32px) clamp(12px,4vw,36px) 0"}}>
         <div className="hero-wrap" style={{height:240}}>
           <HeroImg vertical={vVertical!=="theatre"?vVertical:null} photoId={BG.inventory} w={1100} h={300} alt="" loading="lazy"/>
           <div className="hero-fade"/>
@@ -388,7 +388,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
           <div className="hero-bar"/>
         </div>
       </div>
-      <div style={{padding:"24px 36px 56px",position:"relative",zIndex:1}}>
+      <div style={{padding:"clamp(16px,4vw,24px) clamp(12px,4vw,36px) 56px",position:"relative",zIndex:1}}>
         <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:14,alignItems:"center"}}>
           <div className="srch">{Ic.search}<input aria-label="Search inventory" value={search} onChange={e=>setSrch(e.target.value)} placeholder="Search items, tags, location…"/></div>
           <button className="ico-btn" aria-label="Filters" style={showF?{borderColor:"var(--gold)",color:"var(--cog)"}:{}} onClick={()=>setShowF(!showF)}>{Ic.filter}</button>

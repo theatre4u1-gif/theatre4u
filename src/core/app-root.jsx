@@ -624,6 +624,8 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
   const isDesk = typeof window !== "undefined" && window.innerWidth > 900;
+  // Inside the native app, tag the page so the mobile-only stylesheet applies.
+  useEffect(()=>{ if(IS_NATIVE_APP && typeof document!=="undefined"){ document.body.classList.add("t4u-native"); document.documentElement.classList.add("t4u-native"); } },[]);
   const listed = items.filter(i=>i.mkt!=="Not Listed").length;
 
   // Switch into a school's context (district admin only)
@@ -824,7 +826,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       <MobileHome
         appName={APP_NAME}
         orgName={org?.name}
-        logo={LOGO_MARK}
+        logo={LOGO_ICON}
         onScan={handleNativeScan}
         onInventory={()=>setPage("inventory")}
         onAddItem={()=>{ setAddSignal(n=>n+1); setPage("inventory"); }}
