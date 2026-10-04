@@ -443,4 +443,24 @@ tr:hover td{background:rgba(243,230,204,.55)}
 .t4u-native .modal-hd{padding:calc(14px + env(safe-area-inset-top,0px)) 16px 14px}
 .t4u-native .modal-bd{padding:16px}
 .t4u-native .modal-ft{padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px))}
+/* ── App-appropriate type scale & spacing (native only) ─────────────────── */
+.t4u-native h1{font-size:21px!important;line-height:1.2}
+.t4u-native h2{font-size:18px!important;line-height:1.25}
+.t4u-native h3{font-size:15px!important;line-height:1.3}
+.t4u-native .sh{margin-bottom:14px}
+.t4u-native .sh h2{font-size:19px!important}
+.t4u-native .sh p{font-size:13px}
+.t4u-native .stats{gap:10px}
+.t4u-native .stat{padding:14px 13px!important;border-radius:12px}
+.t4u-native .stat-ico{font-size:19px;margin-bottom:5px}
+.t4u-native .stat-val{font-size:25px!important}
+.t4u-native .stat-lbl{font-size:10px;letter-spacing:1px}
+.t4u-native .card{border-radius:12px}
+.t4u-native .card-p{padding:14px}
+.t4u-native .btn{padding:9px 15px;font-size:13.5px;border-radius:9px}
+.t4u-native .btn-sm{padding:6px 11px;font-size:12px}
+.t4u-native .fi,.t4u-native .fs,.t4u-native .ft{padding:9px 11px;font-size:14px}
+.t4u-native .chip{font-size:11px;padding:2px 8px}
+.t4u-native .modal-hd h1,.t4u-native .modal-hd h2,.t4u-native .modal-hd h3,.t4u-native .modal-title{font-size:17px!important}
+.t4u-native .topbar-title{font-size:18px}
 `;
