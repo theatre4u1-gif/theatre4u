@@ -419,4 +419,71 @@ tr:hover td{background:rgba(243,230,204,.55)}
 @keyframes lp-rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:900px){.lpn{padding:16px 20px}.lpf-row{grid-template-columns:1fr;gap:32px}.lpf-row.rev{direction:ltr}.lp-tg{grid-template-columns:1fr}.lp-pg{grid-template-columns:1fr}.lph-curtl,.lph-curtr{width:40px}.lp-ft{padding:32px 20px 20px}}
 @media(max-width:600px){.lp-cats{grid-template-columns:repeat(3,1fr)}.lph-btns{flex-direction:column;align-items:stretch}.lph-btns button{justify-content:center}}
+
+/* ══════════ NATIVE MOBILE APP (only inside the Capacitor shell) ══════════ */
+/* Scoped to body.t4u-native so NONE of this affects the website. */
+.t4u-native .topbar{padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;gap:10px}
+.t4u-native .topbar-title{font-size:20px}
+.t4u-native .menu-btn{display:none}            /* bottom-bar "More" replaces the hamburger */
+.t4u-native .sb-inner{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}  /* clear bottom bar so Sign Out isn't cut off */
+.t4u-native .hero-wrap{display:none!important} /* drop the website-style banners in the app */
+.t4u-native .scroll-area{padding-bottom:80px}  /* clear the fixed bottom tab bar */
+.t4u-native .aihelp-fab{bottom:86px!important}  /* lift help bubble above the tab bar */
+.t4u-native .overlay{z-index:9200!important}    /* modals cover the bottom bar so it doesn't compete */
+.t4u-native .srch{flex:1 1 100%}
+.t4u-native .srch input{width:100%!important}
+.t4u-native .vtog{flex:1 1 100%}
+.t4u-native .vtog button{flex:1;padding:9px 6px;font-size:13px;white-space:nowrap}
+/* Tab rows: scroll sideways instead of wrapping into vertical/stacked letters */
+.t4u-native .tabs{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
+.t4u-native .tab{flex:0 0 auto;white-space:nowrap;padding:9px 13px;font-size:13px}
+/* Messages: stack the two desktop panes into one column */
+.t4u-native .t4u-chat{flex-direction:column!important;height:auto!important}
+.t4u-native .t4u-chat-list{width:100%!important;min-width:0!important;max-height:42vh;border-right:none!important;border-bottom:1px solid var(--border)}
+.t4u-native .inv-grid{grid-template-columns:1fr!important;gap:12px}
+.t4u-native .inv-img{height:200px}
+.t4u-native .card-p{padding:16px}
+.t4u-native .fbar{padding:12px;gap:10px}
+.t4u-native .stats{grid-template-columns:repeat(2,1fr)!important}
+/* Modals fill the phone screen instead of floating in a tiny card */
+.t4u-native .overlay{padding:0}
+.t4u-native .modal{max-width:100%;max-height:100%;height:100%;border-radius:0}
+.t4u-native .modal-hd{padding:calc(14px + env(safe-area-inset-top,0px)) 16px 14px}
+.t4u-native .modal-bd{padding:16px}
+.t4u-native .modal-ft{padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px))}
+/* ── App-appropriate type scale & spacing (native only) ─────────────────── */
+.t4u-native h1{font-size:21px!important;line-height:1.2}
+.t4u-native h2{font-size:18px!important;line-height:1.25}
+.t4u-native h3{font-size:15px!important;line-height:1.3}
+.t4u-native .sh{margin-bottom:14px}
+.t4u-native .sh h2{font-size:19px!important}
+.t4u-native .sh p{font-size:13px}
+.t4u-native .stats{gap:10px}
+.t4u-native .stat{padding:12px 11px!important;border-radius:12px}
+.t4u-native .stat-ico{font-size:18px;margin-bottom:4px}
+.t4u-native .stat-val{font-size:22px!important}
+.t4u-native .cat-gallery{gap:10px}
+.t4u-native .img-div{display:none!important}         /* hide decorative promo banners (text overflowed) */
+.t4u-native .t4u-comm-grid{grid-template-columns:1fr!important}  /* community board: single column */
+.t4u-native .mosaic{grid-template-rows:repeat(3,120px)!important}
+.t4u-native p,.t4u-native h1,.t4u-native h2,.t4u-native h3,.t4u-native h4,.t4u-native span,.t4u-native div,.t4u-native a{overflow-wrap:break-word;word-break:break-word}
+.t4u-native .stat-lbl{font-size:10px;letter-spacing:1px}
+.t4u-native .card{border-radius:12px}
+.t4u-native .card-p{padding:14px}
+.t4u-native .btn{padding:9px 15px;font-size:13.5px;border-radius:9px}
+.t4u-native .btn-sm{padding:6px 11px;font-size:12px}
+.t4u-native .fi,.t4u-native .fs,.t4u-native .ft{padding:9px 11px;font-size:14px}
+.t4u-native .chip{font-size:11px;padding:2px 8px}
+.t4u-native .modal-hd h1,.t4u-native .modal-hd h2,.t4u-native .modal-hd h3,.t4u-native .modal-title{font-size:17px!important}
+.t4u-native .topbar-title{font-size:18px}
+/* ── System font for a native feel (brand stays gold; logo is an image) ──── */
+.t4u-native, .t4u-native button, .t4u-native input, .t4u-native select, .t4u-native textarea,
+.t4u-native h1, .t4u-native h2, .t4u-native h3, .t4u-native h4, .t4u-native h5,
+.t4u-native p, .t4u-native span, .t4u-native div, .t4u-native a, .t4u-native li, .t4u-native label{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif!important;
+}
+/* keep monospace for item/bin ID codes */
+.t4u-native .lbl-id,.t4u-native .num,.t4u-native [style*="monospace"]{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;
+}
 `;

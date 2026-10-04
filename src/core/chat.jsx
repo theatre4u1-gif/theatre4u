@@ -90,10 +90,10 @@ export function Messages({ userId, orgName, openConvId, onClearOpenConv }) {
   const totalUnread = Object.values(unreadCounts).reduce((s,n)=>s+n,0);
 
   return (
-    <div style={{display:"flex",height:"calc(100vh - 60px)",background:"var(--cream)"}}>
+    <div className="t4u-chat" style={{display:"flex",height:"calc(100vh - 60px)",background:"var(--cream)"}}>
 
       {/* ── Conversation List (left panel) ── */}
-      <div style={{width:320,minWidth:280,borderRight:"1px solid var(--border)",
+      <div className="t4u-chat-list" style={{width:320,minWidth:280,borderRight:"1px solid var(--border)",
         display:"flex",flexDirection:"column",background:"var(--cream)"}}>
         {/* Header */}
         <div style={{padding:"16px 16px 10px",borderBottom:"1px solid var(--border)"}}>

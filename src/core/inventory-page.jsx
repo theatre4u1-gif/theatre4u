@@ -9,6 +9,7 @@ import { fmt$, uid, doorUrl } from "./helpers.js";
 import { CAT, CATS, CAT_GFX, CONDS, SIZES, AVAIL, MKT, getCatsMerged, customCatsFor } from "./inventory.js";
 import { QR } from "./qr.js";
 import { PLANS_DEF } from "./plans.js";
+import { IS_NATIVE_APP, printHtml, shareLabelsAsImage } from "./native.js";
 import { BG, usp } from "../lib/backgrounds.js";
 import { getExchangeName, getVertical, getCatGfx, getCats, getTerm } from "../lib/verticals.js";
 import { CSVImport } from "./marketplace.jsx";
@@ -19,7 +20,7 @@ import { ExternalLoans } from "./external-loans.jsx";
 import { RentalsPage } from "./rentals.jsx";
 import { UpgradePrompt } from "./billing.jsx";
 
-export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null, enableLoans=false, onImported=null, onItemSync=null}){
+export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null, enableLoans=false, onImported=null, onItemSync=null, openAddSignal=0, deepLinkItemId=null, onDeepLinkItemConsumed=null}){
     const[upgradeReason,setUpgradeReason]=useState(null);
   const[pendingMsg,setPendingMsg]=useState("");
   const vVertical=org?.vertical||"theatre";
@@ -87,6 +88,18 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
   const toggleTag=(t)=>setTagF(prev=>{const n=new Set(prev);n.has(t)?n.delete(t):n.add(t);return n;});
   const[showF,setShowF]=useState(false);
   const[modal,setModal]=useState(null);const[active,setActive]=useState(null);
+  const[tagsOpen,setTagsOpen]=useState(false); // collapse the tag filter cloud by default
+  // Mobile home "Add an item" button: when the signal bumps, open the Add form.
+  useEffect(()=>{ if(openAddSignal>0 && canAdd){ setActive(null); setModal("a"); } },[openAddSignal]);
+  // Scanned item QR → open that item's detail in-app (match by display_id or id).
+  const [scanMsg,setScanMsg]=useState("");
+  useEffect(()=>{
+    if(!deepLinkItemId) return;
+    const found = (itemsRaw||[]).find(i => String(i.display_id)===String(deepLinkItemId) || String(i.id)===String(deepLinkItemId));
+    if(found){ setActive(found); setModal("d"); setScanMsg(""); }
+    else { setScanMsg("That code didn't match an item in your inventory."); }
+    onDeepLinkItemConsumed && onDeepLinkItemConsumed();
+  },[deepLinkItemId]);
   const[showImport,setShowImport]=useState(false);
   const[showBulk,setShowBulk]=useState(false);
   const[addMenu,setAddMenu]=useState(false);
@@ -287,10 +300,20 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
     if (!toPrint.length) { alert("No items to print."); return; }
     setPrintingQR(true);
     try {
-      const w = window.open("", "_blank", "width=950,height=720");
-      if (!w) { alert("Pop-up blocked — please allow pop-ups for "+APP_HOST+" and try again."); setPrintingQR(false); return; }
-      w.document.write(`<html><head><title>QR Labels</title>
-      <style>
+      const srcs = await Promise.all(toPrint.map(i => QR.toDataURL(doorUrl(org) + "/#/item/" + i.id, 140)));
+      const labels = toPrint.map((item, n) => {
+        const cat = vCAT[item.category] || CAT[item.category] || CAT.other;
+        const dispId = item.display_id || item.id.slice(0,8).toUpperCase();
+        return "<div class=\"lbl\">"
+          + "<div class=\"lbl-cat\" style=\"color:"+( cat.color||"#888")+"\">" + cat.icon + " " + cat.label + "</div>"
+          + "<div class=\"lbl-name\">" + item.name + "</div>"
+          + (item.location ? "<div class=\"lbl-loc\">📍 " + item.location + "</div>" : "")
+          + "<div class=\"lbl-id\">" + dispId + "</div>"
+          + "<div class=\"lbl-row\"><div><div class=\"lbl-brand\">"+APP_HOST+"</div></div>"
+          + (srcs[n] ? "<img class=\"lbl-qr\" src=\"" + srcs[n] + "\" alt=\"QR\"/>" : "")
+          + "</div></div>";
+      }).join("");
+      const styleBlock = `<style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:Arial,sans-serif;background:#fff;padding:14px}
         .controls{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
@@ -308,31 +331,29 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
         .lbl-brand{font-size:7px;color:#bbb}
         .lbl-qr{width:62px;height:62px}
         @media print{.controls{display:none!important}.grid{gap:7px}.lbl{width:162px;height:162px}}
-      </style></head><body>
-      <div class="controls">
-        <h2>${toPrint.length} label${toPrint.length!==1?"s":""}</h2>
+      </style>`;
+      const controls = `<div class="controls"><h2>${toPrint.length} label${toPrint.length!==1?"s":""}</h2>
         <button class="btn btn-p" onclick="window.print()">Print</button>
         <button class="btn btn-c" onclick="window.close()">Close</button>
-        <span style="font-size:11px;color:#888">Tip: set margins to None in print dialog</span>
-      </div>
-      <div class="grid" id="lbl">Generating labels…</div>
-      </body></html>`);
-      w.document.close();
-      const srcs = await Promise.all(toPrint.map(i => QR.toDataURL(doorUrl(org) + "/#/item/" + i.id, 140)));
-      const labels = toPrint.map((item, n) => {
-        const cat = vCAT[item.category] || CAT[item.category] || CAT.other;
-        const dispId = item.display_id || item.id.slice(0,8).toUpperCase();
-        return "<div class=\"lbl\">"
-          + "<div class=\"lbl-cat\" style=\"color:"+( cat.color||"#888")+"\">" + cat.icon + " " + cat.label + "</div>"
-          + "<div class=\"lbl-name\">" + item.name + "</div>"
-          + (item.location ? "<div class=\"lbl-loc\">📍 " + item.location + "</div>" : "")
-          + "<div class=\"lbl-id\">" + dispId + "</div>"
-          + "<div class=\"lbl-row\"><div><div class=\"lbl-brand\">"+APP_HOST+"</div></div>"
-          + (srcs[n] ? "<img class=\"lbl-qr\" src=\"" + srcs[n] + "\" alt=\"QR\"/>" : "")
-          + "</div></div>";
-      }).join("");
-      const el = w.document.getElementById("lbl");
-      if (el) { el.outerHTML = "<div class=\"grid\">" + labels + "</div>"; setTimeout(() => w.print(), 500); }
+        <span style="font-size:11px;color:#888">Tip: set margins to None in print dialog</span></div>`;
+
+      if (IS_NATIVE_APP) {
+        // Render all labels to one image and open the OS share sheet (Print / Save / AirDrop).
+        const labelData = toPrint.map((item, n) => ({
+          name: item.name,
+          id: item.display_id || item.id.slice(0,8).toUpperCase(),
+          sub: (vCAT[item.category] || CAT[item.category] || CAT.other).label,
+          loc: item.location,
+          qr: srcs[n],
+        }));
+        await shareLabelsAsImage(labelData, "qr-labels.png");
+      } else {
+        const w = window.open("", "_blank", "width=950,height=720");
+        if (!w) { alert("Pop-up blocked — please allow pop-ups for "+APP_HOST+" and try again."); setPrintingQR(false); return; }
+        w.document.write(`<html><head><title>QR Labels</title>${styleBlock}</head><body>${controls}<div class="grid">${labels}</div></body></html>`);
+        w.document.close();
+        setTimeout(() => { try { w.print(); } catch(e){} }, 500);
+      }
     } finally { setPrintingQR(false); }
   };
 
@@ -374,7 +395,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
     )}
     <div style={{position:"relative"}}>
       <HeroImg vertical={vVertical!=="theatre"?vVertical:null} photoId={BG.inventory} w={1400} h={900} className="page-bg-img"/>
-      <div style={{padding:"32px 36px 0"}}>
+      <div style={{padding:"clamp(14px,4vw,32px) clamp(12px,4vw,36px) 0"}}>
         <div className="hero-wrap" style={{height:240}}>
           <HeroImg vertical={vVertical!=="theatre"?vVertical:null} photoId={BG.inventory} w={1100} h={300} alt="" loading="lazy"/>
           <div className="hero-fade"/>
@@ -386,7 +407,13 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
           <div className="hero-bar"/>
         </div>
       </div>
-      <div style={{padding:"24px 36px 56px",position:"relative",zIndex:1}}>
+      <div style={{padding:"clamp(16px,4vw,24px) clamp(12px,4vw,36px) 56px",position:"relative",zIndex:1}}>
+        {scanMsg && (
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:12,padding:"10px 14px",borderRadius:8,background:"rgba(194,24,91,.1)",border:"1px solid rgba(194,24,91,.25)",color:"#c2185b",fontSize:13.5,fontWeight:600}}>
+            <span>{scanMsg}</span>
+            <button onClick={()=>setScanMsg("")} style={{background:"none",border:"none",color:"inherit",cursor:"pointer",fontSize:16,lineHeight:1,padding:"0 4px"}}>×</button>
+          </div>
+        )}
         <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:14,alignItems:"center"}}>
           <div className="srch">{Ic.search}<input aria-label="Search inventory" value={search} onChange={e=>setSrch(e.target.value)} placeholder="Search items, tags, location…"/></div>
           <button className="ico-btn" aria-label="Filters" style={showF?{borderColor:"var(--gold)",color:"var(--cog)"}:{}} onClick={()=>setShowF(!showF)}>{Ic.filter}</button>
@@ -549,19 +576,38 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
           </div>
         )}
         {allTags.length>0&&(
-          <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center",marginBottom:14}}>
-            <span style={{fontSize:11,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:.5,marginRight:2}}>🏷 Tags</span>
-            {allTags.map(t=>{
-              const on=tagF.has(t);
-              return <button key={t} onClick={()=>toggleTag(t)}
-                style={{padding:"3px 10px",borderRadius:12,border:"1px solid",cursor:"pointer",fontFamily:"inherit",fontSize:12,
-                  fontWeight:on?700:500,borderColor:on?"var(--gold)":"var(--border)",
-                  background:on?"rgba(212,168,67,.15)":"transparent",color:on?"var(--cog)":"var(--muted)"}}>
-                #{t}{on?" ✕":""}
-              </button>;
-            })}
-            {tagF.size>0&&<button onClick={()=>setTagF(new Set())}
-              style={{fontSize:12,color:"var(--muted)",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",textDecoration:"underline"}}>clear tags</button>}
+          <div style={{marginBottom:14}}>
+            {/* Collapsed row: a Tags button + any currently-selected tags */}
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
+              <button onClick={()=>setTagsOpen(o=>!o)}
+                style={{display:"inline-flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:20,cursor:"pointer",fontFamily:"inherit",fontSize:12.5,fontWeight:700,
+                  border:"1px solid "+(tagF.size>0?"var(--gold)":"var(--border)"),
+                  background:tagF.size>0?"rgba(212,168,67,.12)":"transparent",color:tagF.size>0?"var(--cog)":"var(--muted)"}}>
+                🏷 Tags{tagF.size>0?` · ${tagF.size}`:""} <span style={{fontSize:10}}>{tagsOpen?"▲":"▼"}</span>
+              </button>
+              {!tagsOpen && [...tagF].map(t=>(
+                <button key={t} onClick={()=>toggleTag(t)}
+                  style={{padding:"3px 10px",borderRadius:12,border:"1px solid var(--gold)",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,background:"rgba(212,168,67,.15)",color:"var(--cog)"}}>
+                  #{t} ✕
+                </button>
+              ))}
+              {tagF.size>0&&<button onClick={()=>setTagF(new Set())}
+                style={{fontSize:12,color:"var(--muted)",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",textDecoration:"underline"}}>clear</button>}
+            </div>
+            {/* Expanded panel: all tags, scrollable so it never takes over the page */}
+            {tagsOpen&&(
+              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:8,maxHeight:170,overflowY:"auto",padding:"10px 12px",border:"1px solid var(--border)",borderRadius:12,background:"var(--parch)"}}>
+                {allTags.map(t=>{
+                  const on=tagF.has(t);
+                  return <button key={t} onClick={()=>toggleTag(t)}
+                    style={{padding:"3px 10px",borderRadius:12,border:"1px solid",cursor:"pointer",fontFamily:"inherit",fontSize:12,
+                      fontWeight:on?700:500,borderColor:on?"var(--gold)":"var(--border)",
+                      background:on?"rgba(212,168,67,.15)":"transparent",color:on?"var(--cog)":"var(--muted)"}}>
+                    #{t}{on?" ✕":""}
+                  </button>;
+                })}
+              </div>
+            )}
           </div>
         )}
         {canAdd&&!gsHide&&invView==="items"&&view!=="locations"&&items.length<5&&(

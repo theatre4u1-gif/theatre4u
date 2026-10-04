@@ -40,6 +40,9 @@ import { LandingPage, PublicOrgPage, PublicItemPage } from "./public.jsx";
 import { AIHelpBubble, PreviewMode } from "./preview.jsx";
 import { OnboardingOverlay } from "./onboarding.jsx";
 import { LocationsPanel } from "./locations.jsx";
+import { IS_NATIVE_APP, openExternal, nativeScan, initOAuthDeepLink } from "./native.js";
+import { MobileHome } from "./mobile-home.jsx";
+import { MobileNav } from "./mobile-nav.jsx";
 
 function makeSamples(){
   return [
@@ -96,7 +99,9 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   const [items,setItems]   = useState([]);
   const [org,setOrg]       = useState({name:"",type:"",email:"",phone:"",location:"",bio:""});
   const [plan,setPlanState] = useState("free"); // derived from org.plan
-  const [page,setPage]     = useState("dashboard");
+  const [page,setPage]     = useState(IS_NATIVE_APP ? "home" : "dashboard");
+  const [addSignal,setAddSignal] = useState(0); // bump to auto-open the Add-Item form on the inventory page
+  const [deepLinkItem,setDeepLinkItem] = useState(null); // scanned item id → open its detail in-app
   const [legalPage,setLegalPage] = useState(null);
   const [mob,setMob]       = useState(false);
   const [loaded,setLoaded] = useState(false);
@@ -621,6 +626,10 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
   const isDesk = typeof window !== "undefined" && window.innerWidth > 900;
+  // Inside the native app, tag the page so the mobile-only stylesheet applies.
+  useEffect(()=>{ if(IS_NATIVE_APP && typeof document!=="undefined"){ document.body.classList.add("t4u-native"); document.documentElement.classList.add("t4u-native"); } },[]);
+  // Native app: finish Google sign-in when the OS returns via the deep link.
+  useEffect(()=>{ if(IS_NATIVE_APP){ initOAuthDeepLink(SB); } },[]);
   const listed = items.filter(i=>i.mkt!=="Not Listed").length;
 
   // Switch into a school's context (district admin only)
@@ -793,12 +802,29 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
     ];
   })();
-  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(curVertical), productions:getTerm(curVertical,"productions"), reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:getPointsName(curVertical), points:getPointsName(curVertical), community:"Community Board", labels:"QR Labels", facschools:"District Schools" };
+  const TITLES = { home:"Home", messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(curVertical), productions:getTerm(curVertical,"productions"), reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:getPointsName(curVertical), points:getPointsName(curVertical), community:"Community Board", labels:"QR Labels", facschools:"District Schools" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicOrgSlug) return <PublicOrgPage slug={publicOrgSlug} />;
   if (publicItemId) return <PublicItemPage itemId={publicItemId} />;
 
+  // ── Native app: mobile home screen ──────────────────────────────────────
+  // Only inside the iOS/Android shell, and only once signed in. The website
+  // never reaches this (IS_NATIVE_APP is false there).
+  const handleNativeScan = async () => {
+    try {
+      const raw = await nativeScan();
+      if (!raw) return;
+      let m;
+      if ((m = raw.match(/[#/]location\/([^/?#\s]+)/))) { setDeepLinkLocation(decodeURIComponent(m[1])); nav("inventory"); return; }
+      if ((m = raw.match(/[#/]item\/([^/?#\s]+)/)))     { setDeepLinkItem(decodeURIComponent(m[1])); nav("inventory"); return; }
+      // Not a Theatre4u item/bin code. For safety we never auto-open arbitrary
+      // scanned links (they can be spam/scam) — just show the not-found notice.
+      setDeepLinkItem(raw); nav("inventory");
+    } catch (e) {
+      alert("Couldn't open the scanner: " + (e?.message || e));
+    }
+  };
   // ── Auth gate ────────────────────────────────────────────────────────────
   if(!authChk) return(
     <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexDirection:"column"}}>
@@ -809,7 +835,15 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
     </div>
   );
 
-  if(!user && previewMode) return <PreviewMode onSignUp={()=>{ setPreviewMode(false); window.__t4u_show_auth&&window.__t4u_show_auth("signup"); }}/>;
+  if(!user && previewMode && !IS_NATIVE_APP) return <PreviewMode onSignUp={()=>{ setPreviewMode(false); window.__t4u_show_auth&&window.__t4u_show_auth("signup"); }}/>;
+
+  // Native app, not signed in → full-screen mobile sign-in (no desktop landing page).
+  if(!user && IS_NATIVE_APP) return(
+    <>
+      <style>{CSS}</style>
+      <AuthOverlay nativeMode onAuth={u=>{setUser(u);}} pendingInvite={pendingInvite} inviteInfo={inviteInfo}/>
+    </>
+  );
 
   if(!user) return(
     <>
@@ -965,6 +999,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                   )}
                   {(plan==="pro"||plan==="district"||isAdmin)&&!isDemo&&(
                     <a href="/help.html" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
+                      onClick={e=>{ if(IS_NATIVE_APP){ e.preventDefault(); openExternal(APP_URL+"/help.html"); } }}
                       style={{color:"rgba(255,255,255,.6)",borderColor:"rgba(255,255,255,.12)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                       ❓ Help & Tutorials
                     </a>
@@ -1093,6 +1128,14 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                   <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
                 </div>
               : <div className="fin">
+                  {page==="home" && IS_NATIVE_APP && <MobileHome
+                    appName={APP_NAME}
+                    orgName={org?.name}
+                    onScan={handleNativeScan}
+                    onInventory={()=>setPage("inventory")}
+                    onAddItem={()=>{ setAddSignal(n=>n+1); setPage("inventory"); }}
+                    onOpenWeb={()=>openExternal(APP_URL)}
+                  />}
                   {page==="requests"    && <Requests userId={org?.id || user?.id} orgName={org?.name} orgEmail={org?.email}
                     onUnreadChange={async()=>{
                       const{count}=await SB.from("rental_requests").select("id",{count:"exact",head:true}).eq("owner_id",activeOrgId).eq("status","pending");
@@ -1100,7 +1143,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                     }}/>}
                   {page==="messages"    && <Messages userId={activeOrgId} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",activeOrgId); setUnreadCount(count||0); }}/>}
                   {page==="dashboard"   && <Dashboard   items={vItems} org={viewOrg} plan={plan} pointBalance={creditBalance} goInventory={(cat)=>{ if(cat) setDeepLinkCategory(cat); nav("inventory"); }} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
-                  {page==="inventory"   && !activeSchool && <Inventory   items={vItems} onAdd={add} onEdit={edit} onDelete={del} userId={org?.id || user?.id} plan={plan} memberRole={memberRole} org={viewOrg} enableLoans={!memberRole} onImported={(data)=>setItems(data)} onItemSync={(id,av)=>setItems(p=>p.map(x=>x.id===id?{...x,avail:av}:x))} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} deepLinkCategory={deepLinkCategory} onDeepLinkCategoryConsumed={()=>setDeepLinkCategory(null)}/>}
+                  {page==="inventory"   && !activeSchool && <Inventory   items={vItems} onAdd={add} onEdit={edit} onDelete={del} userId={org?.id || user?.id} plan={plan} memberRole={memberRole} org={viewOrg} enableLoans={!memberRole} onImported={(data)=>setItems(data)} onItemSync={(id,av)=>setItems(p=>p.map(x=>x.id===id?{...x,avail:av}:x))} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} deepLinkCategory={deepLinkCategory} onDeepLinkCategoryConsumed={()=>setDeepLinkCategory(null)} openAddSignal={addSignal} deepLinkItemId={deepLinkItem} onDeepLinkItemConsumed={()=>setDeepLinkItem(null)}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
                       ? <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading {activeSchool.name}…</div>
@@ -1153,6 +1196,18 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
           </div>
         </div>
       </div>
+
+      {/* ── Native app bottom tab bar ── */}
+      {IS_NATIVE_APP && user && (
+        <MobileNav
+          page={page}
+          onHome={()=>{ setMob(false); setPage("home"); }}
+          onInventory={()=>{ setMob(false); setPage("inventory"); }}
+          onScan={handleNativeScan}
+          onAdd={()=>{ setMob(false); setAddSignal(n=>n+1); setPage("inventory"); }}
+          onMore={()=>setMob(m=>!m)}
+        />
+      )}
 
       {/* ── Legal Modals ── */}
       {legalPage==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegalPage(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}

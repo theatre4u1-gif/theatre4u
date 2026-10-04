@@ -11,6 +11,25 @@ import { FbShareBtn } from "./ui.jsx";
 import { resizeImg, itemShareUrl, itemShareText, fmt$ } from "./helpers.js";
 import { CAT, CAT_GFX, MKT, customCatsFor, getCatsMerged } from "./inventory.js";
 import { QR } from "./qr.js";
+import { printHtml, shareImageDataUrl, IS_NATIVE_APP, nativeTakePhoto } from "./native.js";
+
+// Render a clean label (name, id, QR, location) to a PNG data URL — used in the
+// native app so Print/Save go through the OS share sheet instead of the browser.
+function _loadImage(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; }); }
+async function labelToPng({ name, idText, sub, loc, qrDataUrl, brand, urlText }){
+  const W=560,H=760,x2=W/2;
+  const c=document.createElement("canvas"); c.width=W; c.height=H;
+  const g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,W,H); g.textAlign="center";
+  const clip=(s,n)=> (s&&s.length>n)? s.slice(0,n-1)+"…" : (s||"");
+  g.fillStyle="#111"; g.font="bold 34px Roboto,Arial,sans-serif"; g.fillText(clip(name,26),x2,74);
+  if(idText){ g.fillStyle="#c4761a"; g.font="bold 30px monospace"; g.fillText(idText,x2,120); }
+  if(sub){ g.fillStyle="#555"; g.font="22px Roboto,Arial,sans-serif"; g.fillText(clip(sub,36),x2,158); }
+  if(loc){ g.fillStyle="#333"; g.font="bold 22px Roboto,Arial,sans-serif"; g.fillText(clip(loc,34),x2,194); }
+  try { const img=await _loadImage(qrDataUrl); const q=320; g.drawImage(img,(W-q)/2,220,q,q); } catch(e){}
+  if(urlText){ g.fillStyle="#888"; g.font="15px monospace"; g.fillText(clip(urlText,46),x2,580); }
+  if(brand){ g.fillStyle="#bbb"; g.font="16px Roboto,Arial,sans-serif"; g.fillText(brand,x2,612); }
+  return c.toDataURL("image/png");
+}
 import { ROW_LABELS, COL_LABELS } from "./storage-map.js";
 import { AddToProductionPicker } from "./productions.jsx";
 import { getVertical, getExchangeName, getTerm } from "../lib/verticals.js";
@@ -154,6 +173,8 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
   const[f,setF]=useState(item||blank);
   const[ti,setTi]=useState("");
   const[upl,setUpl]=useState(false);
+  const[sugOpen,setSugOpen]=useState(false); // suggested-tags picker collapsed by default
+  const[fundOpen,setFundOpen]=useState(()=> !!(item && (item.purchase_cost||item.purchase_vendor||item.purchase_date||item.funding_source_id))); // Purchase & Funding collapsed unless already filled
   const[svng,setSvng]=useState(false);
   const[showCam,setShowCam]=useState(false);
   const fr=useRef();
@@ -345,7 +366,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
             </div>
           ))}
           {imgsOf(f).length<maxImg&&<><label className="ph-add" style={{opacity:upl?.5:1}}>{Ic.cam}<span>{upl?"Uploading…":"Add Photo"}</span><input ref={fr} type="file" accept="image/*" hidden onChange={handlePhoto} disabled={upl}/></label>
-                <button type="button" className="ph-add" onClick={handleDrive} disabled={upl} style={{opacity:upl?.5:1,cursor:upl?"default":"pointer"}}><span>📁 Google Drive</span></button><button type="button" className="ph-add" onClick={()=>setShowCam(true)} disabled={upl} style={{opacity:upl?.5:1,cursor:upl?"default":"pointer"}}><span>📸 Camera</span></button></>}
+                <button type="button" className="ph-add" onClick={handleDrive} disabled={upl} style={{opacity:upl?.5:1,cursor:upl?"default":"pointer"}}><span>📁 Google Drive</span></button><button type="button" className="ph-add" onClick={()=>{ if(IS_NATIVE_APP){ nativeTakePhoto().then(file=>{ if(file) capturePhoto(file); }).catch(()=>{}); } else { setShowCam(true); } }} disabled={upl} style={{opacity:upl?.5:1,cursor:upl?"default":"pointer"}}><span>📸 Camera</span></button></>}
         </div>
         {showCam&&<CameraCapture max={maxImg} current={imgsOf(f).length} onCapture={capturePhoto} onClose={()=>setShowCam(false)}/>}
         {maxImg===1&&<div style={{fontSize:11,color:"var(--muted)",marginTop:6}}>Free plan: 1 photo per item. Upgrade to Pro for up to 5 photos.</div>}
@@ -355,10 +376,17 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
         <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>{(f.tags||[]).map(t=><span key={t} className="tc" onClick={()=>upd("tags",f.tags.filter(x=>x!==t))}>#{t} ×</span>)}</div>
         <div style={{display:"flex",gap:7}}><input className="fi" style={{flex:1}} list="itemtaglist" value={ti} onChange={e=>setTi(e.target.value)} placeholder="Add tag…" onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addTag()}}}/><button className="btn btn-o btn-sm" onClick={addTag}>Add</button></div>
         <datalist id="itemtaglist">{suggestedTags.map(t=><option key={t} value={t}/>)}</datalist>
-        {(()=>{const avail=suggestedTags.filter(t=>!(f.tags||[]).includes(t)).slice(0,12);return avail.length>0?(
+        {(()=>{const avail=suggestedTags.filter(t=>!(f.tags||[]).includes(t));return avail.length>0?(
           <div style={{marginTop:8}}>
-            <div style={{fontSize:11,color:"#9a9284",marginBottom:5}}>Tap to add from tags you already use</div>
-            <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{avail.map(t=><span key={t} className="tc" style={{cursor:"pointer",opacity:.85}} onClick={()=>{if(!(f.tags||[]).includes(t))upd("tags",[...(f.tags||[]),t]);}}>+ {t}</span>)}</div>
+            <button type="button" onClick={()=>setSugOpen(o=>!o)}
+              style={{display:"inline-flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:600,color:"var(--goldink)",padding:0}}>
+              <span style={{fontSize:10}}>{sugOpen?"▲":"▼"}</span> Add from tags you already use ({avail.length})
+            </button>
+            {sugOpen&&(
+              <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:6,maxHeight:150,overflowY:"auto",padding:"8px",border:"1px solid var(--border)",borderRadius:10,background:"var(--parch)"}}>
+                {avail.map(t=><span key={t} className="tc" style={{cursor:"pointer",opacity:.85}} onClick={()=>{if(!(f.tags||[]).includes(t))upd("tags",[...(f.tags||[]),t]);}}>+ {t}</span>)}
+              </div>
+            )}
           </div>
         ):null;})()}
       </div>
@@ -381,8 +409,13 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
 
       {/* Purchase & Funding Source — optional, links item to Funding Tracker */}
       <div className="fg fu sdiv">
-        <div className="slbl">💰 Purchase & Funding</div>
+        <div className="slbl" onClick={()=>setFundOpen(o=>!o)} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",userSelect:"none"}}>
+          <span style={{fontSize:11,color:"var(--muted)"}}>{fundOpen?"▲":"▼"}</span>
+          <span style={{whiteSpace:"nowrap"}}>💰 Purchase &amp; Funding</span>
+          <span style={{fontSize:11,fontWeight:600,color:"var(--muted)",whiteSpace:"nowrap"}}>(optional)</span>
+        </div>
       </div>
+      {fundOpen && (<>
       <div className="fg">
         <label className="fl">Item Cost ($)</label>
         <input className="fi" type="number" min="0" step="any" placeholder="e.g. 49.99"
@@ -446,6 +479,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
           </div>
         )}
       </div>
+      </>)}
 
     {/* Save / Cancel — always visible at bottom of form */}
     <div style={{display:"flex",gap:8,justifyContent:"flex-end",
@@ -499,17 +533,30 @@ export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, ca
     // display_id is still shown as the visible caption below.
     const qrIdentifier = item.id;
     const qrUrl = APP_URL+"/#/item/" + qrIdentifier;
-    const qrSrc=await QR.toDataURL(qrUrl,200);
+    const qrSrc=await QR.toDataURL(qrUrl, IS_NATIVE_APP ? 400 : 200);
     if(!qrSrc)return;
-    const w=window.open("","_blank","width=420,height=520");if(!w)return;
     const loc=item.location?"Location: "+item.location:"";
     const itemUrl=APP_HOST+"/#/item/"+qrIdentifier;
     const numStr = item.display_id || (item.item_number != null ? itemNum(item.item_number) : "");
-    w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}.num{font-size:22px;font-weight:900;font-family:monospace;color:#c4761a;margin:2px 0 6px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2>${numStr?`<div class="num">${numStr}</div>`:""}<p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qrSrc}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${itemUrl}</p><p style="font-size:11px;color:#bbb">${APP_NAME} · ${APP_HOST}</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
-    w.document.close();
+    if (IS_NATIVE_APP) {
+      const png = await labelToPng({ name:item.name, idText:numStr, sub:cat.label+" · "+item.condition, loc, qrDataUrl:qrSrc, brand:APP_NAME+" · "+APP_HOST, urlText:itemUrl });
+      await shareImageDataUrl(png, (item.display_id||item.id)+"-label.png");
+      return;
+    }
+    printHtml(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}.num{font-size:22px;font-weight:900;font-family:monospace;color:#c4761a;margin:2px 0 6px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2>${numStr?`<div class="num">${numStr}</div>`:""}<p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qrSrc}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${itemUrl}</p><p style="font-size:11px;color:#bbb">${APP_NAME} · ${APP_HOST}</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`, "width=420,height=520");
   };
 
-  const dlQR=async()=>{const u=await QR.toDataURL(APP_URL+"/#/item/"+item.id,300);if(!u)return;const a=document.createElement("a");a.href=u;a.download=(item.display_id||item.id)+".png";a.click();};
+  const dlQR=async()=>{
+    const u=await QR.toDataURL(APP_URL+"/#/item/"+item.id,400);if(!u)return;
+    if (IS_NATIVE_APP) {
+      const loc=item.location?"Location: "+item.location:"";
+      const numStr = item.display_id || (item.item_number != null ? itemNum(item.item_number) : "");
+      const png = await labelToPng({ name:item.name, idText:numStr, sub:cat.label+" · "+item.condition, loc, qrDataUrl:u, brand:APP_NAME+" · "+APP_HOST, urlText:APP_HOST+"/#/item/"+item.id });
+      await shareImageDataUrl(png, (item.display_id||item.id)+"-label.png");
+      return;
+    }
+    const a=document.createElement("a");a.href=u;a.download=(item.display_id||item.id)+".png";a.click();
+  };
 
   return(
     <>

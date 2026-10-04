@@ -1113,7 +1113,7 @@ export function Requests({ userId, orgName, orgEmail }) {
         </div>
       </div>
 
-      <div style={{padding:"24px 36px 56px",position:"relative",zIndex:1}}>
+      <div style={{padding:"clamp(16px,4vw,24px) clamp(12px,4vw,36px) 56px",position:"relative",zIndex:1}}>
         {/* Tabs */}
         <div className="tabs" style={{marginBottom:20}}>
           <button className={`tab ${tab==="incoming"?"on":""}`} onClick={()=>setTab("incoming")}>

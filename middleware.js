@@ -41,6 +41,7 @@ body{background:#fdf8f1;color:#1a1008;font-family:'DM Sans',system-ui,sans-serif
 .btn.ghost{background:#f5ede0;color:#1a1008;border:1px solid #e8dcc8}
 .empty{max-width:480px;margin:60px auto;text-align:center}
 .empty .ico{font-size:52px;margin-bottom:12px;opacity:.5}
+.empty .logo{width:200px;max-width:72%;height:auto;margin:0 auto 18px;display:block}
 .empty h1{font-family:'Cormorant Garamond',Georgia,serif;font-size:28px;margin-bottom:8px}
 .empty p{color:#7a6a54;margin-bottom:22px}
 </style></head>
@@ -60,7 +61,7 @@ async function itemPage(request, host) {
 
   const notFound = (msg) => new Response(shell({
     title: appName, ogTitle: appName + ' — Marketplace', ogDesc: msg, ogImg: defImg, ogUrl: canonical,
-    body: `<div class="empty"><div class="ico">🎭</div><h1>Item not available</h1><p>${esc(msg)}</p><a class="btn" href="${homeUrl}">Go to ${appName}</a></div>`,
+    body: `<div class="empty"><img class="logo" src="${homeUrl}/${isAT ? 'logo-artstracker.png' : 'logo-theatre4u.svg'}" alt="${appName}"/><h1>Item not available</h1><p>${esc(msg)}</p><a class="btn" href="${homeUrl}">Go to ${appName}</a></div>`,
   }), { status: 404, headers: { 'content-type': 'text/html; charset=utf-8' } });
 
   if (!/^[A-Za-z0-9._-]{1,80}$/.test(raw)) return notFound('This item link is not valid.');

@@ -346,7 +346,7 @@ function CommunityPage({userId, org, plan}) {
             <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"var(--muted)",display:"flex",pointerEvents:"none"}}>{Ic.search}</span>
             <input className="fi" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search the board…" style={{paddingLeft:34,width:"100%"}}/>
           </div>
-          <div style={{display:"flex",gap:0,border:"1px solid var(--border)",borderRadius:6,overflow:"hidden"}}>
+          <div style={{display:"flex",gap:0,border:"1px solid var(--border)",borderRadius:6,overflowX:"auto",maxWidth:"100%",WebkitOverflowScrolling:"touch"}}>
             {[["all","All"],["show","🎟️ Events"],["audition","🎤 Calls"],["photo","📸 Photos"],["wanted","🔍 Wanted"],["announcement","📢 News"]].map(([id,label])=>(
               <button key={id} onClick={()=>setTypeF(id)} style={{background:typeF===id?"var(--gold)":"transparent",color:typeF===id?"#1a0f00":"var(--muted)",border:"none",padding:"7px 12px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>
                 {label}
@@ -359,7 +359,7 @@ function CommunityPage({userId, org, plan}) {
           </div>
         </div>
 
-        <div style={{display:"grid",gridTemplateColumns:"1fr 320px",gap:24,alignItems:"start"}}>
+        <div className="t4u-comm-grid" style={{display:"grid",gridTemplateColumns:"1fr 320px",gap:24,alignItems:"start"}}>
           {/* Main feed */}
           <div>
             <div style={{fontSize:12,color:"var(--muted)",marginBottom:12,fontWeight:600,display:"flex",alignItems:"center",gap:10}}>
