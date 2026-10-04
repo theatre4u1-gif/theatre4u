@@ -9,7 +9,7 @@ import { fmt$, uid, doorUrl } from "./helpers.js";
 import { CAT, CATS, CAT_GFX, CONDS, SIZES, AVAIL, MKT, getCatsMerged, customCatsFor } from "./inventory.js";
 import { QR } from "./qr.js";
 import { PLANS_DEF } from "./plans.js";
-import { IS_NATIVE_APP } from "./native.js";
+import { IS_NATIVE_APP, printHtml } from "./native.js";
 import { BG, usp } from "../lib/backgrounds.js";
 import { getExchangeName, getVertical, getCatGfx, getCats, getTerm } from "../lib/verticals.js";
 import { CSVImport } from "./marketplace.jsx";
@@ -337,15 +337,8 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
         <span style="font-size:11px;color:#888">Tip: set margins to None in print dialog</span></div>`;
 
       if (IS_NATIVE_APP) {
-        // In the app, window.open would hand a blank page to the phone's browser
-        // (and can land on spam). Print through a hidden in-app iframe instead.
-        const html = `<html><head><title>QR Labels</title>${styleBlock}</head><body><div class="grid">${labels}</div></body></html>`;
-        const ifr = document.createElement("iframe");
-        ifr.setAttribute("aria-hidden","true");
-        ifr.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0";
-        document.body.appendChild(ifr);
-        const d = ifr.contentWindow.document; d.open(); d.write(html); d.close();
-        setTimeout(() => { try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch(e){} setTimeout(()=>ifr.remove(), 2000); }, 600);
+        // Show the in-app print preview (with its own Print/Save-PDF + Close bar).
+        printHtml(`<html><head><title>QR Labels</title>${styleBlock}</head><body><div class="grid">${labels}</div></body></html>`);
       } else {
         const w = window.open("", "_blank", "width=950,height=720");
         if (!w) { alert("Pop-up blocked — please allow pop-ups for "+APP_HOST+" and try again."); setPrintingQR(false); return; }

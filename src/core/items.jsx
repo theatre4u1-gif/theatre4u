@@ -11,7 +11,25 @@ import { FbShareBtn } from "./ui.jsx";
 import { resizeImg, itemShareUrl, itemShareText, fmt$ } from "./helpers.js";
 import { CAT, CAT_GFX, MKT, customCatsFor, getCatsMerged } from "./inventory.js";
 import { QR } from "./qr.js";
-import { printHtml } from "./native.js";
+import { printHtml, shareImageDataUrl, IS_NATIVE_APP } from "./native.js";
+
+// Render a clean label (name, id, QR, location) to a PNG data URL — used in the
+// native app so Print/Save go through the OS share sheet instead of the browser.
+function _loadImage(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; }); }
+async function labelToPng({ name, idText, sub, loc, qrDataUrl, brand, urlText }){
+  const W=560,H=760,x2=W/2;
+  const c=document.createElement("canvas"); c.width=W; c.height=H;
+  const g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,W,H); g.textAlign="center";
+  const clip=(s,n)=> (s&&s.length>n)? s.slice(0,n-1)+"…" : (s||"");
+  g.fillStyle="#111"; g.font="bold 34px Roboto,Arial,sans-serif"; g.fillText(clip(name,26),x2,74);
+  if(idText){ g.fillStyle="#c4761a"; g.font="bold 30px monospace"; g.fillText(idText,x2,120); }
+  if(sub){ g.fillStyle="#555"; g.font="22px Roboto,Arial,sans-serif"; g.fillText(clip(sub,36),x2,158); }
+  if(loc){ g.fillStyle="#333"; g.font="bold 22px Roboto,Arial,sans-serif"; g.fillText(clip(loc,34),x2,194); }
+  try { const img=await _loadImage(qrDataUrl); const q=320; g.drawImage(img,(W-q)/2,220,q,q); } catch(e){}
+  if(urlText){ g.fillStyle="#888"; g.font="15px monospace"; g.fillText(clip(urlText,46),x2,580); }
+  if(brand){ g.fillStyle="#bbb"; g.font="16px Roboto,Arial,sans-serif"; g.fillText(brand,x2,612); }
+  return c.toDataURL("image/png");
+}
 import { ROW_LABELS, COL_LABELS } from "./storage-map.js";
 import { AddToProductionPicker } from "./productions.jsx";
 import { getVertical, getExchangeName, getTerm } from "../lib/verticals.js";
@@ -500,15 +518,30 @@ export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, ca
     // display_id is still shown as the visible caption below.
     const qrIdentifier = item.id;
     const qrUrl = APP_URL+"/#/item/" + qrIdentifier;
-    const qrSrc=await QR.toDataURL(qrUrl,200);
+    const qrSrc=await QR.toDataURL(qrUrl, IS_NATIVE_APP ? 400 : 200);
     if(!qrSrc)return;
     const loc=item.location?"Location: "+item.location:"";
     const itemUrl=APP_HOST+"/#/item/"+qrIdentifier;
     const numStr = item.display_id || (item.item_number != null ? itemNum(item.item_number) : "");
+    if (IS_NATIVE_APP) {
+      const png = await labelToPng({ name:item.name, idText:numStr, sub:cat.label+" · "+item.condition, loc, qrDataUrl:qrSrc, brand:APP_NAME+" · "+APP_HOST, urlText:itemUrl });
+      await shareImageDataUrl(png, (item.display_id||item.id)+"-label.png");
+      return;
+    }
     printHtml(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}.num{font-size:22px;font-weight:900;font-family:monospace;color:#c4761a;margin:2px 0 6px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2>${numStr?`<div class="num">${numStr}</div>`:""}<p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qrSrc}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${itemUrl}</p><p style="font-size:11px;color:#bbb">${APP_NAME} · ${APP_HOST}</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`, "width=420,height=520");
   };
 
-  const dlQR=async()=>{const u=await QR.toDataURL(APP_URL+"/#/item/"+item.id,300);if(!u)return;const a=document.createElement("a");a.href=u;a.download=(item.display_id||item.id)+".png";a.click();};
+  const dlQR=async()=>{
+    const u=await QR.toDataURL(APP_URL+"/#/item/"+item.id,400);if(!u)return;
+    if (IS_NATIVE_APP) {
+      const loc=item.location?"Location: "+item.location:"";
+      const numStr = item.display_id || (item.item_number != null ? itemNum(item.item_number) : "");
+      const png = await labelToPng({ name:item.name, idText:numStr, sub:cat.label+" · "+item.condition, loc, qrDataUrl:u, brand:APP_NAME+" · "+APP_HOST, urlText:APP_HOST+"/#/item/"+item.id });
+      await shareImageDataUrl(png, (item.display_id||item.id)+"-label.png");
+      return;
+    }
+    const a=document.createElement("a");a.href=u;a.download=(item.display_id||item.id)+".png";a.click();
+  };
 
   return(
     <>

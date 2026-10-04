@@ -76,6 +76,25 @@ export function printHtml(html, winFeatures) {
   return w;
 }
 
+// Share (or save) a PNG given as a data URL. In the app this opens the OS share
+// sheet — which includes Print, Save image, Save to Drive, and sending anywhere.
+// On the web it just downloads the file. Returns true if the share sheet opened.
+export async function shareImageDataUrl(dataUrl, filename) {
+  if (!IS_NATIVE_APP) {
+    try { const a = document.createElement("a"); a.href = dataUrl; a.download = filename; a.click(); } catch (e) {}
+    return false;
+  }
+  const fsMod = await import("@capacitor/filesystem");
+  const shMod = await import("@capacitor/share");
+  const Filesystem = fsMod.Filesystem; const Directory = fsMod.Directory;
+  const Share = shMod.Share;
+  const base64 = String(dataUrl).split(",")[1];
+  await Filesystem.writeFile({ path: filename, data: base64, directory: Directory.Cache });
+  const { uri } = await Filesystem.getUri({ path: filename, directory: Directory.Cache });
+  await Share.share({ title: filename, text: filename, url: uri });
+  return true;
+}
+
 // Launch the native barcode / QR scanner (ready-made full-screen UI from the
 // MLKit plugin). Returns the scanned text, or null. Only call inside the app.
 export async function nativeScan() {
