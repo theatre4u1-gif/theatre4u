@@ -835,7 +835,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
     </div>
   );
 
-  if(!user && previewMode) return <PreviewMode onSignUp={()=>{ setPreviewMode(false); window.__t4u_show_auth&&window.__t4u_show_auth("signup"); }}/>;
+  if(!user && previewMode && !IS_NATIVE_APP) return <PreviewMode onSignUp={()=>{ setPreviewMode(false); window.__t4u_show_auth&&window.__t4u_show_auth("signup"); }}/>;
 
   // Native app, not signed in → full-screen mobile sign-in (no desktop landing page).
   if(!user && IS_NATIVE_APP) return(
@@ -999,6 +999,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                   )}
                   {(plan==="pro"||plan==="district"||isAdmin)&&!isDemo&&(
                     <a href="/help.html" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
+                      onClick={e=>{ if(IS_NATIVE_APP){ e.preventDefault(); openExternal(APP_URL+"/help.html"); } }}
                       style={{color:"rgba(255,255,255,.6)",borderColor:"rgba(255,255,255,.12)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                       ❓ Help & Tutorials
                     </a>

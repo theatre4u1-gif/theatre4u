@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { CAT } from "./inventory.js";
 import { QR } from "./qr.js";
-import { APP_NAME, APP_EMAIL } from "./config.js";
+import { APP_NAME, APP_EMAIL, APP_URL } from "./config.js";
 import { doorOf } from "../lib/admin-metrics.js";
-import { printHtml } from "./native.js";
+import { printHtml, openExternal, IS_NATIVE_APP } from "./native.js";
 
 const LABEL_PACKS = [
   { qty:25,  type:"standard",    label:"25 Standard",     retail:1000, desc:"Indoor use · polyester matte · water-resistant" },
@@ -926,6 +926,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
               🖨 Print Labels Now
             </button>
             <a href="/help.html#qr" target="_blank" rel="noreferrer"
+              onClick={e=>{ if(IS_NATIVE_APP){ e.preventDefault(); openExternal(APP_URL+"/help.html#qr"); } }}
               style={{fontSize:13,fontWeight:600,color:"var(--goldink)",textDecoration:"none"}}>
               Full printing guide in Help →
             </a>
