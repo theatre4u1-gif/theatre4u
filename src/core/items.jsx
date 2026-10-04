@@ -11,7 +11,7 @@ import { FbShareBtn } from "./ui.jsx";
 import { resizeImg, itemShareUrl, itemShareText, fmt$ } from "./helpers.js";
 import { CAT, CAT_GFX, MKT, customCatsFor, getCatsMerged } from "./inventory.js";
 import { QR } from "./qr.js";
-import { printHtml, shareImageDataUrl, IS_NATIVE_APP } from "./native.js";
+import { printHtml, shareImageDataUrl, IS_NATIVE_APP, nativeTakePhoto } from "./native.js";
 
 // Render a clean label (name, id, QR, location) to a PNG data URL — used in the
 // native app so Print/Save go through the OS share sheet instead of the browser.
@@ -364,7 +364,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
             </div>
           ))}
           {imgsOf(f).length<maxImg&&<><label className="ph-add" style={{opacity:upl?.5:1}}>{Ic.cam}<span>{upl?"Uploading…":"Add Photo"}</span><input ref={fr} type="file" accept="image/*" hidden onChange={handlePhoto} disabled={upl}/></label>
-                <button type="button" className="ph-add" onClick={handleDrive} disabled={upl} style={{opacity:upl?.5:1,cursor:upl?"default":"pointer"}}><span>📁 Google Drive</span></button><button type="button" className="ph-add" onClick={()=>setShowCam(true)} disabled={upl} style={{opacity:upl?.5:1,cursor:upl?"default":"pointer"}}><span>📸 Camera</span></button></>}
+                <button type="button" className="ph-add" onClick={handleDrive} disabled={upl} style={{opacity:upl?.5:1,cursor:upl?"default":"pointer"}}><span>📁 Google Drive</span></button><button type="button" className="ph-add" onClick={()=>{ if(IS_NATIVE_APP){ nativeTakePhoto().then(file=>{ if(file) capturePhoto(file); }).catch(()=>{}); } else { setShowCam(true); } }} disabled={upl} style={{opacity:upl?.5:1,cursor:upl?"default":"pointer"}}><span>📸 Camera</span></button></>}
         </div>
         {showCam&&<CameraCapture max={maxImg} current={imgsOf(f).length} onCapture={capturePhoto} onClose={()=>setShowCam(false)}/>}
         {maxImg===1&&<div style={{fontSize:11,color:"var(--muted)",marginTop:6}}>Free plan: 1 photo per item. Upgrade to Pro for up to 5 photos.</div>}

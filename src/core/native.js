@@ -76,6 +76,21 @@ export function printHtml(html, winFeatures) {
   return w;
 }
 
+// Take a photo with the phone's native camera and return it as a File (so it
+// flows through the same upload/resize path as a picked file). App only.
+export async function nativeTakePhoto() {
+  if (!IS_NATIVE_APP) throw new Error("Camera is only available in the app.");
+  const mod = await import("@capacitor/camera");
+  const { Camera, CameraResultType, CameraSource } = mod;
+  const photo = await Camera.getPhoto({
+    quality: 80, allowEditing: false,
+    resultType: CameraResultType.DataUrl, source: CameraSource.Camera,
+  });
+  if (!photo?.dataUrl) return null;
+  const blob = await (await fetch(photo.dataUrl)).blob();
+  return new File([blob], "photo-" + Date.now() + ".jpg", { type: blob.type || "image/jpeg" });
+}
+
 // Share (or save) a PNG given as a data URL. In the app this opens the OS share
 // sheet — which includes Print, Save image, Save to Drive, and sending anywhere.
 // On the web it just downloads the file. Returns true if the share sheet opened.
