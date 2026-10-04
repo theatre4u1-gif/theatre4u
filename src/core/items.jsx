@@ -173,6 +173,8 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
   const[f,setF]=useState(item||blank);
   const[ti,setTi]=useState("");
   const[upl,setUpl]=useState(false);
+  const[sugOpen,setSugOpen]=useState(false); // suggested-tags picker collapsed by default
+  const[fundOpen,setFundOpen]=useState(()=> !!(item && (item.purchase_cost||item.purchase_vendor||item.purchase_date||item.funding_source_id))); // Purchase & Funding collapsed unless already filled
   const[svng,setSvng]=useState(false);
   const[showCam,setShowCam]=useState(false);
   const fr=useRef();
@@ -374,10 +376,17 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
         <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>{(f.tags||[]).map(t=><span key={t} className="tc" onClick={()=>upd("tags",f.tags.filter(x=>x!==t))}>#{t} ×</span>)}</div>
         <div style={{display:"flex",gap:7}}><input className="fi" style={{flex:1}} list="itemtaglist" value={ti} onChange={e=>setTi(e.target.value)} placeholder="Add tag…" onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addTag()}}}/><button className="btn btn-o btn-sm" onClick={addTag}>Add</button></div>
         <datalist id="itemtaglist">{suggestedTags.map(t=><option key={t} value={t}/>)}</datalist>
-        {(()=>{const avail=suggestedTags.filter(t=>!(f.tags||[]).includes(t)).slice(0,12);return avail.length>0?(
+        {(()=>{const avail=suggestedTags.filter(t=>!(f.tags||[]).includes(t));return avail.length>0?(
           <div style={{marginTop:8}}>
-            <div style={{fontSize:11,color:"#9a9284",marginBottom:5}}>Tap to add from tags you already use</div>
-            <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{avail.map(t=><span key={t} className="tc" style={{cursor:"pointer",opacity:.85}} onClick={()=>{if(!(f.tags||[]).includes(t))upd("tags",[...(f.tags||[]),t]);}}>+ {t}</span>)}</div>
+            <button type="button" onClick={()=>setSugOpen(o=>!o)}
+              style={{display:"inline-flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:600,color:"var(--goldink)",padding:0}}>
+              <span style={{fontSize:10}}>{sugOpen?"▲":"▼"}</span> Add from tags you already use ({avail.length})
+            </button>
+            {sugOpen&&(
+              <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:6,maxHeight:150,overflowY:"auto",padding:"8px",border:"1px solid var(--border)",borderRadius:10,background:"var(--parch)"}}>
+                {avail.map(t=><span key={t} className="tc" style={{cursor:"pointer",opacity:.85}} onClick={()=>{if(!(f.tags||[]).includes(t))upd("tags",[...(f.tags||[]),t]);}}>+ {t}</span>)}
+              </div>
+            )}
           </div>
         ):null;})()}
       </div>
@@ -400,8 +409,12 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
 
       {/* Purchase & Funding Source — optional, links item to Funding Tracker */}
       <div className="fg fu sdiv">
-        <div className="slbl">💰 Purchase & Funding</div>
+        <div className="slbl" onClick={()=>setFundOpen(o=>!o)} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:8,userSelect:"none"}}>
+          <span style={{fontSize:11,color:"var(--muted)"}}>{fundOpen?"▲":"▼"}</span>
+          💰 Purchase &amp; Funding <span style={{fontSize:11,fontWeight:600,color:"var(--muted)"}}>(optional)</span>
+        </div>
       </div>
+      {fundOpen && (<>
       <div className="fg">
         <label className="fl">Item Cost ($)</label>
         <input className="fi" type="number" min="0" step="any" placeholder="e.g. 49.99"
@@ -465,6 +478,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
           </div>
         )}
       </div>
+      </>)}
 
     {/* Save / Cancel — always visible at bottom of form */}
     <div style={{display:"flex",gap:8,justifyContent:"flex-end",
