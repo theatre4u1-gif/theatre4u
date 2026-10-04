@@ -40,6 +40,8 @@ import { LandingPage, PublicOrgPage, PublicItemPage } from "./public.jsx";
 import { AIHelpBubble, PreviewMode } from "./preview.jsx";
 import { OnboardingOverlay } from "./onboarding.jsx";
 import { LocationsPanel } from "./locations.jsx";
+import { IS_NATIVE_APP, openExternal, nativeScan } from "./native.js";
+import { MobileHome } from "./mobile-home.jsx";
 
 function makeSamples(){
   return [
@@ -96,7 +98,8 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   const [items,setItems]   = useState([]);
   const [org,setOrg]       = useState({name:"",type:"",email:"",phone:"",location:"",bio:""});
   const [plan,setPlanState] = useState("free"); // derived from org.plan
-  const [page,setPage]     = useState("dashboard");
+  const [page,setPage]     = useState(IS_NATIVE_APP ? "home" : "dashboard");
+  const [addSignal,setAddSignal] = useState(0); // bump to auto-open the Add-Item form on the inventory page
   const [legalPage,setLegalPage] = useState(null);
   const [mob,setMob]       = useState(false);
   const [loaded,setLoaded] = useState(false);
@@ -799,6 +802,39 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   if (publicOrgSlug) return <PublicOrgPage slug={publicOrgSlug} />;
   if (publicItemId) return <PublicItemPage itemId={publicItemId} />;
 
+  // ── Native app: mobile home screen ──────────────────────────────────────
+  // Only inside the iOS/Android shell, and only once signed in. The website
+  // never reaches this (IS_NATIVE_APP is false there).
+  const handleNativeScan = async () => {
+    try {
+      const raw = await nativeScan();
+      if (!raw) return;
+      let m;
+      if ((m = raw.match(/[#/]location\/([^/?#\s]+)/))) { setDeepLinkLocation(decodeURIComponent(m[1])); nav("inventory"); return; }
+      if ((m = raw.match(/[#/]item\/([^/?#\s]+)/)))     { openExternal(APP_URL + "/item/" + encodeURIComponent(m[1])); return; }
+      if (/^https?:\/\//i.test(raw)) { openExternal(raw); return; }
+      nav("inventory");
+    } catch (e) {
+      alert("Couldn't open the scanner: " + (e?.message || e));
+    }
+  };
+  if (IS_NATIVE_APP && user && page === "home") return (
+    <>
+      <style>{CSS}</style>
+      <MobileHome
+        appName={APP_NAME}
+        orgName={org?.name}
+        logo={LOGO_MARK}
+        onScan={handleNativeScan}
+        onInventory={()=>setPage("inventory")}
+        onAddItem={()=>{ setAddSignal(n=>n+1); setPage("inventory"); }}
+        onOpenWeb={()=>openExternal(APP_URL)}
+        onFullApp={()=>setPage("dashboard")}
+        onSettings={()=>setPage("settings")}
+      />
+    </>
+  );
+
   // ── Auth gate ────────────────────────────────────────────────────────────
   if(!authChk) return(
     <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexDirection:"column"}}>
@@ -1100,7 +1136,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                     }}/>}
                   {page==="messages"    && <Messages userId={activeOrgId} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",activeOrgId); setUnreadCount(count||0); }}/>}
                   {page==="dashboard"   && <Dashboard   items={vItems} org={viewOrg} plan={plan} pointBalance={creditBalance} goInventory={(cat)=>{ if(cat) setDeepLinkCategory(cat); nav("inventory"); }} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
-                  {page==="inventory"   && !activeSchool && <Inventory   items={vItems} onAdd={add} onEdit={edit} onDelete={del} userId={org?.id || user?.id} plan={plan} memberRole={memberRole} org={viewOrg} enableLoans={!memberRole} onImported={(data)=>setItems(data)} onItemSync={(id,av)=>setItems(p=>p.map(x=>x.id===id?{...x,avail:av}:x))} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} deepLinkCategory={deepLinkCategory} onDeepLinkCategoryConsumed={()=>setDeepLinkCategory(null)}/>}
+                  {page==="inventory"   && !activeSchool && <Inventory   items={vItems} onAdd={add} onEdit={edit} onDelete={del} userId={org?.id || user?.id} plan={plan} memberRole={memberRole} org={viewOrg} enableLoans={!memberRole} onImported={(data)=>setItems(data)} onItemSync={(id,av)=>setItems(p=>p.map(x=>x.id===id?{...x,avail:av}:x))} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} deepLinkCategory={deepLinkCategory} onDeepLinkCategoryConsumed={()=>setDeepLinkCategory(null)} openAddSignal={addSignal}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
                       ? <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading {activeSchool.name}…</div>
