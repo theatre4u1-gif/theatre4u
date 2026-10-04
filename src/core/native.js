@@ -35,12 +35,39 @@ export function openExternal(url) {
 export function printHtml(html, winFeatures) {
   if (IS_NATIVE_APP) {
     const safe = String(html).replace(/<script[\s\S]*?<\/script>/gi, "");
-    const ifr = document.createElement("iframe");
-    ifr.setAttribute("aria-hidden", "true");
-    ifr.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0";
-    document.body.appendChild(ifr);
-    const d = ifr.contentWindow.document; d.open(); d.write(safe); d.close();
-    setTimeout(() => { try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch (e) {} setTimeout(() => ifr.remove(), 2000); }, 600);
+    const styleM = safe.match(/<style[\s\S]*?<\/style>/i);
+    const bodyM = safe.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    const inner = (styleM ? styleM[0] : "") + (bodyM ? bodyM[1] : safe);
+
+    // One-time print stylesheet: in print output, show only the label content.
+    if (!document.getElementById("t4u-print-style")) {
+      const ps = document.createElement("style");
+      ps.id = "t4u-print-style";
+      ps.textContent = "@media print{body>*:not(.t4u-print-root){display:none!important}.t4u-print-root{position:static!important;overflow:visible!important}.t4u-print-bar{display:none!important}}";
+      document.head.appendChild(ps);
+    }
+
+    const root = document.createElement("div");
+    root.className = "t4u-print-root";
+    root.style.cssText = "position:fixed;inset:0;z-index:2147483600;background:#fff;color:#000;overflow:auto";
+
+    const bar = document.createElement("div");
+    bar.className = "t4u-print-bar";
+    bar.style.cssText = "position:sticky;top:0;display:flex;gap:10px;justify-content:flex-end;align-items:center;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;background:#15121b;border-bottom:1px solid rgba(212,175,55,.3)";
+    const mk = (label, bg, fg) => { const b = document.createElement("button"); b.textContent = label; b.style.cssText = "padding:9px 18px;border:none;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;background:" + bg + ";color:" + fg; return b; };
+    const closeBtn = mk("Close", "rgba(255,255,255,.14)", "#f3ead3");
+    const printBtn = mk("Print / Save PDF", "linear-gradient(135deg,#C9A23A,#E6C65C)", "#1a1208");
+    const cleanup = () => { try { root.remove(); } catch (e) {} };
+    closeBtn.onclick = cleanup;
+    printBtn.onclick = () => { try { window.print(); } catch (e) {} };
+    bar.appendChild(closeBtn); bar.appendChild(printBtn);
+
+    const content = document.createElement("div");
+    content.style.cssText = "padding:14px";
+    content.innerHTML = inner;
+
+    root.appendChild(bar); root.appendChild(content);
+    document.body.appendChild(root);
     return null;
   }
   const w = window.open("", "_blank", winFeatures || "width=820,height=640");
