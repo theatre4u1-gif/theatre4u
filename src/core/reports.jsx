@@ -86,7 +86,7 @@ export function Reports({ items, plan="free", org=null, userId=null, userEmail=n
         </div>
       </div>
 
-      <div style={{padding:"24px 36px 48px",position:"relative",zIndex:1}}>
+      <div style={{padding:"clamp(16px,4vw,24px) clamp(12px,4vw,36px) 48px",position:"relative",zIndex:1}}>
         <div className="tabs">
           {[["overview","Overview"],["condition","Condition"],["availability","Availability"],["market",getExchangeName(org?.vertical)],["location","Locations"],["productions","🎭 "+getTerm(org?.vertical,"productions")],["usage","📊 Platform Usage"]].map(([t,l])=>(
             <button key={t} className={`tab ${tab===t?"on":""}`} onClick={()=>setTab(t)}>{l}</button>

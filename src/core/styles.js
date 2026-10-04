@@ -431,7 +431,13 @@ tr:hover td{background:rgba(243,230,204,.55)}
 .t4u-native .srch{flex:1 1 100%}
 .t4u-native .srch input{width:100%!important}
 .t4u-native .vtog{flex:1 1 100%}
-.t4u-native .vtog button{flex:1;padding:9px 6px;font-size:13px}
+.t4u-native .vtog button{flex:1;padding:9px 6px;font-size:13px;white-space:nowrap}
+/* Tab rows: scroll sideways instead of wrapping into vertical/stacked letters */
+.t4u-native .tabs{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
+.t4u-native .tab{flex:0 0 auto;white-space:nowrap;padding:9px 13px;font-size:13px}
+/* Messages: stack the two desktop panes into one column */
+.t4u-native .t4u-chat{flex-direction:column!important;height:auto!important}
+.t4u-native .t4u-chat-list{width:100%!important;min-width:0!important;max-height:42vh;border-right:none!important;border-bottom:1px solid var(--border)}
 .t4u-native .inv-grid{grid-template-columns:1fr!important;gap:12px}
 .t4u-native .inv-img{height:200px}
 .t4u-native .card-p{padding:16px}
