@@ -70,7 +70,7 @@ export function AIHelpBubble({ user }) {
   };
 
   return (
-    <div style={bubbleStyle}>
+    <div className="aihelp-fab" style={bubbleStyle}>
       {open && (
         <div style={panelStyle}>
           {/* Header */}

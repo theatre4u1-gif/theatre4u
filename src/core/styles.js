@@ -424,10 +424,10 @@ tr:hover td{background:rgba(243,230,204,.55)}
 /* Scoped to body.t4u-native so NONE of this affects the website. */
 .t4u-native .topbar{padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;gap:10px}
 .t4u-native .topbar-title{font-size:20px}
-.t4u-native .hero-wrap{height:140px!important}
-.t4u-native .hero-title{font-size:26px!important}
-.t4u-native .hero-body{padding:16px 18px!important}
-.t4u-native .hero-sub{font-size:13px;max-width:none}
+.t4u-native .menu-btn{display:none}            /* bottom-bar "More" replaces the hamburger */
+.t4u-native .hero-wrap{display:none!important} /* drop the website-style banners in the app */
+.t4u-native .scroll-area{padding-bottom:80px}  /* clear the fixed bottom tab bar */
+.t4u-native .aihelp-fab{bottom:86px!important}  /* lift help bubble above the tab bar */
 .t4u-native .srch{flex:1 1 100%}
 .t4u-native .srch input{width:100%!important}
 .t4u-native .vtog{flex:1 1 100%}

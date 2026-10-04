@@ -35,6 +35,28 @@ export async function nativeScan() {
   const mod = await import("@capacitor-mlkit/barcode-scanning");
   const BarcodeScanner = mod.BarcodeScanner || mod.default?.BarcodeScanner || mod.default;
   try { await BarcodeScanner.requestPermissions(); } catch { /* user prompt */ }
+
+  // Android needs Google's barcode-scanner module present before the first scan.
+  // It downloads once in the background; we wait for it to finish, then scan.
+  if (NATIVE_PLATFORM === "android" && BarcodeScanner.isGoogleBarcodeScannerModuleAvailable) {
+    try {
+      const avail = await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable();
+      if (!avail?.available) {
+        await new Promise((resolve, reject) => {
+          let done = false;
+          const finish = (fn, arg) => { if (!done) { done = true; fn(arg); } };
+          BarcodeScanner.addListener("googleBarcodeScannerModuleInstallProgress", (ev) => {
+            // state 4 = COMPLETED (per MLKit); also resolve if progress hits 100
+            if (ev?.state === 4 || ev?.progress === 100) finish(resolve);
+          });
+          BarcodeScanner.installGoogleBarcodeScannerModule().catch((e) => finish(reject, e));
+          // Safety timeout so we never hang forever
+          setTimeout(() => finish(resolve), 30000);
+        });
+      }
+    } catch { /* fall through and let scan() surface any real error */ }
+  }
+
   const result = await BarcodeScanner.scan();
   const codes = result?.barcodes || [];
   return codes.length ? (codes[0].rawValue || codes[0].displayValue || null) : null;

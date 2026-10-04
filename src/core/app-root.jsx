@@ -42,6 +42,7 @@ import { OnboardingOverlay } from "./onboarding.jsx";
 import { LocationsPanel } from "./locations.jsx";
 import { IS_NATIVE_APP, openExternal, nativeScan } from "./native.js";
 import { MobileHome } from "./mobile-home.jsx";
+import { MobileNav } from "./mobile-nav.jsx";
 
 function makeSamples(){
   return [
@@ -798,7 +799,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
     ];
   })();
-  const TITLES = { messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(curVertical), productions:getTerm(curVertical,"productions"), reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:getPointsName(curVertical), points:getPointsName(curVertical), community:"Community Board", labels:"QR Labels", facschools:"District Schools" };
+  const TITLES = { home:"Home", messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(curVertical), productions:getTerm(curVertical,"productions"), reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:getPointsName(curVertical), points:getPointsName(curVertical), community:"Community Board", labels:"QR Labels", facschools:"District Schools" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicOrgSlug) return <PublicOrgPage slug={publicOrgSlug} />;
@@ -820,23 +821,6 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       alert("Couldn't open the scanner: " + (e?.message || e));
     }
   };
-  if (IS_NATIVE_APP && user && page === "home") return (
-    <>
-      <style>{CSS}</style>
-      <MobileHome
-        appName={APP_NAME}
-        orgName={org?.name}
-        logo={LOGO_ICON}
-        onScan={handleNativeScan}
-        onInventory={()=>setPage("inventory")}
-        onAddItem={()=>{ setAddSignal(n=>n+1); setPage("inventory"); }}
-        onOpenWeb={()=>openExternal(APP_URL)}
-        onFullApp={()=>setPage("dashboard")}
-        onSettings={()=>setPage("settings")}
-      />
-    </>
-  );
-
   // ── Auth gate ────────────────────────────────────────────────────────────
   if(!authChk) return(
     <div style={{minHeight:"100vh",background:"var(--ink)",display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexDirection:"column"}}>
@@ -1139,6 +1123,14 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                   <div style={{width:32,height:32,border:"2.5px solid var(--linen)",borderTopColor:"var(--gold)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
                 </div>
               : <div className="fin">
+                  {page==="home" && IS_NATIVE_APP && <MobileHome
+                    appName={APP_NAME}
+                    orgName={org?.name}
+                    onScan={handleNativeScan}
+                    onInventory={()=>setPage("inventory")}
+                    onAddItem={()=>{ setAddSignal(n=>n+1); setPage("inventory"); }}
+                    onOpenWeb={()=>openExternal(APP_URL)}
+                  />}
                   {page==="requests"    && <Requests userId={org?.id || user?.id} orgName={org?.name} orgEmail={org?.email}
                     onUnreadChange={async()=>{
                       const{count}=await SB.from("rental_requests").select("id",{count:"exact",head:true}).eq("owner_id",activeOrgId).eq("status","pending");
@@ -1199,6 +1191,18 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
           </div>
         </div>
       </div>
+
+      {/* ── Native app bottom tab bar ── */}
+      {IS_NATIVE_APP && user && (
+        <MobileNav
+          page={page}
+          onHome={()=>{ setMob(false); setPage("home"); }}
+          onInventory={()=>{ setMob(false); setPage("inventory"); }}
+          onScan={handleNativeScan}
+          onRequests={()=>{ setMob(false); setPage("requests"); }}
+          onMore={()=>setMob(m=>!m)}
+        />
+      )}
 
       {/* ── Legal Modals ── */}
       {legalPage==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegalPage(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
