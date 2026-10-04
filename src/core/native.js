@@ -148,6 +148,32 @@ export async function shareImageDataUrl(dataUrl, filename) {
   return true;
 }
 
+// Render a set of QR labels into one image and open the OS share sheet (Print,
+// Save to Photos/Files, AirDrop…). App only. `labels` = [{name,id,sub,loc,qr}].
+export async function shareLabelsAsImage(labels, filename = "qr-labels.png") {
+  if (!labels || !labels.length) return false;
+  const cols = labels.length === 1 ? 1 : (labels.length === 2 ? 2 : 3);
+  const cellW = 250, cellH = 280, pad = 16, qr = 150;
+  const rows = Math.ceil(labels.length / cols);
+  const W = cols * cellW + pad * 2, H = rows * cellH + pad * 2;
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, W, H); g.textAlign = "center";
+  const clip = (s, n) => (s && s.length > n) ? s.slice(0, n - 1) + "…" : (s || "");
+  const loadImg = (src) => new Promise((res) => { if (!src) { res(null); return; } const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+  for (let i = 0; i < labels.length; i++) {
+    const r = Math.floor(i / cols), col = i % cols;
+    const x = pad + col * cellW, y = pad + r * cellH, cx = x + cellW / 2;
+    g.strokeStyle = "#ccc"; g.lineWidth = 1; g.strokeRect(x + 5, y + 5, cellW - 10, cellH - 10);
+    g.fillStyle = "#111"; g.font = "bold 15px Arial"; g.fillText(clip(labels[i].name, 22), cx, y + 30);
+    if (labels[i].id) { g.fillStyle = "#c4761a"; g.font = "bold 13px monospace"; g.fillText(clip(labels[i].id, 20), cx, y + 52); }
+    if (labels[i].sub) { g.fillStyle = "#666"; g.font = "11px Arial"; g.fillText(clip(labels[i].sub, 30), cx, y + 70); }
+    if (labels[i].loc) { g.fillStyle = "#333"; g.font = "bold 11px Arial"; g.fillText("📍 " + clip(labels[i].loc, 26), cx, y + 88); }
+    const img = await loadImg(labels[i].qr);
+    if (img) g.drawImage(img, cx - qr / 2, y + 100, qr, qr);
+  }
+  return shareImageDataUrl(c.toDataURL("image/png"), filename);
+}
+
 // Launch the native barcode / QR scanner (ready-made full-screen UI from the
 // MLKit plugin). Returns the scanned text, or null. Only call inside the app.
 export async function nativeScan() {
