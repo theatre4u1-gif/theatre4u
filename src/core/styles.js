@@ -455,6 +455,9 @@ tr:hover td{background:rgba(243,230,204,.55)}
 .t4u-native .stat-ico{font-size:18px;margin-bottom:4px}
 .t4u-native .stat-val{font-size:22px!important}
 .t4u-native .cat-gallery{gap:10px}
+.t4u-native .img-div{display:none!important}         /* hide decorative promo banners (text overflowed) */
+.t4u-native .t4u-comm-grid{grid-template-columns:1fr!important}  /* community board: single column */
+.t4u-native .mosaic{grid-template-rows:repeat(3,120px)!important}
 .t4u-native p,.t4u-native h1,.t4u-native h2,.t4u-native h3,.t4u-native h4,.t4u-native span,.t4u-native div,.t4u-native a{overflow-wrap:break-word;word-break:break-word}
 .t4u-native .stat-lbl{font-size:10px;letter-spacing:1px}
 .t4u-native .card{border-radius:12px}
