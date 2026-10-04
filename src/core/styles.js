@@ -425,6 +425,7 @@ tr:hover td{background:rgba(243,230,204,.55)}
 .t4u-native .topbar{padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;gap:10px}
 .t4u-native .topbar-title{font-size:20px}
 .t4u-native .menu-btn{display:none}            /* bottom-bar "More" replaces the hamburger */
+.t4u-native .sb-inner{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}  /* clear bottom bar so Sign Out isn't cut off */
 .t4u-native .hero-wrap{display:none!important} /* drop the website-style banners in the app */
 .t4u-native .scroll-area{padding-bottom:80px}  /* clear the fixed bottom tab bar */
 .t4u-native .aihelp-fab{bottom:86px!important}  /* lift help bubble above the tab bar */

@@ -88,6 +88,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
   const toggleTag=(t)=>setTagF(prev=>{const n=new Set(prev);n.has(t)?n.delete(t):n.add(t);return n;});
   const[showF,setShowF]=useState(false);
   const[modal,setModal]=useState(null);const[active,setActive]=useState(null);
+  const[tagsOpen,setTagsOpen]=useState(false); // collapse the tag filter cloud by default
   // Mobile home "Add an item" button: when the signal bumps, open the Add form.
   useEffect(()=>{ if(openAddSignal>0 && canAdd){ setActive(null); setModal("a"); } },[openAddSignal]);
   // Scanned item QR → open that item's detail in-app (match by display_id or id).
@@ -568,19 +569,38 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
           </div>
         )}
         {allTags.length>0&&(
-          <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center",marginBottom:14}}>
-            <span style={{fontSize:11,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:.5,marginRight:2}}>🏷 Tags</span>
-            {allTags.map(t=>{
-              const on=tagF.has(t);
-              return <button key={t} onClick={()=>toggleTag(t)}
-                style={{padding:"3px 10px",borderRadius:12,border:"1px solid",cursor:"pointer",fontFamily:"inherit",fontSize:12,
-                  fontWeight:on?700:500,borderColor:on?"var(--gold)":"var(--border)",
-                  background:on?"rgba(212,168,67,.15)":"transparent",color:on?"var(--cog)":"var(--muted)"}}>
-                #{t}{on?" ✕":""}
-              </button>;
-            })}
-            {tagF.size>0&&<button onClick={()=>setTagF(new Set())}
-              style={{fontSize:12,color:"var(--muted)",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",textDecoration:"underline"}}>clear tags</button>}
+          <div style={{marginBottom:14}}>
+            {/* Collapsed row: a Tags button + any currently-selected tags */}
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
+              <button onClick={()=>setTagsOpen(o=>!o)}
+                style={{display:"inline-flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:20,cursor:"pointer",fontFamily:"inherit",fontSize:12.5,fontWeight:700,
+                  border:"1px solid "+(tagF.size>0?"var(--gold)":"var(--border)"),
+                  background:tagF.size>0?"rgba(212,168,67,.12)":"transparent",color:tagF.size>0?"var(--cog)":"var(--muted)"}}>
+                🏷 Tags{tagF.size>0?` · ${tagF.size}`:""} <span style={{fontSize:10}}>{tagsOpen?"▲":"▼"}</span>
+              </button>
+              {!tagsOpen && [...tagF].map(t=>(
+                <button key={t} onClick={()=>toggleTag(t)}
+                  style={{padding:"3px 10px",borderRadius:12,border:"1px solid var(--gold)",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,background:"rgba(212,168,67,.15)",color:"var(--cog)"}}>
+                  #{t} ✕
+                </button>
+              ))}
+              {tagF.size>0&&<button onClick={()=>setTagF(new Set())}
+                style={{fontSize:12,color:"var(--muted)",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",textDecoration:"underline"}}>clear</button>}
+            </div>
+            {/* Expanded panel: all tags, scrollable so it never takes over the page */}
+            {tagsOpen&&(
+              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:8,maxHeight:170,overflowY:"auto",padding:"10px 12px",border:"1px solid var(--border)",borderRadius:12,background:"var(--parch)"}}>
+                {allTags.map(t=>{
+                  const on=tagF.has(t);
+                  return <button key={t} onClick={()=>toggleTag(t)}
+                    style={{padding:"3px 10px",borderRadius:12,border:"1px solid",cursor:"pointer",fontFamily:"inherit",fontSize:12,
+                      fontWeight:on?700:500,borderColor:on?"var(--gold)":"var(--border)",
+                      background:on?"rgba(212,168,67,.15)":"transparent",color:on?"var(--cog)":"var(--muted)"}}>
+                    #{t}{on?" ✕":""}
+                  </button>;
+                })}
+              </div>
+            )}
           </div>
         )}
         {canAdd&&!gsHide&&invView==="items"&&view!=="locations"&&items.length<5&&(
