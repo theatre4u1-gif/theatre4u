@@ -816,8 +816,9 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       let m;
       if ((m = raw.match(/[#/]location\/([^/?#\s]+)/))) { setDeepLinkLocation(decodeURIComponent(m[1])); nav("inventory"); return; }
       if ((m = raw.match(/[#/]item\/([^/?#\s]+)/)))     { setDeepLinkItem(decodeURIComponent(m[1])); nav("inventory"); return; }
-      if (/^https?:\/\//i.test(raw)) { openExternal(raw); return; }
-      nav("inventory");
+      // Not a Theatre4u item/bin code. For safety we never auto-open arbitrary
+      // scanned links (they can be spam/scam) — just show the not-found notice.
+      setDeepLinkItem(raw); nav("inventory");
     } catch (e) {
       alert("Couldn't open the scanner: " + (e?.message || e));
     }

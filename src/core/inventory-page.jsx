@@ -9,6 +9,7 @@ import { fmt$, uid, doorUrl } from "./helpers.js";
 import { CAT, CATS, CAT_GFX, CONDS, SIZES, AVAIL, MKT, getCatsMerged, customCatsFor } from "./inventory.js";
 import { QR } from "./qr.js";
 import { PLANS_DEF } from "./plans.js";
+import { IS_NATIVE_APP } from "./native.js";
 import { BG, usp } from "../lib/backgrounds.js";
 import { getExchangeName, getVertical, getCatGfx, getCats, getTerm } from "../lib/verticals.js";
 import { CSVImport } from "./marketplace.jsx";
@@ -298,10 +299,20 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
     if (!toPrint.length) { alert("No items to print."); return; }
     setPrintingQR(true);
     try {
-      const w = window.open("", "_blank", "width=950,height=720");
-      if (!w) { alert("Pop-up blocked — please allow pop-ups for "+APP_HOST+" and try again."); setPrintingQR(false); return; }
-      w.document.write(`<html><head><title>QR Labels</title>
-      <style>
+      const srcs = await Promise.all(toPrint.map(i => QR.toDataURL(doorUrl(org) + "/#/item/" + i.id, 140)));
+      const labels = toPrint.map((item, n) => {
+        const cat = vCAT[item.category] || CAT[item.category] || CAT.other;
+        const dispId = item.display_id || item.id.slice(0,8).toUpperCase();
+        return "<div class=\"lbl\">"
+          + "<div class=\"lbl-cat\" style=\"color:"+( cat.color||"#888")+"\">" + cat.icon + " " + cat.label + "</div>"
+          + "<div class=\"lbl-name\">" + item.name + "</div>"
+          + (item.location ? "<div class=\"lbl-loc\">📍 " + item.location + "</div>" : "")
+          + "<div class=\"lbl-id\">" + dispId + "</div>"
+          + "<div class=\"lbl-row\"><div><div class=\"lbl-brand\">"+APP_HOST+"</div></div>"
+          + (srcs[n] ? "<img class=\"lbl-qr\" src=\"" + srcs[n] + "\" alt=\"QR\"/>" : "")
+          + "</div></div>";
+      }).join("");
+      const styleBlock = `<style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:Arial,sans-serif;background:#fff;padding:14px}
         .controls{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
@@ -319,31 +330,29 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
         .lbl-brand{font-size:7px;color:#bbb}
         .lbl-qr{width:62px;height:62px}
         @media print{.controls{display:none!important}.grid{gap:7px}.lbl{width:162px;height:162px}}
-      </style></head><body>
-      <div class="controls">
-        <h2>${toPrint.length} label${toPrint.length!==1?"s":""}</h2>
+      </style>`;
+      const controls = `<div class="controls"><h2>${toPrint.length} label${toPrint.length!==1?"s":""}</h2>
         <button class="btn btn-p" onclick="window.print()">Print</button>
         <button class="btn btn-c" onclick="window.close()">Close</button>
-        <span style="font-size:11px;color:#888">Tip: set margins to None in print dialog</span>
-      </div>
-      <div class="grid" id="lbl">Generating labels…</div>
-      </body></html>`);
-      w.document.close();
-      const srcs = await Promise.all(toPrint.map(i => QR.toDataURL(doorUrl(org) + "/#/item/" + i.id, 140)));
-      const labels = toPrint.map((item, n) => {
-        const cat = vCAT[item.category] || CAT[item.category] || CAT.other;
-        const dispId = item.display_id || item.id.slice(0,8).toUpperCase();
-        return "<div class=\"lbl\">"
-          + "<div class=\"lbl-cat\" style=\"color:"+( cat.color||"#888")+"\">" + cat.icon + " " + cat.label + "</div>"
-          + "<div class=\"lbl-name\">" + item.name + "</div>"
-          + (item.location ? "<div class=\"lbl-loc\">📍 " + item.location + "</div>" : "")
-          + "<div class=\"lbl-id\">" + dispId + "</div>"
-          + "<div class=\"lbl-row\"><div><div class=\"lbl-brand\">"+APP_HOST+"</div></div>"
-          + (srcs[n] ? "<img class=\"lbl-qr\" src=\"" + srcs[n] + "\" alt=\"QR\"/>" : "")
-          + "</div></div>";
-      }).join("");
-      const el = w.document.getElementById("lbl");
-      if (el) { el.outerHTML = "<div class=\"grid\">" + labels + "</div>"; setTimeout(() => w.print(), 500); }
+        <span style="font-size:11px;color:#888">Tip: set margins to None in print dialog</span></div>`;
+
+      if (IS_NATIVE_APP) {
+        // In the app, window.open would hand a blank page to the phone's browser
+        // (and can land on spam). Print through a hidden in-app iframe instead.
+        const html = `<html><head><title>QR Labels</title>${styleBlock}</head><body><div class="grid">${labels}</div></body></html>`;
+        const ifr = document.createElement("iframe");
+        ifr.setAttribute("aria-hidden","true");
+        ifr.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0";
+        document.body.appendChild(ifr);
+        const d = ifr.contentWindow.document; d.open(); d.write(html); d.close();
+        setTimeout(() => { try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch(e){} setTimeout(()=>ifr.remove(), 2000); }, 600);
+      } else {
+        const w = window.open("", "_blank", "width=950,height=720");
+        if (!w) { alert("Pop-up blocked — please allow pop-ups for "+APP_HOST+" and try again."); setPrintingQR(false); return; }
+        w.document.write(`<html><head><title>QR Labels</title>${styleBlock}</head><body>${controls}<div class="grid">${labels}</div></body></html>`);
+        w.document.close();
+        setTimeout(() => { try { w.print(); } catch(e){} }, 500);
+      }
     } finally { setPrintingQR(false); }
   };
 
