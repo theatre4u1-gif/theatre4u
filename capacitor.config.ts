@@ -13,6 +13,13 @@ const config: CapacitorConfig = {
   appName: 'Theatre4u',
   webDir: 'dist',
   backgroundColor: '#0d0b11',
+  // Load the live site so every website change reaches installed apps instantly
+  // (no reinstall / no store review). The bundled dist/ stays as a fallback.
+  // Requires the mobile code to be deployed to theatre4u.org.
+  server: {
+    url: 'https://theatre4u.org',
+    cleartext: false,
+  },
   ios: {
     contentInset: 'always',
     backgroundColor: '#0d0b11',

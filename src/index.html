@@ -130,6 +130,12 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon-theatre4u.png"/>
     <link rel="icon" type="image/svg+xml" href="/favicon-theatre4u.svg"/>
     <link rel="manifest" href="/manifest.json"/>
+    <!-- Register service worker so the app is installable on Android (iOS installs via Add to Home Screen). Network-first = always current. -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function(){ navigator.serviceWorker.register('/sw.js').catch(function(){}); });
+      }
+    </script>
     <script>
       // Domain-aware branding: swap icons + manifest on artstracker.org
       (function(){
