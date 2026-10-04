@@ -28,6 +28,27 @@ export function openExternal(url) {
   }
 }
 
+// Print an HTML document safely. On the web this opens a print window as usual.
+// In the native app, window.open hands a blank page to the phone's browser (which
+// can land on spam), so we print through a hidden in-app iframe instead and strip
+// any auto-print <script> so it only prints once.
+export function printHtml(html, winFeatures) {
+  if (IS_NATIVE_APP) {
+    const safe = String(html).replace(/<script[\s\S]*?<\/script>/gi, "");
+    const ifr = document.createElement("iframe");
+    ifr.setAttribute("aria-hidden", "true");
+    ifr.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0";
+    document.body.appendChild(ifr);
+    const d = ifr.contentWindow.document; d.open(); d.write(safe); d.close();
+    setTimeout(() => { try { ifr.contentWindow.focus(); ifr.contentWindow.print(); } catch (e) {} setTimeout(() => ifr.remove(), 2000); }, 600);
+    return null;
+  }
+  const w = window.open("", "_blank", winFeatures || "width=820,height=640");
+  if (!w) return null;
+  w.document.write(html); w.document.close();
+  return w;
+}
+
 // Launch the native barcode / QR scanner (ready-made full-screen UI from the
 // MLKit plugin). Returns the scanned text, or null. Only call inside the app.
 export async function nativeScan() {

@@ -4,6 +4,7 @@ import { CAT } from "./inventory.js";
 import { QR } from "./qr.js";
 import { APP_NAME, APP_EMAIL } from "./config.js";
 import { doorOf } from "../lib/admin-metrics.js";
+import { printHtml } from "./native.js";
 
 const LABEL_PACKS = [
   { qty:25,  type:"standard",    label:"25 Standard",     retail:1000, desc:"Indoor use · polyester matte · water-resistant" },
@@ -267,9 +268,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
           <div class="lbl-id">${eId}</div>
         </div></div>`;
       }).join("");
-      const w = window.open("","_blank","width=900,height=700");
-      if(!w){setPrinting(false);return;}
-      w.document.write(`<!DOCTYPE html><html><head><title>Labels — ${org?.name||APP_NAME}</title>
+      printHtml(`<!DOCTYPE html><html><head><title>Labels — ${org?.name||APP_NAME}</title>
       <style>
         @page{ size:letter; margin:0; }
         *{margin:0;padding:0;box-sizing:border-box}
@@ -305,8 +304,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
       </div>
       <div class="sheet">${labels}</div>
       <script>setTimeout(function(){window.print()},600)<\/script>
-      </body></html>`);
-      w.document.close();
+      </body></html>`, "width=900,height=700");
     } finally { setPrinting(false); }
   };
 

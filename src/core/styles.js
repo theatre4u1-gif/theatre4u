@@ -463,4 +463,14 @@ tr:hover td{background:rgba(243,230,204,.55)}
 .t4u-native .chip{font-size:11px;padding:2px 8px}
 .t4u-native .modal-hd h1,.t4u-native .modal-hd h2,.t4u-native .modal-hd h3,.t4u-native .modal-title{font-size:17px!important}
 .t4u-native .topbar-title{font-size:18px}
+/* ── System font for a native feel (brand stays gold; logo is an image) ──── */
+.t4u-native, .t4u-native button, .t4u-native input, .t4u-native select, .t4u-native textarea,
+.t4u-native h1, .t4u-native h2, .t4u-native h3, .t4u-native h4, .t4u-native h5,
+.t4u-native p, .t4u-native span, .t4u-native div, .t4u-native a, .t4u-native li, .t4u-native label{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif!important;
+}
+/* keep monospace for item/bin ID codes */
+.t4u-native .lbl-id,.t4u-native .num,.t4u-native [style*="monospace"]{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;
+}
 `;

@@ -11,6 +11,7 @@ import { FbShareBtn } from "./ui.jsx";
 import { resizeImg, itemShareUrl, itemShareText, fmt$ } from "./helpers.js";
 import { CAT, CAT_GFX, MKT, customCatsFor, getCatsMerged } from "./inventory.js";
 import { QR } from "./qr.js";
+import { printHtml } from "./native.js";
 import { ROW_LABELS, COL_LABELS } from "./storage-map.js";
 import { AddToProductionPicker } from "./productions.jsx";
 import { getVertical, getExchangeName, getTerm } from "../lib/verticals.js";
@@ -501,12 +502,10 @@ export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, ca
     const qrUrl = APP_URL+"/#/item/" + qrIdentifier;
     const qrSrc=await QR.toDataURL(qrUrl,200);
     if(!qrSrc)return;
-    const w=window.open("","_blank","width=420,height=520");if(!w)return;
     const loc=item.location?"Location: "+item.location:"";
     const itemUrl=APP_HOST+"/#/item/"+qrIdentifier;
     const numStr = item.display_id || (item.item_number != null ? itemNum(item.item_number) : "");
-    w.document.write(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}.num{font-size:22px;font-weight:900;font-family:monospace;color:#c4761a;margin:2px 0 6px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2>${numStr?`<div class="num">${numStr}</div>`:""}<p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qrSrc}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${itemUrl}</p><p style="font-size:11px;color:#bbb">${APP_NAME} · ${APP_HOST}</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
-    w.document.close();
+    printHtml(`<html><head><title>QR – ${item.name}</title><style>body{font-family:sans-serif;text-align:center;padding:40px}img{margin:12px 0;border:1px solid #eee;border-radius:6px}h2{margin-bottom:4px;font-size:18px}.num{font-size:22px;font-weight:900;font-family:monospace;color:#c4761a;margin:2px 0 6px}p{color:#666;font-size:13px;margin:3px 0}</style></head><body><h2>${item.name}</h2>${numStr?`<div class="num">${numStr}</div>`:""}<p>${cat.label} · ${item.condition}</p>${loc?`<p style="font-weight:700;color:#333">${loc}</p>`:""}<img src="${qrSrc}" width="200" height="200"/><p style="font-size:11px;margin-top:8px;color:#888">${itemUrl}</p><p style="font-size:11px;color:#bbb">${APP_NAME} · ${APP_HOST}</p><script>setTimeout(function(){window.print()},300)<\/script></body></html>`, "width=420,height=520");
   };
 
   const dlQR=async()=>{const u=await QR.toDataURL(APP_URL+"/#/item/"+item.id,300);if(!u)return;const a=document.createElement("a");a.href=u;a.download=(item.display_id||item.id)+".png";a.click();};
