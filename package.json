@@ -30,6 +30,7 @@
     "@capacitor/share": "^6.0.3",
     "@capacitor/filesystem": "^6.0.3",
     "@capacitor/camera": "^6.1.2",
+    "@capacitor/browser": "^6.0.3",
     "@capacitor-mlkit/barcode-scanning": "^6.1.0"
   },
   "devDependencies": {

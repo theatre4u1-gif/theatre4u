@@ -76,6 +76,44 @@ export function printHtml(html, winFeatures) {
   return w;
 }
 
+// Google sign-in inside the app: open Google in the system browser, then the
+// OS returns to the app via a custom-scheme deep link that we exchange for a
+// session. Needs the redirect URL allow-listed in Supabase (see mobile/README).
+export const OAUTH_REDIRECT = "theatre4u://auth-callback";
+
+export async function nativeGoogleOAuth(supabase) {
+  if (!IS_NATIVE_APP) throw new Error("Only in the app.");
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: OAUTH_REDIRECT, skipBrowserRedirect: true,
+      queryParams: { prompt: "select_account" } },
+  });
+  if (error) throw error;
+  if (!data?.url) throw new Error("Could not start Google sign-in.");
+  const { Browser } = await import("@capacitor/browser");
+  await Browser.open({ url: data.url });
+}
+
+// Register once (native only): catch the deep link back from Google and finish
+// the sign-in. Handles both PKCE (?code=) and implicit (#access_token=) returns.
+export async function initOAuthDeepLink(supabase) {
+  if (!IS_NATIVE_APP) return;
+  const { App } = await import("@capacitor/app");
+  App.addListener("appUrlOpen", async ({ url }) => {
+    if (!url || url.indexOf("auth-callback") === -1) return;
+    try {
+      const frag = (url.split("#")[1] || url.split("?")[1] || "");
+      const p = new URLSearchParams(frag);
+      if (p.get("code")) {
+        await supabase.auth.exchangeCodeForSession(p.get("code"));
+      } else if (p.get("access_token")) {
+        await supabase.auth.setSession({ access_token: p.get("access_token"), refresh_token: p.get("refresh_token") });
+      }
+    } catch (e) { console.error("OAuth deep link failed", e); }
+    try { const { Browser } = await import("@capacitor/browser"); await Browser.close(); } catch (e) {}
+  });
+}
+
 // Take a photo with the phone's native camera and return it as a File (so it
 // flows through the same upload/resize path as a picked file). App only.
 export async function nativeTakePhoto() {

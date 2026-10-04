@@ -59,6 +59,32 @@ Then run `npm run app:assets`. (Uses `@capacitor/assets`.)
 
 ---
 
+## Native features — status + required config
+
+Done in the app (branch `mobile/capacitor-theatre4u`): mobile home + bottom tab bar,
+full-screen mobile sign-in, native QR scanner, system font + mobile layout, in-app
+label preview, per-item **Print / Save PNG via the OS share sheet**, **native camera**
+for Add-Item photos, and **Google sign-in** via system browser + deep link.
+
+**After pulling these changes, run `npm install` first** (new plugins were added:
+`@capacitor/share`, `@capacitor/filesystem`, `@capacitor/camera`, `@capacitor/browser`),
+then `npm run app:sync`.
+
+### Google sign-in — one setting to flip (Supabase)
+The app returns from Google via the deep link `theatre4u://auth-callback`.
+In the **Supabase dashboard → Authentication → URL Configuration → Redirect URLs**,
+add:  `theatre4u://auth-callback`
+(Google Cloud needs no change — Supabase is the OAuth client.) Until this URL is
+allow-listed, Google sign-in in the app will fail; **email + password still works.**
+Android deep-link scheme is already registered in `android/app/src/main/AndroidManifest.xml`.
+
+### iOS (when we add the iPhone app) — Info.plist
+Add these keys (Xcode will also need them for App Store review):
+- `NSCameraUsageDescription` — "Take photos of inventory items."
+- `NSPhotoLibraryUsageDescription` — "Attach photos to inventory items."
+- `NSPhotoLibraryAddUsageDescription` — "Save label images."
+- URL scheme `theatre4u` under `CFBundleURLTypes` (for Google sign-in deep link).
+
 ## Phase 2 — native upgrades (not done yet)
 
 These are the code changes that make it feel like a real app, planned next:

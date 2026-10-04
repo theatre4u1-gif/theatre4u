@@ -40,7 +40,7 @@ import { LandingPage, PublicOrgPage, PublicItemPage } from "./public.jsx";
 import { AIHelpBubble, PreviewMode } from "./preview.jsx";
 import { OnboardingOverlay } from "./onboarding.jsx";
 import { LocationsPanel } from "./locations.jsx";
-import { IS_NATIVE_APP, openExternal, nativeScan } from "./native.js";
+import { IS_NATIVE_APP, openExternal, nativeScan, initOAuthDeepLink } from "./native.js";
 import { MobileHome } from "./mobile-home.jsx";
 import { MobileNav } from "./mobile-nav.jsx";
 
@@ -628,6 +628,8 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   const isDesk = typeof window !== "undefined" && window.innerWidth > 900;
   // Inside the native app, tag the page so the mobile-only stylesheet applies.
   useEffect(()=>{ if(IS_NATIVE_APP && typeof document!=="undefined"){ document.body.classList.add("t4u-native"); document.documentElement.classList.add("t4u-native"); } },[]);
+  // Native app: finish Google sign-in when the OS returns via the deep link.
+  useEffect(()=>{ if(IS_NATIVE_APP){ initOAuthDeepLink(SB); } },[]);
   const listed = items.filter(i=>i.mkt!=="Not Listed").length;
 
   // Switch into a school's context (district admin only)

@@ -3,7 +3,7 @@ import { SB } from "./supabase.js";
 import { EM } from "./messages.js";
 import { CSS } from "./styles.js";
 import { APP_NAME, IS_ARTSTRACKER, APP_URL, APP_EMAIL, APP_HOST } from "./config.js";
-import { openExternal } from "./native.js";
+import { openExternal, nativeGoogleOAuth } from "./native.js";
 import { LegalModal } from "./ui.jsx";
 import { TERMS_CONTENT, PRIVACY_CONTENT } from "./legal.js";
 import { authErrKey, getRefCode, isDemoMode } from "./helpers.js";
@@ -215,6 +215,13 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo, nativeMode=false
   const googleSignIn=async()=>{
     setErr("");
     if(isDemoMode()){setErr("Google sign-in isn't available in the demo. Use the demo button instead.");return;}
+    // Inside the native app, Google must go through the system browser + a deep
+    // link back into the app (see native.js). The website path is unchanged.
+    if(nativeMode){
+      try{ await nativeGoogleOAuth(SB); }
+      catch(e){ setErr("Couldn't start Google sign-in. Please try again."); }
+      return;
+    }
     try{ sessionStorage.setItem("t4u_oauth_flow","1"); }catch(e){}
     const{error}=await SB.auth.signInWithOAuth({
       provider:"google",
@@ -285,13 +292,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo, nativeMode=false
             </button>
           ))}
         </div>
-        {/* Continue with Google — hidden in the native app (OAuth redirect isn't wired yet). */}
-        {nativeMode ? (
-          <div style={{marginBottom:16,fontSize:12.5,color:"#9b93a8",lineHeight:1.5,textAlign:"center"}}>
-            Prefer Google sign-in?{" "}
-            <span onClick={()=>openExternal(APP_URL)} style={{color:"#d4a843",fontWeight:600,cursor:"pointer",textDecoration:"underline"}}>Open the web platform ↗</span>
-          </div>
-        ) : (<>
+        {/* Continue with Google (web: redirect; app: system browser + deep link) */}
         <button onClick={googleSignIn} disabled={loading}
           style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:10,
             background:"#fff",color:"#1f1f1f",border:"1px solid #282333",borderRadius:6,
@@ -310,7 +311,6 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo, nativeMode=false
           <span style={{fontSize:11,color:"#685f76",textTransform:"uppercase",letterSpacing:1}}>or</span>
           <div style={{flex:1,height:1,background:"#282333"}}/>
         </div>
-        </>)}
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
           {mode==="signup"&&(<>
             {IS_ARTSTRACKER&&(
