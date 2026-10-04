@@ -847,6 +847,14 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
 
   if(!user && previewMode) return <PreviewMode onSignUp={()=>{ setPreviewMode(false); window.__t4u_show_auth&&window.__t4u_show_auth("signup"); }}/>;
 
+  // Native app, not signed in → full-screen mobile sign-in (no desktop landing page).
+  if(!user && IS_NATIVE_APP) return(
+    <>
+      <style>{CSS}</style>
+      <AuthOverlay nativeMode onAuth={u=>{setUser(u);}} pendingInvite={pendingInvite} inviteInfo={inviteInfo}/>
+    </>
+  );
+
   if(!user) return(
     <>
       <style>{CSS}</style>

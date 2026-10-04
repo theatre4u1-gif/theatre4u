@@ -3,6 +3,7 @@ import { SB } from "./supabase.js";
 import { EM } from "./messages.js";
 import { CSS } from "./styles.js";
 import { APP_NAME, IS_ARTSTRACKER, APP_URL, APP_EMAIL, APP_HOST } from "./config.js";
+import { openExternal } from "./native.js";
 import { LegalModal } from "./ui.jsx";
 import { TERMS_CONTENT, PRIVACY_CONTENT } from "./legal.js";
 import { authErrKey, getRefCode, isDemoMode } from "./helpers.js";
@@ -12,8 +13,8 @@ import { US_STATES, STATE_NAMES } from "../lib/geo.js";
 
 // Auth screens (sign-in / sign-up overlay + full-page login) — extracted from App.jsx.
 
-export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
-  const[visible,setVisible]=useState(false);
+export function AuthOverlay({onAuth, pendingInvite, inviteInfo, nativeMode=false}){
+  const[visible,setVisible]=useState(nativeMode);
   const[mode,setMode]=useState("login");
   const[email,setEmail]=useState(()=>{ try { return sessionStorage.getItem("t4u_prefill_email")||""; } catch{return "";} });
   const[pass,setPass]=useState("");
@@ -228,8 +229,12 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
     // On success the browser redirects to Google — nothing more to do here.
   };
 
-  const overlayStyle={position:"fixed",inset:0,background:"rgba(0,0,0,.82)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(4px)"};
-  const cardStyle={background:"#15121b",border:"1px solid #282333",borderRadius:16,width:"100%",maxWidth:440,padding:"36px 36px 32px",boxShadow:"0 16px 56px rgba(0,0,0,.6)",animation:"lp-rise .2s ease",fontFamily:"'DM Sans',sans-serif",color:"#ede8df",maxHeight:"92vh",overflowY:"auto"};
+  const overlayStyle=nativeMode
+    ? {position:"fixed",inset:0,background:"var(--ink,#0d0b11)",zIndex:9999,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"calc(env(safe-area-inset-top,0px) + 24px) 16px calc(env(safe-area-inset-bottom,0px) + 28px)",overflowY:"auto"}
+    : {position:"fixed",inset:0,background:"rgba(0,0,0,.82)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(4px)"};
+  const cardStyle=nativeMode
+    ? {background:"#15121b",border:"1px solid #282333",borderRadius:16,width:"100%",maxWidth:460,padding:"28px 22px 26px",fontFamily:"'DM Sans',sans-serif",color:"#ede8df"}
+    : {background:"#15121b",border:"1px solid #282333",borderRadius:16,width:"100%",maxWidth:440,padding:"36px 36px 32px",boxShadow:"0 16px 56px rgba(0,0,0,.6)",animation:"lp-rise .2s ease",fontFamily:"'DM Sans',sans-serif",color:"#ede8df",maxHeight:"92vh",overflowY:"auto"};
   const inputStyle={width:"100%",background:"#110f18",border:"1px solid #282333",borderRadius:6,padding:"10px 12px",color:"#ede8df",fontSize:14,fontFamily:"'DM Sans',sans-serif",outline:"none",boxSizing:"border-box"};
   const labelStyle={fontSize:11,fontWeight:600,color:"#9b93a8",textTransform:"uppercase",letterSpacing:1,display:"block",marginBottom:4};
 
@@ -252,7 +257,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:"#ede8df"}}>{mode==="login"?"Welcome back":"Get started free"}</div>
             <div style={{fontSize:12,color:"#685f76",marginTop:3}}>{mode==="login"?("Sign in to your "+APP_NAME+" account"):("Create your free "+APP_NAME+" account")}</div>
           </div>
-          <button onClick={close} style={{background:"none",border:"1px solid #282333",borderRadius:6,color:"#9b93a8",cursor:"pointer",padding:"4px 9px",fontSize:14,lineHeight:1}}>×</button>
+          {!nativeMode&&<button onClick={close} style={{background:"none",border:"1px solid #282333",borderRadius:6,color:"#9b93a8",cursor:"pointer",padding:"4px 9px",fontSize:14,lineHeight:1}}>×</button>}
         </div>
         {pendingInvite&&inviteInfo&&(
           <div style={{background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.28)",borderRadius:10,padding:"12px 14px",marginBottom:18}}>
@@ -280,7 +285,13 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
             </button>
           ))}
         </div>
-        {/* Continue with Google */}
+        {/* Continue with Google — hidden in the native app (OAuth redirect isn't wired yet). */}
+        {nativeMode ? (
+          <div style={{marginBottom:16,fontSize:12.5,color:"#9b93a8",lineHeight:1.5,textAlign:"center"}}>
+            Prefer Google sign-in?{" "}
+            <span onClick={()=>openExternal(APP_URL)} style={{color:"#d4a843",fontWeight:600,cursor:"pointer",textDecoration:"underline"}}>Open the web platform ↗</span>
+          </div>
+        ) : (<>
         <button onClick={googleSignIn} disabled={loading}
           style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:10,
             background:"#fff",color:"#1f1f1f",border:"1px solid #282333",borderRadius:6,
@@ -299,6 +310,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo}){
           <span style={{fontSize:11,color:"#685f76",textTransform:"uppercase",letterSpacing:1}}>or</span>
           <div style={{flex:1,height:1,background:"#282333"}}/>
         </div>
+        </>)}
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
           {mode==="signup"&&(<>
             {IS_ARTSTRACKER&&(
