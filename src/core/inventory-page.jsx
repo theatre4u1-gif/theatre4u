@@ -90,11 +90,12 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
   // Mobile home "Add an item" button: when the signal bumps, open the Add form.
   useEffect(()=>{ if(openAddSignal>0 && canAdd){ setActive(null); setModal("a"); } },[openAddSignal]);
   // Scanned item QR → open that item's detail in-app (match by display_id or id).
+  const [scanMsg,setScanMsg]=useState("");
   useEffect(()=>{
     if(!deepLinkItemId) return;
     const found = (itemsRaw||[]).find(i => String(i.display_id)===String(deepLinkItemId) || String(i.id)===String(deepLinkItemId));
-    if(found){ setActive(found); setModal("d"); }
-    else { setSrch(String(deepLinkItemId)); }
+    if(found){ setActive(found); setModal("d"); setScanMsg(""); }
+    else { setScanMsg("That code didn't match an item in your inventory."); }
     onDeepLinkItemConsumed && onDeepLinkItemConsumed();
   },[deepLinkItemId]);
   const[showImport,setShowImport]=useState(false);
@@ -397,6 +398,12 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
         </div>
       </div>
       <div style={{padding:"clamp(16px,4vw,24px) clamp(12px,4vw,36px) 56px",position:"relative",zIndex:1}}>
+        {scanMsg && (
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:12,padding:"10px 14px",borderRadius:8,background:"rgba(194,24,91,.1)",border:"1px solid rgba(194,24,91,.25)",color:"#c2185b",fontSize:13.5,fontWeight:600}}>
+            <span>{scanMsg}</span>
+            <button onClick={()=>setScanMsg("")} style={{background:"none",border:"none",color:"inherit",cursor:"pointer",fontSize:16,lineHeight:1,padding:"0 4px"}}>×</button>
+          </div>
+        )}
         <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:14,alignItems:"center"}}>
           <div className="srch">{Ic.search}<input aria-label="Search inventory" value={search} onChange={e=>setSrch(e.target.value)} placeholder="Search items, tags, location…"/></div>
           <button className="ico-btn" aria-label="Filters" style={showF?{borderColor:"var(--gold)",color:"var(--cog)"}:{}} onClick={()=>setShowF(!showF)}>{Ic.filter}</button>
