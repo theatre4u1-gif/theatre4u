@@ -137,15 +137,22 @@ export async function shareImageDataUrl(dataUrl, filename) {
     try { const a = document.createElement("a"); a.href = dataUrl; a.download = filename; a.click(); } catch (e) {}
     return false;
   }
-  const fsMod = await import("@capacitor/filesystem");
-  const shMod = await import("@capacitor/share");
-  const Filesystem = fsMod.Filesystem; const Directory = fsMod.Directory;
-  const Share = shMod.Share;
-  const base64 = String(dataUrl).split(",")[1];
-  await Filesystem.writeFile({ path: filename, data: base64, directory: Directory.Cache });
-  const { uri } = await Filesystem.getUri({ path: filename, directory: Directory.Cache });
-  await Share.share({ title: filename, text: filename, url: uri });
-  return true;
+  try {
+    const fsMod = await import("@capacitor/filesystem");
+    const shMod = await import("@capacitor/share");
+    const Filesystem = fsMod.Filesystem; const Directory = fsMod.Directory;
+    const Share = shMod.Share;
+    const base64 = String(dataUrl).split(",")[1];
+    await Filesystem.writeFile({ path: filename, data: base64, directory: Directory.Cache });
+    const { uri } = await Filesystem.getUri({ path: filename, directory: Directory.Cache });
+    // Share the file (not a URL) so Print / Save to Photos / Files appear in the sheet.
+    await Share.share({ title: "QR labels", files: [uri] });
+    return true;
+  } catch (e) {
+    if (e && String(e.message || e).toLowerCase().includes("cancel")) return false; // user dismissed the sheet
+    alert("Couldn't open the share sheet: " + (e?.message || e));
+    return false;
+  }
 }
 
 // Render a set of QR labels into one image and open the OS share sheet (Print,
