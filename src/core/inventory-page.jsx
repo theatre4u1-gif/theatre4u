@@ -19,7 +19,7 @@ import { ExternalLoans } from "./external-loans.jsx";
 import { RentalsPage } from "./rentals.jsx";
 import { UpgradePrompt } from "./billing.jsx";
 
-export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null, enableLoans=false, onImported=null, onItemSync=null, openAddSignal=0}){
+export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null, enableLoans=false, onImported=null, onItemSync=null, openAddSignal=0, deepLinkItemId=null, onDeepLinkItemConsumed=null}){
     const[upgradeReason,setUpgradeReason]=useState(null);
   const[pendingMsg,setPendingMsg]=useState("");
   const vVertical=org?.vertical||"theatre";
@@ -89,6 +89,14 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
   const[modal,setModal]=useState(null);const[active,setActive]=useState(null);
   // Mobile home "Add an item" button: when the signal bumps, open the Add form.
   useEffect(()=>{ if(openAddSignal>0 && canAdd){ setActive(null); setModal("a"); } },[openAddSignal]);
+  // Scanned item QR → open that item's detail in-app (match by display_id or id).
+  useEffect(()=>{
+    if(!deepLinkItemId) return;
+    const found = (itemsRaw||[]).find(i => String(i.display_id)===String(deepLinkItemId) || String(i.id)===String(deepLinkItemId));
+    if(found){ setActive(found); setModal("d"); }
+    else { setSrch(String(deepLinkItemId)); }
+    onDeepLinkItemConsumed && onDeepLinkItemConsumed();
+  },[deepLinkItemId]);
   const[showImport,setShowImport]=useState(false);
   const[showBulk,setShowBulk]=useState(false);
   const[addMenu,setAddMenu]=useState(false);

@@ -101,6 +101,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   const [plan,setPlanState] = useState("free"); // derived from org.plan
   const [page,setPage]     = useState(IS_NATIVE_APP ? "home" : "dashboard");
   const [addSignal,setAddSignal] = useState(0); // bump to auto-open the Add-Item form on the inventory page
+  const [deepLinkItem,setDeepLinkItem] = useState(null); // scanned item id → open its detail in-app
   const [legalPage,setLegalPage] = useState(null);
   const [mob,setMob]       = useState(false);
   const [loaded,setLoaded] = useState(false);
@@ -814,7 +815,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       if (!raw) return;
       let m;
       if ((m = raw.match(/[#/]location\/([^/?#\s]+)/))) { setDeepLinkLocation(decodeURIComponent(m[1])); nav("inventory"); return; }
-      if ((m = raw.match(/[#/]item\/([^/?#\s]+)/)))     { openExternal(APP_URL + "/item/" + encodeURIComponent(m[1])); return; }
+      if ((m = raw.match(/[#/]item\/([^/?#\s]+)/)))     { setDeepLinkItem(decodeURIComponent(m[1])); nav("inventory"); return; }
       if (/^https?:\/\//i.test(raw)) { openExternal(raw); return; }
       nav("inventory");
     } catch (e) {
@@ -1138,7 +1139,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                     }}/>}
                   {page==="messages"    && <Messages userId={activeOrgId} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",activeOrgId); setUnreadCount(count||0); }}/>}
                   {page==="dashboard"   && <Dashboard   items={vItems} org={viewOrg} plan={plan} pointBalance={creditBalance} goInventory={(cat)=>{ if(cat) setDeepLinkCategory(cat); nav("inventory"); }} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
-                  {page==="inventory"   && !activeSchool && <Inventory   items={vItems} onAdd={add} onEdit={edit} onDelete={del} userId={org?.id || user?.id} plan={plan} memberRole={memberRole} org={viewOrg} enableLoans={!memberRole} onImported={(data)=>setItems(data)} onItemSync={(id,av)=>setItems(p=>p.map(x=>x.id===id?{...x,avail:av}:x))} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} deepLinkCategory={deepLinkCategory} onDeepLinkCategoryConsumed={()=>setDeepLinkCategory(null)} openAddSignal={addSignal}/>}
+                  {page==="inventory"   && !activeSchool && <Inventory   items={vItems} onAdd={add} onEdit={edit} onDelete={del} userId={org?.id || user?.id} plan={plan} memberRole={memberRole} org={viewOrg} enableLoans={!memberRole} onImported={(data)=>setItems(data)} onItemSync={(id,av)=>setItems(p=>p.map(x=>x.id===id?{...x,avail:av}:x))} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} deepLinkCategory={deepLinkCategory} onDeepLinkCategoryConsumed={()=>setDeepLinkCategory(null)} openAddSignal={addSignal} deepLinkItemId={deepLinkItem} onDeepLinkItemConsumed={()=>setDeepLinkItem(null)}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading
                       ? <div style={{textAlign:"center",padding:48,color:"var(--muted)"}}>Loading {activeSchool.name}…</div>
@@ -1199,7 +1200,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
           onHome={()=>{ setMob(false); setPage("home"); }}
           onInventory={()=>{ setMob(false); setPage("inventory"); }}
           onScan={handleNativeScan}
-          onRequests={()=>{ setMob(false); setPage("requests"); }}
+          onAdd={()=>{ setMob(false); setAddSignal(n=>n+1); setPage("inventory"); }}
           onMore={()=>setMob(m=>!m)}
         />
       )}
