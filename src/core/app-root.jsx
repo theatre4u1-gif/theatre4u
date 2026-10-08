@@ -12,7 +12,7 @@ import { AuthOverlay, GoogleProfileSetup } from "./auth.jsx";
 import { STRIPE_LINKS, stripeLink, PLANS_DEF, UPGRADE_PLANS, betaPhase, graceEndDate } from "./plans.js";
 import { UpgradePrompt, UpgradePlans } from "./billing.jsx";
 import { CAT_GFX, CATS, CAT, CAT_MAP, CONDS, SIZES, AVAIL, MKT, setCustomCats, customCatsFor, getCatsMerged, setOrgLabels, vLabelOf, vIconOf, catLabelOf } from "./inventory.js";
-import { AdminHub, DistrictDashboard, SiteCoordinatorDashboard } from "./admin.jsx";
+import { AdminHub, DistrictDashboard } from "./admin.jsx";
 import { LabelsPage } from "./labels.jsx";
 import { OrgProfilePage } from "./profile.jsx";
 import { Prop28Page } from "./prop28.jsx";
@@ -126,7 +126,6 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   const [facDistrict,setFacDistrict]= useState(null); // district this user facilitates (full-edit browse), or null
   const [facSchools, setFacSchools] = useState([]);   // schools in the facilitated district
   const [ownsDistrict,setOwnsDistrict] = useState(false); // true if this user owns a district — show District tab from any of their orgs
-  const [isSiteCoord,setIsSiteCoord] = useState(false); // true if this user is a Site Coordinator (site_members) — show "My Site" tab
   const [needsProfile,setNeedsProfile] = useState(false); // Google-OAuth signup with no org yet — show finish-setup step
   // Invite token from URL — persisted in localStorage so it survives
   // Supabase's email confirmation redirect (which strips query params)
@@ -369,10 +368,6 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
         const { data: fSch } = await SB.from("orgs").select("*").eq("district_id", fdId).order("name");
         setFacSchools(fSch || []);
       } else { setFacDistrict(null); setFacSchools([]); }
-      // Site Coordinator detection — if this user coordinates one or more sites, show the "My Site" tab
-      const { data: scRows } = await SB.from("site_members")
-        .select("site_id").eq("user_id", user.id).eq("role","site_coordinator").limit(1);
-      setIsSiteCoord(!!(scRows && scRows.length));
       // District-owner detection — lets the District tab show from ANY of the owner's orgs
       // (e.g. while viewing a school they direct), not only from their own-org context.
       const { data: ownDist } = await SB.from("districts").select("id").eq("owner_id", user.id).maybeSingle();
@@ -804,11 +799,10 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       ...(!isMember ? [{ id:"points", label:getPointsName(curVertical), ico:"🪙" }] : []),
       ...(((!isMember && plan === "district") || ownsDistrict || (!isMember && facDistrict)) ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
       ...(!isMember && facDistrict ? [{ id:"facschools", label:"District Schools", ico:"🏫" }] : []),
-      ...(!isMember && isSiteCoord ? [{ id:"site", label:"My Site", ico:"🏢" }] : []),
       ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
     ];
   })();
-  const TITLES = { home:"Home", messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(curVertical), productions:getTerm(curVertical,"productions"), reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:getPointsName(curVertical), points:getPointsName(curVertical), community:"Community Board", labels:"QR Labels", facschools:"District Schools", site:"My Site" };
+  const TITLES = { home:"Home", messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(curVertical), productions:getTerm(curVertical,"productions"), reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:getPointsName(curVertical), points:getPointsName(curVertical), community:"Community Board", labels:"QR Labels", facschools:"District Schools" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicOrgSlug) return <PublicOrgPage slug={publicOrgSlug} />;
@@ -1171,7 +1165,6 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                   {page==="profile"     && <OrgProfilePage userId={org?.id || user?.id} org={org} setOrg={setOrg} plan={plan} items={items}/>}
               {page==="settings"    && <Settings    org={org} setOrg={setOrg} onSeed={seed} user={user} userId={org?.id || user?.id} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
                   {page==="district"    && (plan==="district" || ownsDistrict || facDistrict) && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool} isFacilitator={!!facDistrict}/>}
-                  {page==="site"        && isSiteCoord && <SiteCoordinatorDashboard user={user} onSwitchSchool={switchSchool}/>}
                   {page==="facschools"  && facDistrict && (
                     <div style={{padding:"32px 36px 56px"}}>
                       <h1 style={{fontFamily:"var(--serif)",fontSize:32,marginBottom:4}}>District Schools</h1>

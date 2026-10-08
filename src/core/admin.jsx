@@ -1907,10 +1907,10 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
 
         {/* Tabs */}
         <div className="tabs" style={{ marginBottom: 16 }}>
-          {["schools", "sites", "invites", "inventory", "funding"].map(t => (
+          {["schools", "invites", "inventory", "funding"].map(t => (
             <button key={t} className={`tab ${tab === t ? "on" : ""}`} onClick={() => setTab(t)}
               style={{ textTransform: "capitalize" }}>
-              {t==="schools" ? `🏫 Schools (${slotsUsed})` : t==="sites" ? `🏢 Sites` : t==="invites" ? `📨 Invites (${invites.filter(i=>i.status==="pending").length})` : t==="inventory" ? `📦 Inventory (${distItems.length})` : `💰 Funding`}
+              {t==="schools" ? `🏫 Schools (${slotsUsed})` : t==="invites" ? `📨 Invites (${invites.filter(i=>i.status==="pending").length})` : t==="inventory" ? `📦 Inventory (${distItems.length})` : `💰 Funding`}
             </button>
           ))}
           <button className="btn btn-o btn-sm" style={{ marginLeft: "auto" }}
@@ -1968,7 +1968,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
                     </button>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button className="btn btn-o btn-sm" style={{ flex: 1, minWidth: 0 }} onClick={() => openDirectors(school)}>
-                        👤 Directors
+                        👤 Dept Leaders
                       </button>
                       <button className="btn btn-o btn-sm" style={{ flex: 1, minWidth: 0 }} onClick={() => changeSchoolOwner(school)}>
                         🔑 Owner
@@ -1983,8 +1983,6 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
               ))}
             </div>
           )
-        ) : tab === "sites" ? (
-          <DistrictSitesPanel district={district} schools={schools} onChanged={load} />
         ) : tab === "invites" ? (
           /* Invites tab */
           <div className="card" style={{ overflow: "hidden" }}>
@@ -2046,7 +2044,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
                 {schools.map(sc=><option key={sc.id} value={sc.id}>{sc.name}</option>)}
               </select>
               <select value={distProgF} onChange={e=>setDistProgF(e.target.value)} style={{padding:"6px 10px",borderRadius:7,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--linen)",fontSize:13}}>
-                <option value="all">All Programs</option>
+                <option value="all">All Departments</option>
                 {[...new Set(schools.map(sc=>sc.vertical||"theatre"))].map(v=><option key={v} value={v}>{getVertical(v).icon} {getVertical(v).label}</option>)}
               </select>
               <div style={{marginLeft:"auto",display:"flex",gap:8}}>
@@ -2065,7 +2063,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
                 <div style={{overflowX:"auto"}}>
                   <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
                     <thead><tr style={{borderBottom:"2px solid var(--border)"}}>
-                      {["School","Program","Item","Category","Condition","Qty","Availability","Location"].map(h=>(
+                      {["School","Department","Item","Category","Condition","Qty","Availability","Location"].map(h=>(
                         <th key={h} style={{padding:"8px 10px",textAlign:"left",color:"var(--muted)",fontWeight:700,fontSize:11,textTransform:"uppercase",letterSpacing:.5,whiteSpace:"nowrap"}}>{h}</th>
                       ))}
                     </tr></thead>
@@ -2197,31 +2195,31 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}
           onClick={()=>setDirSchool(null)}>
           <div className="card card-p" style={{ maxWidth:460, width:"100%" }} onClick={e=>e.stopPropagation()}>
-            <h3 style={{ fontFamily:"var(--serif)", marginBottom:4 }}>Program Directors</h3>
+            <h3 style={{ fontFamily:"var(--serif)", marginBottom:4 }}>Department Leaders</h3>
             <p style={{ fontSize:13, color:"var(--muted)", marginBottom:16 }}>
-              {dirSchool.name} — directors see only this program's inventory. Assign the same person to several schools to make them a multi-program coordinator.
+              {dirSchool.name} — a leader assigned to a department sees only that department's inventory. Leave the department blank to give whole-school access.
             </p>
             {dirList.length>0 ? (
               <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:16 }}>
                 {dirList.map(d=>(
                   <div key={d.email} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:"var(--parch)", borderRadius:8, border:"1px solid var(--border)" }}>
-                    <div style={{ flex:1, fontSize:13, fontWeight:600 }}>{d.email}<span style={{ display:"block", fontSize:11, fontWeight:500, color:"var(--muted)" }}>{d.vertical ? (getVertical(d.vertical).icon+" "+getVertical(d.vertical).label) : "All programs"}</span></div>
+                    <div style={{ flex:1, fontSize:13, fontWeight:600 }}>{d.email}<span style={{ display:"block", fontSize:11, fontWeight:500, color:"var(--muted)" }}>{d.vertical ? (getVertical(d.vertical).icon+" "+getVertical(d.vertical).label) : "Whole school"}</span></div>
                     <button onClick={()=>removeDirector(d.email)} style={{ padding:"3px 10px", borderRadius:6, border:"1px solid rgba(194,24,91,.3)", background:"transparent", color:"var(--red)", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>Remove</button>
                   </div>
                 ))}
               </div>
             ) : (
-              <div style={{ color:"var(--muted)", fontSize:13, marginBottom:16 }}>No directors assigned yet.</div>
+              <div style={{ color:"var(--muted)", fontSize:13, marginBottom:16 }}>No department leaders assigned yet.</div>
             )}
-            <div style={{ fontWeight:700, fontSize:13, marginBottom:6 }}>Assign a director</div>
+            <div style={{ fontWeight:700, fontSize:13, marginBottom:6 }}>Assign a department leader</div>
             <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-              <input className="fi" type="email" placeholder="director@email.com" value={dirEmail}
+              <input className="fi" type="email" placeholder="leader@email.com" value={dirEmail}
                 onChange={e=>setDirEmail(e.target.value)} style={{ flex:1, minWidth:160 }}/>
               {(() => {
                 const dv = (dirSchool.verticals_enabled && dirSchool.verticals_enabled.length) ? dirSchool.verticals_enabled : [dirSchool.vertical||"theatre"];
                 return dv.length>1 ? (
                   <select className="fs" value={dirVertical} onChange={e=>setDirVertical(e.target.value)} style={{ flex:"0 0 auto" }}>
-                    <option value="">All programs</option>
+                    <option value="">Whole school (all departments)</option>
                     {dv.map(v=><option key={v} value={v}>{getVertical(v).icon} {getVertical(v).label}</option>)}
                   </select>
                 ) : null;
@@ -2229,7 +2227,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
               <button className="btn btn-g btn-sm" disabled={dirBusy} onClick={addDirector}>{dirBusy?"…":"Assign"}</button>
             </div>
             <p style={{ fontSize:11, color:"var(--muted)", marginTop:8 }}>
-              They must have an ArtsTracker account first. They'll see this program's inventory next time they log in.
+              They must have an ArtsTracker account first. They'll see their department's inventory next time they log in.
             </p>
             <button className="btn btn-o btn-sm" style={{ marginTop:16, width:"100%" }} onClick={()=>setDirSchool(null)}>Done</button>
           </div>
@@ -2243,7 +2241,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
           <div className="card card-p" style={{ maxWidth:460, width:"100%" }} onClick={e=>e.stopPropagation()}>
             <h3 style={{ fontFamily:"var(--serif)", marginBottom:4 }}>Arts Facilitators</h3>
             <p style={{ fontSize:13, color:"var(--muted)", marginBottom:16 }}>
-              Facilitators can view and edit inventory across every school in your district. Use this for district arts coordinators who support all programs.
+              Facilitators can view and edit inventory across every school and department in your district. Use this for district arts coordinators.
             </p>
             {facList.length>0 ? (
               <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:16 }}>
