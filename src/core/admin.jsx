@@ -1328,7 +1328,7 @@ export function AdminHub({ currentUser, org, only, initialTab }) {
               <div>
                 <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>Award Stage Points</div>
                 <div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6}}>
-                  Reward a program for giving great feedback or referring a new program.
+                  Reward a program for giving great feedback or referring a new school.
                   Go to the <strong style={{color:"var(--text)"}}>Feedback</strong> tab and use
                   the <strong style={{color:"var(--goldink)"}}>🎁 Award Points</strong> button on any feedback entry.
                   The points appear in their account immediately.
@@ -1531,7 +1531,7 @@ function DistrictSitesPanel({ district, schools, onChanged }) {
       </div>
       {sites.length === 0 ? (
         <div className="card card-p" style={{ textAlign: "center", padding: 32, color: "var(--muted)" }}>
-          No sites yet. A site is a campus that groups its programs, run by one or more Site Coordinators.
+          No sites yet. A site groups a school's programs and is run by one or more Site Coordinators.
         </div>
       ) : sites.map(site => {
         const attached = (schools || []).filter(s => s.site_id === site.id);
@@ -1785,7 +1785,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
   };
 
   const removeSchool = async (schoolId) => {
-    if (!window.confirm("Remove this program from your district? Their account and data will remain, but they will no longer be linked to your district.")) return;
+    if (!window.confirm("Remove this school from your district? Their account and data will remain, but they will no longer be linked to your district.")) return;
     // Detach via a scoped RPC (owner or facilitator of this district only) so orgs stays locked down.
     const { error } = await SB.rpc("district_remove_school", { p_school_id: schoolId });
     if (error) { setMsg("❌ " + error.message); return; }
@@ -1841,7 +1841,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
     <div style={{ padding: 48, textAlign: "center" }}>
       <div style={{ fontSize: 40, marginBottom: 12 }}>🏢</div>
       <h2 style={{ fontFamily: "var(--serif)", marginBottom: 8 }}>District Plan Required</h2>
-      <p style={{ color: "var(--muted)" }}>Upgrade to District to manage multiple programs from one dashboard.</p>
+      <p style={{ color: "var(--muted)" }}>Upgrade to District to manage multiple schools from one dashboard.</p>
     </div>
   );
 
@@ -1857,7 +1857,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
             <h1 className="hero-title" style={{ fontSize: 44 }}>
               {district?.name || "Your District"}
             </h1>
-            <p className="hero-sub">Manage all your programs from one place.</p>
+            <p className="hero-sub">Manage all your schools from one place.</p>
           </div>
           <div className="hero-bar" />
         </div>
@@ -1868,7 +1868,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 12, marginBottom: 24 }}>
           {[
-            { icon: "🏫", label: "Programs",    val: `${slotsUsed} / ${slotsTotal}` },
+            { icon: "🏫", label: "Schools",     val: `${slotsUsed} / ${slotsTotal}` },
             { icon: "📦", label: "Total Items",  val: totalItems },
             { icon: "📨", label: "Pending Invites", val: invites.filter(i => i.status === "pending").length },
             { icon: "🎭", label: "Plan",         val: "District", color: "#42a5f5" },
@@ -1884,7 +1884,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
         {/* District Name — owner only (facilitators cannot rename the district) */}
         {isOwner && (
         <div className="card card-p" style={{ marginBottom: 20 }}>
-          <div className="sh"><h2>District Profile</h2><p>This name appears on all program Exchange listings.</p></div>
+          <div className="sh"><h2>District Profile</h2><p>This name appears on all school Exchange listings.</p></div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
             <div className="fg" style={{ flex: 1, minWidth: 200 }}>
               <label className="fl">District Name</label>
@@ -1910,7 +1910,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
           {["schools", "sites", "invites", "inventory", "funding"].map(t => (
             <button key={t} className={`tab ${tab === t ? "on" : ""}`} onClick={() => setTab(t)}
               style={{ textTransform: "capitalize" }}>
-              {t==="schools" ? `🏫 Programs (${slotsUsed})` : t==="sites" ? `🏢 Sites` : t==="invites" ? `📨 Invites (${invites.filter(i=>i.status==="pending").length})` : t==="inventory" ? `📦 Inventory (${distItems.length})` : `💰 Funding`}
+              {t==="schools" ? `🏫 Schools (${slotsUsed})` : t==="sites" ? `🏢 Sites` : t==="invites" ? `📨 Invites (${invites.filter(i=>i.status==="pending").length})` : t==="inventory" ? `📦 Inventory (${distItems.length})` : `💰 Funding`}
             </button>
           ))}
           <button className="btn btn-o btn-sm" style={{ marginLeft: "auto" }}
@@ -1920,7 +1920,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
           <button className="btn btn-g btn-sm"
             onClick={() => setShowInvite(true)}
             disabled={slotsUsed >= slotsTotal}>
-            + Add Program
+            + Add School
           </button>
         </div>
 
@@ -1930,11 +1930,11 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
           schools.length === 0 ? (
             <div className="card card-p" style={{ textAlign: "center", padding: 40 }}>
               <div style={{ fontSize: 36, marginBottom: 10 }}>🏫</div>
-              <h3 style={{ fontFamily: "var(--serif)", marginBottom: 6 }}>No Programs Yet</h3>
+              <h3 style={{ fontFamily: "var(--serif)", marginBottom: 6 }}>No Schools Yet</h3>
               <p style={{ color: "var(--muted)", marginBottom: 16 }}>
-                Invite up to {slotsTotal} programs to your district. Each program gets its own login and inventory.
+                Invite up to {slotsTotal} schools to your district. Each school gets their own login and inventory.
               </p>
-              <button className="btn btn-g" onClick={() => setShowInvite(true)}>+ Invite First Program</button>
+              <button className="btn btn-g" onClick={() => setShowInvite(true)}>+ Invite First School</button>
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 14 }}>
@@ -1945,8 +1945,8 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
                       display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>🏫</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.3 }}>{school.name || "Unnamed Program"}</div>
-                        <button title="Rename program" aria-label="Rename program" onClick={() => renameSchool(school)}
+                        <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.3 }}>{school.name || "Unnamed School"}</div>
+                        <button title="Rename school" aria-label="Rename school" onClick={() => renameSchool(school)}
                           style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 13, padding: 2, lineHeight: 1, flexShrink: 0 }}>
                           ✏️
                         </button>
@@ -1959,12 +1959,12 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
                       📦 {itemCounts[school.id] || 0} items
                     </span>
                     <span style={{ padding: "2px 8px", background: "rgba(66,165,245,.12)", color: "#42a5f5", borderRadius: 8, fontSize: 11, fontWeight: 600 }}>
-                      {school.type || "Program"}
+                      {school.type || "School"}
                     </span>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: "auto", paddingTop: 8, borderTop: "1px solid var(--border)" }}>
                     <button className="btn btn-g btn-sm" onClick={() => onSwitchSchool(school)}>
-                      Enter Program →
+                      Enter School →
                     </button>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button className="btn btn-o btn-sm" style={{ flex: 1, minWidth: 0 }} onClick={() => openDirectors(school)}>
@@ -1994,7 +1994,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "rgba(0,0,0,.2)" }}>
-                    {["Email", "Program", "Status", "Sent", ""].map(h => (
+                    {["Email", "School", "Status", "Sent", ""].map(h => (
                       <th key={h} style={{ padding: "9px 14px", textAlign: "left", fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", fontWeight: 700 }}>{h}</th>
                     ))}
                   </tr>
@@ -2042,11 +2042,11 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
           <div>
             <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16,alignItems:"center"}}>
               <select value={distSchoolF} onChange={e=>setDistSchoolF(e.target.value)} style={{padding:"6px 10px",borderRadius:7,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--linen)",fontSize:13}}>
-                <option value="all">All Programs</option>
+                <option value="all">All Schools</option>
                 {schools.map(sc=><option key={sc.id} value={sc.id}>{sc.name}</option>)}
               </select>
               <select value={distProgF} onChange={e=>setDistProgF(e.target.value)} style={{padding:"6px 10px",borderRadius:7,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--linen)",fontSize:13}}>
-                <option value="all">All Disciplines</option>
+                <option value="all">All Programs</option>
                 {[...new Set(schools.map(sc=>sc.vertical||"theatre"))].map(v=><option key={v} value={v}>{getVertical(v).icon} {getVertical(v).label}</option>)}
               </select>
               <div style={{marginLeft:"auto",display:"flex",gap:8}}>
@@ -2060,12 +2060,12 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
               let fi=distItems;
               if(distSchoolF!=="all") fi=fi.filter(i=>i.org_id===distSchoolF);
               if(distProgF!=="all") fi=fi.filter(i=>(i.orgs?.vertical||i.vertical||"theatre")===distProgF);
-              if(!fi.length) return(<div className="empty" style={{padding:40}}><div className="empty-ico">📦</div><h3>No items found</h3><p>Adjust your filters or invite more programs.</p></div>);
+              if(!fi.length) return(<div className="empty" style={{padding:40}}><div className="empty-ico">📦</div><h3>No items found</h3><p>Adjust your filters or invite more schools.</p></div>);
               if(distView==="table") return(
                 <div style={{overflowX:"auto"}}>
                   <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
                     <thead><tr style={{borderBottom:"2px solid var(--border)"}}>
-                      {["Program","Discipline","Item","Category","Condition","Qty","Availability","Location"].map(h=>(
+                      {["School","Program","Item","Category","Condition","Qty","Availability","Location"].map(h=>(
                         <th key={h} style={{padding:"8px 10px",textAlign:"left",color:"var(--muted)",fontWeight:700,fontSize:11,textTransform:"uppercase",letterSpacing:.5,whiteSpace:"nowrap"}}>{h}</th>
                       ))}
                     </tr></thead>
@@ -2113,7 +2113,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
             const bySchool = schools.map(sc=>{
               const alloc = distFund.sources.filter(s=>s.org_id===sc.id && s.is_active).reduce((a,s)=>a+(parseFloat(s.total_amount)||0),0);
               const spent = distFund.exps.filter(e=>e.org_id===sc.id).reduce((a,e)=>a+(parseFloat(e.amount)||0),0);
-              return { id:sc.id, name:sc.name||"Unnamed Program", alloc, spent, remaining:alloc-spent };
+              return { id:sc.id, name:sc.name||"Unnamed School", alloc, spent, remaining:alloc-spent };
             });
             const shown = fundSchoolF==="all" ? bySchool : bySchool.filter(r=>r.id===fundSchoolF);
             const tAlloc = shown.reduce((a,r)=>a+r.alloc,0);
@@ -2123,7 +2123,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
             const p28cost = p28shown.reduce((a,p)=>a+(parseFloat(p.cost)||0),0);
             const p28students = p28shown.reduce((a,p)=>a+(parseInt(p.students_served)||0),0);
             const exportCsv = ()=>{
-              const rows=[["Program","Allocated","Spent","Remaining"]];
+              const rows=[["School","Allocated","Spent","Remaining"]];
               shown.forEach(r=>rows.push([r.name,r.alloc.toFixed(2),r.spent.toFixed(2),r.remaining.toFixed(2)]));
               rows.push(["DISTRICT TOTAL",tAlloc.toFixed(2),tSpent.toFixed(2),tRem.toFixed(2)]);
               const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(",")).join("\n");
@@ -2135,7 +2135,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
               <div>
                 <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16,alignItems:"center"}}>
                   <select value={fundSchoolF} onChange={e=>setFundSchoolF(e.target.value)} style={{padding:"6px 10px",borderRadius:7,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--linen)",fontSize:13}}>
-                    <option value="all">All Programs (district total)</option>
+                    <option value="all">All Schools (district total)</option>
                     {schools.map(sc=><option key={sc.id} value={sc.id}>{sc.name}</option>)}
                   </select>
                   <button className="btn btn-o btn-sm" style={{marginLeft:"auto"}} onClick={exportCsv}>⬇ Download CSV</button>
@@ -2155,12 +2155,12 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
                   ))}
                 </div>
                 {shown.length===0 ? (
-                  <div className="empty" style={{padding:40}}><div className="empty-ico">💰</div><h3>No funding data yet</h3><p>Programs track grants and spending in their Funding Tracker.</p></div>
+                  <div className="empty" style={{padding:40}}><div className="empty-ico">💰</div><h3>No funding data yet</h3><p>Schools track grants and spending in their Funding Tracker.</p></div>
                 ) : (
                   <div style={{overflowX:"auto"}}>
                     <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
                       <thead><tr style={{borderBottom:"2px solid var(--border)"}}>
-                        {["Program","Allocated","Spent","Remaining","% Spent"].map((h,i)=>(
+                        {["School","Allocated","Spent","Remaining","% Spent"].map((h,i)=>(
                           <th key={h} style={{padding:"8px 10px",textAlign:i===0?"left":"right",color:"var(--muted)",fontWeight:700,fontSize:11,textTransform:"uppercase",letterSpacing:.5}}>{h}</th>
                         ))}
                       </tr></thead>
@@ -2243,13 +2243,13 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
           <div className="card card-p" style={{ maxWidth:460, width:"100%" }} onClick={e=>e.stopPropagation()}>
             <h3 style={{ fontFamily:"var(--serif)", marginBottom:4 }}>Arts Facilitators</h3>
             <p style={{ fontSize:13, color:"var(--muted)", marginBottom:16 }}>
-              Facilitators can view and edit inventory across every program and site in your district. Use this for district arts coordinators who support all programs.
+              Facilitators can view and edit inventory across every school in your district. Use this for district arts coordinators who support all programs.
             </p>
             {facList.length>0 ? (
               <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:16 }}>
                 {facList.map(f=>(
                   <div key={f.email} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:"var(--parch)", borderRadius:8, border:"1px solid var(--border)" }}>
-                    <div style={{ flex:1, fontSize:13, fontWeight:600 }}>{f.email}<span style={{ display:"block", fontSize:11, fontWeight:500, color:"var(--muted)" }}>All programs · full edit</span></div>
+                    <div style={{ flex:1, fontSize:13, fontWeight:600 }}>{f.email}<span style={{ display:"block", fontSize:11, fontWeight:500, color:"var(--muted)" }}>All schools · full edit</span></div>
                     <button onClick={()=>removeFacilitator(f.email)} style={{ padding:"3px 10px", borderRadius:6, border:"1px solid rgba(194,24,91,.3)", background:"transparent", color:"var(--red)", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>Remove</button>
                   </div>
                 ))}
@@ -2279,25 +2279,25 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
           onClick={e => e.target === e.currentTarget && setShowInvite(false)}>
           <div className="card card-p" style={{ width: "100%", maxWidth: 480, animation: "su .2s ease" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0 }}>
-              <h2 style={{ fontFamily: "var(--serif)", fontSize: 20 }}>Add Program to District</h2>
+              <h2 style={{ fontFamily: "var(--serif)", fontSize: 20 }}>Add School to District</h2>
               <button className="btn btn-o btn-sm" onClick={() => setShowInvite(false)}>✕</button>
             </div>
 
             <div style={{ marginTop: 16 }}>
               <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 12, lineHeight: 1.6 }}>
-                Send an invite link by email. The program director can accept by signing into their existing Theatre4u™ account
+                Send an invite link by email. The school director can accept by signing into their existing Theatre4u™ account
                 or by creating a new one. You have <strong>{slotsTotal - slotsUsed}</strong> slot{slotsTotal - slotsUsed !== 1 ? "s" : ""} remaining.
               </p>
               <div className="fg" style={{ marginBottom: 12 }}>
-                <label className="fl">Program Director Email *</label>
+                <label className="fl">School Director Email *</label>
                 <input className="fi" type="email" value={invEmail} onChange={e => setInvEmail(e.target.value)}
                   placeholder="director@school.edu" autoFocus
                   onKeyDown={e => e.key === "Enter" && sendInvite()} />
               </div>
               <div className="fg" style={{ marginBottom: 16 }}>
-                <label className="fl">Program Name (optional)</label>
+                <label className="fl">School Name (optional)</label>
                 <input className="fi" value={invSchool} onChange={e => setInvSchool(e.target.value)}
-                  placeholder="e.g. Marina High Theatre" />
+                  placeholder="e.g. Coppell Middle School West" />
               </div>
               {msg && <div style={{ color: msg.startsWith("✓") ? "var(--green)" : "var(--red)",
                 marginBottom: 12, fontSize: 13, fontWeight: 600 }}>{msg}</div>}
