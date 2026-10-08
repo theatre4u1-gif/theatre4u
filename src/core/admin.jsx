@@ -1425,174 +1425,6 @@ export function AdminHub({ currentUser, org, only, initialTab }) {
   );
 }
 
-export function SiteCoordinatorDashboard({ user, onSwitchSchool }) {
-  const [sites, setSites] = useState([]);
-  const [programs, setPrograms] = useState([]);
-  const [msg, setMsg] = useState("");
-  const flash = (t) => { setMsg(t); setTimeout(() => setMsg(""), 3500); };
-  const load = async () => {
-    if (!user) return;
-    const { data: sm } = await SB.from("site_members").select("site_id").eq("user_id", user.id).eq("role", "site_coordinator");
-    const siteIds = (sm || []).map(r => r.site_id);
-    if (!siteIds.length) { setSites([]); setPrograms([]); return; }
-    const { data: st } = await SB.from("sites").select("*").in("id", siteIds).order("name");
-    setSites(st || []);
-    const { data: pr } = await SB.from("orgs").select("id,name,site_id,vertical").in("site_id", siteIds).order("name");
-    setPrograms(pr || []);
-  };
-  useEffect(() => { load(); }, [user?.id]);
-  const assignLeader = async (orgId, input) => {
-    const email = (input.value || "").trim().toLowerCase(); if (!email) return;
-    const { data, error } = await SB.rpc("assign_program_leader", { p_org_id: orgId, p_email: email });
-    if (error) return flash("❌ " + error.message);
-    if (data === "no_account") return flash("No account for " + email + " yet — have them sign in once, then assign.");
-    input.value = ""; flash("✓ Program leader assigned");
-  };
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div>
-        <h2 style={{ fontFamily: "var(--serif)", margin: 0 }}>Your Site{sites.length > 1 ? "s" : ""}</h2>
-        <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 4 }}>Oversee the programs at your site, enter any program's inventory, and assign program leaders.</p>
-      </div>
-      {msg && <div style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>{msg}</div>}
-      {sites.length === 0 ? (
-        <div className="card card-p" style={{ textAlign: "center", padding: 32, color: "var(--muted)" }}>You're not assigned to a site yet. Your district facilitator can add you.</div>
-      ) : sites.map(site => {
-        const progs = programs.filter(p => p.site_id === site.id);
-        return (
-          <div key={site.id} className="card card-p" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>🏢 {site.name || "Your Site"}</div>
-            {progs.length === 0 ? <div style={{ fontSize: 13, color: "var(--muted)" }}>No programs attached to this site yet.</div> : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 12 }}>
-                {progs.map(p => (
-                  <div key={p.id} className="card card-p" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    <div style={{ fontWeight: 700 }}>{p.name || "Program"}</div>
-                    <button className="btn btn-g btn-sm" onClick={() => onSwitchSchool && onSwitchSchool(p)}>Enter program →</button>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <input className="fi" style={{ flex: 1, minWidth: 0 }} placeholder="leader@email" id={`pl-${p.id}`} />
-                      <button className="btn btn-o btn-sm" onClick={() => assignLeader(p.id, document.getElementById(`pl-${p.id}`))}>+ Leader</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function DistrictSitesPanel({ district, schools, onChanged }) {
-  const [sites, setSites] = useState([]);
-  const [coords, setCoords] = useState({});
-  const [newName, setNewName] = useState("");
-  const [msg, setMsg] = useState("");
-  const load = async () => {
-    if (!district) return;
-    const { data: st } = await SB.from("sites").select("*").eq("district_id", district.id).order("name");
-    setSites(st || []);
-    const cmap = {};
-    for (const s of (st || [])) {
-      const { data: m } = await SB.from("site_members").select("email,user_id").eq("site_id", s.id).eq("role", "site_coordinator");
-      cmap[s.id] = m || [];
-    }
-    setCoords(cmap);
-  };
-  useEffect(() => { load(); }, [district?.id]);
-  const flash = (t) => { setMsg(t); setTimeout(() => setMsg(""), 3500); };
-  const createSite = async () => {
-    const name = newName.trim(); if (!name || !district) return;
-    const { error } = await SB.rpc("create_site", { p_district_id: district.id, p_name: name });
-    if (error) return flash("❌ " + error.message);
-    setNewName(""); await load(); onChanged && onChanged(); flash("✓ Site created");
-  };
-  const attachOrg = async (orgId, siteId) => {
-    if (!orgId || !siteId) return;
-    const { error } = await SB.rpc("attach_org_to_site", { p_org_id: orgId, p_site_id: siteId });
-    if (error) return flash("❌ " + error.message);
-    await load(); onChanged && onChanged();
-  };
-  const detachOrg = async (orgId) => {
-    const { error } = await SB.rpc("detach_org_from_site", { p_org_id: orgId });
-    if (error) return flash("❌ " + error.message);
-    await load(); onChanged && onChanged();
-  };
-  const addCoord = async (siteId, input) => {
-    const email = (input.value || "").trim().toLowerCase(); if (!email) return;
-    const { data, error } = await SB.rpc("add_site_coordinator", { p_site_id: siteId, p_email: email });
-    if (error) return flash("❌ " + error.message);
-    if (data === "no_account") return flash("No account for " + email + " yet — have them sign in once, then add.");
-    input.value = ""; await load(); flash("✓ Coordinator added");
-  };
-  const removeCoord = async (siteId, email) => {
-    const { error } = await SB.rpc("remove_site_coordinator", { p_site_id: siteId, p_email: email });
-    if (error) return flash("❌ " + error.message);
-    await load();
-  };
-  const unattached = (schools || []).filter(s => !s.site_id);
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div className="card card-p" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <input className="fi" style={{ flex: 1, minWidth: 200 }} placeholder="New site name (e.g. Edison High School)"
-          value={newName} onChange={e => setNewName(e.target.value)} />
-        <button className="btn btn-g btn-sm" onClick={createSite}>+ Create Site</button>
-        {msg && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>{msg}</span>}
-      </div>
-      {sites.length === 0 ? (
-        <div className="card card-p" style={{ textAlign: "center", padding: 32, color: "var(--muted)" }}>
-          No sites yet. A site groups a school's programs and is run by one or more Site Coordinators.
-        </div>
-      ) : sites.map(site => {
-        const attached = (schools || []).filter(s => s.site_id === site.id);
-        const cs = coords[site.id] || [];
-        return (
-          <div key={site.id} className="card card-p" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>🏢 {site.name || "Unnamed Site"}</div>
-            <div>
-              <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", marginBottom: 4 }}>Programs at this site</div>
-              {attached.length === 0 ? <div style={{ fontSize: 13, color: "var(--muted)" }}>None yet.</div> : (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {attached.map(a => (
-                    <span key={a.id} style={{ padding: "3px 8px", background: "rgba(255,255,255,.08)", borderRadius: 8, fontSize: 12, display: "flex", gap: 6, alignItems: "center" }}>
-                      {a.name || "Program"}
-                      <button onClick={() => detachOrg(a.id)} title="Detach" style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer" }}>✕</button>
-                    </span>
-                  ))}
-                </div>
-              )}
-              {unattached.length > 0 && (
-                <select className="fi" style={{ marginTop: 6, maxWidth: 300 }} defaultValue=""
-                  onChange={e => { if (e.target.value) { attachOrg(e.target.value, site.id); e.target.value = ""; } }}>
-                  <option value="">+ Attach a program…</option>
-                  {unattached.map(u => <option key={u.id} value={u.id}>{u.name || "Program"}</option>)}
-                </select>
-              )}
-            </div>
-            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 8 }}>
-              <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", marginBottom: 4 }}>Site Coordinators (one or more)</div>
-              {cs.length === 0 ? <div style={{ fontSize: 13, color: "var(--muted)" }}>None yet.</div> : (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {cs.map(c => (
-                    <span key={c.email} style={{ padding: "3px 8px", background: "rgba(66,165,245,.12)", color: "#42a5f5", borderRadius: 8, fontSize: 12, display: "flex", gap: 6, alignItems: "center" }}>
-                      {c.email}
-                      <button onClick={() => removeCoord(site.id, c.email)} title="Remove" style={{ background: "none", border: "none", color: "inherit", cursor: "pointer" }}>✕</button>
-                    </span>
-                  ))}
-                </div>
-              )}
-              <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                <input className="fi" style={{ flex: 1, minWidth: 180 }} placeholder="coordinator@hbuhsd.edu" id={`coord-${site.id}`} />
-                <button className="btn btn-o btn-sm" onClick={() => addCoord(site.id, document.getElementById(`coord-${site.id}`))}>+ Add Coordinator</button>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 export function SchoolCoordinatorDashboard({ user, onSwitchSchool }) {
   const [schools, setSchools] = useState([]);
   const [leaders, setLeaders] = useState({}); // org_id -> program_director rows
@@ -1804,16 +1636,27 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
     const email = facEmail.trim().toLowerCase();
     if (!email || !district) return;
     setFacBusy(true);
-    const { data: acct } = await SB.from("orgs").select("id").eq("email", email).single();
-    if (!acct) { setFacMsg("❌ No account found for "+email+". Ask them to sign up first, then add them."); setFacBusy(false); return; }
-    const { error } = await SB.from("district_members").upsert({
-      district_id: district.id, user_id: acct.id, email, role: "facilitator", invited_by: user.id
-    }, { onConflict: "district_id,email" });
+    const { data: acct } = await SB.from("orgs").select("id").eq("email", email).maybeSingle();
+    if (acct) {
+      // Existing account → grant facilitator immediately
+      const { error } = await SB.from("district_members").upsert({
+        district_id: district.id, user_id: acct.id, email, role: "facilitator", invited_by: user.id
+      }, { onConflict: "district_id,email" });
+      setFacBusy(false);
+      if (error) { setFacMsg("❌ "+error.message); return; }
+      setFacList(p => [...p.filter(f=>f.email!==email), { email, role:"facilitator", joined_at:new Date().toISOString() }]);
+      setFacEmail("");
+      setFacMsg("✅ "+email+" added as a facilitator");
+      return;
+    }
+    // No account yet → email them a facilitator invite
+    const { data:{ session } } = await SB.auth.getSession();
+    const r = await callEdgeFn("district-invite", { email, member_role: "facilitator" }, session?.access_token);
     setFacBusy(false);
-    if (error) { setFacMsg("❌ "+error.message); return; }
-    setFacList(p => [...p.filter(f=>f.email!==email), { email, role:"facilitator", joined_at:new Date().toISOString() }]);
+    if (r?.error) { setFacMsg("❌ "+r.error); return; }
+    setFacList(p => [...p.filter(f=>f.email!==email), { email, role:"facilitator", joined_at:new Date().toISOString(), _pending:true }]);
     setFacEmail("");
-    setFacMsg("✅ "+email+" added as a facilitator");
+    setFacMsg(r?.email_sent ? "✉️ Invite emailed to "+email : "✓ Invite created for "+email+" — they can accept via the emailed link.");
   };
   const removeFacilitator = async (email) => {
     if (!district) return;
@@ -2451,7 +2294,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
             </div>
             {facMsg && <p style={{ fontSize:12, color: facMsg.startsWith("✅")?"var(--green)":"var(--red)", marginTop:8 }}>{facMsg}</p>}
             <p style={{ fontSize:11, color:"var(--muted)", marginTop:8 }}>
-              They must have an ArtsTracker account first. They'll get district access next time they log in.
+              No account needed — if they're new, we'll email them an invite. They'll get district access once they accept (or next login if they already have an account).
             </p>
             <button className="btn btn-o btn-sm" style={{ marginTop:16, width:"100%" }} onClick={()=>setShowFac(false)}>Done</button>
           </div>

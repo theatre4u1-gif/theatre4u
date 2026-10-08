@@ -745,6 +745,19 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
         return;
       }
 
+      // ── FACILITATOR INVITE (grants district-wide facilitator, not a school link) ──
+      if (invite.member_role === "facilitator") {
+        const { data: fr } = await SB.rpc("accept_facilitator_invite", { p_token: pendingInvite });
+        clearInvite();
+        if (fr?.success) {
+          alert(`✓ You're now an Arts Facilitator for ${fr.district_name || "the district"}. The page will reload to show the district.`);
+          window.location.reload();
+        } else {
+          alert(fr?.error || "Couldn't accept the facilitator invite. Ask your district administrator to send a fresh link.");
+        }
+        return;
+      }
+
       // Check if this org is already in a different district
       const { data: currentOrg } = await SB.from("orgs").select("district_id,name").eq("id", activeOrgId).single();
       if (currentOrg?.district_id && currentOrg.district_id !== invite.district_id) {

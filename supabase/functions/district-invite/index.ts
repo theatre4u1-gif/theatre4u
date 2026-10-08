@@ -34,8 +34,9 @@ Deno.serve(async (req: Request) => {
       return json({ error: "Email service not configured. Please contact the administrator." }, 500);
     }
 
-    const { email, school_name } = await req.json();
+    const { email, school_name, member_role } = await req.json();
     if (!email) return json({ error: "Missing email" }, 400);
+    const isFacilitator = member_role === "facilitator";
 
     // Branding: prefer the door the invite was actually sent from (Origin/Referer), so an invite
     // sent from artstracker.org brands as ArtsTracker even if the district signed up on theatre4u.org.
@@ -78,27 +79,35 @@ Deno.serve(async (req: Request) => {
       district = newDist;
     }
 
-    const { count } = await sb.from("orgs")
-      .select("id", { count: "exact", head: true })
-      .eq("district_id", district.id);
-    if ((count ?? 0) >= district.max_schools)
-      return json({ error: `District limit reached (${district.max_schools} schools max)` }, 400);
+    if (!isFacilitator) {
+      const { count } = await sb.from("orgs")
+        .select("id", { count: "exact", head: true })
+        .eq("district_id", district.id);
+      if ((count ?? 0) >= district.max_schools)
+        return json({ error: `District limit reached (${district.max_schools} schools max)` }, 400);
+    }
 
     const { data: existing } = await sb.from("district_invites")
       .select("id, status")
       .eq("district_id", district.id)
       .eq("email", email.toLowerCase())
       .eq("status", "pending")
-      .single();
+      .maybeSingle();
     if (existing) return json({ error: "An invite was already sent to this email. Check the Invites tab to copy the link." }, 400);
 
     const { data: invite, error: invErr } = await sb.from("district_invites")
-      .insert({ district_id: district.id, email: email.toLowerCase(), school_name, invited_by: user.id })
+      .insert({ district_id: district.id, email: email.toLowerCase(), school_name: isFacilitator ? null : school_name, member_role: isFacilitator ? "facilitator" : null, invited_by: user.id })
       .select()
       .single();
     if (invErr) return json({ error: invErr.message }, 500);
 
     const inviteUrl = `${B.site}?invite=${invite.token}`;
+    const bodyIntro = isFacilitator
+      ? `You've been invited to join <strong>${district.name || "a district"}</strong> on ${B.name} as an <strong>Arts Facilitator</strong> &mdash; you'll be able to view and manage inventory across every school in the district.`
+      : `You've been invited to join <strong>${district.name || "a district"}</strong> on ${B.name}${school_name ? ` as <strong>${school_name}</strong>` : ""}.`;
+    const subjectLine = isFacilitator
+      ? `You're invited to help run ${district.name || "a district"} on ${B.name}`
+      : `You're invited to join ${district.name || "a district"} on ${B.name}`;
 
     const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -107,7 +116,7 @@ Deno.serve(async (req: Request) => {
         from: B.from,
         reply_to: B.reply,
         to: [email],
-        subject: `You're invited to join ${district.name || "a district"} on ${B.name}`,
+        subject: subjectLine,
         html: `
           <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px;background:#fff">
             <div style="text-align:center;margin-bottom:24px">
@@ -116,7 +125,7 @@ Deno.serve(async (req: Request) => {
               <p style="color:#888;font-size:13px;margin:0">Inventory &amp; Community</p>
             </div>
             <h2 style="font-family:Georgia,serif;color:#1a0600">You've been invited!</h2>
-            <p style="color:#444;line-height:1.6">You've been invited to join <strong>${district.name || "a district"}</strong> on ${B.name}${school_name ? ` as <strong>${school_name}</strong>` : ""}.</p>
+            <p style="color:#444;line-height:1.6">${bodyIntro}</p>
             <p style="color:#444;line-height:1.6">If you already have a ${B.name} account, <strong>sign in</strong> with your existing email and password &mdash; your inventory will link automatically. If you're new, create a free account.</p>
             <div style="text-align:center;margin:28px 0">
               <a href="${inviteUrl}" style="display:inline-block;background:#d4a843;color:#1a0600;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px">Accept Invitation &#8594;</a>
