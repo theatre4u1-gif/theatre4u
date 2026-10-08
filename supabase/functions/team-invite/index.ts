@@ -53,7 +53,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: invite, error: invErr } = await sb
       .from("org_invites")
-      .select("id, org_id, email, role, token, expires_at")
+      .select("id, org_id, email, role, vertical, token, expires_at")
       .eq("id", invite_id)
       .single();
 
@@ -62,10 +62,18 @@ Deno.serve(async (req: Request) => {
       return json({ error: "Invite not found" }, 404);
     }
 
-    if (invite.org_id !== user.id) return json({ error: "Forbidden" }, 403);
+    // Authorize sender: the org owner (org_id === user.id) OR anyone allowed to manage this
+    // school (district owner/facilitator, platform admin, or school coordinator).
+    let allowed = invite.org_id === user.id;
+    if (!allowed) {
+      const userClient = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: auth } } });
+      const { data: canManage } = await userClient.rpc("_can_manage_school", { p_org_id: invite.org_id });
+      allowed = !!canManage;
+    }
+    if (!allowed) return json({ error: "Forbidden" }, 403);
     if (!invite.email) return json({ error: "No email on this invite" }, 400);
 
-    const { data: org } = await sb.from("orgs").select("name, vertical, signup_domain").eq("id", user.id).single();
+    const { data: org } = await sb.from("orgs").select("name, vertical, signup_domain").eq("id", invite.org_id).single();
     const orgName = org?.name || "a program";
     // Prefer the door the invite was sent from (Origin/Referer); non-theatre vertical = ArtsTracker.
     const reqOrigin = req.headers.get("origin") || req.headers.get("referer") || "";
@@ -74,10 +82,14 @@ Deno.serve(async (req: Request) => {
 
     const inviteUrl = `${B.site}/invite.html?token=${invite.token}`;
 
+    const DEPT: Record<string,string> = { theatre:"Theatre", music:"Music", dance:"Dance", art:"Visual Art", booster:"Program", choir:"Choir" };
+    const deptName = invite.vertical ? (DEPT[invite.vertical] || (invite.vertical.charAt(0).toUpperCase() + invite.vertical.slice(1))) : "";
     const roleLabel = invite.role === "stage_manager" ? "Stage Manager"
       : invite.role === "co_director" ? "Co-Director"
       : invite.role === "crew" ? "Crew"
       : invite.role === "house" ? "House (view only)"
+      : invite.role === "coordinator" ? "School Coordinator"
+      : invite.role === "program_director" ? (deptName ? `${deptName} Department Leader` : "Department Leader")
       : invite.role;
 
     const roleDesc = invite.role === "co_director"
@@ -86,6 +98,10 @@ Deno.serve(async (req: Request) => {
       ? `You can add, edit, and delete items, access the Funding Tracker, ${B.exchange}, and Community Board.`
       : invite.role === "crew"
       ? "You can add and edit items and upload photos."
+      : invite.role === "coordinator"
+      ? "You oversee every department at this school and can assign Department Leaders."
+      : invite.role === "program_director"
+      ? (deptName ? `You manage the ${deptName} department&rsquo;s inventory at this school.` : "You manage your department&rsquo;s inventory at this school.")
       : "You can view and search inventory.";
 
     const expiryDisplay = formatExpiry(invite.expires_at);

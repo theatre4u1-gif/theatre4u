@@ -11,6 +11,16 @@ import { AdminContentReports } from "./admin-reports.jsx";
 
 // Admin module — building-block forms/widgets. The big admin cluster (AdminHub, etc.) will join this file.
 
+// Send a role-invite email (School Coordinator / Department Leader) via the team-invite edge fn.
+// Returns true if the email was actually sent.
+async function emailRoleInvite(inviteId){
+  try{
+    const { data:{ session } } = await SB.auth.getSession();
+    const r = await callEdgeFn("team-invite", { invite_id: inviteId }, session?.access_token);
+    return r && r.email_sent === true;
+  }catch(e){ return false; }
+}
+
 export function AddMemberForm({ onAdd, saving }) {
   const [email, setEmail] = useState("");
   const [role,  setRole]  = useState("crew");
@@ -1610,8 +1620,12 @@ export function SchoolCoordinatorDashboard({ user, onSwitchSchool }) {
     const email = (input.value || "").trim().toLowerCase(); if (!email) return;
     const { data, error } = await SB.rpc("assign_department_leader", { p_org_id: orgId, p_email: email, p_vertical: vertical || null });
     if (error) return flash("❌ " + error.message);
-    if (data === "no_account") return flash("No account for " + email + " yet — have them sign in once, then assign.");
     if (data === "denied") return flash("❌ Not allowed.");
+    if (typeof data === "string" && data.startsWith("invited:")) {
+      const sent = await emailRoleInvite(data.slice(8));
+      input.value = ""; await load();
+      return flash(sent ? "✉️ Invite emailed to " + email : "✓ Invite created for " + email);
+    }
     input.value = ""; await load(); flash("✓ Leader assigned");
   };
   const unassign = async (orgId, email) => {
@@ -1726,24 +1740,26 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
     const email = dirEmail.trim().toLowerCase();
     if (!email || !dirSchool) return;
     setDirBusy(true);
-    // The director must already have an account (their org.id = their auth user id)
-    const { data: acct } = await SB.from("orgs").select("id").eq("email", email).single();
-    if (!acct) { setMsg("❌ No account found for "+email+". Ask them to sign up first, then assign."); setDirBusy(false); return; }
-    const { error } = await SB.from("org_members").upsert({
-      org_id: dirSchool.id, user_id: acct.id, email, role: "program_director", vertical: dirVertical || null,
-      invited_by: user.id, joined_at: new Date().toISOString()
-    }, { onConflict: "org_id,user_id" });
+    const { data, error } = await SB.rpc("assign_department_leader", { p_org_id: dirSchool.id, p_email: email, p_vertical: dirVertical || null });
     setDirBusy(false);
     if (error) { setMsg("❌ "+error.message); return; }
+    if (data === "denied") { setMsg("❌ You don’t have permission to assign a leader here."); return; }
+    if (typeof data === "string" && data.startsWith("invited:")) {
+      const sent = await emailRoleInvite(data.slice(8));
+      setDirList(p => [...p.filter(d=>d.email!==email), { email, role:"program_director", vertical: dirVertical || null, joined_at:new Date().toISOString(), _pending:true }]);
+      setDirEmail(""); setDirVertical("");
+      setMsg(sent ? "✉️ Invite emailed to "+email : "✓ Invite created for "+email+" — they can accept via the emailed link.");
+      return;
+    }
     setDirList(p => [...p.filter(d=>d.email!==email), { email, role:"program_director", vertical: dirVertical || null, joined_at:new Date().toISOString() }]);
     setDirEmail(""); setDirVertical("");
-    setMsg("✅ "+email+" assigned as program director");
+    setMsg("✅ "+email+" assigned");
   };
   const removeDirector = async (email) => {
     if (!dirSchool) return;
-    await SB.from("org_members").delete().eq("org_id", dirSchool.id).eq("email", email).eq("role","program_director");
+    await SB.rpc("remove_department_leader", { p_org_id: dirSchool.id, p_email: email });
     setDirList(p => p.filter(d=>d.email!==email));
-    setMsg("✅ Director removed");
+    setMsg("✅ Leader removed");
   };
 
   // ── School Coordinators (oversee every department at one school) ───────────
@@ -1759,8 +1775,13 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
     const { data, error } = await SB.rpc("add_school_coordinator", { p_org_id: coordSchool.id, p_email: email });
     setCoordBusy(false);
     if (error) { setCoordMsg("❌ " + error.message); return; }
-    if (data === "no_account") { setCoordMsg("No ArtsTracker account for " + email + " yet — have them sign in once, then add."); return; }
     if (data === "denied") { setCoordMsg("❌ You can’t add a coordinator here."); return; }
+    if (typeof data === "string" && data.startsWith("invited:")) {
+      const sent = await emailRoleInvite(data.slice(8));
+      setCoordList(p => [...p.filter(c => c.email !== email), { email, role: "coordinator", vertical: null, _pending:true }]);
+      setCoordEmail(""); setCoordMsg(sent ? "✉️ Invite emailed to " + email : "✓ Invite created for " + email + " — they can accept via the emailed link.");
+      return;
+    }
     setCoordList(p => [...p.filter(c => c.email !== email), { email, role: "coordinator", vertical: null }]);
     setCoordEmail(""); setCoordMsg("✅ " + email + " added as School Coordinator");
   };
@@ -2358,7 +2379,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
               <button className="btn btn-g btn-sm" disabled={dirBusy} onClick={addDirector}>{dirBusy?"…":"Assign"}</button>
             </div>
             <p style={{ fontSize:11, color:"var(--muted)", marginTop:8 }}>
-              They must have an ArtsTracker account first. They'll see their department's inventory next time they log in.
+              No account needed — if they're new, we'll email them an invite to join. They'll see their department's inventory once they accept (or next login if they already have an account).
             </p>
             <button className="btn btn-o btn-sm" style={{ marginTop:16, width:"100%" }} onClick={()=>setDirSchool(null)}>Done</button>
           </div>
@@ -2394,7 +2415,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
             </div>
             {coordMsg && <p style={{ fontSize:12, color: coordMsg.startsWith("✅")?"var(--green)":"var(--red)", marginTop:8 }}>{coordMsg}</p>}
             <p style={{ fontSize:11, color:"var(--muted)", marginTop:8 }}>
-              They must have an ArtsTracker account first. They'll get coordinator access to this school next time they log in.
+              No account needed — if they're new, we'll email them an invite to join. They'll get coordinator access once they accept (or next login if they already have an account).
             </p>
             <button className="btn btn-o btn-sm" style={{ marginTop:16, width:"100%" }} onClick={()=>setCoordSchool(null)}>Done</button>
           </div>
