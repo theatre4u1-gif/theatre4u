@@ -1415,6 +1415,64 @@ export function AdminHub({ currentUser, org, only, initialTab }) {
   );
 }
 
+export function SiteCoordinatorDashboard({ user, onSwitchSchool }) {
+  const [sites, setSites] = useState([]);
+  const [programs, setPrograms] = useState([]);
+  const [msg, setMsg] = useState("");
+  const flash = (t) => { setMsg(t); setTimeout(() => setMsg(""), 3500); };
+  const load = async () => {
+    if (!user) return;
+    const { data: sm } = await SB.from("site_members").select("site_id").eq("user_id", user.id).eq("role", "site_coordinator");
+    const siteIds = (sm || []).map(r => r.site_id);
+    if (!siteIds.length) { setSites([]); setPrograms([]); return; }
+    const { data: st } = await SB.from("sites").select("*").in("id", siteIds).order("name");
+    setSites(st || []);
+    const { data: pr } = await SB.from("orgs").select("id,name,site_id,vertical").in("site_id", siteIds).order("name");
+    setPrograms(pr || []);
+  };
+  useEffect(() => { load(); }, [user?.id]);
+  const assignLeader = async (orgId, input) => {
+    const email = (input.value || "").trim().toLowerCase(); if (!email) return;
+    const { data, error } = await SB.rpc("assign_program_leader", { p_org_id: orgId, p_email: email });
+    if (error) return flash("❌ " + error.message);
+    if (data === "no_account") return flash("No account for " + email + " yet — have them sign in once, then assign.");
+    input.value = ""; flash("✓ Program leader assigned");
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div>
+        <h2 style={{ fontFamily: "var(--serif)", margin: 0 }}>Your Site{sites.length > 1 ? "s" : ""}</h2>
+        <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 4 }}>Oversee the programs at your site, enter any program's inventory, and assign program leaders.</p>
+      </div>
+      {msg && <div style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>{msg}</div>}
+      {sites.length === 0 ? (
+        <div className="card card-p" style={{ textAlign: "center", padding: 32, color: "var(--muted)" }}>You're not assigned to a site yet. Your district facilitator can add you.</div>
+      ) : sites.map(site => {
+        const progs = programs.filter(p => p.site_id === site.id);
+        return (
+          <div key={site.id} className="card card-p" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>🏢 {site.name || "Your Site"}</div>
+            {progs.length === 0 ? <div style={{ fontSize: 13, color: "var(--muted)" }}>No programs attached to this site yet.</div> : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 12 }}>
+                {progs.map(p => (
+                  <div key={p.id} className="card card-p" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <div style={{ fontWeight: 700 }}>{p.name || "Program"}</div>
+                    <button className="btn btn-g btn-sm" onClick={() => onSwitchSchool && onSwitchSchool(p)}>Enter program →</button>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <input className="fi" style={{ flex: 1, minWidth: 0 }} placeholder="leader@email" id={`pl-${p.id}`} />
+                      <button className="btn btn-o btn-sm" onClick={() => assignLeader(p.id, document.getElementById(`pl-${p.id}`))}>+ Leader</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function DistrictSitesPanel({ district, schools, onChanged }) {
   const [sites, setSites] = useState([]);
   const [coords, setCoords] = useState({});
