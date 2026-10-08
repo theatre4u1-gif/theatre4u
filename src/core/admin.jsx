@@ -1415,6 +1415,116 @@ export function AdminHub({ currentUser, org, only, initialTab }) {
   );
 }
 
+function DistrictSitesPanel({ district, schools, onChanged }) {
+  const [sites, setSites] = useState([]);
+  const [coords, setCoords] = useState({});
+  const [newName, setNewName] = useState("");
+  const [msg, setMsg] = useState("");
+  const load = async () => {
+    if (!district) return;
+    const { data: st } = await SB.from("sites").select("*").eq("district_id", district.id).order("name");
+    setSites(st || []);
+    const cmap = {};
+    for (const s of (st || [])) {
+      const { data: m } = await SB.from("site_members").select("email,user_id").eq("site_id", s.id).eq("role", "site_coordinator");
+      cmap[s.id] = m || [];
+    }
+    setCoords(cmap);
+  };
+  useEffect(() => { load(); }, [district?.id]);
+  const flash = (t) => { setMsg(t); setTimeout(() => setMsg(""), 3500); };
+  const createSite = async () => {
+    const name = newName.trim(); if (!name || !district) return;
+    const { error } = await SB.rpc("create_site", { p_district_id: district.id, p_name: name });
+    if (error) return flash("❌ " + error.message);
+    setNewName(""); await load(); onChanged && onChanged(); flash("✓ Site created");
+  };
+  const attachOrg = async (orgId, siteId) => {
+    if (!orgId || !siteId) return;
+    const { error } = await SB.rpc("attach_org_to_site", { p_org_id: orgId, p_site_id: siteId });
+    if (error) return flash("❌ " + error.message);
+    await load(); onChanged && onChanged();
+  };
+  const detachOrg = async (orgId) => {
+    const { error } = await SB.rpc("detach_org_from_site", { p_org_id: orgId });
+    if (error) return flash("❌ " + error.message);
+    await load(); onChanged && onChanged();
+  };
+  const addCoord = async (siteId, input) => {
+    const email = (input.value || "").trim().toLowerCase(); if (!email) return;
+    const { data, error } = await SB.rpc("add_site_coordinator", { p_site_id: siteId, p_email: email });
+    if (error) return flash("❌ " + error.message);
+    if (data === "no_account") return flash("No account for " + email + " yet — have them sign in once, then add.");
+    input.value = ""; await load(); flash("✓ Coordinator added");
+  };
+  const removeCoord = async (siteId, email) => {
+    const { error } = await SB.rpc("remove_site_coordinator", { p_site_id: siteId, p_email: email });
+    if (error) return flash("❌ " + error.message);
+    await load();
+  };
+  const unattached = (schools || []).filter(s => !s.site_id);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div className="card card-p" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <input className="fi" style={{ flex: 1, minWidth: 200 }} placeholder="New site name (e.g. Edison High School)"
+          value={newName} onChange={e => setNewName(e.target.value)} />
+        <button className="btn btn-g btn-sm" onClick={createSite}>+ Create Site</button>
+        {msg && <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 13 }}>{msg}</span>}
+      </div>
+      {sites.length === 0 ? (
+        <div className="card card-p" style={{ textAlign: "center", padding: 32, color: "var(--muted)" }}>
+          No sites yet. A site groups a school's programs and is run by one or more Site Coordinators.
+        </div>
+      ) : sites.map(site => {
+        const attached = (schools || []).filter(s => s.site_id === site.id);
+        const cs = coords[site.id] || [];
+        return (
+          <div key={site.id} className="card card-p" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>🏢 {site.name || "Unnamed Site"}</div>
+            <div>
+              <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", marginBottom: 4 }}>Programs at this site</div>
+              {attached.length === 0 ? <div style={{ fontSize: 13, color: "var(--muted)" }}>None yet.</div> : (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {attached.map(a => (
+                    <span key={a.id} style={{ padding: "3px 8px", background: "rgba(255,255,255,.08)", borderRadius: 8, fontSize: 12, display: "flex", gap: 6, alignItems: "center" }}>
+                      {a.name || "Program"}
+                      <button onClick={() => detachOrg(a.id)} title="Detach" style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer" }}>✕</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {unattached.length > 0 && (
+                <select className="fi" style={{ marginTop: 6, maxWidth: 300 }} defaultValue=""
+                  onChange={e => { if (e.target.value) { attachOrg(e.target.value, site.id); e.target.value = ""; } }}>
+                  <option value="">+ Attach a program…</option>
+                  {unattached.map(u => <option key={u.id} value={u.id}>{u.name || "Program"}</option>)}
+                </select>
+              )}
+            </div>
+            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 8 }}>
+              <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1, color: "var(--muted)", marginBottom: 4 }}>Site Coordinators (one or more)</div>
+              {cs.length === 0 ? <div style={{ fontSize: 13, color: "var(--muted)" }}>None yet.</div> : (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {cs.map(c => (
+                    <span key={c.email} style={{ padding: "3px 8px", background: "rgba(66,165,245,.12)", color: "#42a5f5", borderRadius: 8, fontSize: 12, display: "flex", gap: 6, alignItems: "center" }}>
+                      {c.email}
+                      <button onClick={() => removeCoord(site.id, c.email)} title="Remove" style={{ background: "none", border: "none", color: "inherit", cursor: "pointer" }}>✕</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                <input className="fi" style={{ flex: 1, minWidth: 180 }} placeholder="coordinator@hbuhsd.edu" id={`coord-${site.id}`} />
+                <button className="btn btn-o btn-sm" onClick={() => addCoord(site.id, document.getElementById(`coord-${site.id}`))}>+ Add Coordinator</button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = false }) {
   const [district,   setDistrict]   = useState(null);
   const [isOwner,    setIsOwner]    = useState(false); // true only for the district owner (gates owner-only controls)
@@ -1739,10 +1849,10 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
 
         {/* Tabs */}
         <div className="tabs" style={{ marginBottom: 16 }}>
-          {["schools", "invites", "inventory", "funding"].map(t => (
+          {["schools", "sites", "invites", "inventory", "funding"].map(t => (
             <button key={t} className={`tab ${tab === t ? "on" : ""}`} onClick={() => setTab(t)}
               style={{ textTransform: "capitalize" }}>
-              {t==="schools" ? `🏫 Schools (${slotsUsed})` : t==="invites" ? `📨 Invites (${invites.filter(i=>i.status==="pending").length})` : t==="inventory" ? `📦 Inventory (${distItems.length})` : `💰 Funding`}
+              {t==="schools" ? `🏫 Schools (${slotsUsed})` : t==="sites" ? `🏢 Sites` : t==="invites" ? `📨 Invites (${invites.filter(i=>i.status==="pending").length})` : t==="inventory" ? `📦 Inventory (${distItems.length})` : `💰 Funding`}
             </button>
           ))}
           <button className="btn btn-o btn-sm" style={{ marginLeft: "auto" }}
@@ -1815,6 +1925,8 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
               ))}
             </div>
           )
+        ) : tab === "sites" ? (
+          <DistrictSitesPanel district={district} schools={schools} onChanged={load} />
         ) : tab === "invites" ? (
           /* Invites tab */
           <div className="card" style={{ overflow: "hidden" }}>
