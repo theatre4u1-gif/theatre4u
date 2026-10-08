@@ -12,7 +12,7 @@ import { AuthOverlay, GoogleProfileSetup } from "./auth.jsx";
 import { STRIPE_LINKS, stripeLink, PLANS_DEF, UPGRADE_PLANS, betaPhase, graceEndDate } from "./plans.js";
 import { UpgradePrompt, UpgradePlans } from "./billing.jsx";
 import { CAT_GFX, CATS, CAT, CAT_MAP, CONDS, SIZES, AVAIL, MKT, setCustomCats, customCatsFor, getCatsMerged, setOrgLabels, vLabelOf, vIconOf, catLabelOf } from "./inventory.js";
-import { AdminHub, DistrictDashboard } from "./admin.jsx";
+import { AdminHub, DistrictDashboard, SchoolCoordinatorDashboard } from "./admin.jsx";
 import { LabelsPage } from "./labels.jsx";
 import { OrgProfilePage } from "./profile.jsx";
 import { Prop28Page } from "./prop28.jsx";
@@ -112,6 +112,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   );
   // District: activeSchool = null means "own account", otherwise = school org object
   const [activeSchool,setActiveSchool]   = useState(null);
+  const [isCoord,     setIsCoord]        = useState(false); // user is a School Coordinator of >=1 school → show "My School"
   const [memberRole,  setMemberRole]    = useState(null); // null=owner/director, or stage_manager/crew/house/program_director
   const [memberships, setMemberships]   = useState([]); // all program memberships (for multi-program directors)
   const [activeVertical, setActiveVertical] = useState(null); // active department for multi-vertical accounts; null until org loads
@@ -372,6 +373,9 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       // (e.g. while viewing a school they direct), not only from their own-org context.
       const { data: ownDist } = await SB.from("districts").select("id").eq("owner_id", user.id).maybeSingle();
       setOwnsDistrict(!!ownDist);
+      // School Coordinator detection — they oversee a school's departments (org_members role=coordinator)
+      const { data: coordRows } = await SB.from("org_members").select("org_id").eq("user_id", user.id).eq("role","coordinator").limit(1);
+      setIsCoord(!!(coordRows && coordRows.length));
       setLoaded(true);
       // Load unread message count — scoped to THIS org's conversations only. Without the
       // conversation scope, a message sent from another org the user owns (e.g. Ocean View)
@@ -799,10 +803,11 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       ...(!isMember ? [{ id:"points", label:getPointsName(curVertical), ico:"🪙" }] : []),
       ...(((!isMember && plan === "district") || ownsDistrict || (!isMember && facDistrict)) ? [{ id:"district", label:"District", ico:"🏢", district:true }] : []),
       ...(!isMember && facDistrict ? [{ id:"facschools", label:"District Schools", ico:"🏫" }] : []),
+      ...(isCoord ? [{ id:"myschool", label:"My School", ico:"🏫" }] : []),
       ...(!isMember && isAdmin ? [{ id:"admin", label:"Admin", ico:Ic.settings, admin:true }] : []),
     ];
   })();
-  const TITLES = { home:"Home", messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(curVertical), productions:getTerm(curVertical,"productions"), reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:getPointsName(curVertical), points:getPointsName(curVertical), community:"Community Board", labels:"QR Labels", facschools:"District Schools" };
+  const TITLES = { home:"Home", messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(curVertical), productions:getTerm(curVertical,"productions"), reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:getPointsName(curVertical), points:getPointsName(curVertical), community:"Community Board", labels:"QR Labels", facschools:"District Schools", myschool:"My School" };
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicOrgSlug) return <PublicOrgPage slug={publicOrgSlug} />;
@@ -1165,6 +1170,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                   {page==="profile"     && <OrgProfilePage userId={org?.id || user?.id} org={org} setOrg={setOrg} plan={plan} items={items}/>}
               {page==="settings"    && <Settings    org={org} setOrg={setOrg} onSeed={seed} user={user} userId={org?.id || user?.id} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
                   {page==="district"    && (plan==="district" || ownsDistrict || facDistrict) && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool} isFacilitator={!!facDistrict}/>}
+                  {page==="myschool"    && isCoord && <SchoolCoordinatorDashboard user={user} onSwitchSchool={switchSchool}/>}
                   {page==="facschools"  && facDistrict && (
                     <div style={{padding:"32px 36px 56px"}}>
                       <h1 style={{fontFamily:"var(--serif)",fontSize:32,marginBottom:4}}>District Schools</h1>

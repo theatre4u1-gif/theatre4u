@@ -75,14 +75,22 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
   }, [deepLinkCategory]);
 
   const catKey="t4u_catf_"+(org?.id||userId||"x");
+  const viewKey="t4u_view_"+(org?.id||userId||"x");
+  const sortKey="t4u_sort_"+(org?.id||userId||"x");
   const[search,setSrch]=useState("");
   // Category filter remembers the last choice per program (sticky). A costume
   // director who selects "Costumes" stays on it across visits.
   const[catF,setCatF]=useState(()=>{try{return localStorage.getItem(catKey)||"all"}catch{return "all"}});
   useEffect(()=>{try{localStorage.setItem(catKey,catF)}catch(e){}},[catF]);
-  const[sortBy,setSortBy]=useState("newest"); // newest | number | name | location
+  const[sortBy,setSortBy]=useState(()=>{try{return localStorage.getItem(sortKey)||"newest"}catch{return "newest"}}); // newest | number | name | location | department
+  useEffect(()=>{try{localStorage.setItem(sortKey,sortBy)}catch(e){}},[sortBy]);
   const[condF,setCondF]=useState("all");const[availF,setAvailF]=useState("all");
-  const[mktF,setMktF]=useState("all");const[view,setView]=useState("grid"); // grid | table | locations
+  const[mktF,setMktF]=useState("all");const[view,setView]=useState(()=>{try{const v=localStorage.getItem(viewKey);return (v==="grid"||v==="table")?v:"grid"}catch{return "grid"}}); // grid | table | locations
+  useEffect(()=>{try{if(view==="grid"||view==="table")localStorage.setItem(viewKey,view)}catch(e){}},[view]);
+  // Department (vertical) filter — defaults to the active department; "all" shows every department. Resets when the active department changes.
+  const[deptF,setDeptF]=useState(vVertical);
+  useEffect(()=>{setDeptF(vVertical)},[vVertical]);
+  const deptList=((org?.verticals_enabled)||[]).filter(Boolean);
   const[hoverImg,setHoverImg]=useState(null); // full-size photo shown on card hover
   const[tagF,setTagF]=useState(()=>new Set()); // active tag filters (item must have ALL selected)
   const toggleTag=(t)=>setTagF(prev=>{const n=new Set(prev);n.has(t)?n.delete(t):n.add(t);return n;});
@@ -230,8 +238,8 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
     let q=SB.from("items").select("*", withCount?{count:"exact"}:undefined)
       .eq("org_id",userId)
       .or("review_status.is.null,review_status.eq.approved");
-    if(multiV) q=q.eq("vertical",vVertical);  // multi-department: show only the active department's items
-    if(qstr) q=q.or(`name.ilike.*${qstr}*,notes.ilike.*${qstr}*,location.ilike.*${qstr}*,display_id.ilike.*${qstr}*`);
+    if(multiV && deptF!=="all") q=q.eq("vertical",deptF);  // department filter (default = active department; "all" = every department)
+    if(qstr) q=q.or(`name.ilike.*${qstr}*,notes.ilike.*${qstr}*,description.ilike.*${qstr}*,location.ilike.*${qstr}*,display_id.ilike.*${qstr}*`);
     if(catF!=="all") q=q.eq("category",catF);
     if(condF!=="all") q=q.eq("condition",condF);
     if(availF!=="all") q=q.eq("avail",availF);
@@ -241,6 +249,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
     if(sortBy==="name") q=q.order("name",{ascending:true});
     else if(sortBy==="location") q=q.order("location",{ascending:true,nullsFirst:false}).order("item_number",{ascending:true,nullsFirst:false});
     else if(sortBy==="number") q=q.order("item_number",{ascending:true,nullsFirst:false}).order("display_id",{ascending:true});
+    else if(sortBy==="department") q=q.order("vertical",{ascending:true,nullsFirst:false}).order("added",{ascending:false});
     else q=q.order("added",{ascending:false});
     return q;
   };
@@ -256,7 +265,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
     })();
     return ()=>{alive=false;};
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[userId,dsearch,catF,condF,availF,mktF,tagF,locFilter,sortBy,reloadKey,vVertical,multiV]);
+  },[userId,dsearch,catF,condF,availF,mktF,tagF,locFilter,sortBy,reloadKey,deptF,vVertical,multiV]);
   const loadMore=async()=>{
     if(loadingMore) return; setLoadingMore(true);
     const {data,error}=await buildQuery(false).range(rows.length,rows.length+PAGE-1);
@@ -418,11 +427,16 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
           <div className="srch">{Ic.search}<input aria-label="Search inventory" value={search} onChange={e=>setSrch(e.target.value)} placeholder="Search items, tags, location…"/></div>
           <button className="ico-btn" aria-label="Filters" style={showF?{borderColor:"var(--gold)",color:"var(--cog)"}:{}} onClick={()=>setShowF(!showF)}>{Ic.filter}</button>
           <div className="vtog"><button className={view==="grid"?"on":""} onClick={()=>setView("grid")}>Grid</button><button className={view==="table"?"on":""} onClick={()=>setView("table")}>Table</button><button className={view==="locations"?"on":""} onClick={()=>setView("locations")}>📦 Locations</button></div>
+          {multiV&&view!=="locations"&&<select value={deptF} onChange={e=>setDeptF(e.target.value)} title="Filter by department" style={{padding:"6px 11px",borderRadius:7,border:"1.5px solid var(--border)",background:"transparent",fontSize:13,fontFamily:"inherit",color:"var(--muted)",cursor:"pointer"}}>
+            <option value="all">All departments</option>
+            {deptList.map(v=><option key={v} value={v}>{getVertical(v).icon} {getVertical(v).label}</option>)}
+          </select>}
           {view!=="locations"&&<select value={sortBy} onChange={e=>setSortBy(e.target.value)} title="Sort items" style={{padding:"6px 11px",borderRadius:7,border:"1.5px solid var(--border)",background:"transparent",fontSize:13,fontFamily:"inherit",color:"var(--muted)",cursor:"pointer"}}>
             <option value="newest">Sort: Newest</option>
             <option value="number">Sort: Item #</option>
             <option value="name">Sort: Name</option>
             <option value="location">Sort: Location</option>
+            {multiV&&<option value="department">Sort: Department</option>}
           </select>}
           {canEdit&&<button
             onClick={()=>{ setSelectMode(m=>!m); setSelected(new Set()); setBulkField(""); setBulkValue(""); setBulkMsg(""); }}

@@ -1583,6 +1583,102 @@ function DistrictSitesPanel({ district, schools, onChanged }) {
   );
 }
 
+export function SchoolCoordinatorDashboard({ user, onSwitchSchool }) {
+  const [schools, setSchools] = useState([]);
+  const [leaders, setLeaders] = useState({}); // org_id -> program_director rows
+  const [msg, setMsg] = useState("");
+  const load = async () => {
+    const { data } = await SB.rpc("my_coordinator_schools");
+    const list = data || [];
+    setSchools(list);
+    const map = {};
+    for (const sc of list) {
+      const { data: ls } = await SB.rpc("get_school_leaders", { p_org_id: sc.id });
+      map[sc.id] = (ls || []).filter(r => r.role === "program_director");
+    }
+    setLeaders(map);
+  };
+  useEffect(() => { load(); }, [user?.id]);
+  const flash = (t) => { setMsg(t); setTimeout(() => setMsg(""), 3500); };
+  const deptsOf = (sc) => ((sc.verticals_enabled && sc.verticals_enabled.length) ? sc.verticals_enabled : [sc.vertical || "theatre"]);
+  const labelOf = (sc, v) => {
+    const o = (sc.vertical_labels && sc.vertical_labels[v]) || null;
+    const g = getVertical(v);
+    return { icon: (o && o.icon) || g.icon, label: (o && o.label) || g.label };
+  };
+  const assign = async (orgId, vertical, input) => {
+    const email = (input.value || "").trim().toLowerCase(); if (!email) return;
+    const { data, error } = await SB.rpc("assign_department_leader", { p_org_id: orgId, p_email: email, p_vertical: vertical || null });
+    if (error) return flash("❌ " + error.message);
+    if (data === "no_account") return flash("No account for " + email + " yet — have them sign in once, then assign.");
+    if (data === "denied") return flash("❌ Not allowed.");
+    input.value = ""; await load(); flash("✓ Leader assigned");
+  };
+  const unassign = async (orgId, email) => {
+    await SB.rpc("remove_department_leader", { p_org_id: orgId, p_email: email });
+    await load();
+  };
+  if (!schools.length) return (
+    <div style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>
+      You aren’t a coordinator of any school yet. Ask your district to add you.
+    </div>
+  );
+  return (
+    <div style={{ padding: "24px 28px" }}>
+      {msg && <div style={{ marginBottom: 12, color: "var(--green)", fontWeight: 700 }}>{msg}</div>}
+      {schools.map(sc => {
+        const dls = leaders[sc.id] || [];
+        const whole = dls.filter(d => !d.vertical);
+        return (
+          <div key={sc.id} className="card card-p" style={{ marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>🏫 {sc.name}</div>
+              <button className="btn btn-g btn-sm" style={{ marginLeft: "auto" }} onClick={() => onSwitchSchool && onSwitchSchool(sc)}>Enter school →</button>
+            </div>
+            <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Assign a leader to each department. A leader sees only their department’s inventory.</div>
+            {deptsOf(sc).map(v => {
+              const L = labelOf(sc, v);
+              const here = dls.filter(d => (d.vertical || null) === v);
+              return (
+                <div key={v} style={{ borderTop: "1px solid var(--border)", paddingTop: 10, marginTop: 10 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>{L.icon} {L.label}</div>
+                  {here.length > 0 ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+                      {here.map(d => (
+                        <span key={d.email} style={{ padding: "3px 8px", background: "rgba(66,165,245,.12)", color: "#42a5f5", borderRadius: 8, fontSize: 12, display: "flex", gap: 6, alignItems: "center" }}>
+                          {d.email}
+                          <button onClick={() => unassign(sc.id, d.email)} title="Remove" style={{ background: "none", border: "none", color: "inherit", cursor: "pointer" }}>✕</button>
+                        </span>
+                      ))}
+                    </div>
+                  ) : <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>No leader yet.</div>}
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input className="fi" style={{ flex: 1, minWidth: 160 }} placeholder="leader@school.edu" id={`ld-${sc.id}-${v}`} />
+                    <button className="btn btn-o btn-sm" onClick={() => assign(sc.id, v, document.getElementById(`ld-${sc.id}-${v}`))}>+ Assign leader</button>
+                  </div>
+                </div>
+              );
+            })}
+            {whole.length > 0 && (
+              <div style={{ borderTop: "1px solid var(--border)", paddingTop: 10, marginTop: 10 }}>
+                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>🏫 Whole-school leaders</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {whole.map(d => (
+                    <span key={d.email} style={{ padding: "3px 8px", background: "rgba(255,255,255,.08)", borderRadius: 8, fontSize: 12, display: "flex", gap: 6, alignItems: "center" }}>
+                      {d.email}
+                      <button onClick={() => unassign(sc.id, d.email)} title="Remove" style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer" }}>✕</button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = false }) {
   const [district,   setDistrict]   = useState(null);
   const [isOwner,    setIsOwner]    = useState(false); // true only for the district owner (gates owner-only controls)
@@ -1614,6 +1710,11 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
   const [facEmail,   setFacEmail]   = useState("");
   const [facBusy,    setFacBusy]    = useState(false);
   const [facMsg,     setFacMsg]     = useState("");
+  const [coordSchool,setCoordSchool]= useState(null); // school whose Coordinators modal is open
+  const [coordList,  setCoordList]  = useState([]);
+  const [coordEmail, setCoordEmail] = useState("");
+  const [coordBusy,  setCoordBusy]  = useState(false);
+  const [coordMsg,   setCoordMsg]   = useState("");
 
   const openDirectors = async (school) => {
     setDirSchool(school); setDirEmail(""); setDirList([]); setDirVertical("");
@@ -1643,6 +1744,31 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
     await SB.from("org_members").delete().eq("org_id", dirSchool.id).eq("email", email).eq("role","program_director");
     setDirList(p => p.filter(d=>d.email!==email));
     setMsg("✅ Director removed");
+  };
+
+  // ── School Coordinators (oversee every department at one school) ───────────
+  const openCoords = async (school) => {
+    setCoordSchool(school); setCoordEmail(""); setCoordMsg(""); setCoordList([]);
+    const { data } = await SB.rpc("get_school_leaders", { p_org_id: school.id });
+    setCoordList((data || []).filter(r => r.role === "coordinator"));
+  };
+  const addCoord = async () => {
+    const email = coordEmail.trim().toLowerCase();
+    if (!email || !coordSchool) return;
+    setCoordBusy(true);
+    const { data, error } = await SB.rpc("add_school_coordinator", { p_org_id: coordSchool.id, p_email: email });
+    setCoordBusy(false);
+    if (error) { setCoordMsg("❌ " + error.message); return; }
+    if (data === "no_account") { setCoordMsg("No ArtsTracker account for " + email + " yet — have them sign in once, then add."); return; }
+    if (data === "denied") { setCoordMsg("❌ You can’t add a coordinator here."); return; }
+    setCoordList(p => [...p.filter(c => c.email !== email), { email, role: "coordinator", vertical: null }]);
+    setCoordEmail(""); setCoordMsg("✅ " + email + " added as School Coordinator");
+  };
+  const removeCoord = async (email) => {
+    if (!coordSchool) return;
+    await SB.rpc("remove_school_coordinator", { p_org_id: coordSchool.id, p_email: email });
+    setCoordList(p => p.filter(c => c.email !== email));
+    setCoordMsg("✅ Coordinator removed");
   };
 
   // ── District-wide Arts Facilitators (full edit across all schools) ──────────
@@ -1968,8 +2094,13 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
                     </button>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button className="btn btn-o btn-sm" style={{ flex: 1, minWidth: 0 }} onClick={() => openDirectors(school)}>
-                        👤 Dept Leaders
+                        👤 Leaders
                       </button>
+                      <button className="btn btn-o btn-sm" style={{ flex: 1, minWidth: 0 }} onClick={() => openCoords(school)}>
+                        🧑‍🏫 Coordinators
+                      </button>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
                       <button className="btn btn-o btn-sm" style={{ flex: 1, minWidth: 0 }} onClick={() => changeSchoolOwner(school)}>
                         🔑 Owner
                       </button>
@@ -2230,6 +2361,42 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
               They must have an ArtsTracker account first. They'll see their department's inventory next time they log in.
             </p>
             <button className="btn btn-o btn-sm" style={{ marginTop:16, width:"100%" }} onClick={()=>setDirSchool(null)}>Done</button>
+          </div>
+        </div>
+      )}
+
+      {/* School Coordinators Modal */}
+      {coordSchool && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}
+          onClick={()=>setCoordSchool(null)}>
+          <div className="card card-p" style={{ maxWidth:460, width:"100%" }} onClick={e=>e.stopPropagation()}>
+            <h3 style={{ fontFamily:"var(--serif)", marginBottom:4 }}>School Coordinators</h3>
+            <p style={{ fontSize:13, color:"var(--muted)", marginBottom:16 }}>
+              {coordSchool.name} — a School Coordinator oversees every department at this school and can assign its Department Leaders. Add one or more (a department coordinator, principal, or AP).
+            </p>
+            {coordList.length>0 ? (
+              <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:16 }}>
+                {coordList.map(c=>(
+                  <div key={c.email} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:"var(--parch)", borderRadius:8, border:"1px solid var(--border)" }}>
+                    <div style={{ flex:1, fontSize:13, fontWeight:600 }}>{c.email}<span style={{ display:"block", fontSize:11, fontWeight:500, color:"var(--muted)" }}>Whole school · can assign leaders</span></div>
+                    <button onClick={()=>removeCoord(c.email)} style={{ padding:"3px 10px", borderRadius:6, border:"1px solid rgba(194,24,91,.3)", background:"transparent", color:"var(--red)", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>Remove</button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ color:"var(--muted)", fontSize:13, marginBottom:16 }}>No coordinators yet.</div>
+            )}
+            <div style={{ fontWeight:700, fontSize:13, marginBottom:6 }}>Add a coordinator</div>
+            <div style={{ display:"flex", gap:8 }}>
+              <input className="fi" type="email" placeholder="coordinator@school.edu" value={coordEmail}
+                onChange={e=>setCoordEmail(e.target.value)} style={{ flex:1 }}/>
+              <button className="btn btn-g btn-sm" disabled={coordBusy} onClick={addCoord}>{coordBusy?"…":"Add"}</button>
+            </div>
+            {coordMsg && <p style={{ fontSize:12, color: coordMsg.startsWith("✅")?"var(--green)":"var(--red)", marginTop:8 }}>{coordMsg}</p>}
+            <p style={{ fontSize:11, color:"var(--muted)", marginTop:8 }}>
+              They must have an ArtsTracker account first. They'll get coordinator access to this school next time they log in.
+            </p>
+            <button className="btn btn-o btn-sm" style={{ marginTop:16, width:"100%" }} onClick={()=>setCoordSchool(null)}>Done</button>
           </div>
         </div>
       )}
