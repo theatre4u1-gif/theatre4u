@@ -14,6 +14,7 @@ export const VERTICAL_BG_GRAD = {
   dance:   "linear-gradient(135deg,#7b1560 0%,#c2185b 55%,#e91e8c 100%)",
   art:     "linear-gradient(135deg,#0d2b6e 0%,#1565c0 50%,#00838f 100%)",
   booster: "linear-gradient(135deg,#4a148c 0%,#7b1fa2 55%,#9c27b0 100%)",
+  home:    "linear-gradient(135deg,#0A5450 0%,#0F6E6B 55%,#1C9E8F 100%)", // BinTrove — teal, no theatre photos
 };
 
 // Unsplash photo URL builder

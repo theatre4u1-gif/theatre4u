@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import React from "react";
 import { isDemoMode } from "./core/helpers.js";
-import { IS_THEATRE4U, IS_ADMIN_HOST, FAVICON, TOUCH_ICON } from "./core/config.js";
+import { IS_THEATRE4U, IS_BINTROVE, IS_ADMIN_HOST, FAVICON, TOUCH_ICON } from "./core/config.js";
 import { AppRoot } from "./core/app-root.jsx";
 import { AdminApp } from "./core/admin-app.jsx";
 import { DemoApp } from "./core/demo.jsx";
@@ -21,6 +21,8 @@ if (typeof document !== "undefined") {
   };
   setIcon("icon", FAVICON, IS_THEATRE4U ? "image/svg+xml" : "image/png");
   setIcon("apple-touch-icon", TOUCH_ICON, null);
+  // BinTrove: override the static Theatre4u tab title (home brand).
+  if (IS_BINTROVE) document.title = "BinTrove — Home storage, organized.";
 }
 
 // Capture a referral code from the ?ref= param and persist it for signup.

@@ -904,7 +904,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
         onTakeTour={()=>{ window.location.href = window.location.href.split("?")[0] + "?preview=1"; }}
       />
       <AuthOverlay onAuth={u=>{setUser(u);}} pendingInvite={pendingInvite} inviteInfo={inviteInfo}/>
-      {user && !isDemo && <AIHelpBubble user={user} />}
+      {user && !isDemo && !IS_BINTROVE && <AIHelpBubble user={user} />}
     </>
   );
 
@@ -1257,7 +1257,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       {/* ── Legal Modals ── */}
       {legalPage==="terms"&&<LegalModal title="Terms of Service" onClose={()=>setLegalPage(null)}>{TERMS_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
       {legalPage==="privacy"&&<LegalModal title="Privacy Policy" onClose={()=>setLegalPage(null)}>{PRIVACY_CONTENT.map(([h,b])=><div key={h} style={{marginBottom:16}}><div style={{fontWeight:700,color:"#d4a843",marginBottom:4,fontSize:13}}>{h}</div><div>{b}</div></div>)}</LegalModal>}
-      {user && !isDemo && <AIHelpBubble user={user} />}
+      {user && !isDemo && !IS_BINTROVE && <AIHelpBubble user={user} />}
       {/* ── Google-OAuth finish-setup ─ new social signups with no org yet ── */}
       {user && needsProfile && !isDemo && (
         <GoogleProfileSetup user={user} onDone={()=>{ setNeedsProfile(false); setLoaded(false); }}/>

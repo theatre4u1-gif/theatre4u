@@ -409,8 +409,8 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
           <HeroImg vertical={vVertical!=="theatre"?vVertical:null} photoId={BG.inventory} w={1100} h={300} alt="" loading="lazy"/>
           <div className="hero-fade"/>
           <div className="hero-body">
-            <div className="hero-eyebrow">📦 Your Collection</div>
-            <h1 className="hero-title" style={{fontSize:46}}>Inventory</h1>
+            <div className="hero-eyebrow">📦 {IS_BINTROVE?"Your Home":"Your Collection"}</div>
+            <h1 className="hero-title" style={{fontSize:46}}>{IS_BINTROVE?"My Bins":"Inventory"}</h1>
             <p className="hero-sub">{getTerm(vVertical,"inventorySub")}</p>
           </div>
           <div className="hero-bar"/>

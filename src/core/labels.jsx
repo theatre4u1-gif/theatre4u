@@ -577,7 +577,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
               })}
             </div>
             <div style={{fontSize:11.5,color:"var(--faint)",marginTop:8}}>
-              Not sure? Avery label sheets are the easiest and cheapest for most programs.
+              Not sure? Avery label sheets are the easiest and cheapest for most {IS_BINTROVE?"people":"programs"}.
             </div>
           </div>
 
