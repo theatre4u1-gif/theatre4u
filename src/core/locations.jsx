@@ -195,7 +195,7 @@ function RoomMap({ loc, items, userId, onUpdate, vertical="theatre" }) {
                 </div>
               ) : (
                 <div>
-                  <input style={{ ...inp,marginBottom:8 }} value={pinName} onChange={e=>setPinName(e.target.value)} placeholder="e.g. Red Costume Tubs, Prop Shelf B" autoFocus onKeyDown={e=>e.key==="Enter"&&savePin()} />
+                  <input style={{ ...inp,marginBottom:8 }} value={pinName} onChange={e=>setPinName(e.target.value)} placeholder={IS_BINTROVE?"e.g. Holiday Bins, Garage Shelf B":"e.g. Red Costume Tubs, Prop Shelf B"} autoFocus onKeyDown={e=>e.key==="Enter"&&savePin()} />
                 </div>
               )}
 
@@ -446,8 +446,8 @@ export function LocationsPanel({ userId, items, onEditItem, onDeleteItem, vertic
       ) : locations.length === 0 ? (
         <div className="empty">
           <div className="empty-ico">📦</div>
-          <h3>No locations yet</h3>
-          <p>Add your first storage location — a room with a photo map, a costume rack, or a simple named location.</p>
+          <h3>{IS_BINTROVE?"No bins yet":"No locations yet"}</h3>
+          <p>{IS_BINTROVE?'Add your first bin or storage spot — a closet with a photo map, a shelf, or a simple named bin (e.g. "Garage Shelf A").':"Add your first storage location — a room with a photo map, a costume rack, or a simple named location."}</p>
           <button className="btn btn-g" onClick={() => { setActive(null); setModal("add"); }}>+ Add First Location</button>
         </div>
       ) : (
@@ -586,7 +586,7 @@ function LocationFormModal({ initial, saving, onSave, onCancel, inp, lbl }) {
         )}
         <div>
           <label style={lbl}>Location name *</label>
-          <input style={inp} value={f.name} onChange={e=>upd("name",e.target.value)} placeholder={f.location_type==="room"?"e.g. Costume Storage Room":f.location_type==="rack"?"e.g. Costume Rack A":"e.g. Storage Container 1, Prop Room Shelf 3"} autoFocus />
+          <input style={inp} value={f.name} onChange={e=>upd("name",e.target.value)} placeholder={IS_BINTROVE?(f.location_type==="room"?"e.g. Garage, Attic, Hall Closet":f.location_type==="rack"?"e.g. Garage Shelf A":"e.g. Holiday Bin 1, Basement Shelf 3"):(f.location_type==="room"?"e.g. Costume Storage Room":f.location_type==="rack"?"e.g. Costume Rack A":"e.g. Storage Container 1, Prop Room Shelf 3")} autoFocus />
         </div>
         <div>
           <label style={lbl}>Short code <span style={{ fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:10 }}>(optional — for labels)</span></label>
@@ -594,7 +594,7 @@ function LocationFormModal({ initial, saving, onSave, onCancel, inp, lbl }) {
         </div>
         <div>
           <label style={lbl}>Description <span style={{ fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:10 }}>(optional)</span></label>
-          <textarea style={{ ...inp,minHeight:56,resize:"vertical" }} value={f.description||""} onChange={e=>upd("description",e.target.value)} placeholder="Upstage right, blue rolling rack, near loading dock…" />
+          <textarea style={{ ...inp,minHeight:56,resize:"vertical" }} value={f.description||""} onChange={e=>upd("description",e.target.value)} placeholder={IS_BINTROVE?"Top shelf, blue lid, behind the holiday boxes…":"Upstage right, blue rolling rack, near loading dock…"} />
         </div>
         <div style={{ display:"flex",gap:8,justifyContent:"flex-end",paddingTop:12,borderTop:"1px solid var(--border)" }}>
           <button className="btn btn-o" onClick={onCancel}>Cancel</button>

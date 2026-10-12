@@ -394,7 +394,10 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
       </div>
     )}
     {headerNote}
-    {(nearLimit||atLimit)&&(
+    {/* BinTrove enforces its item/bin caps server-side (home_plan); the add flow routes to the
+        Account page on the cap error. This school free-plan banner ("/25", Pro, Exchange) is
+        hidden for home accounts. */}
+    {!IS_BINTROVE && (nearLimit||atLimit)&&(
       <div style={{background:atLimit?"rgba(194,24,91,.12)":"rgba(212,168,67,.1)",border:"1px solid "+(atLimit?"rgba(194,24,91,.3)":"rgba(212,168,67,.25)"),borderRadius:8,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
         <span style={{fontSize:13,color:atLimit?"var(--red)":"var(--gold)",fontWeight:600}}>
           {atLimit?"⚠️ Item limit reached — upgrade to add more items.":"⚡ "+items.length+"/25 items used on free plan."}
@@ -518,7 +521,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
                   <option value="location">Location</option>
                   <option value="condition">Condition</option>
                   <option value="avail">Availability</option>
-                  <option value="mkt">Exchange Status</option>
+                  {!IS_BINTROVE && <option value="mkt">Exchange Status</option>}
                 </select>
 
                 {bulkField==="category"&&(
@@ -585,7 +588,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
             <div><label>Category</label><select value={catF} onChange={e=>setCatF(e.target.value)}><option value="all">All</option>{vCATS.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></div>
             <div><label>Condition</label><select value={condF} onChange={e=>setCondF(e.target.value)}><option value="all">All</option>{vCONDS.map(c=><option key={c}>{c}</option>)}</select></div>
             <div><label>Availability</label><select value={availF} onChange={e=>setAvailF(e.target.value)}><option value="all">All</option>{vAVAIL.map(a=><option key={a}>{a}</option>)}</select></div>
-            <div><label>Exchange Status</label><select value={mktF} onChange={e=>setMktF(e.target.value)}><option value="all">All</option>{vMKT.map(s=><option key={s}>{s}</option>)}</select></div>
+            {!IS_BINTROVE && <div><label>Exchange Status</label><select value={mktF} onChange={e=>setMktF(e.target.value)}><option value="all">All</option>{vMKT.map(s=><option key={s}>{s}</option>)}</select></div>}
             <button className="btn btn-o btn-sm" onClick={()=>{setCatF("all");setCondF("all");setAvailF("all");setMktF("all")}}>Clear</button>
           </div>
         )}

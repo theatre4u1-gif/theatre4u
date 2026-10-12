@@ -1,23 +1,31 @@
 import React, { useState, useEffect } from "react";
-import { APP_NAME, IS_ARTSTRACKER } from "./config.js";
+import { APP_NAME, IS_ARTSTRACKER, IS_BINTROVE } from "./config.js";
 import { SB } from "./supabase.js";
 import { CAT, CATS, CONDS, AVAIL, MKT } from "./inventory.js";
-import { BG, usp } from "../lib/backgrounds.js";
+import { BG, usp, VERTICAL_BG_GRAD } from "../lib/backgrounds.js";
 import { Ic } from "./icons.jsx";
 import { UpgradePlans } from "./billing.jsx";
 import { fmt$, doorUrl, doorHost } from "./helpers.js";
 import { QR } from "./qr.js";
 import { printProductionReport } from "./productions.jsx";
-import { getExchangeName, getTerm } from "../lib/verticals.js";
+import { getExchangeName, getTerm, getCats, getVertical } from "../lib/verticals.js";
 
 // Reports page (+ platform-usage + production-report tabs) — extracted from App.jsx.
 
 export function Reports({ items, plan="free", org=null, userId=null, userEmail=null }) {
   const [tab,setTab] = useState("overview");
+  // Vertical-aware vocabulary. BinTrove (home) uses the home vertical's categories /
+  // conditions / availability so breakdowns are correct; school hosts keep the static
+  // theatre vocab exactly as before (byte-identical).
+  const V      = org?.vertical || (IS_BINTROVE ? "home" : "theatre");
+  const vCATS  = IS_BINTROVE ? getCats(V)                          : CATS;
+  const vCONDS = IS_BINTROVE ? (getVertical(V).conditions   || CONDS) : CONDS;
+  const vAVAIL = IS_BINTROVE ? (getVertical(V).availability || AVAIL) : AVAIL;
+  const catOf  = id => (IS_BINTROVE ? (vCATS.find(c=>c.id===id) || {icon:"📦",label:id}) : (CAT[id]||CAT.other));
   const totalQty  = items.reduce((s,i)=>s+(i.qty||1),0);
-  const catData   = CATS.map(cat=>{const ci=items.filter(i=>i.category===cat.id);return{...cat,count:ci.length,qty:ci.reduce((s,i)=>s+(i.qty||1),0),val:ci.reduce((s,i)=>s+((i.sale||0)*(i.qty||1)),0)}}).filter(c=>c.count>0);
-  const condData  = CONDS.map(c=>({l:c,n:items.filter(i=>i.condition===c).length})).filter(c=>c.n>0);
-  const availData = AVAIL.map(a=>({l:a,n:items.filter(i=>i.avail===a).length})).filter(a=>a.n>0);
+  const catData   = vCATS.map(cat=>{const ci=items.filter(i=>i.category===cat.id);return{...cat,count:ci.length,qty:ci.reduce((s,i)=>s+(i.qty||1),0),val:ci.reduce((s,i)=>s+((i.sale||0)*(i.qty||1)),0)}}).filter(c=>c.count>0);
+  const condData  = vCONDS.map(c=>({l:c,n:items.filter(i=>i.condition===c).length})).filter(c=>c.n>0);
+  const availData = vAVAIL.map(a=>({l:a,n:items.filter(i=>i.avail===a).length})).filter(a=>a.n>0);
   const mktData   = MKT.map(s=>({l:s,n:items.filter(i=>i.mkt===s).length})).filter(m=>m.n>0);
   const maxN = n => Math.max(1,n);
   const locData = Object.entries(
@@ -42,18 +50,20 @@ export function Reports({ items, plan="free", org=null, userId=null, userEmail=n
       doorUrl(org)+"/#/item/"+i.id,i.img||"",i.notes||"",i.id,i.added
     ]);
     const csv="﻿"+[h,...rows].map(r=>r.map(esc).join(",")).join("\r\n");
-    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download=(IS_ARTSTRACKER?"artstracker":"theatre4u")+"_inventory.csv";a.click();
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download=(IS_BINTROVE?"bintrove":IS_ARTSTRACKER?"artstracker":"theatre4u")+"_inventory.csv";a.click();
   };
 
   const printAllQR = async () => {
     const w=window.open("","_blank");if(!w)return;
-    w.document.write(`<html><head><title>${APP_NAME} QR Labels</title></head><body style="font-family:sans-serif;padding:16px"><h2 style="font-size:14px;margin-bottom:16px;color:#333">Theatre4u™ — QR Labels (${items.length} items)</h2><div id="lbl">Generating…</div></body></html>`);w.document.close();
+    w.document.write(`<html><head><title>${APP_NAME} QR Labels</title></head><body style="font-family:sans-serif;padding:16px"><h2 style="font-size:14px;margin-bottom:16px;color:#333">${APP_NAME} — QR Labels (${items.length} items)</h2><div id="lbl">Generating…</div></body></html>`);w.document.close();
     const srcs=await Promise.all(items.map(i=>QR.toDataURL(doorUrl(org)+"/#/item/"+i.id,140)));
     const labels=items.map((i,n)=>`<div style="display:inline-block;text-align:center;padding:10px;border:1px dashed #ccc;margin:5px;width:160px;vertical-align:top"><img src="${srcs[n]||""}" width="100" height="100"/><div style="font-size:10px;font-weight:700;margin-top:5px;word-break:break-word">${i.name}</div><div style="font-size:8px;color:#888;margin-top:2px">${i.category} · ${i.id.slice(0,8)}</div></div>`).join("");
     const el=w.document.getElementById("lbl");if(el){el.outerHTML=labels;setTimeout(()=>w.print(),400);}
   };
 
-  if(plan==="free") return(
+  // BinTrove: Reports (the full item list + breakdowns + CSV) is open to every home
+  // account — their plan tiers gate capacity, not features. School hosts keep the Pro gate.
+  if(plan==="free" && !IS_BINTROVE) return(
     <div style={{padding:"40px 20px",textAlign:"center"}}>
       <div style={{fontSize:44,marginBottom:14}}>📊</div>
       <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,marginBottom:10}}>Reports require a Pro account</h2>
@@ -64,16 +74,18 @@ export function Reports({ items, plan="free", org=null, userId=null, userEmail=n
 
   return(
     <div style={{position:"relative"}}>
-      <img src={usp(BG.reports,1400,900)} alt="" className="page-bg-img"/>
+      {!IS_BINTROVE && <img src={usp(BG.reports,1400,900)} alt="" className="page-bg-img"/>}
 
       <div style={{padding:"32px 36px 0"}}>
         <div className="hero-wrap" style={{height:230}}>
-          <img src={usp(BG.reports,1100,290)} alt="Reports" loading="lazy"/>
+          {IS_BINTROVE
+            ? <div style={{position:"absolute",inset:0,background:VERTICAL_BG_GRAD.home}}/>
+            : <img src={usp(BG.reports,1100,290)} alt="Reports" loading="lazy"/>}
           <div className="hero-fade"/>
           <div className="hero-body">
-            <div className="hero-eyebrow">📊 Analytics</div>
+            <div className="hero-eyebrow">📊 {IS_BINTROVE?"Your Home":"Analytics"}</div>
             <h1 className="hero-title" style={{fontSize:44}}>Reports</h1>
-            <p className="hero-sub">Breakdowns, condition tracking, and data exports for your program.</p>
+            <p className="hero-sub">{IS_BINTROVE?"A full list of everything you own, plus condition and location breakdowns and CSV export.":"Breakdowns, condition tracking, and data exports for your program."}</p>
           </div>
           <div style={{position:"absolute",bottom:24,right:30,zIndex:2,display:"flex",gap:8}}>
             <button className="btn" style={{background:"rgba(255,255,255,0.18)",border:"1px solid rgba(255,255,255,0.55)",color:"#fff",backdropFilter:"blur(6px)",fontWeight:600}} onClick={printAllQR}>
@@ -88,7 +100,10 @@ export function Reports({ items, plan="free", org=null, userId=null, userEmail=n
 
       <div style={{padding:"clamp(16px,4vw,24px) clamp(12px,4vw,36px) 48px",position:"relative",zIndex:1}}>
         <div className="tabs">
-          {[["overview","Overview"],["condition","Condition"],["availability","Availability"],["market",getExchangeName(org?.vertical)],["location","Locations"],["productions","🎭 "+getTerm(org?.vertical,"productions")],["usage","📊 Platform Usage"]].map(([t,l])=>(
+          {(IS_BINTROVE
+            ? [["overview","Overview"],["condition","Condition"],["availability","Availability"],["location","Locations"]]
+            : [["overview","Overview"],["condition","Condition"],["availability","Availability"],["market",getExchangeName(org?.vertical)],["location","Locations"],["productions","🎭 "+getTerm(org?.vertical,"productions")],["usage","📊 Platform Usage"]]
+          ).map(([t,l])=>(
             <button key={t} className={`tab ${tab===t?"on":""}`} onClick={()=>setTab(t)}>{l}</button>
           ))}
         </div>
@@ -140,7 +155,7 @@ export function Reports({ items, plan="free", org=null, userId=null, userEmail=n
             {availData.map(a=>(
               <div className="bar-row" key={a.l}>
                 <span className="bar-lbl" style={{width:130}}>{a.l}</span>
-                <div className="bar-track"><div className="bar-fill" style={{width:`${(a.n/maxN(items.length))*100}%`,background:a.l==="In Stock"?"#4caf50":a.l==="In Use"?"#42a5f5":"#ffa726"}}/></div>
+                <div className="bar-track"><div className="bar-fill" style={{width:`${(a.n/maxN(items.length))*100}%`,background:(a.l==="In Stock"||a.l==="Stored")?"#4caf50":a.l==="In Use"?"#42a5f5":"#ffa726"}}/></div>
                 <span className="bar-cnt">{a.n}</span>
               </div>
             ))}
@@ -162,7 +177,7 @@ export function Reports({ items, plan="free", org=null, userId=null, userEmail=n
 
         {tab==="location"&&(
           <div className="card card-p">
-            <div className="sh"><h2>Items by Location</h2><p>Where everything is stored across your facility.</p></div>
+            <div className="sh"><h2>Items by Location</h2><p>Where everything is stored across your {IS_BINTROVE?"home":"facility"}.</p></div>
             {locData.length===0
               ? <p style={{color:"var(--muted)",textAlign:"center",padding:24}}>No items yet.</p>
               : locData.map(([loc,data])=>(
@@ -177,14 +192,14 @@ export function Reports({ items, plan="free", org=null, userId=null, userEmail=n
                       <thead><tr><th>Item</th><th>Category</th><th>Condition</th><th>Qty</th><th>Availability</th></tr></thead>
                       <tbody>
                         {data.items.map(item=>{
-                          const cat=CAT[item.category]||CAT.other;
+                          const cat=catOf(item.category);
                           return(
                             <tr key={item.id}>
                               <td style={{fontWeight:700}}>{item.name}</td>
                               <td>{cat.icon} {cat.label}</td>
                               <td>{item.condition}</td>
                               <td style={{fontWeight:800}}>{item.qty}</td>
-                              <td><span style={{padding:"2px 8px",borderRadius:10,fontSize:11,fontWeight:700,background:item.avail==="In Stock"?"rgba(76,175,80,.15)":"rgba(66,165,245,.15)",color:item.avail==="In Stock"?"#2e7d32":"#1565c0"}}>{item.avail}</span></td>
+                              <td><span style={{padding:"2px 8px",borderRadius:10,fontSize:11,fontWeight:700,background:(item.avail==="In Stock"||item.avail==="Stored")?"rgba(76,175,80,.15)":"rgba(66,165,245,.15)",color:(item.avail==="In Stock"||item.avail==="Stored")?"#2e7d32":"#1565c0"}}>{item.avail}</span></td>
                             </tr>
                           );
                         })}

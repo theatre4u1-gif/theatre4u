@@ -391,7 +391,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
         ):null;})()}
       </div>
       <div className="fg fu"><label className="fl">Notes</label><textarea className="ft" value={f.notes} onChange={e=>upd("notes",e.target.value)} placeholder="Usage history, care instructions…"/></div>
-      <div className="fg fu sdiv"><div className="slbl">🏪 {getExchangeName(vertical)}</div></div>
+      {!IS_BINTROVE && <div className="fg fu sdiv"><div className="slbl">🏪 {getExchangeName(vertical)}</div></div>}
       {!IS_BINTROVE && <div className="fg"><label className="fl">Listing Status</label><select className="fs" value={f.mkt} onChange={e=>upd("mkt",e.target.value)}>{MKT.map(s=><option key={s}>{s}</option>)}</select></div>}
       {f.mkt!=="Not Listed"&&f.mkt!=="Private"&&!marketplaceEnabled&&(
         <div className="fg fu" style={{marginTop:-4}}>
@@ -590,13 +590,13 @@ export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, ca
           <div className="dt-row" key={l}><span className="dt-lbl">{l}</span><span>{v}</span></div>
         ))}
       </div>
-      <div className="dt-sec"><h3>Backstage Exchange</h3>
+      {!IS_BINTROVE && <div className="dt-sec"><h3>Backstage Exchange</h3>
         <div className="dt-row"><span className="dt-lbl">Status</span><span className={`mkt-badge ${mktCls}`}>{item.mkt}</span></div>
         {(item.mkt==="For Rent"||item.mkt==="Rent or Sale")&&<div className="dt-row"><span className="dt-lbl">Rental/week</span><span className="price">{fmt$(item.rent)}</span></div>}
         {(item.mkt==="For Sale"||item.mkt==="Rent or Sale")&&<div className="dt-row"><span className="dt-lbl">Sale Price</span><span className="price">{fmt$(item.sale)}</span></div>}
         {item.mkt==="For Loan"&&<div className="dt-row"><span className="dt-lbl">Loan Period</span><span style={{fontWeight:700,color:"#00838f"}}>{item.loan_period||2} week{(item.loan_period||2)!==1?"s":""}</span></div>}
         {item.mkt==="For Loan"&&<div className="dt-row"><span className="dt-lbl">Deposit</span><span className="price">{item.deposit>0?fmt$(item.deposit):"None (free loan)"}</span></div>}
-      </div>
+      </div>}
       <div className="dt-sec">
         <h3 style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <span style={{display:"flex",alignItems:"center",gap:7}}>

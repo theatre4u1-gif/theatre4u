@@ -812,6 +812,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       { id:"dashboard", label:"Home",       ico:Ic.home },
       { id:"inventory", label:"My Bins",    ico:Ic.box  },
       { id:"labels",    label:"Bin Labels", ico:"🏷"    },
+      { id:"reports",   label:"Reports",    ico:"📊"    },
       { id:"profile",   label:"Account",    ico:"👤"    },
     ];
     const role = memberRole; // null=director/owner, stage_manager, crew, house
@@ -840,7 +841,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   })();
   const TITLES = { home:"Home", messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(curVertical), productions:getTerm(curVertical,"productions"), reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:getPointsName(curVertical), points:getPointsName(curVertical), community:"Community Board", labels:"QR Labels", facschools:"District Schools", myschool:"My School" };
   // BinTrove: consumer titles (mutates the object, not a reassignment; only for IS_BINTROVE).
-  if (IS_BINTROVE) Object.assign(TITLES, { dashboard:"Home", inventory:"My Bins", labels:"Bin Labels", profile:"Account" });
+  if (IS_BINTROVE) Object.assign(TITLES, { dashboard:"Home", inventory:"My Bins", labels:"Bin Labels", reports:"Reports", profile:"Account" });
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicOrgSlug) return <PublicOrgPage slug={publicOrgSlug} />;
@@ -1047,13 +1048,14 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                     </a>
                   )}
                   {plan==="free"&&!isAdmin&&(
-                    <button className="btn btn-sm btn-full" style={{background:"linear-gradient(135deg,var(--gold),var(--amber))",border:"none",color:"#1a0f00",fontSize:13,fontWeight:800,padding:"9px 12px",letterSpacing:.2}} onClick={()=>nav("settings")}>
+                    <button className="btn btn-sm btn-full" style={{background:"linear-gradient(135deg,var(--gold),var(--amber))",border:"none",color:"#1a0f00",fontSize:13,fontWeight:800,padding:"9px 12px",letterSpacing:.2}} onClick={()=>nav(IS_BINTROVE?"profile":"settings")}>
                       ⭐ Upgrade Plan
                     </button>
                   )}
-                  <button className="btn btn-o btn-sm btn-full" style={{color:"rgba(255,255,255,.85)",borderColor:"rgba(255,255,255,.28)",fontSize:13,padding:"8px 12px"}} onClick={()=>nav("settings")}>
-                    <span style={{width:13,height:13,display:"flex"}}>{Ic.settings}</span>Settings
-                  </button>
+                  {/* BinTrove: Settings → the consumer Account page (plan, usage, sign out, close account);
+                      the theatre Settings page (team, departments, Exchange) never shows for home accounts. */}
+                  <button className="btn btn-o btn-sm btn-full" style={{color:"rgba(255,255,255,.85)",borderColor:"rgba(255,255,255,.28)",fontSize:13,padding:"8px 12px"}} onClick={()=>nav(IS_BINTROVE?"profile":"settings")}>
+                    <span style={{width:13,height:13,display:"flex"}}>{Ic.settings}</span>{IS_BINTROVE?"Account":"Settings"}</button>
                   {/* Subscribe / founding-claim button — temp_pro users who haven't paid yet, not in demo */}
                   {org?.temp_pro && !org?.stripe_subscription_id && !isAdmin && !isDemoMode() && (
                     org?.founding_member
@@ -1207,7 +1209,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                   {page==="funding"     && <FundingPage userId={org?.id || user?.id} org={viewOrg} plan={plan}/>}
                   {page==="prop28"      && <Prop28Page  userId={org?.id || user?.id} org={viewOrg} onNav={nav}/>}
                   {page==="profile"     && (IS_BINTROVE ? <BinTroveAccount user={user} org={org}/> : <OrgProfilePage userId={org?.id || user?.id} org={org} setOrg={setOrg} plan={plan} items={items}/>)}
-              {page==="settings"    && <Settings    org={org} setOrg={setOrg} onSeed={seed} user={user} userId={org?.id || user?.id} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
+              {page==="settings"    && (IS_BINTROVE ? <BinTroveAccount user={user} org={org}/> : <Settings    org={org} setOrg={setOrg} onSeed={seed} user={user} userId={org?.id || user?.id} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>)}
                   {page==="district"    && (plan==="district" || ownsDistrict || facDistrict) && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool} isFacilitator={!!facDistrict}/>}
                   {page==="myschool"    && isCoord && <SchoolCoordinatorDashboard user={user} onSwitchSchool={switchSchool}/>}
                   {page==="facschools"  && facDistrict && (

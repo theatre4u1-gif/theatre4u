@@ -498,9 +498,9 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}}>
           {[
             {n:"1",ico:"🖨",t:"Print now — free",
-              b:"Use the Print tab to instantly generate and print QR code labels for any items. Works from any home or school printer. Best for getting started quickly."},
+              b:"Use the Print tab to instantly generate and print QR code labels for any items. Works from any home printer. Best for getting started quickly."},
             {n:"2",ico:"📬",t:"Order durable labels",
-              b:"Order professional polyester or weatherproof vinyl labels printed by WePrintBarcodes and mailed to your school. Pre-coded — stick them on bins now, assign to items anytime."},
+              b:IS_BINTROVE?"Order professional polyester or weatherproof vinyl labels printed by WePrintBarcodes and mailed to you. Pre-coded — stick them on bins now, assign to items anytime.":"Order professional polyester or weatherproof vinyl labels printed by WePrintBarcodes and mailed to your school. Pre-coded — stick them on bins now, assign to items anytime."},
             {n:"3",ico:"🔗",t:"Assign codes to items",
               b:"Got physical labels? Use the Assign tab to link any label code to any inventory item — current or future. Scan the label with any phone camera to pull up the item instantly."},
           ].map(s=>(
@@ -868,15 +868,15 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
         <div style={{maxWidth:640}}>
           <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.8,marginBottom:18}}>
             Any printer works with the <strong style={{color:"var(--text)"}}>Print Labels</strong> tab
-            and Avery-style sticker sheets. For labels that survive years of backstage handling,
+            and Avery-style sticker sheets. For labels that survive years of {IS_BINTROVE?"handling in the garage, attic, and basement":"backstage handling"},
             these are the printers we recommend:
           </p>
           <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:18}}>
             {[
               ["🏷️","Brother QL-810W","Cheap, fast bulk labels for bins and shelves. Paper rolls run about 3\u00A2 per label (400-label roll \u2248 $14).","https://www.amazon.com/dp/B01MTWGMRR?tag=artstracker-20","Printer on Amazon","https://www.amazon.com/dp/B0002VS6HG?tag=artstracker-20","DK-1201 label rolls"],
-              ["🔧","Brother P-touch CUBE Plus (PT-P710BT)","Prints durable laminated tape for props, cases, and anything handled every week. Connects to a computer by USB (Bluetooth is for the phone app).","https://www.amazon.com/dp/B07HB8LNSY?tag=artstracker-20","Printer on Amazon",null,null],
-              ["📦","TZe-251 tape, 24mm black on white (everyday, best overall)","The size the label template uses. Best for props, storage tubs, toolboxes, shelving, and lighting and sound equipment.","https://www.amazon.com/s?k=Brother+TZe-251+24mm&tag=artstracker-20","Tape on Amazon",null,null],
-              ["💪","TZe-S241 tape, 24mm extra strength adhesive","Stronger stick for rough or textured surfaces: Rubbermaid bins, Pelican and road cases, and painted scenery carts.","https://www.amazon.com/s?k=Brother+TZe-S241&tag=artstracker-20","Tape on Amazon",null,null],
+              ["🔧","Brother P-touch CUBE Plus (PT-P710BT)",IS_BINTROVE?"Prints durable laminated tape for bins, cases, and anything handled often. Connects to a computer by USB (Bluetooth is for the phone app).":"Prints durable laminated tape for props, cases, and anything handled every week. Connects to a computer by USB (Bluetooth is for the phone app).","https://www.amazon.com/dp/B07HB8LNSY?tag=artstracker-20","Printer on Amazon",null,null],
+              ["📦","TZe-251 tape, 24mm black on white (everyday, best overall)",IS_BINTROVE?"The size the label template uses. Best for storage tubs, toolboxes, shelving, and electronics.":"The size the label template uses. Best for props, storage tubs, toolboxes, shelving, and lighting and sound equipment.","https://www.amazon.com/s?k=Brother+TZe-251+24mm&tag=artstracker-20","Tape on Amazon",null,null],
+              ["💪","TZe-S241 tape, 24mm extra strength adhesive",IS_BINTROVE?"Stronger stick for rough or textured surfaces: Rubbermaid bins, totes, and storage cases.":"Stronger stick for rough or textured surfaces: Rubbermaid bins, Pelican and road cases, and painted scenery carts.","https://www.amazon.com/s?k=Brother+TZe-S241&tag=artstracker-20","Tape on Amazon",null,null],
             ].map(([icon,name,desc,url,cta,url2,cta2],i)=>(
               <div key={i} style={{background:"var(--parch)",border:"1px solid var(--border)",borderRadius:12,padding:"16px 18px",display:"flex",gap:14,alignItems:"flex-start"}}>
                 <div style={{fontSize:26,lineHeight:1}}>{icon}</div>
