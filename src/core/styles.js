@@ -1,5 +1,6 @@
 // ── Global app stylesheet (design system) — extracted from App.jsx ──
-export const CSS = `
+import { IS_BINTROVE } from "./config.js";
+const CSS_BASE = `
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600&family=Lora:ital,wght@0,500;0,600;1,400;1,500&family=Raleway:wght@500;600;700;800&display=swap');
 :root{
   --ink:#1a0c06;--deep:#2a0f09;--cog:#8b5a0f;--amber:#c49a30;--gold:#e8b85d;--gilt:#f5cc70;
@@ -487,3 +488,11 @@ tr:hover td{background:rgba(243,230,204,.55)}
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;
 }
 `;
+
+// BinTrove: teal-forward palette, appended ONLY for IS_BINTROVE. A second :root block
+// after the base overrides the gold accents with teal (+ a gold pop). Theatre4u/ArtsTracker
+// receive CSS_BASE unchanged (byte-identical string).
+const BINTROVE_THEME = `
+:root{ --gold:#1C9E8F; --amber:#0F6E6B; --gilt:#D3A13C; --cog:#0A5450; --goldink:#0A5450; }
+`;
+export const CSS = CSS_BASE + (IS_BINTROVE ? BINTROVE_THEME : "");

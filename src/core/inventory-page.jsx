@@ -1,6 +1,6 @@
 // INVENTORY PAGE — extracted from App.jsx (modularization).
 import React, { useState, useEffect, useMemo } from "react";
-import { APP_HOST } from "./config.js";
+import { APP_HOST, IS_BINTROVE } from "./config.js";
 import { SB } from "./supabase.js";
 import { Modal, HeroImg, CatCard, CatThumb } from "./ui.jsx";
 import { Ic } from "./icons.jsx";
@@ -426,7 +426,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
         <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:14,alignItems:"center"}}>
           <div className="srch">{Ic.search}<input aria-label="Search inventory" value={search} onChange={e=>setSrch(e.target.value)} placeholder="Search items, tags, location…"/></div>
           <button className="ico-btn" aria-label="Filters" style={showF?{borderColor:"var(--gold)",color:"var(--cog)"}:{}} onClick={()=>setShowF(!showF)}>{Ic.filter}</button>
-          <div className="vtog"><button className={view==="grid"?"on":""} onClick={()=>setView("grid")}>Grid</button><button className={view==="table"?"on":""} onClick={()=>setView("table")}>Table</button><button className={view==="locations"?"on":""} onClick={()=>setView("locations")}>📦 Locations</button></div>
+          <div className="vtog"><button className={view==="grid"?"on":""} onClick={()=>setView("grid")}>Grid</button><button className={view==="table"?"on":""} onClick={()=>setView("table")}>Table</button><button className={view==="locations"?"on":""} onClick={()=>setView("locations")}>📦 {IS_BINTROVE?"Bins":"Locations"}</button></div>
           {multiV&&view!=="locations"&&<select value={deptF} onChange={e=>setDeptF(e.target.value)} title="Filter by department" style={{padding:"6px 11px",borderRadius:7,border:"1.5px solid var(--border)",background:"transparent",fontSize:13,fontFamily:"inherit",color:"var(--muted)",cursor:"pointer"}}>
             <option value="all">All departments</option>
             {deptList.map(v=><option key={v} value={v}>{getVertical(v).icon} {getVertical(v).label}</option>)}
@@ -653,7 +653,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
                   <span style={{width:22,height:22,borderRadius:"50%",background:"var(--gold)",color:"#1a0f00",fontSize:12,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>2</span>
                   <span style={{fontSize:14,fontWeight:800,color:"var(--text)"}}>Give each a home</span>
                 </div>
-                <div style={{fontSize:12.5,color:"var(--muted)",marginBottom:10,lineHeight:1.45}}>Set up storage locations (e.g. "Wig Cabinet," "Costume Closet A") so every item has a spot and you can find it later.</div>
+                <div style={{fontSize:12.5,color:"var(--muted)",marginBottom:10,lineHeight:1.45}}>{IS_BINTROVE?'Set up your bins (e.g. "Christmas Decorations," "Garage Shelf A") so everything has a home and you can find it later.':'Set up storage locations (e.g. "Wig Cabinet," "Costume Closet A") so every item has a spot and you can find it later.'}</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
                   <button className="btn btn-o btn-sm" onClick={()=>setView("locations")}>📦 Set up locations</button>
                 </div>

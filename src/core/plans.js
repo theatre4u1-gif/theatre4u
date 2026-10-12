@@ -23,6 +23,26 @@ export function stripeLink(baseUrl, userId, userEmail) {
   } catch { return baseUrl; }
 }
 
+// ── BinTrove (consumer home-inventory) — annual-only at launch ──────────────
+// Live Stripe price IDs (product prod_VQeOWT8WqxNtrr). The webhook's PRICE_TO_HOME maps
+// these prices → orgs.home_plan. BINTROVE_LINKS get the payment-link URLs once created.
+export const BINTROVE_PRICE_IDS = {
+  starter:   "price_1UPn5uBRkceXoRsJ1KDkvxb9", // $24/yr
+  home:      "price_1UPn6fBRkceXoRsJCKN8IGLT", // $59/yr
+  home_plus: "price_1UPn6UBRkceXoRsJTZUcCOOg", // $89/yr
+};
+export const BINTROVE_LINKS = {
+  starter:   "https://buy.stripe.com/3cIeVcgNb4150Hh2ErgA80j", // $24/yr
+  home:      "https://buy.stripe.com/cNi28q8gF9lp3TtgvhgA80k", // $59/yr
+  home_plus: "https://buy.stripe.com/aFa14m0OdeFJ0Hhdj5gA80l", // $89/yr
+};
+export const BINTROVE_PLANS_DEF = {
+  free:      { label:"Free",      maxBins:3,        maxItems:30,       annualPrice:0,  users:1 },
+  starter:   { label:"Starter",   maxBins:10,       maxItems:100,      annualPrice:24, users:1 },
+  home:      { label:"Home",      maxBins:30,       maxItems:300,      annualPrice:59, users:2 },
+  home_plus: { label:"Home Plus", maxBins:Infinity, maxItems:Infinity, annualPrice:89, users:5 },
+};
+
 export const PLANS_DEF = {
   free:     { label:"Free",     maxItems:25,  marketplace:false, reports:false, allVerticals:false, monthlyPrice:0,  annualPrice:0   },
   pro:      { label:"Pro",      maxItems:Infinity, marketplace:true,  reports:true,  allVerticals:false, monthlyPrice:15, annualPrice:150 },

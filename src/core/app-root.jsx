@@ -23,6 +23,7 @@ import { FundingPage } from "./funding.jsx";
 import { ExternalLoans } from "./external-loans.jsx";
 import { HOSTNAME, IS_THEATRE4U, IS_ARTSTRACKER, IS_BINTROVE, APP_NAME, APP_SUBTITLE, APP_EMAIL, APP_URL, ADMIN_EMAILS, isAdminEmail, ADMIN_EMAIL, LOGO_ICON, FAVICON, TOUCH_ICON, LOGO_FULL, LOGO_MARK } from "./config.js";
 import { BinTroveAuthScreen } from "./bintrove-auth.jsx";
+import { BinTroveAccount } from "./bintrove-account.jsx";
 import { POINT_EARN_RATES, POINTS_PER_DOLLAR, POINTS_FREE_MONTH, POINTS_MAX_BALANCE, POINTS_EXPIRE_DAYS, PLATFORM_FEE_PCT, POINTS_MIN_REDEEM, MILESTONE_POINTS } from "./points-config.js";
 import { Ic } from "./icons.jsx";
 import { Pager, Modal, FbShareBtn, HeroImg, CatCard, CatThumb, LegalModal, LogoMarkDark, LogoMarkLight } from "./ui.jsx";
@@ -467,7 +468,13 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   const add = useCallback(async(item)=>{
     const row=sanitizeItemRow({...item,org_id:activeOrgId, vertical: item.vertical || activeVertical || org?.vertical || "theatre"});
     const{data,error}=await SB.from("items").insert(row).select().single();
-    if(error){ alert("Could not save item: "+error.message); console.error(error); return; }
+    if(error){
+      if(IS_BINTROVE && /BINTROVE_CAP/.test(error.message||"")){
+        alert("You've reached your plan's item limit. Upgrade to add more — opening your account.");
+        setMob(false); setPage("profile"); return;
+      }
+      alert("Could not save item: "+error.message); console.error(error); return;
+    }
     if(data){
       setItems(p=>[data,...p]);
       // Auto-create funding expenditure if a funding source and cost were provided
@@ -797,6 +804,15 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   const canReviewPending = (memberRole === null || memberRole === "director" || memberRole === "program_director");
   const pendingReviewCount = canReviewPending ? items.filter(i => i && i.review_status === "pending").length : 0;
   const NAV = (() => {
+    // BinTrove (home accounts): trimmed consumer nav — no org muscle (productions,
+    // Exchange, funding, district, community, reports, points, messages, requests).
+    // Only triggers for IS_BINTROVE; school hosts are byte-identical.
+    if (IS_BINTROVE) return [
+      { id:"dashboard", label:"Home",       ico:Ic.home },
+      { id:"inventory", label:"My Bins",    ico:Ic.box  },
+      { id:"labels",    label:"Bin Labels", ico:"🏷"    },
+      { id:"profile",   label:"Account",    ico:"👤"    },
+    ];
     const role = memberRole; // null=director/owner, stage_manager, crew, house
     const isCrew  = role === "crew"  || role === "house";
     const isStage = role === "stage_manager";
@@ -822,6 +838,8 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
     ];
   })();
   const TITLES = { home:"Home", messages:"Messages", prop28:"Prop 28", requests:"Requests", dashboard:"Dashboard", inventory: activeSchool ? `📦 ${activeSchool.name}` : "Inventory", marketplace:getExchangeName(curVertical), productions:getTerm(curVertical,"productions"), reports:"Reports", settings:"Settings", admin:"Admin Dashboard", district:"District", credits:getPointsName(curVertical), points:getPointsName(curVertical), community:"Community Board", labels:"QR Labels", facschools:"District Schools", myschool:"My School" };
+  // BinTrove: consumer titles (mutates the object, not a reassignment; only for IS_BINTROVE).
+  if (IS_BINTROVE) Object.assign(TITLES, { dashboard:"Home", inventory:"My Bins", labels:"Bin Labels", profile:"Account" });
 
   // ── Public item page — no auth required ─────────────────────────────────────
   if (publicOrgSlug) return <PublicOrgPage slug={publicOrgSlug} />;
@@ -1185,7 +1203,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                   {page==="reports"     && <Reports     items={activeSchool ? schoolItems : vItems} plan={plan} org={viewOrg} userId={org?.id || user?.id} userEmail={user?.email}/>}
                   {page==="funding"     && <FundingPage userId={org?.id || user?.id} org={viewOrg} plan={plan}/>}
                   {page==="prop28"      && <Prop28Page  userId={org?.id || user?.id} org={viewOrg} onNav={nav}/>}
-                  {page==="profile"     && <OrgProfilePage userId={org?.id || user?.id} org={org} setOrg={setOrg} plan={plan} items={items}/>}
+                  {page==="profile"     && (IS_BINTROVE ? <BinTroveAccount user={user} org={org}/> : <OrgProfilePage userId={org?.id || user?.id} org={org} setOrg={setOrg} plan={plan} items={items}/>)}
               {page==="settings"    && <Settings    org={org} setOrg={setOrg} onSeed={seed} user={user} userId={org?.id || user?.id} items={items} setItems={setItems} plan={plan} userEmail={user?.email} setPlan={setPlan} memberRole={memberRole}/>}
                   {page==="district"    && (plan==="district" || ownsDistrict || facDistrict) && <DistrictDashboard user={user} plan={plan} onSwitchSchool={switchSchool} isFacilitator={!!facDistrict}/>}
                   {page==="myschool"    && isCoord && <SchoolCoordinatorDashboard user={user} onSwitchSchool={switchSchool}/>}

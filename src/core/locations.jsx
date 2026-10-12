@@ -2,7 +2,7 @@
 // Extracted from App.jsx. LocationsPanel is the entry point (Inventory's
 // Locations tab); the other three are module-internal.
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { APP_NAME, APP_URL } from "./config.js";
+import { APP_NAME, APP_URL, IS_BINTROVE } from "./config.js";
 import { SB } from "./supabase.js";
 import { Modal } from "./ui.jsx";
 import { EM } from "./messages.js";
@@ -374,7 +374,10 @@ export function LocationsPanel({ userId, items, onEditItem, onDeleteItem, vertic
       else { setLocations(p => p.map(x => x.id === data.id ? data : x)); flash("✓ Location updated"); setModal(null); setActive(null); }
     } else {
       const { data, error } = await SB.from("storage_locations").insert({ org_id: userId, vertical: vertical || "theatre", ...payload, map_pins: [], rack_slots: {} }).select().single();
-      if (error) { flash("❌ " + EM.fundingSave.body); }
+      if (error) {
+        if (IS_BINTROVE && /BINTROVE_CAP/.test(error.message || "")) flash("You've reached your plan's bin limit — upgrade in Account to add more.");
+        else flash("❌ " + EM.fundingSave.body);
+      }
       else { setLocations(p => [...p, data]); setActiveRoom(data.id); flash("✓ Location added"); setModal(null); }
     }
     setSaving(false);

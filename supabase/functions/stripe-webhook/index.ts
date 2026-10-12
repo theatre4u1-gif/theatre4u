@@ -39,6 +39,14 @@ const PRICE_TO_PLAN: Record<string, { plan: string; interval: string; allVertica
   "price_1TfrzPBRkceXoRsJ3OXj3Kg7": { plan: "district_l", interval: "annual",  allVerticals: true },
 };
 
+// BinTrove (home-inventory) annual prices → home_plan. Sets orgs.home_plan ONLY (never the school `plan`).
+// Additive: these IDs are not in PRICE_TO_PLAN and school prices are not here, so school billing is untouched.
+const PRICE_TO_HOME: Record<string, { home_plan: string; interval: string }> = {
+  "price_1UPn5uBRkceXoRsJ1KDkvxb9": { home_plan: "starter",   interval: "annual" }, // $24/yr
+  "price_1UPn6fBRkceXoRsJCKN8IGLT": { home_plan: "home",      interval: "annual" }, // $59/yr
+  "price_1UPn6UBRkceXoRsJTZUcCOOg": { home_plan: "home_plus", interval: "annual" }, // $89/yr
+};
+
 // Stripe moved current_period_end/start onto the subscription ITEM in recent API versions.
 // Read the subscription-level field first, then fall back to the first item.
 function periodEndsFromSub(sub: Record<string, unknown>): { start: number | null; end: number | null } {
@@ -340,7 +348,19 @@ Deno.serve(async (req: Request) => {
           period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
           stripe_created_at: event.created ? new Date((event.created as number) * 1000).toISOString() : null });
 
-        if (org && planInfo) {
+        const homeInfo = priceId ? PRICE_TO_HOME[priceId] : undefined;
+        if (org && homeInfo) {
+          // BinTrove home subscription → set home_plan ONLY; never touch the school `plan`/verticals/points.
+          await sb.from("orgs").update({
+            home_plan: homeInfo.home_plan,
+            subscription_status: "active",
+            stripe_customer_id: customerId,
+            stripe_subscription_id: subscriptionId,
+            plan_expires_at: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+          }).eq("id", org.id);
+          await sendPaymentAlert({ eventType, orgName: org.name, orgEmail: org.email,
+            plan: "BinTrove " + homeInfo.home_plan, interval: homeInfo.interval, amountCents: alertAmountCents });
+        } else if (org && planInfo) {
           const isAnnual = planInfo.interval === "annual";
           await sb.from("orgs").update({
             plan: planInfo.plan, plan_interval: planInfo.interval,
@@ -356,7 +376,7 @@ Deno.serve(async (req: Request) => {
           if (isAnnual) { try { await sb.rpc("award_milestone_points", { p_org_id: org.id, p_type: "annual_bonus", p_amount: 300, p_desc: "Annual plan bonus" }); } catch (_) {} }
           await sendPaymentAlert({ eventType, orgName: org.name, orgEmail: org.email,
             plan: planInfo.plan + (planInfo.allVerticals ? " (ArtsTracker)" : ""), interval: planInfo.interval, amountCents: alertAmountCents });
-        } else if (!planInfo) {
+        } else if (!planInfo && !homeInfo) {
           console.warn("Unknown price ID:", priceId);
           await sendErrorAlert("unknown price ID on a completed checkout",
             `A subscription checkout completed (${eventId}) but price ${priceId} is not in PRICE_TO_PLAN, so the org was not upgraded. Customer ${customerId} / ${customerEmail}. Add the price mapping and provision manually.`);
@@ -394,6 +414,8 @@ Deno.serve(async (req: Request) => {
           };
           if (planInfo) { updates.plan = planInfo.plan; updates.plan_interval = planInfo.interval; }
           if (planInfo?.allVerticals) updates.verticals_enabled = ALL_VERTICALS;
+          const homeInfo = priceId ? PRICE_TO_HOME[priceId] : undefined;
+          if (homeInfo) updates.home_plan = homeInfo.home_plan; // BinTrove: sync home_plan; school `plan` untouched
           await sb.from("orgs").update(updates).eq("id", org.id);
         }
         break;
@@ -411,7 +433,15 @@ Deno.serve(async (req: Request) => {
           period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
           stripe_created_at: event.created ? new Date((event.created as number) * 1000).toISOString() : null });
 
-        if (org) {
+        const delHome = (() => { const pid = extractPriceId(data); return pid ? PRICE_TO_HOME[pid] : undefined; })();
+        if (org && delHome) {
+          // BinTrove home subscription canceled → home_plan back to free; school plan/verticals untouched.
+          await sb.from("orgs").update({
+            home_plan: "free", subscription_status: "canceled",
+            stripe_subscription_id: null,
+            plan_expires_at: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+          }).eq("id", org.id);
+        } else if (org) {
           await sb.from("orgs").update({
             plan: "free", plan_interval: "monthly", subscription_status: "canceled",
             stripe_subscription_id: null,
