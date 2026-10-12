@@ -144,6 +144,36 @@ export const VERTICALS = {
     marketOptions: ["Not Listed","For Sale","For Pickup","For Loan"],
   },
 
+  // ── HOME (BinTrove consumer home-inventory) ───────────────────────────────
+  home: {
+    id: "home",
+    label: "Home",
+    icon: "🏠",
+    color: "#0F6E6B",
+    appName: "BinTrove",
+    exchangeName: "",
+    terms: { productions:"Collections", production:"Collection", addToProduction:"Add to Collection", productionPhotos:"Photos", upcomingShow:"", auditionNotice:"", showAnnouncement:"", crewRole:"Household", tagline:"Find what's in every bin.", taglineSub:"BinTrove keeps your home organized — every bin, box, and keepsake in one place.", inventorySub:"Every bin, box, and item — all in one place.", productionsSub:"", communityIntro:"" },
+    fundingCats: ["Household","Holiday","Tools","Other"],
+    categories: [
+      { id:"holiday",     label:"Holiday & Seasonal",   icon:"🎄", color:"#0E6B61", grad:"linear-gradient(135deg,#0A5450,#0F6E6B,#1C9E8F)" },
+      { id:"decor",       label:"Decorations",          icon:"✨", color:"#B5801F", grad:"linear-gradient(135deg,#9A6B14,#D3A13C,#E8B85D)" },
+      { id:"kitchen",     label:"Kitchen & Dining",     icon:"🍽️", color:"#b06800", grad:"linear-gradient(135deg,#7f4800,#e65100,#ff9800)" },
+      { id:"tools",       label:"Tools & Hardware",     icon:"🔧", color:"#374549", grad:"linear-gradient(135deg,#263238,#37474f,#546e7a)" },
+      { id:"outdoor",     label:"Garage & Outdoor",     icon:"🧰", color:"#27723a", grad:"linear-gradient(135deg,#1b5e20,#2e7d32,#43a047)" },
+      { id:"keepsakes",   label:"Keepsakes & Memories", icon:"📷", color:"#a0144e", grad:"linear-gradient(135deg,#880e4f,#ad1457,#e91e63)" },
+      { id:"electronics", label:"Electronics",          icon:"🔌", color:"#1554a0", grad:"linear-gradient(135deg,#0d2b6e,#1565c0,#1976d2)" },
+      { id:"clothing",    label:"Clothing & Linens",    icon:"👕", color:"#5c1a8a", grad:"linear-gradient(135deg,#4a148c,#6a1b9a,#8e24aa)" },
+      { id:"kids",        label:"Kids & Toys",          icon:"🧸", color:"#d35400", grad:"linear-gradient(135deg,#7f4800,#e65100,#ff9800)" },
+      { id:"documents",   label:"Documents & Records",  icon:"📄", color:"#5d3a1a", grad:"linear-gradient(135deg,#3e2723,#5d4037,#795548)" },
+      { id:"sports",      label:"Sports & Hobbies",     icon:"⚽", color:"#00695c", grad:"linear-gradient(135deg,#006064,#00838f,#00acc1)" },
+      { id:"other",       label:"Other",                icon:"📦", color:"#4a2e1a", grad:"linear-gradient(135deg,#37474f,#546e7a,#78909c)" },
+    ],
+    conditions:    ["New","Good","Used","Fragile","For Donation"],
+    sizes:         ["N/A","Small","Medium","Large"],
+    availability:  ["Stored","In Use","Checked Out","Lent Out","Missing","Donated"],
+    marketOptions: ["Not Listed"],
+  },
+
 };
 
 // ── Helper functions ───────────────────────────────────────────────────────
@@ -161,7 +191,8 @@ export const getCat = (verticalId, catId) => {
 };
 
 // Flat list of all verticals — useful for dropdown menus and signup screens.
-export const VERTICALS_LIST = Object.values(VERTICALS);
+// Excludes "home" (BinTrove) so it never appears in the ArtsTracker vertical picker.
+export const VERTICALS_LIST = Object.values(VERTICALS).filter(v => v.id !== "home");
 
 // Returns the categories array for a given vertical ID.
 // This is the most common call site — e.g. to populate a category dropdown.

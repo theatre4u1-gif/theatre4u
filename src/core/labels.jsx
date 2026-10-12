@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { CAT } from "./inventory.js";
 import { QR } from "./qr.js";
-import { APP_NAME, APP_EMAIL, APP_URL } from "./config.js";
+import { APP_NAME, APP_EMAIL, APP_URL, IS_BINTROVE } from "./config.js";
 import { doorOf } from "../lib/admin-metrics.js";
 import { printHtml, openExternal, IS_NATIVE_APP } from "./native.js";
 
@@ -142,7 +142,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
   // The Print tab labels two kinds of thing through one engine: inventory items and
   // storage boxes/locations. Both are normalized into a common shape so every print
   // path (plain paper, Avery, P-touch, CSV) works the same for either.
-  const host = doorOf(org) === "artstracker" ? "artstracker.org" : "theatre4u.org";
+  const host = IS_BINTROVE ? "bintrove.com" : (doorOf(org) === "artstracker" ? "artstracker.org" : "theatre4u.org");
   const locCount = (locId) => myItems.filter(i=>i.location_id===locId).length;
 
   const normItem = (i) => {

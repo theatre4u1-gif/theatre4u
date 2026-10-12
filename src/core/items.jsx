@@ -3,7 +3,7 @@
 // item components rendered by Inventory and Marketplace. uploadPhoto moved in
 // (used only here).
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { APP_HOST, APP_URL, APP_NAME } from "./config.js";
+import { APP_HOST, APP_URL, APP_NAME, IS_BINTROVE } from "./config.js";
 import { SB } from "./supabase.js";
 import { EM } from "./messages.js";
 import { Ic } from "./icons.jsx";
@@ -392,7 +392,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
       </div>
       <div className="fg fu"><label className="fl">Notes</label><textarea className="ft" value={f.notes} onChange={e=>upd("notes",e.target.value)} placeholder="Usage history, care instructions…"/></div>
       <div className="fg fu sdiv"><div className="slbl">🏪 {getExchangeName(vertical)}</div></div>
-      <div className="fg"><label className="fl">Listing Status</label><select className="fs" value={f.mkt} onChange={e=>upd("mkt",e.target.value)}>{MKT.map(s=><option key={s}>{s}</option>)}</select></div>
+      {!IS_BINTROVE && <div className="fg"><label className="fl">Listing Status</label><select className="fs" value={f.mkt} onChange={e=>upd("mkt",e.target.value)}>{MKT.map(s=><option key={s}>{s}</option>)}</select></div>}
       {f.mkt!=="Not Listed"&&f.mkt!=="Private"&&!marketplaceEnabled&&(
         <div className="fg fu" style={{marginTop:-4}}>
           <div style={{background:"rgba(212,168,67,.1)",border:"1px solid rgba(212,168,67,.3)",borderRadius:7,padding:"9px 12px",fontSize:12,color:"var(--amber)",lineHeight:1.6,display:"flex",gap:8,alignItems:"flex-start"}}>
@@ -411,7 +411,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
       <div className="fg fu sdiv">
         <div className="slbl" onClick={()=>setFundOpen(o=>!o)} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",userSelect:"none"}}>
           <span style={{fontSize:11,color:"var(--muted)"}}>{fundOpen?"▲":"▼"}</span>
-          <span style={{whiteSpace:"nowrap"}}>💰 Purchase &amp; Funding</span>
+          <span style={{whiteSpace:"nowrap"}}>💰 Purchase &amp; {IS_BINTROVE?"Value":"Funding"}</span>
           <span style={{fontSize:11,fontWeight:600,color:"var(--muted)",whiteSpace:"nowrap"}}>(optional)</span>
         </div>
       </div>
@@ -428,10 +428,10 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
       </div>
       <div className="fg fu">
         <label className="fl">Vendor / Supplier</label>
-        <input className="fi" placeholder="e.g. Goodwill, Amazon, Drama Bookshop"
+        <input className="fi" placeholder={IS_BINTROVE?"e.g. Amazon, Target, Costco":"e.g. Goodwill, Amazon, Drama Bookshop"}
           value={f.purchase_vendor||""} onChange={e=>upd("purchase_vendor",e.target.value)}/>
       </div>
-      <div className="fg fu">
+      {!IS_BINTROVE && (<div className="fg fu">
         <label className="fl">Charge to Funding Source</label>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
           <select className="fs" style={{flex:1}} value={f.funding_source_id||""} onChange={e=>upd("funding_source_id",e.target.value)}>
@@ -478,7 +478,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
             </div>
           </div>
         )}
-      </div>
+      </div>)}
       </>)}
 
     {/* Save / Cancel — always visible at bottom of form */}
@@ -644,7 +644,7 @@ export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, ca
       <div style={{display:"flex",gap:8,marginTop:16,flexWrap:"wrap"}}>
         {canEdit&&onEdit&&<button className="btn btn-p btn-sm" onClick={onEdit}><span style={{width:14,height:14,display:"flex"}}>{Ic.edit}</span>Edit</button>}
         {canDelete&&onDelete&&<button className="btn btn-d btn-sm" onClick={()=>{if(window.confirm("Delete this item?"))onDelete(item.id)}}><span style={{width:14,height:14,display:"flex"}}>{Ic.trash}</span>Delete</button>}
-        {userId && <button className="btn btn-o btn-sm" onClick={()=>setShowAddToProd(true)}>🎭 {getTerm(item.vertical,"addToProduction")}</button>}
+        {!IS_BINTROVE && userId && <button className="btn btn-o btn-sm" onClick={()=>setShowAddToProd(true)}>🎭 {getTerm(item.vertical,"addToProduction")}</button>}
         {item.mkt!=="Not Listed"&&<FbShareBtn
           url={itemShareUrl(item)}
           text={itemShareText(item, schoolName)}

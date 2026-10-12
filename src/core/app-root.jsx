@@ -24,6 +24,7 @@ import { ExternalLoans } from "./external-loans.jsx";
 import { HOSTNAME, IS_THEATRE4U, IS_ARTSTRACKER, IS_BINTROVE, APP_NAME, APP_SUBTITLE, APP_EMAIL, APP_URL, ADMIN_EMAILS, isAdminEmail, ADMIN_EMAIL, LOGO_ICON, FAVICON, TOUCH_ICON, LOGO_FULL, LOGO_MARK } from "./config.js";
 import { BinTroveAuthScreen } from "./bintrove-auth.jsx";
 import { BinTroveAccount } from "./bintrove-account.jsx";
+import { BinTroveHome } from "./bintrove-home.jsx";
 import { POINT_EARN_RATES, POINTS_PER_DOLLAR, POINTS_FREE_MONTH, POINTS_MAX_BALANCE, POINTS_EXPIRE_DAYS, PLATFORM_FEE_PCT, POINTS_MIN_REDEEM, MILESTONE_POINTS } from "./points-config.js";
 import { Ic } from "./icons.jsx";
 import { Pager, Modal, FbShareBtn, HeroImg, CatCard, CatThumb, LegalModal, LogoMarkDark, LogoMarkLight } from "./ui.jsx";
@@ -1183,7 +1184,9 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                       setPendingReqCount(count||0);
                     }}/>}
                   {page==="messages"    && <Messages userId={activeOrgId} orgName={org?.name} openConvId={openConvId} onClearOpenConv={()=>setOpenConvId(null)} onUnreadChange={async()=>{ const{count}=await SB.from("messages").select("id",{count:"exact",head:true}).eq("read",false).neq("sender_id",activeOrgId); setUnreadCount(count||0); }}/>}
-                  {page==="dashboard"   && <Dashboard   items={vItems} org={viewOrg} plan={plan} pointBalance={creditBalance} goInventory={(cat)=>{ if(cat) setDeepLinkCategory(cat); nav("inventory"); }} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>}
+                  {page==="dashboard"   && (IS_BINTROVE
+                    ? <BinTroveHome items={vItems} org={viewOrg} goInventory={(cat)=>{ if(cat) setDeepLinkCategory(cat); nav("inventory"); }}/>
+                    : <Dashboard   items={vItems} org={viewOrg} plan={plan} pointBalance={creditBalance} goInventory={(cat)=>{ if(cat) setDeepLinkCategory(cat); nav("inventory"); }} goMarketplace={()=>nav("marketplace")} goCommunity={()=>nav("community")} goProfile={()=>nav("profile")} goPoints={()=>nav("points")}/>)}
                   {page==="inventory"   && !activeSchool && <Inventory   items={vItems} onAdd={add} onEdit={edit} onDelete={del} userId={org?.id || user?.id} plan={plan} memberRole={memberRole} org={viewOrg} enableLoans={!memberRole} onImported={(data)=>setItems(data)} onItemSync={(id,av)=>setItems(p=>p.map(x=>x.id===id?{...x,avail:av}:x))} deepLinkLocationId={deepLinkLocation} onDeepLinkConsumed={()=>setDeepLinkLocation(null)} deepLinkCategory={deepLinkCategory} onDeepLinkCategoryConsumed={()=>setDeepLinkCategory(null)} openAddSignal={addSignal} deepLinkItemId={deepLinkItem} onDeepLinkItemConsumed={()=>setDeepLinkItem(null)}/>}
                   {page==="inventory"   && activeSchool && (
                     schoolLoading

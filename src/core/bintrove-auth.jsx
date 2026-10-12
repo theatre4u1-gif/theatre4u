@@ -67,6 +67,7 @@ export function BinTroveAuthScreen({ onAuth }) {
             director_name: name.trim() || null,
             type: "", phone: "", location: "", bio: "",
             kind: "home", home_plan: "free",
+            vertical: "home", verticals_enabled: ["home"],
             terms_accepted_at: new Date().toISOString(),
             terms_version: "2026-08",
           }, { onConflict: "id", ignoreDuplicates: false });
