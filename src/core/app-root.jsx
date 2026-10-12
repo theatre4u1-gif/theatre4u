@@ -21,7 +21,8 @@ import { CreditsPage } from "./points.jsx";
 import { Reports } from "./reports.jsx";
 import { FundingPage } from "./funding.jsx";
 import { ExternalLoans } from "./external-loans.jsx";
-import { HOSTNAME, IS_THEATRE4U, IS_ARTSTRACKER, APP_NAME, APP_SUBTITLE, APP_EMAIL, APP_URL, ADMIN_EMAILS, isAdminEmail, ADMIN_EMAIL, LOGO_ICON, FAVICON, TOUCH_ICON, LOGO_FULL, LOGO_MARK } from "./config.js";
+import { HOSTNAME, IS_THEATRE4U, IS_ARTSTRACKER, IS_BINTROVE, APP_NAME, APP_SUBTITLE, APP_EMAIL, APP_URL, ADMIN_EMAILS, isAdminEmail, ADMIN_EMAIL, LOGO_ICON, FAVICON, TOUCH_ICON, LOGO_FULL, LOGO_MARK } from "./config.js";
+import { BinTroveAuthScreen } from "./bintrove-auth.jsx";
 import { POINT_EARN_RATES, POINTS_PER_DOLLAR, POINTS_FREE_MONTH, POINTS_MAX_BALANCE, POINTS_EXPIRE_DAYS, PLATFORM_FEE_PCT, POINTS_MIN_REDEEM, MILESTONE_POINTS } from "./points-config.js";
 import { Ic } from "./icons.jsx";
 import { Pager, Modal, FbShareBtn, HeroImg, CatCard, CatThumb, LegalModal, LogoMarkDark, LogoMarkLight } from "./ui.jsx";
@@ -854,6 +855,10 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   );
 
   if(!user && previewMode && !IS_NATIVE_APP) return <PreviewMode onSignUp={()=>{ setPreviewMode(false); window.__t4u_show_auth&&window.__t4u_show_auth("signup"); }}/>;
+
+  // BinTrove (app.bintrove.com): logged-out users get the consumer sign-up/sign-in — NOT the school landing.
+  // Only triggers when IS_BINTROVE; Theatre4u/ArtsTracker are byte-identical.
+  if(!user && IS_BINTROVE) return(<><style>{CSS}</style><BinTroveAuthScreen onAuth={u=>{setUser(u);}}/></>);
 
   // Native app, not signed in → full-screen mobile sign-in (no desktop landing page).
   if(!user && IS_NATIVE_APP) return(
