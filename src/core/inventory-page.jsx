@@ -23,8 +23,11 @@ import { UpgradePrompt } from "./billing.jsx";
 export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null, enableLoans=false, onImported=null, onItemSync=null, openAddSignal=0, deepLinkItemId=null, onDeepLinkItemConsumed=null}){
     const[upgradeReason,setUpgradeReason]=useState(null);
   const[pendingMsg,setPendingMsg]=useState("");
-  const vVertical=org?.vertical||"theatre";
-  const multiV=((org?.verticals_enabled)||[]).length>1;  // multi-department org → scope lists to the active department
+  // The BinTrove door is always the "home" vertical — regardless of the underlying org's
+  // stored vertical (e.g. an admin viewing bintrove.com with a theatre org). This drives
+  // categories, conditions, availability, the hero gradient and the sub copy, all at once.
+  const vVertical=IS_BINTROVE ? "home" : (org?.vertical||"theatre");
+  const multiV=!IS_BINTROVE && ((org?.verticals_enabled)||[]).length>1;  // multi-department org → scope lists to the active department (never on the home door)
   const vCATS=getCatsMerged(vVertical);
   const vCfg=getVertical(vVertical);
   const vCONDS=vCfg.conditions, vAVAIL=vCfg.availability, vMKT=vCfg.marketOptions;
@@ -697,7 +700,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
         {view==="grid"&&(loadingRows
           ?<div className="empty"><div className="empty-ico">⏳</div><h3>Loading…</h3></div>
           :rows.length===0
-          ?<div className="empty"><div className="empty-ico">{vCfg.icon}</div><h3>No Items Found</h3><p>{anyFilter?"Try adjusting search or filters.":"Add your first item to build your catalog."}</p>{!anyFilter&&canAdd&&<button className="btn btn-g" onClick={()=>{setActive(null);setModal("a")}}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add First Item</button>}</div>
+          ?<div className="empty"><div className="empty-ico">{IS_BINTROVE?"📦":vCfg.icon}</div><h3>No Items Found</h3><p>{anyFilter?"Try adjusting search or filters.":"Add your first item to build your catalog."}</p>{!anyFilter&&canAdd&&<button className="btn btn-g" onClick={()=>{setActive(null);setModal("a")}}><span style={{width:15,height:15,display:"flex"}}>{Ic.plus}</span>Add First Item</button>}</div>
           :<div className="inv-grid">
               {rows.map(item=>{
                 const cat=vCAT[item.category]||vCAT.other||CAT.other;
@@ -790,11 +793,11 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
       />}
       {modal==="a"&&(<Modal title="Add New Item" onClose={()=>setModal(null)}
          >
-          <ItemForm onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={org?.vertical||"theatre"} plan={plan} suggestedTags={allTags}/>
+          <ItemForm onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={vVertical} plan={plan} suggestedTags={allTags}/>
         </Modal>)}
       {modal==="e"&&active&&(<Modal title="Edit Item" onClose={()=>setModal(null)}
          >
-          <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={org?.vertical||"theatre"} plan={plan} suggestedTags={allTags}/>
+          <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={vVertical} plan={plan} suggestedTags={allTags}/>
         </Modal>)}
       {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{del(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete}/></Modal>}
       {showImport&&<CSVImport userId={userId} vertical={vVertical} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",userId).order("added",{ascending:false}).limit(2000);if(data&&onImported)onImported(data);refetch();}}/>}

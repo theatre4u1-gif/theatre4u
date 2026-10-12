@@ -17,7 +17,7 @@ export function Reports({ items, plan="free", org=null, userId=null, userEmail=n
   // Vertical-aware vocabulary. BinTrove (home) uses the home vertical's categories /
   // conditions / availability so breakdowns are correct; school hosts keep the static
   // theatre vocab exactly as before (byte-identical).
-  const V      = org?.vertical || (IS_BINTROVE ? "home" : "theatre");
+  const V      = IS_BINTROVE ? "home" : (org?.vertical || "theatre");
   const vCATS  = IS_BINTROVE ? getCats(V)                          : CATS;
   const vCONDS = IS_BINTROVE ? (getVertical(V).conditions   || CONDS) : CONDS;
   const vAVAIL = IS_BINTROVE ? (getVertical(V).availability || AVAIL) : AVAIL;
