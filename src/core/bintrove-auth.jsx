@@ -123,7 +123,8 @@ export function BinTroveAuthScreen({ onAuth }) {
 
   return (
     <><style>{CSS}</style>
-      <div style={wrap}>
+      <div style={{ minHeight: "100vh", background: CREAM, padding: "28px 20px 52px", fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif", color: INK }}>
+        <div style={{ maxWidth: 960, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center" }}>
         <div style={card}>
           <div style={{ textAlign: "center", marginBottom: 6 }}>
             <img src="/logo-bintrove.png" alt={APP_NAME} style={{ height: 58 }} />
@@ -177,9 +178,35 @@ export function BinTroveAuthScreen({ onAuth }) {
 
           <div style={{ textAlign: "center", marginTop: 14, fontSize: 12, color: "#9aa29e" }}>Questions? {APP_EMAIL}</div>
         </div>
+        {mode === "signup" && <BinTroveUseCases onStart={() => window.scrollTo({ top: 0, behavior: "smooth" })} />}
+        </div>
       </div>
       {legal === "terms" && <LegalModal title="Terms of Service" onClose={() => setLegal(null)}>{TERMS_CONTENT.map(([h, b]) => <div key={h} style={{ marginBottom: 16 }}><div style={{ fontWeight: 700, color: "#d4a843", marginBottom: 4, fontSize: 13 }}>{h}</div><div>{b}</div></div>)}</LegalModal>}
       {legal === "privacy" && <LegalModal title="Privacy Policy" onClose={() => setLegal(null)}>{PRIVACY_CONTENT.map(([h, b]) => <div key={h} style={{ marginBottom: 16 }}><div style={{ fontWeight: 700, color: "#d4a843", marginBottom: 4, fontSize: 13 }}>{h}</div><div>{b}</div></div>)}</LegalModal>}
     </>
+  );
+}
+
+// Use-case band shown under the signup card: real before/after + in-app inventory shots.
+function BinTroveUseCases({ onStart }) {
+  const TEALc = "#0F6E6B", LINEc = "#e7e2d7", MUTc = "#5d706d", INKc = "#163230";
+  const shot = { border: "1px solid " + LINEc, borderRadius: 14, overflow: "hidden", boxShadow: "0 6px 22px rgba(15,110,107,.08)", margin: "0 auto 18px", background: "#fff" };
+  return (
+    <div style={{ width: "100%", maxWidth: 900, margin: "44px auto 0", textAlign: "center" }}>
+      <h2 style={{ fontSize: 26, fontWeight: 800, color: INKc, margin: 0 }}>See what's in every bin</h2>
+      <p style={{ color: MUTc, fontSize: 15, maxWidth: 580, margin: "8px auto 24px", lineHeight: 1.5 }}>
+        Snap it, label it, scan it. One QR code and the whole bin's contents are right there on your phone.
+      </p>
+      <div style={shot}>
+        <img src="/bintrove-ba-hero.jpg" alt="Before and after — scan a bin to see what's inside" loading="lazy" style={{ width: "100%", display: "block" }} />
+      </div>
+      <div style={{ ...shot, maxWidth: 520 }}>
+        <img src="/bintrove-ba-bins.jpg" alt="Before and after — a storage room with every bin QR-labeled" loading="lazy" style={{ width: "100%", display: "block" }} />
+      </div>
+      <div style={{ marginTop: 22 }}>
+        <button onClick={onStart} style={{ background: TEALc, color: "#fff", border: "none", fontWeight: 800, fontSize: 16, padding: "14px 30px", borderRadius: 12, cursor: "pointer" }}>Start Free →</button>
+        <div style={{ color: MUTc, fontSize: 13, marginTop: 10 }}>Your first 3 bins and 30 items are free, forever.</div>
+      </div>
+    </div>
   );
 }

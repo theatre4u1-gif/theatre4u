@@ -548,7 +548,16 @@ function pickTip(pool:Tip[],sentIds:Set<string>,lastId:string|null,u:Usage,month
   return cand[0].t;
 }
 
+// BinTrove uses the shared email helpers (gold accents). Swap gold → teal at render time so
+// BinTrove mail matches the brand without forking every helper. No-op for the arts brands.
+const tealize=(h:string)=>h
+  .split('#d4a843').join('#1C9E8F')   // primary gold accent (borders, CTA button, gold box border)
+  .split('#8b6914').join('#0A5450')   // darker gold link text
+  .split('#fff8e6').join('#E6F4F1');  // gold callout background
+const brandHtml=(B:Brand,html:string)=>B.plain==='BinTrove'?tealize(html):html;
+
 async function sendTipHtml(to:string,subject:string,html:string,key:string,B:Brand,unsubUrl:string):Promise<string|null>{
+  html=brandHtml(B,html);
   const headers:Record<string,string>={'List-Unsubscribe':unsubUrl?`<${unsubUrl}>, <mailto:hello@theatre4u.org?subject=unsubscribe>`:`<mailto:hello@theatre4u.org?subject=unsubscribe>`};
   if(unsubUrl)headers['List-Unsubscribe-Post']='List-Unsubscribe=One-Click';
   const res=await fetch('https://api.resend.com/emails',{
@@ -565,7 +574,7 @@ async function sendEmail(to:string,num:number,name:string,org:string,key:string,
   const e=(B.plain==='BinTrove'?HOME_EMAILS:EMAILS)[num];
   if(!e)return null;
   const first=name?.split(' ')[0]||'there';
-  const html=e.html(B,V,first,org).replace(ftr(B),ftrFull(B,unsubUrl));
+  const html=brandHtml(B,e.html(B,V,first,org).replace(ftr(B),ftrFull(B,unsubUrl)));
   const headers:Record<string,string>={'List-Unsubscribe':unsubUrl?`<${unsubUrl}>, <mailto:hello@theatre4u.org?subject=unsubscribe>`:`<mailto:hello@theatre4u.org?subject=unsubscribe>`};
   if(unsubUrl)headers['List-Unsubscribe-Post']='List-Unsubscribe=One-Click';
   const res=await fetch('https://api.resend.com/emails',{

@@ -139,7 +139,7 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
             : <>{IS_ARTSTRACKER ? "Everything your program needs —" : "Everything your theatre program needs —"}{" "}<span style={{color:"var(--gold)"}}>in one place</span></>}
         </h1>
         <p style={{fontSize:"clamp(16px,2.5vw,20px)",color:"rgba(255,255,255,.7)",lineHeight:1.7,marginBottom:36,maxWidth:600,margin:"0 auto 36px"}}>
-          {c("landing.hero.subhead", IS_ARTSTRACKER ? "For theatre, music, dance, and visual arts — and any program that needs to keep track of what it owns. Know what you have, find what you need, and share with programs near you." : "Know what you have. Find what you need. Built specifically for theatre programs of every size.")}
+          {c("landing.hero.subhead", IS_ARTSTRACKER ? "For theatre, music, dance, and visual arts — and any program that needs to keep track of what it owns. Know what you have, find what you need, and share with programs near you." : "Know what you have. Find what you need. Built for theatre programs of every size — schools, colleges, and community theatres.")}
         </p>
         <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
           <button onClick={onSignUp} style={{background:"linear-gradient(135deg,var(--gold),var(--goldd))",border:"none",color:"#1a0f00",padding:"14px 32px",borderRadius:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:16,fontWeight:800,boxShadow:"0 4px 24px rgba(212,168,67,.4)"}}>
@@ -185,8 +185,8 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
     <div style={{order:ord("features"),display:vis("features")?"block":"none",padding:"80px 32px",maxWidth:1100,margin:"0 auto",width:"100%"}}>
       <div style={{textAlign:"center",marginBottom:52}}>
         <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>{c("landing.features.eyebrow", "What "+APP_NAME+" does")}</div>
-        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(32px,5vw,48px)",color:"#fff",lineHeight:1.15}}>{c("landing.features.heading", IS_ARTSTRACKER ? "Built for busy program directors" : "Built for busy drama directors")}</h2>
-        <p style={{fontSize:16,color:"rgba(255,255,255,.55)",marginTop:12,maxWidth:520,margin:"12px auto 0"}}>{c("landing.features.subhead", IS_ARTSTRACKER ? "Not a generic inventory app. Built for theatre, music, dance, and visual arts programs — and any group with equipment to track — by someone who has lived it." : "Not a generic inventory app. Built specifically for theatre programs, schools, and the broader performing arts community — by someone who has lived it.")}</p>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(32px,5vw,48px)",color:"#fff",lineHeight:1.15}}>{c("landing.features.heading", IS_ARTSTRACKER ? "Built for busy program directors" : "Built for busy theatre directors")}</h2>
+        <p style={{fontSize:16,color:"rgba(255,255,255,.55)",marginTop:12,maxWidth:520,margin:"12px auto 0"}}>{c("landing.features.subhead", IS_ARTSTRACKER ? "Not a generic inventory app. Built for theatre, music, dance, and visual arts programs — and any group with equipment to track — by someone who has lived it." : "Not a generic inventory app. Built for theatre programs of every kind — schools, colleges, and community theatres — by someone who has lived it.")}</p>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:20}}>
         {features.map(f=>(
