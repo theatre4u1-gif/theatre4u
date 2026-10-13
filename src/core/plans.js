@@ -37,10 +37,18 @@ export const BINTROVE_LINKS = {
   home_plus: "https://buy.stripe.com/aFa14m0OdeFJ0Hhdj5gA80l", // $89/yr
 };
 export const BINTROVE_PLANS_DEF = {
-  free:      { label:"Free",      maxBins:3,        maxItems:30,       annualPrice:0,  users:1 },
-  starter:   { label:"Starter",   maxBins:10,       maxItems:100,      annualPrice:24, users:1 },
-  home:      { label:"Home",      maxBins:30,       maxItems:300,      annualPrice:59, users:2 },
-  home_plus: { label:"Home Plus", maxBins:Infinity, maxItems:Infinity, annualPrice:89, users:5 },
+  free:      { label:"Free",      maxBins:3,        maxItems:30,       annualPrice:0,  users:1,
+    blurb:"Try it out — catalog a few bins and see how it works.",
+    features:["QR labels for every bin","Photos, search & locations","CSV export"] },
+  starter:   { label:"Starter",   maxBins:10,       maxItems:100,      annualPrice:24, users:1,
+    blurb:"A closet, the garage, or your holiday bins.",
+    features:["Everything in Free","10 bins · 100 items","1 user"] },
+  home:      { label:"Home",      maxBins:30,       maxItems:300,      annualPrice:59, users:2,
+    blurb:"A whole household — share with your partner.",
+    features:["Everything in Starter","30 bins · 300 items","Share with 2 people"] },
+  home_plus: { label:"Home Plus", maxBins:Infinity, maxItems:Infinity, annualPrice:89, users:5,
+    blurb:"No limits — perfect for a big house or a move.",
+    features:["Everything in Home","Unlimited bins & items","Share with up to 5"] },
 };
 
 export const PLANS_DEF = {

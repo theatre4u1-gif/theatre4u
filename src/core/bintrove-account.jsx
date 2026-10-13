@@ -64,7 +64,17 @@ export function BinTroveAccount({ user, org }) {
       <div key={id} style={{ ...card, marginBottom: 0, flex: 1, minWidth: 180, textAlign: "center", borderColor: id === "home" ? TEAL : LINE, boxShadow: id === "home" ? "0 8px 24px rgba(15,110,107,.12)" : "none" }}>
         <div style={{ fontWeight: 800, fontSize: 18 }}>{t.label}</div>
         <div style={{ fontSize: 26, fontWeight: 800, margin: "6px 0 2px" }}>{id === "free" ? "$0" : "$" + t.annualPrice}<span style={{ fontSize: 13, fontWeight: 500, color: MUT }}>{id === "free" ? "" : "/yr"}</span></div>
-        <div style={{ fontSize: 13, color: MUT, marginBottom: 10 }}>{fmtCap(t.maxBins)} bins · {fmtCap(t.maxItems)} items</div>
+        <div style={{ fontSize: 13, color: MUT, marginBottom: 8 }}>{fmtCap(t.maxBins)} bins · {fmtCap(t.maxItems)} items</div>
+        {t.blurb && <div style={{ fontSize: 12.5, color: INK, lineHeight: 1.5, marginBottom: 10, minHeight: 36 }}>{t.blurb}</div>}
+        {Array.isArray(t.features) && (
+          <ul style={{ listStyle: "none", padding: 0, margin: "0 0 12px", textAlign: "left" }}>
+            {t.features.map((f, i) => (
+              <li key={i} style={{ fontSize: 12.5, color: MUT, marginBottom: 4, paddingLeft: 18, position: "relative" }}>
+                <span style={{ position: "absolute", left: 0, color: TEAL, fontWeight: 800 }}>✓</span>{f}
+              </li>
+            ))}
+          </ul>
+        )}
         {isCurrent
           ? <div style={{ padding: "9px 0", fontWeight: 700, color: TEAL, border: "1.5px solid " + TEAL, borderRadius: 10 }}>Your plan</div>
           : (link

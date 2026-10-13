@@ -417,7 +417,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
       </div>
       {fundOpen && (<>
       <div className="fg">
-        <label className="fl">Item Cost ($)</label>
+        <label className="fl">{IS_BINTROVE?"Value ($)":"Item Cost ($)"}</label>
         <input className="fi" type="number" min="0" step="any" placeholder="e.g. 49.99"
           value={f.purchase_cost||""} onChange={e=>upd("purchase_cost",e.target.value)}/>
       </div>

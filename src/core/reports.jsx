@@ -22,8 +22,11 @@ export function Reports({ items, plan="free", org=null, userId=null, userEmail=n
   const vCONDS = IS_BINTROVE ? (getVertical(V).conditions   || CONDS) : CONDS;
   const vAVAIL = IS_BINTROVE ? (getVertical(V).availability || AVAIL) : AVAIL;
   const catOf  = id => (IS_BINTROVE ? (vCATS.find(c=>c.id===id) || {icon:"📦",label:id}) : (CAT[id]||CAT.other));
+  // Per-item value for totals/exports. Home (BinTrove) users enter "Purchase & Value"
+  // (purchase_cost); school/arts use the listing price (sale). Fall back across both.
+  const valOf = i => IS_BINTROVE ? (parseFloat(i.purchase_cost)||parseFloat(i.sale)||0) : (parseFloat(i.sale)||0);
   const totalQty  = items.reduce((s,i)=>s+(i.qty||1),0);
-  const catData   = vCATS.map(cat=>{const ci=items.filter(i=>i.category===cat.id);return{...cat,count:ci.length,qty:ci.reduce((s,i)=>s+(i.qty||1),0),val:ci.reduce((s,i)=>s+((i.sale||0)*(i.qty||1)),0)}}).filter(c=>c.count>0);
+  const catData   = vCATS.map(cat=>{const ci=items.filter(i=>i.category===cat.id);return{...cat,count:ci.length,qty:ci.reduce((s,i)=>s+(i.qty||1),0),val:ci.reduce((s,i)=>s+(valOf(i)*(i.qty||1)),0)}}).filter(c=>c.count>0);
   const condData  = vCONDS.map(c=>({l:c,n:items.filter(i=>i.condition===c).length})).filter(c=>c.n>0);
   const availData = vAVAIL.map(a=>({l:a,n:items.filter(i=>i.avail===a).length})).filter(a=>a.n>0);
   const mktData   = MKT.map(s=>({l:s,n:items.filter(i=>i.mkt===s).length})).filter(m=>m.n>0);
@@ -43,12 +46,19 @@ export function Reports({ items, plan="free", org=null, userId=null, userEmail=n
     // Every field is quoted and escaped — item names and locations routinely contain
     // commas, quotes and line breaks, which used to split a row across columns.
     const esc = v => '"'+String(v==null?"":v).replace(/"/g,'""')+'"';
-    const h=["Label ID","Name","Category","Condition","Size","Qty","Location","Availability","Market","Rent","Sale","Loan Period (wks)","Deposit","Tags","QR URL","Image URL","Notes","ID","Added"];
-    const rows=items.map(i=>[
-      i.display_id||"",i.name,i.category,i.condition,i.size,i.qty,i.location,i.avail,i.mkt,
-      i.rent,i.sale,i.loan_period||"",i.deposit||"",(i.tags||[]).join(";"),
-      doorUrl(org)+"/#/item/"+i.id,i.img||"",i.notes||"",i.id,i.added
-    ]);
+    // BinTrove: an insurance-ready inventory + value list (no Exchange columns; includes
+    // Value + Purchase date/vendor). School/arts: the full catalog incl. Exchange fields.
+    const h = IS_BINTROVE
+      ? ["Label ID","Name","Category","Condition","Size","Qty","Location","Availability","Value ($)","Purchased","Vendor","Tags","QR URL","Image URL","Notes","ID","Added"]
+      : ["Label ID","Name","Category","Condition","Size","Qty","Location","Availability","Market","Rent","Sale","Loan Period (wks)","Deposit","Tags","QR URL","Image URL","Notes","ID","Added"];
+    const rows=items.map(i=> IS_BINTROVE
+      ? [i.display_id||"",i.name,i.category,i.condition,i.size,i.qty,i.location,i.avail,
+         valOf(i)||"",i.purchase_date||"",i.purchase_vendor||"",(i.tags||[]).join(";"),
+         doorUrl(org)+"/#/item/"+i.id,i.img||"",i.notes||"",i.id,i.added]
+      : [i.display_id||"",i.name,i.category,i.condition,i.size,i.qty,i.location,i.avail,i.mkt,
+         i.rent,i.sale,i.loan_period||"",i.deposit||"",(i.tags||[]).join(";"),
+         doorUrl(org)+"/#/item/"+i.id,i.img||"",i.notes||"",i.id,i.added]
+    );
     const csv="﻿"+[h,...rows].map(r=>r.map(esc).join(",")).join("\r\n");
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download=(IS_BINTROVE?"bintrove":IS_ARTSTRACKER?"artstracker":"theatre4u")+"_inventory.csv";a.click();
   };
