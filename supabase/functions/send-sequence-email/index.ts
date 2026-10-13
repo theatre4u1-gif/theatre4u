@@ -1,3 +1,7 @@
+// send-sequence-email v8 — + monthly "something new" re-engagement series (2026-10-13)
+//   Onboarding 0-6 unchanged. New `monthly:true` mode reads per-org usage and sends the
+//   most-relevant unseen tip (ARTS_TIPS / HOME_TIPS), recycling oldest-first. Logs to
+//   email_monthly_log. Driven by email-sequence-scheduler's monthly pass.
 // send-sequence-email v7 — brand by VERTICAL too (2026-07-14)
 // Change from v5/v6: brand now also considers org.vertical. Non-theatre verticals
 // (music/dance/art/booster) are ALWAYS ArtsTracker-branded — Theatre4u is theatre-only —
@@ -323,6 +327,229 @@ const HOME_EMAILS:Record<number,EmailDef>={
   `)},
 };
 
+// ───────────────────────────────────────────────────────────────────────────
+// MONTHLY "something new" re-engagement series (runs AFTER onboarding 0-6).
+// Usage-responsive: reads what the org has actually done and surfaces a feature
+// or angle they haven't used yet. Recycles indefinitely (oldest-first) once all
+// tips in the brand's pool have been sent. Tracked in email_monthly_log.
+// ───────────────────────────────────────────────────────────────────────────
+type Usage={items:number;listed:number;valued:number;bins:number;productions:number;funding:number;members:number;tagged:number;ageDays:number};
+async function getUsage(SB:any,org_id:string,created_at?:string):Promise<Usage>{
+  const c=async(tbl:string,extra?:(q:any)=>any)=>{
+    let q=SB.from(tbl).select('id',{count:'exact',head:true}).eq('org_id',org_id);
+    if(extra)q=extra(q);
+    const{count}=await q; return count||0;
+  };
+  const[items,bins,productions,funding,members]=await Promise.all([
+    c('items'),c('storage_locations'),c('productions'),c('funding_sources'),c('org_members'),
+  ]);
+  const listed=await c('items',(q)=>q.not('mkt','is',null).neq('mkt','Not Listed'));
+  const valued=await c('items',(q)=>q.or('purchase_cost.gt.0,sale.gt.0'));
+  const tagged=await c('items',(q)=>q.not('tags','is',null));
+  const ageDays=created_at?Math.floor((Date.now()-new Date(created_at).getTime())/86400000):999;
+  return{items,listed,valued,bins,productions,funding,members,tagged,ageDays};
+}
+
+type Tip={id:string;score:(u:Usage,month:number)=>number;subject:(B:Brand,V:Vert)=>string;html:(B:Brand,V:Vert,name:string,org:string)=>string};
+
+// Arts pool (Theatre4u + ArtsTracker) — vocab/audience via V. Higher score = more relevant now.
+const ARTS_TIPS:Tip[]=[
+  {id:'a_reports',score:(u)=>u.items>=10?62:(u.items>=3?30:0),
+    subject:(B,V)=>`A report that changes the ${V.budgetWord}`,
+    html:(B,V,name,org)=>wrap(B,`
+      ${p(`Hi ${name},`)}
+      ${p(`${org} has enough in inventory now that the <strong>Reports</strong> tab becomes genuinely useful — turn your items into a document ${V.oversight} will actually respond to.`)}
+      ${stripe('&#x1F4B0; Total value',`Show the full replacement value of what your program manages. Walking into ${V.budgetWord} with that number changes the conversation.`)}
+      ${stripe('&#x1F4CA; By category or condition','Spot what you have too much of, what needs replacing, and what is ready for next season.')}
+      ${stripe('&#x1F4C4; Export CSV','Attach a clean inventory list to a grant application in about 30 seconds.')}
+      ${cta(B,'Open Reports →')}`)},
+  {id:'a_exchange',score:(u)=>u.items>=5&&u.listed===0?70:(u.items>=5?18:0),
+    subject:(B,V)=>`You haven't listed anything on ${V.exchange} yet`,
+    html:(B,V,name,org)=>wrap(B,`
+      ${p(`Hi ${name},`)}
+      ${p(`${org} has items worth sharing — but nothing is listed on <strong>${V.exchange}</strong> yet. Listing the things you don't use year-round is how programs find each other (and how you find what you need without buying new).`)}
+      ${parchment(`<strong style="color:#1a0f00;font-size:14px">Takes a minute:</strong>${ol([
+        `Open any item in <strong>Inventory</strong>`,
+        `Click <strong>Edit</strong> → <strong>${V.exchange}</strong>`,
+        'Choose For Rent, For Loan, or For Sale, set your terms, Save',
+      ])}`)}
+      ${cta(B,`List an item on ${V.exchange} →`)}
+      ${sm('Programs in CA, OH, MO, NC, NH, NY, VA, GA, and PA are already active.')}`)},
+  {id:'a_funding',score:(u)=>u.funding===0?56:12,
+    subject:()=>'The funding tracker does your paperwork for you',
+    html:(B,V,name,org)=>wrap(B,`
+      ${p(`Hi ${name},`)}
+      ${p(`If you track ${V.money} anywhere right now — a spreadsheet, a folder, your memory — the <strong>Funding Tracker</strong> will save ${org} real time at year-end.`)}
+      ${ul([
+        'Create a source for each grant or allocation',
+        'Log expenditures as you spend — the balance updates itself',
+        `Pull a full report whenever ${V.oversight} asks`,
+      ])}
+      ${p(V.prop28,'font-size:13px;color:#888;line-height:1.6;')}
+      ${cta(B,'Set up a funding source →')}`)},
+  {id:'a_team',score:(u)=>u.members<=1?52:10,
+    subject:(B,V)=>`${V.org} is easier with your ${V.team} in it`,
+    html:(B,V,name,org)=>wrap(B,`
+      ${p(`Hi ${name},`)}
+      ${p(`Right now you're the only one in ${org}'s account. The moment you invite your ${V.team}, people stop asking you where things are — they just look it up.`)}
+      ${ul([
+        'Each role gets the right level of access',
+        'New members join instantly with a QR code',
+        'Everyone sees the same up-to-date inventory',
+      ])}
+      ${cta(B,'Invite your team →')}`)},
+  {id:'a_labels',score:(u)=>u.items>=5?42:15,
+    subject:()=>'Print QR labels for everything you own',
+    html:(B,V,name,org)=>wrap(B,`
+      ${p(`Hi ${name},`)}
+      ${p(`Every item in ${org}'s inventory already has a QR code — printing labels for them is where the whole system starts to feel like magic.`)}
+      ${ul([
+        'Print from any printer, or order durable pre-printed label packs',
+        'Scan a bin or shelf tag with any phone to see exactly what&#39;s there',
+        `No more opening six boxes to find one ${V.one.split(',')[0].replace('a ','')}`,
+      ])}
+      ${cta(B,'Print labels →')}`)},
+  {id:'a_productions',score:(u)=>u.productions===0&&u.items>=5?46:10,
+    subject:(B,V)=>`Tie your inventory to each ${V.event}`,
+    html:(B,V,name,org)=>wrap(B,`
+      ${p(`Hi ${name},`)}
+      ${p(`${B.plain} can track your ${V.event}s by season and connect items to each one — so ${org} builds a real history of what you used, and when.`)}
+      ${ul([
+        `Create each ${V.event} and associate the items it used`,
+        'See at a glance what came back and what didn&#39;t',
+        'Pull up last season to plan this one',
+      ])}
+      ${cta(B,`Add a ${V.event} →`)}`)},
+  {id:'a_value',score:(u)=>u.items>=10&&u.valued<Math.max(3,Math.floor(u.items*0.3))?50:14,
+    subject:()=>'Add values now, thank yourself at audit time',
+    html:(B,V,name,org)=>wrap(B,`
+      ${p(`Hi ${name},`)}
+      ${p(`Most of ${org}'s items don't have an estimated value yet. Adding them as you go quietly builds exactly ${V.risk}.`)}
+      ${ul([
+        'Open an item → add its estimated or purchase value',
+        'Reports then total it for insurance, grants, and audits',
+        'A documented asset list is what protects the program if something is lost',
+      ])}
+      ${cta(B,'Add values to your items →')}`)},
+  {id:'a_bins',score:(u)=>u.bins===0&&u.items>=5?48:8,
+    subject:(B,V)=>`Give everything in your ${V.space} a home`,
+    html:(B,V,name,org)=>wrap(B,`
+      ${p(`Hi ${name},`)}
+      ${p(`${org} has items but no storage locations set up yet. Adding them means your ${V.team} can find anything without asking you first.`)}
+      ${ul([
+        `Create locations for your ${V.space} — shelves, racks, closets, bins`,
+        'Assign items to where they actually live',
+        'Search by location to pull everything in one spot',
+      ])}
+      ${cta(B,'Set up storage locations →')}`)},
+];
+
+// Home pool (BinTrove) — ignores V; literal home copy.
+const HOME_TIPS:Tip[]=[
+  {id:'h_catalog',score:(u)=>u.items<10?58:5,
+    subject:()=>'The fastest way to get value from BinTrove',
+    html:(B,_V,name)=>wrap(B,`
+      ${p(`Hi ${name},`)}
+      ${p(`You've started — now the payoff comes from getting a few more bins in. The <strong>Add from photos</strong> tool turns a batch of pictures into items fast.`)}
+      ${ul([
+        'Snap a shelf or an open bin — each thing becomes an item',
+        'Name it and set its location later, in bulk',
+        'Pick the bin you dig through most and start there',
+      ])}
+      ${cta(B,'Add more to your bins →')}`)},
+  {id:'h_bins',score:(u)=>u.bins<3&&u.items>=3?55:10,
+    subject:()=>'Give every bin a location',
+    html:(B,_V,name)=>wrap(B,`
+      ${p(`Hi ${name},`)}
+      ${p(`A <strong>location</strong> is where things live (Garage, Attic, Hall Closet); a <strong>bin</strong> is a container in it. Once each bin has a home, "where is that?" stops being a question.`)}
+      ${parchment('<strong style="color:#1a0f00;font-size:14px">Tip:</strong> name a location like &ldquo;Garage — Shelf A&rdquo; and you&#39;ll always know which shelf to walk to.')}
+      ${cta(B,'Set up your bins →')}`)},
+  {id:'h_labels',score:(u)=>u.items>=3?45:20,
+    subject:()=>'Print a QR label for every bin',
+    html:(B,_V,name)=>wrap(B,`
+      ${p(`Hi ${name},`)}
+      ${p(`This is where BinTrove earns its keep: stick a QR label on a bin, scan it with your phone, and see what&#39;s inside without opening it.`)}
+      ${ul([
+        'Print from any home printer onto plain paper or sticker sheets',
+        'Or order durable pre-printed labels that last for years',
+        'Scan to view — no app required just to look inside',
+      ])}
+      ${cta(B,'Print bin labels →')}`)},
+  {id:'h_reports',score:(u)=>u.items>=10?60:(u.items>=3?26:0),
+    subject:()=>"The home inventory you'll be glad you have",
+    html:(B,_V,name)=>wrap(B,`
+      ${p(`Hi ${name},`)}
+      ${p(`You've quietly built something valuable: a photographed record of what you own. The <strong>Reports</strong> tab turns it into a home inventory in seconds.`)}
+      ${stripe('For insurance','Photos, locations, values, and a list — export to CSV and hand it to your insurer.')}
+      ${stripe('For peace of mind','No more &ldquo;do we already have one of these?&rdquo;')}
+      ${stripe('For a move or an estate','Everything documented in one place.')}
+      ${cta(B,'Open Reports →')}`)},
+  {id:'h_value',score:(u)=>u.items>=10&&u.valued<Math.max(3,Math.floor(u.items*0.3))?50:15,
+    subject:()=>'Add values — build your insurance list as you go',
+    html:(B,_V,name)=>wrap(B,`
+      ${p(`Hi ${name},`)}
+      ${p(`Most of your items don't have a value yet. Add one in the item's <strong>Purchase &amp; Value</strong> section and Reports will total it for you.`)}
+      ${ul([
+        'Open an item → Purchase &amp; Value → enter what it&#39;s worth',
+        'Reports shows your total value by category',
+        'Export a CSV that&#39;s ready for an insurance claim',
+      ])}
+      ${cta(B,'Add values to your items →')}`)},
+  {id:'h_tags',score:(u)=>u.items>=10&&u.tagged===0?50:15,
+    subject:()=>'One tap to "show me the Christmas stuff"',
+    html:(B,_V,name)=>wrap(B,`
+      ${p(`Hi ${name},`)}
+      ${p(`Tag your items — Holiday, Camping, Baby, Keepsakes — and finding a whole category becomes one tap, no matter which bin things are in.`)}
+      ${ul([
+        'Add a tag or category to items as you go',
+        'Filter to see everything with that tag at once',
+        'Great for the stuff that only comes out once a year',
+      ])}
+      ${cta(B,'Tag your items →')}`)},
+  {id:'h_moving',score:(u,month)=>30+([4,5,6,7].includes(month)?18:0),
+    subject:()=>'Moving? Label every box, unpack by room',
+    html:(B,_V,name)=>wrap(B,`
+      ${p(`Hi ${name},`)}
+      ${p(`If a move is anywhere on your horizon, BinTrove turns packing chaos into a plan.`)}
+      ${ul([
+        '<strong>Packing:</strong> snap each box, give it a QR label — an instant manifest.',
+        '<strong>The move:</strong> set each box&#39;s location to its destination room.',
+        '<strong>Unpacking:</strong> scan a box to see what&#39;s inside before you cut the tape.',
+      ])}
+      ${cta(B,'Start a move list →')}`)},
+  {id:'h_holiday',score:(u,month)=>26+([8,9,10,11].includes(month)?40:0),
+    subject:()=>'Never buy a second box of ornaments again',
+    html:(B,_V,name)=>wrap(B,`
+      ${p(`Hi ${name},`)}
+      ${p(`The stuff that comes out once a year is exactly what we forget we own. A few labeled seasonal bins means you find the lights and the wrap in minutes — and stop re-buying what you already have.`)}
+      ${parchment('<strong style="color:#1a0f00;font-size:14px">Tip:</strong> make a location called &ldquo;Holiday — Garage Shelf A,&rdquo; label each bin, done.')}
+      ${cta(B,'Set up your holiday bins →')}`)},
+];
+
+// Pick the best tip the org hasn't seen; recycle oldest-first once all are sent.
+function pickTip(pool:Tip[],sentIds:Set<string>,lastId:string|null,u:Usage,month:number):Tip{
+  const scored=pool.map(t=>({t,s:t.score(u,month)})).filter(x=>x.s>0);
+  const base=scored.length?scored:pool.map(t=>({t,s:1}));
+  let cand=base.filter(x=>!sentIds.has(x.t.id));
+  if(!cand.length)cand=base.filter(x=>x.t.id!==lastId);   // recycle, skip back-to-back repeat
+  if(!cand.length)cand=base;
+  cand.sort((a,b)=>b.s-a.s);
+  return cand[0].t;
+}
+
+async function sendTipHtml(to:string,subject:string,html:string,key:string,B:Brand,unsubUrl:string):Promise<string|null>{
+  const headers:Record<string,string>={'List-Unsubscribe':unsubUrl?`<${unsubUrl}>, <mailto:hello@theatre4u.org?subject=unsubscribe>`:`<mailto:hello@theatre4u.org?subject=unsubscribe>`};
+  if(unsubUrl)headers['List-Unsubscribe-Post']='List-Unsubscribe=One-Click';
+  const res=await fetch('https://api.resend.com/emails',{
+    method:'POST',
+    headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'},
+    body:JSON.stringify({from:B.from,reply_to:B.reply,to:[to],subject,html,headers})
+  });
+  const d=await res.json();
+  if(!res.ok)throw new Error(`Resend ${res.status}: ${JSON.stringify(d)}`);
+  return d.id as string;
+}
+
 async function sendEmail(to:string,num:number,name:string,org:string,key:string,B:Brand,V:Vert,unsubUrl=''):Promise<string|null>{
   const e=(B.plain==='BinTrove'?HOME_EMAILS:EMAILS)[num];
   if(!e)return null;
@@ -346,7 +573,35 @@ Deno.serve(async(req:Request)=>{
   const SB=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
   if(!KEY)return new Response(JSON.stringify({error:'RESEND_API_KEY not set'}),{status:500,headers:{...CORS,'Content-Type':'application/json'}});
   try{
-    const{org_id,email_num,lead_email,lead_name,lead_org}=await req.json();
+    const{org_id,email_num,lead_email,lead_name,lead_org,monthly}=await req.json();
+
+    // ── Monthly "something new" re-engagement (usage-responsive; recycles).
+    if(monthly){
+      if(!org_id)return new Response(JSON.stringify({error:'org_id required for monthly'}),{status:400,headers:{...CORS,'Content-Type':'application/json'}});
+      const{data:org}=await SB.from('orgs').select('id,name,email,director_name,plan,vertical,org_type,home_plan,signup_domain,email_opt_out,unsubscribe_token,account_status,deleted_at,created_at').eq('id',org_id).single();
+      if(!org)return new Response(JSON.stringify({error:'org not found'}),{status:404,headers:{...CORS,'Content-Type':'application/json'}});
+      if(org.email_opt_out||org.deleted_at||['closed','deleted'].includes(org.account_status))return new Response(JSON.stringify({ok:true,skipped:'opted out or closed'}),{headers:{...CORS,'Content-Type':'application/json'}});
+      const B=brandFor(org.signup_domain,org.vertical,org.org_type), V=vertFor(org.vertical,org.org_type);
+      const u=await getUsage(SB,org_id,org.created_at);
+      // Never-activated guard: 0 items and >90 days old → stop pinging (log a cadence marker so
+      // the scheduler won't re-call for the cadence window; resumes automatically if they add items).
+      if(u.items===0&&u.ageDays>90){
+        await SB.from('email_monthly_log').insert({org_id,tip_id:'none',brand:B.plain,status:'skipped_inactive'});
+        return new Response(JSON.stringify({ok:true,skipped:'inactive (0 items, >90d)'}),{headers:{...CORS,'Content-Type':'application/json'}});
+      }
+      const{data:log}=await SB.from('email_monthly_log').select('tip_id,sent_at').eq('org_id',org_id).eq('status','sent').order('sent_at',{ascending:false});
+      const sentIds=new Set((log||[]).map((r:any)=>r.tip_id));
+      const lastId=(log&&log[0])?log[0].tip_id:null;
+      const pool=(B.plain==='BinTrove')?HOME_TIPS:ARTS_TIPS;
+      const tip=pickTip(pool,sentIds,lastId,u,new Date().getMonth());
+      const first=(org.director_name||org.name||'there').split(' ')[0];
+      const unsubUrl=`${Deno.env.get('SUPABASE_URL')}/functions/v1/unsubscribe/${org.unsubscribe_token}`;
+      const html=tip.html(B,V,first,org.name||'your program').replace(ftr(B),ftrFull(B,unsubUrl));
+      const rid=await sendTipHtml(org.email,tip.subject(B,V),html,KEY,B,unsubUrl);
+      await SB.from('email_monthly_log').insert({org_id,tip_id:tip.id,brand:B.plain,resend_id:rid,status:'sent'});
+      console.log(`Monthly tip ${tip.id} → ${org.email} (${org.name}) [${B.plain}/${org.vertical||'theatre'}]`);
+      return new Response(JSON.stringify({ok:true,monthly:true,tip_id:tip.id,to:org.email,resend_id:rid}),{headers:{...CORS,'Content-Type':'application/json'}});
+    }
 
     if(email_num===0){
       if(!lead_email)return new Response(JSON.stringify({error:'lead_email required for email 0'}),{status:400,headers:{...CORS,'Content-Type':'application/json'}});

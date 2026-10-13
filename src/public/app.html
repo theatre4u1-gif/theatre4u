@@ -460,7 +460,7 @@ let CAT = Object.fromEntries(CATS.map(c=>[c.id,c]));
 let CUSTOM_CATS_M = [];   // [{id, vertical, label}]
 let CAT_LABELS_M  = {};   // {"<vertical>:<catId>": "New Name"}
 function buildCats(vertical){
-  const v = vertical || "theatre";
+  const v = IS_BINTROVE ? "home" : (vertical || "theatre");
   const base = (VCATS[v] || VCATS.theatre).map(c => {
     const ov = CAT_LABELS_M[v + ":" + c.id];
     return ov ? { ...c, label: ov } : c;
@@ -708,7 +708,7 @@ function AuthScreen({onAuth}) {
     h("div",{className:"auth-form"},
       h("div",{className:"fg"},
         h("label",{className:"fl"},"Email"),
-        h("input",{className:"fi",type:"email",value:email,onChange:e=>setEmail(e.target.value),placeholder:"you@school.edu",autoCapitalize:"none",inputMode:"email"})
+        h("input",{className:"fi",type:"email",value:email,onChange:e=>setEmail(e.target.value),placeholder:IS_BINTROVE?"you@email.com":"you@school.edu",autoCapitalize:"none",inputMode:"email"})
       ),
       h("div",{className:"fg"},
         h("label",{className:"fl"},"Password"),
@@ -1893,7 +1893,7 @@ function StorageLocationsManager({userId}) {
 // Manage inventory categories on mobile, matching the website's Settings.
 // Add / rename / remove custom categories, and rename built-in ones. Owner or director only.
 function CategoriesManager({ org, userId }) {
-  const vertical = org?.vertical || "theatre";
+  const vertical = IS_BINTROVE ? "home" : (org?.vertical || "theatre");
   const role = org?._memberRole;
   const canManage = !role || role === "director" || role === "program_director";
   const [custom, setCustom]   = useState([]);
@@ -2361,25 +2361,40 @@ createRoot(document.getElementById("root")).render(h(App,null));
 </script>
 
 <!-- PWA Manifest inline -->
+<!-- Classic script: must NOT reference the module script's consts (APP_NAME etc.) —
+     module-scoped bindings aren't visible here. Brand is recomputed locally. -->
 <script>
-const manifest = {
-  name:APP_NAME,short_name:APP_NAME,description:APP_TAGLINE,
-  start_url:"/app",display:"standalone",background_color:"#0a0a0f",theme_color:"#0a0a0f",
-  orientation:"portrait",
-  icons: IS_ARTSTRACKER ? [
+(function(){
+  var bt = location.hostname.indexOf("bintrove") !== -1;
+  var at = !bt && location.hostname.indexOf("artstracker") !== -1;
+  var name = bt ? "BinTrove" : at ? "ArtsTracker" : "Theatre4u";
+  var desc = bt ? "Home storage, organized."
+           : at ? "Inventory · Exchange · Community for Arts Programs"
+                : "Inventory · Backstage Exchange · Community";
+  var bg = bt ? "#0A5450" : "#0a0a0f";
+  var icons = bt ? [
+    {src:"/icon-192-bintrove.png",sizes:"192x192",type:"image/png"},
+    {src:"/icon-512-bintrove.png",sizes:"512x512",type:"image/png"}
+  ] : at ? [
     {src:"/icon-192-artstracker.png",sizes:"192x192",type:"image/png"},
     {src:"/icon-512-artstracker.png",sizes:"512x512",type:"image/png"}
   ] : [
     {src:"/icon-192-theatre4u.png",sizes:"192x192",type:"image/png"},
     {src:"/icon-512-theatre4u.png",sizes:"512x512",type:"image/png"},
     {src:"/favicon-theatre4u.svg",sizes:"any",type:"image/svg+xml"}
-  ]
-};
-const blob=new Blob([JSON.stringify(manifest)],{type:"application/json"});
-const url=URL.createObjectURL(blob);
-const link=document.createElement("link");
-link.rel="manifest";link.href=url;
-document.head.appendChild(link);
+  ];
+  var manifest = {
+    name:name, short_name:name, description:desc,
+    start_url:"/app", display:"standalone",
+    background_color:bg, theme_color:bg, orientation:"portrait", icons:icons
+  };
+  try {
+    var blob=new Blob([JSON.stringify(manifest)],{type:"application/json"});
+    var link=document.createElement("link");
+    link.rel="manifest"; link.href=URL.createObjectURL(blob);
+    document.head.appendChild(link);
+  } catch(e){}
+})();
 </script>
 </body>
 </html>
