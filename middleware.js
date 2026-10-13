@@ -51,17 +51,18 @@ body{background:#fdf8f1;color:#1a1008;font-family:'DM Sans',system-ui,sans-serif
 // Serve /item/:id as a crawlable, share-ready page with per-item Open Graph tags.
 async function itemPage(request, host) {
   const url = new URL(request.url);
+  const isBT = host.includes('bintrove');
   const isAT = host.includes('artstracker') && !host.startsWith('admin.');
-  const brand = isAT ? 'artstracker.org' : 'theatre4u.org';
-  const appName = isAT ? 'ArtsTracker' : 'Theatre4u';
+  const brand = isBT ? 'bintrove.com' : isAT ? 'artstracker.org' : 'theatre4u.org';
+  const appName = isBT ? 'BinTrove' : isAT ? 'ArtsTracker' : 'Theatre4u';
   const homeUrl = 'https://' + brand;
-  const defImg = homeUrl + '/og-' + (isAT ? 'artstracker' : 'theatre4u') + '.png';
+  const defImg = homeUrl + '/og-' + (isBT ? 'bintrove' : isAT ? 'artstracker' : 'theatre4u') + '.png';
   const canonical = 'https://' + host + url.pathname;
   const raw = decodeURIComponent((url.pathname.split('/').filter(Boolean).pop() || ''));
 
   const notFound = (msg) => new Response(shell({
     title: appName, ogTitle: appName + ' — Marketplace', ogDesc: msg, ogImg: defImg, ogUrl: canonical,
-    body: `<div class="empty"><img class="logo" src="${homeUrl}/${isAT ? 'logo-artstracker.png' : 'logo-theatre4u.svg'}" alt="${appName}"/><h1>Item not available</h1><p>${esc(msg)}</p><a class="btn" href="${homeUrl}">Go to ${appName}</a></div>`,
+    body: `<div class="empty"><img class="logo" src="${homeUrl}/${isBT ? 'logo-bintrove.png' : isAT ? 'logo-artstracker.png' : 'logo-theatre4u.svg'}" alt="${appName}"/><h1>Item not available</h1><p>${esc(msg)}</p><a class="btn" href="${homeUrl}">Go to ${appName}</a></div>`,
   }), { status: 404, headers: { 'content-type': 'text/html; charset=utf-8' } });
 
   if (!/^[A-Za-z0-9._-]{1,80}$/.test(raw)) return notFound('This item link is not valid.');
@@ -90,7 +91,7 @@ async function itemPage(request, host) {
   const openUrl = homeUrl + '/#/item/' + encodeURIComponent(item.display_id || raw);
 
   const body = `<div class="card">
-    <div class="ph">${item.img ? `<img src="${esc(item.img)}" alt="${esc(item.name)}"/>` : '<span>🎭</span>'}</div>
+    <div class="ph">${item.img ? `<img src="${esc(item.img)}" alt="${esc(item.name)}"/>` : `<span>${isBT ? '📦' : '🎭'}</span>`}</div>
     <div class="bd">
       <h1>${esc(item.name)}</h1>
       ${sub ? `<div class="sub">${esc(sub)}</div>` : ''}
@@ -110,19 +111,20 @@ export default function middleware(request) {
   const url = new URL(request.url);
   const path = url.pathname;
   const host = (request.headers.get('host') || '').toLowerCase();
+  const isBinTrove = host.includes('bintrove');
   const isArtsTracker = host.includes('artstracker') && !host.startsWith('admin.');
 
-  // Per-host SEO files (dotted paths, added to the matcher above). On artstracker.org
-  // serve the ArtsTracker variants; otherwise let the static Theatre4u files serve.
-  if (path === '/sitemap.xml') return isArtsTracker ? rewrite(new URL('/sitemap-artstracker.xml', request.url)) : next();
-  if (path === '/robots.txt')  return isArtsTracker ? rewrite(new URL('/robots-artstracker.txt', request.url)) : next();
+  // Per-host SEO files (dotted paths, added to the matcher above). Serve each brand's
+  // variant; otherwise let the static Theatre4u files serve.
+  if (path === '/sitemap.xml') return isBinTrove ? rewrite(new URL('/sitemap-bintrove.xml', request.url)) : isArtsTracker ? rewrite(new URL('/sitemap-artstracker.xml', request.url)) : next();
+  if (path === '/robots.txt')  return isBinTrove ? rewrite(new URL('/robots-bintrove.txt', request.url))  : isArtsTracker ? rewrite(new URL('/robots-artstracker.txt', request.url))  : next();
 
   // Shareable item page with per-item Open Graph tags (fixes Facebook/social item links).
   if (path.startsWith('/item/')) return itemPage(request, host);
 
   // Let vercel.json / static files handle these pretty URLs
   if (path === '/join' || path.startsWith('/org/') || path === '/booth' || path === '/blog' || path.startsWith('/blog/')) return next();
-  const file = host.includes('artstracker') ? '/home-artstracker.html' : '/home-theatre4u.html';
+  const file = isBinTrove ? '/home-bintrove.html' : host.includes('artstracker') ? '/home-artstracker.html' : '/home-theatre4u.html';
   // The admin host (admin.artstracker.org) must never be indexed by search engines.
   const init = host.startsWith('admin.') ? { headers: { 'x-robots-tag': 'noindex, nofollow' } } : undefined;
   return rewrite(new URL(file, request.url), init);

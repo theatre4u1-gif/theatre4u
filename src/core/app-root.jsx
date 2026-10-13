@@ -1040,7 +1040,22 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
                       📱 Mobile App
                     </a>
                   )}
-                  {(plan==="pro"||plan==="district"||isAdmin)&&!isDemo&&(
+                  {/* BinTrove: let home users install the app (PWA) — Add to Home Screen instructions. */}
+                  {IS_BINTROVE && !isDemo && !IS_NATIVE_APP && (
+                    <a href="/help-bintrove.html#app" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
+                      style={{color:"var(--goldink)",borderColor:"rgba(211,161,60,.4)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                      📱 Get the App
+                    </a>
+                  )}
+                  {/* BinTrove: a Help & FAQ link for every home user (the theatre help page is gated to paid school plans). */}
+                  {IS_BINTROVE && !isDemo && (
+                    <a href="/help-bintrove.html" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
+                      onClick={e=>{ if(IS_NATIVE_APP){ e.preventDefault(); openExternal(APP_URL+"/help-bintrove.html"); } }}
+                      style={{color:"rgba(255,255,255,.6)",borderColor:"rgba(255,255,255,.12)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+                      ❓ Help & FAQ
+                    </a>
+                  )}
+                  {!IS_BINTROVE && (plan==="pro"||plan==="district"||isAdmin)&&!isDemo&&(
                     <a href="/help.html" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
                       onClick={e=>{ if(IS_NATIVE_APP){ e.preventDefault(); openExternal(APP_URL+"/help.html"); } }}
                       style={{color:"rgba(255,255,255,.6)",borderColor:"rgba(255,255,255,.12)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
