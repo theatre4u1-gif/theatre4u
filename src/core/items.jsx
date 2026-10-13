@@ -161,8 +161,8 @@ export async function uploadPhoto(file, userId) {
 export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical="theatre",plan="free",suggestedTags=[]}){
   const vConfig = getVertical(vertical);
   // Per-vertical example text (QA-4, 2026-07-04)
-  const EX_ITEM = {theatre:"Victorian Ball Gown", music:"Yamaha Trumpet", dance:"Ballet Slippers (Pair)", art:"Acrylic Paint Set", booster:"Folding Table"}[vertical] || "Storage Bin";
-  const EX_LOC  = {theatre:"Costume Closet A", music:"Instrument Room, Shelf 2", dance:"Costume Rack B", art:"Supply Cabinet 3", booster:"Storage Room A"}[vertical] || "Storage Room A";
+  const EX_ITEM = {theatre:"Victorian Ball Gown", music:"Yamaha Trumpet", dance:"Ballet Slippers (Pair)", art:"Acrylic Paint Set", booster:"Folding Table", home:"Holiday lights"}[vertical] || "Storage Bin";
+  const EX_LOC  = {theatre:"Costume Closet A", music:"Instrument Room, Shelf 2", dance:"Costume Rack B", art:"Supply Cabinet 3", booster:"Storage Room A", home:"Garage Shelf A"}[vertical] || "Storage Room A";
   const vCATS   = getCatsMerged(vertical);
   const vCONDS  = vConfig.conditions;
   const vSIZES  = vConfig.sizes;
@@ -390,7 +390,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
           </div>
         ):null;})()}
       </div>
-      <div className="fg fu"><label className="fl">Notes</label><textarea className="ft" value={f.notes} onChange={e=>upd("notes",e.target.value)} placeholder="Usage history, care instructions…"/></div>
+      <div className="fg fu"><label className="fl">Notes</label><textarea className="ft" value={f.notes} onChange={e=>upd("notes",e.target.value)} placeholder={IS_BINTROVE?"Condition, serial number, where you bought it…":"Usage history, care instructions…"}/></div>
       {!IS_BINTROVE && <div className="fg fu sdiv"><div className="slbl">🏪 {getExchangeName(vertical)}</div></div>}
       {!IS_BINTROVE && <div className="fg"><label className="fl">Listing Status</label><select className="fs" value={f.mkt} onChange={e=>upd("mkt",e.target.value)}>{MKT.map(s=><option key={s}>{s}</option>)}</select></div>}
       {f.mkt!=="Not Listed"&&f.mkt!=="Private"&&!marketplaceEnabled&&(

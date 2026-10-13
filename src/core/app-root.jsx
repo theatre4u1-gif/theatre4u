@@ -48,7 +48,19 @@ import { MobileHome } from "./mobile-home.jsx";
 import { MobileNav } from "./mobile-nav.jsx";
 
 function makeSamples(){
-  return [
+  const home=[
+    {name:"Holiday Lights (LED, 3 boxes)", category:"holiday",   condition:"Good",     size:"N/A",qty:3, location:"Garage — Shelf A",   notes:"Warm white, tested last season", vertical:"home", mkt:"Not Listed",rent:0,sale:0,purchase_cost:45, avail:"Stored",tags:["christmas"],  img:null},
+    {name:"Artificial Christmas Tree 7ft", category:"holiday",   condition:"Good",     size:"N/A",qty:1, location:"Attic",             notes:"Pre-lit, in original box",       vertical:"home", mkt:"Not Listed",rent:0,sale:0,purchase_cost:180,avail:"Stored",tags:["christmas"],  img:null},
+    {name:"Cordless Drill — DeWalt",       category:"tools",     condition:"Excellent",size:"N/A",qty:1, location:"Garage — Workbench", notes:"2 batteries + charger",          vertical:"home", mkt:"Not Listed",rent:0,sale:0,purchase_cost:129,avail:"Stored",tags:["power tools"],img:null},
+    {name:"Camping Tent (4-person)",       category:"sports",    condition:"Good",     size:"N/A",qty:1, location:"Garage — Shelf B",   notes:"Poles in the side bag",          vertical:"home", mkt:"Not Listed",rent:0,sale:0,purchase_cost:110,avail:"Stored",tags:["camping"],    img:null},
+    {name:"KitchenAid Stand Mixer",        category:"kitchen",   condition:"Excellent",size:"N/A",qty:1, location:"Kitchen Pantry",     notes:"Red — whisk + dough hook",       vertical:"home", mkt:"Not Listed",rent:0,sale:0,purchase_cost:299,avail:"Stored",tags:[],             img:null},
+    {name:"Kids' Winter Coats (bin)",      category:"clothing",  condition:"Good",     size:"N/A",qty:1, location:"Hall Closet",        notes:"Sizes 4–8, outgrown",            vertical:"home", mkt:"Not Listed",rent:0,sale:0,purchase_cost:0,  avail:"Stored",tags:["seasonal"],   img:null},
+    {name:"Board Games (assorted, 12)",    category:"kids",      condition:"Good",     size:"N/A",qty:12,location:"Family Room Cabinet",notes:"",                               vertical:"home", mkt:"Not Listed",rent:0,sale:0,purchase_cost:0,  avail:"Stored",tags:[],             img:null},
+    {name:"Patio String Lights",           category:"outdoor",   condition:"Good",     size:"N/A",qty:2, location:"Garage — Shelf A",   notes:"",                               vertical:"home", mkt:"Not Listed",rent:0,sale:0,purchase_cost:35, avail:"Stored",tags:["outdoor"],    img:null},
+    {name:"Family Photo Albums (5)",       category:"keepsakes", condition:"Good",     size:"N/A",qty:5, location:"Office — Closet",    notes:"",                               vertical:"home", mkt:"Not Listed",rent:0,sale:0,purchase_cost:0,  avail:"Stored",tags:["memories"],   img:null},
+    {name:"Documents & Warranties Folder", category:"documents", condition:"Good",     size:"N/A",qty:1, location:"Office — File Cabinet",notes:"Appliance manuals + receipts",  vertical:"home", mkt:"Not Listed",rent:0,sale:0,purchase_cost:0,  avail:"Stored",tags:[],             img:null},
+  ];
+  const theatre=[
     {name:"Victorian Ball Gown – Blue",   category:"costumes", condition:"Good",     size:"M",       qty:1, location:"Storage Room A",notes:"Used in A Christmas Carol 2024",mkt:"For Rent",   rent:25,sale:0, avail:"In Stock",tags:["period","formal"],img:null},
     {name:"Pirate Hat Collection (6 pc)", category:"costumes", condition:"Fair",     size:"One Size",qty:6, location:"Storage Room B",notes:"Assorted styles",              mkt:"Not Listed", rent:0, sale:0, avail:"In Stock",tags:["adventure"],      img:null},
     {name:"Wireless Mic – Shure SM58",    category:"sound",    condition:"Excellent",size:"N/A",     qty:4, location:"Sound Booth",     notes:"4 channels, wireless",         mkt:"For Rent",   rent:15,sale:0, avail:"In Stock",tags:["audio"],          img:null},
@@ -59,7 +71,8 @@ function makeSamples(){
     {name:"Forest Backdrop Flat 8×12ft",  category:"sets",     condition:"Good",     size:"N/A",     qty:2, location:"Workroom",      notes:"Painted muslin on frame",      mkt:"For Rent",   rent:40,sale:0, avail:"In Stock",tags:["outdoor"],         img:null},
     {name:"Ben Nye Master Makeup Kit",    category:"makeup",   condition:"Good",     size:"N/A",     qty:3, location:"Dressing Room 1", notes:"Full spectrum",                mkt:"Not Listed", rent:0, sale:0, avail:"In Stock",tags:["professional"],    img:null},
     {name:"Foam Rubber Swords (8 pc)",    category:"props",    condition:"Fair",     size:"N/A",     qty:8, location:"Props Table",     notes:"Safe for stage combat",        mkt:"For Sale",   rent:0, sale:12,avail:"In Stock",tags:["combat"],          img:null},
-  ].map(i=>({...i,id:uid(),added:new Date().toISOString()}));
+  ];
+  return (IS_BINTROVE?home:theatre).map(i=>({...i,id:uid(),added:new Date().toISOString()}));
 }
 
 export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null }){

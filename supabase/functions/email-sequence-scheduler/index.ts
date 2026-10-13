@@ -1,4 +1,6 @@
-// email-sequence-scheduler v3
+// email-sequence-scheduler v4
+// v4 (2026-10-13): added monthly "something new" re-engagement pass (calls send-sequence-email
+//   with {monthly:true} for orgs >30d old, ~28d since last monthly; capped MONTHLY_CAP/run).
 // Fixed: email 0 tracking uses simple WHERE clause
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2';
 const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type'};
@@ -65,7 +67,35 @@ Deno.serve(async(req:Request)=>{
       }
     }
 
-    console.log(`Scheduler v3: ${results.length} emails processed`);
+    // ── Monthly "something new" re-engagement: orgs past onboarding (>30d old),
+    //    not opted out/closed, ~28d since their last monthly email. Capped per run.
+    const MONTHLY_CAP=40;
+    const monthCutoff=new Date(now.getTime()-30*24*60*60*1000).toISOString();
+    const recentCutoff=new Date(now.getTime()-28*24*60*60*1000).toISOString();
+    const{data:morgs}=await SB.from('orgs')
+      .select('id,name,email,created_at,email_opt_out,account_status,deleted_at')
+      .lte('created_at',monthCutoff)
+      .is('deleted_at',null);
+    if(morgs?.length){
+      // Orgs that already got a monthly email (or an inactivity marker) in the last 28d → not due.
+      const{data:recent}=await SB.from('email_monthly_log').select('org_id').gte('sent_at',recentCutoff);
+      const recentSet=new Set((recent||[]).map((r:any)=>r.org_id));
+      let monthlyN=0;
+      for(const org of morgs){
+        if(monthlyN>=MONTHLY_CAP)break;
+        if(SKIP.includes(org.email?.toLowerCase())||org.email_opt_out||org.deleted_at||['closed','deleted'].includes(org.account_status))continue;
+        if(recentSet.has(org.id))continue;
+        try{
+          const d=await post({org_id:org.id,monthly:true});
+          monthlyN++;
+          results.push({target:org.name||org.email,email_num:-1,status:d.ok?(d.tip_id||d.skipped||'sent'):(d.skipped||d.error||'err')});
+        }catch(e){
+          results.push({target:org.name||org.email,email_num:-1,status:'err:'+String(e)});
+        }
+      }
+    }
+
+    console.log(`Scheduler v4: ${results.length} emails processed`);
     return new Response(JSON.stringify({ok:true,processed:results.length,results}),{headers:{...CORS,'Content-Type':'application/json'}});
   }catch(e){
     console.error(String(e));

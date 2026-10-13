@@ -1081,7 +1081,7 @@ function AddSheet({onClose, onAdded, userId, plan}) {
         h(PhotoGallery,{imgs:imgsOf(f),max:maxImg,uploading,onAdd:handleMorePhoto,onRemove:removeImage,onCover:makeCover,onCaptureFile:async file=>{ if(!file) return false; const url=await uploadPhoto(file,userId); if(!url) return false; setF(p=>{const cur=imgsOf(p); if(cur.length>=maxImg) return p; const next=[...cur,url]; return {...p,images:next,img:next[0]};}); return true; }}),
         h("div",{className:"fg"},
           h("label",{className:"fl"},"Item Name *"),
-          h("input",{className:"fi",value:f.name,onChange:e=>upd("name",e.target.value),placeholder:"e.g. Victorian Ball Gown",autoFocus:true})
+          h("input",{className:"fi",value:f.name,onChange:e=>upd("name",e.target.value),placeholder:IS_BINTROVE?"e.g. Holiday lights":"e.g. Victorian Ball Gown",autoFocus:true})
         ),
         h("div",{className:"fg"},
           h("label",{className:"fl"},"Category"),
