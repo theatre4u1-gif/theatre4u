@@ -122,6 +122,8 @@ export default function middleware(request) {
   // Shareable item page with per-item Open Graph tags (fixes Facebook/social item links).
   if (path.startsWith('/item/')) return itemPage(request, host);
 
+  // The installable mobile web app (all brands) — /app → /app.html (brand resolved in-page by host).
+  if (path === '/app') return rewrite(new URL('/app.html', request.url));
   // Let vercel.json / static files handle these pretty URLs
   if (path === '/join' || path.startsWith('/org/') || path === '/booth' || path === '/blog' || path.startsWith('/blog/')) return next();
   const file = isBinTrove ? '/home-bintrove.html' : host.includes('artstracker') ? '/home-artstracker.html' : '/home-theatre4u.html';

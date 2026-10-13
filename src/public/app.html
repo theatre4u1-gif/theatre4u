@@ -274,17 +274,28 @@ const SB = createClient(
 );
 
 // ── Domain-aware branding (ArtsTracker vs Theatre4u) ──────────────────────────
-const IS_ARTSTRACKER = location.hostname.includes("artstracker");
-const APP_NAME = IS_ARTSTRACKER ? "ArtsTracker" : "Theatre4u™";
-const APP_TAGLINE = IS_ARTSTRACKER ? "Inventory · Exchange · Community for Arts Programs" : "Inventory · Backstage Exchange · Community";
-const APP_ICON = IS_ARTSTRACKER ? "🎨" : "🎭";
-const BRAND_URL  = IS_ARTSTRACKER ? "https://artstracker.org" : "https://theatre4u.org";
-const BRAND_HOST = IS_ARTSTRACKER ? "artstracker.org" : "theatre4u.org";
+const IS_BINTROVE   = location.hostname.includes("bintrove");
+const IS_ARTSTRACKER = !IS_BINTROVE && location.hostname.includes("artstracker");
+const APP_NAME = IS_BINTROVE ? "BinTrove" : IS_ARTSTRACKER ? "ArtsTracker" : "Theatre4u™";
+const APP_TAGLINE = IS_BINTROVE ? "Home storage, organized." : IS_ARTSTRACKER ? "Inventory · Exchange · Community for Arts Programs" : "Inventory · Backstage Exchange · Community";
+const APP_ICON = IS_BINTROVE ? "📦" : IS_ARTSTRACKER ? "🎨" : "🎭";
+const BRAND_URL  = IS_BINTROVE ? "https://bintrove.com" : IS_ARTSTRACKER ? "https://artstracker.org" : "https://theatre4u.org";
+const BRAND_HOST = IS_BINTROVE ? "bintrove.com" : IS_ARTSTRACKER ? "artstracker.org" : "theatre4u.org";
 document.title = APP_NAME;
 if (IS_ARTSTRACKER) {
   const ic = document.querySelector('link[rel="icon"]'); if (ic){ ic.href = "/favicon-artstracker.png"; ic.type = "image/png"; }
   const ti = document.querySelector('link[rel="apple-touch-icon"]'); if (ti) ti.href = "/apple-touch-icon-artstracker.png";
   const mt = document.querySelector('meta[name="apple-mobile-web-app-title"]'); if (mt) mt.content = "ArtsTracker";
+}
+if (IS_BINTROVE) {
+  const ic = document.querySelector('link[rel="icon"]'); if (ic){ ic.href = "/favicon-bintrove.png"; ic.type = "image/png"; }
+  const ti = document.querySelector('link[rel="apple-touch-icon"]'); if (ti) ti.href = "/apple-touch-icon-bintrove.png";
+  const mt = document.querySelector('meta[name="apple-mobile-web-app-title"]'); if (mt) mt.content = "BinTrove";
+  const mn = document.querySelector('link[rel="manifest"]'); if (mn) mn.href = "/manifest-bintrove.json";
+  const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = "#0A5450";
+  // Recolor the gold theatre accent to BinTrove teal across the whole app.
+  const r = document.documentElement.style;
+  r.setProperty('--gold', '#1C9E8F'); r.setProperty('--gold2', '#2bbfae'); r.setProperty('--goldd', '#0A5450');
 }
 
 // ── QR Code generator ─────────────────────────────────────────────────────────
@@ -440,7 +451,7 @@ function PhotoGallery({imgs, max, uploading, onAdd, onRemove, onCover, onCapture
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 // Per-department category sets (generated from src/lib/verticals.js — resync if that changes)
-const VCATS = {"theatre":[{"id":"costumes","label":"Costumes","icon":"👗"},{"id":"props","label":"Props","icon":"🎭"},{"id":"sets","label":"Sets & Scenery","icon":"🏛️"},{"id":"lighting","label":"Lighting","icon":"💡"},{"id":"sound","label":"Sound","icon":"🔊"},{"id":"scripts","label":"Scripts & Music","icon":"📜"},{"id":"makeup","label":"Makeup & Wigs","icon":"💄"},{"id":"furniture","label":"Stage Furniture","icon":"🪑"},{"id":"fabrics","label":"Fabrics & Drapes","icon":"🧵"},{"id":"tools","label":"Tools","icon":"🔧"},{"id":"effects","label":"Special Effects","icon":"✨"},{"id":"other","label":"Other","icon":"📦"}],"music":[{"id":"strings","label":"Strings","icon":"🎻"},{"id":"woodwinds","label":"Woodwinds","icon":"🎶"},{"id":"brass","label":"Brass","icon":"🎺"},{"id":"percussion","label":"Percussion","icon":"🥁"},{"id":"keyboard","label":"Keyboard","icon":"🎹"},{"id":"vocal","label":"Vocal","icon":"🎤"},{"id":"sheet_music","label":"Sheet Music","icon":"🎼"},{"id":"amplification","label":"Amplification","icon":"🔊"},{"id":"other","label":"Other","icon":"📦"}],"dance":[{"id":"costumes","label":"Costumes","icon":"👗"},{"id":"footwear","label":"Footwear","icon":"👠"},{"id":"props","label":"Props","icon":"🌂"},{"id":"sound","label":"Sound & Music","icon":"🎵"},{"id":"lighting","label":"Lighting","icon":"💡"},{"id":"mirrors","label":"Mirrors & Barres","icon":"🪞"},{"id":"other","label":"Other","icon":"📦"}],"art":[{"id":"painting","label":"Painting Supplies","icon":"🖌️"},{"id":"drawing","label":"Drawing","icon":"✏️"},{"id":"sculpture","label":"Sculpture","icon":"🗿"},{"id":"printmaking","label":"Printmaking","icon":"🖨️"},{"id":"ceramics","label":"Ceramics","icon":"🏺"},{"id":"digital","label":"Digital Media","icon":"💻"},{"id":"textiles","label":"Textiles","icon":"🧵"},{"id":"equipment","label":"Equipment","icon":"📷"},{"id":"other","label":"Other","icon":"📦"}],"booster":[{"id":"equipment","label":"Equipment","icon":"🎒"},{"id":"supplies","label":"Supplies","icon":"🧰"},{"id":"uniforms","label":"Apparel & Uniforms","icon":"👕"},{"id":"event_supplies","label":"Events","icon":"🎪"},{"id":"fundraising","label":"Fundraising","icon":"💰"},{"id":"storage","label":"Storage","icon":"🗄️"},{"id":"awards","label":"Awards","icon":"🏆"},{"id":"other","label":"Other","icon":"📦"}]};
+const VCATS = {"theatre":[{"id":"costumes","label":"Costumes","icon":"👗"},{"id":"props","label":"Props","icon":"🎭"},{"id":"sets","label":"Sets & Scenery","icon":"🏛️"},{"id":"lighting","label":"Lighting","icon":"💡"},{"id":"sound","label":"Sound","icon":"🔊"},{"id":"scripts","label":"Scripts & Music","icon":"📜"},{"id":"makeup","label":"Makeup & Wigs","icon":"💄"},{"id":"furniture","label":"Stage Furniture","icon":"🪑"},{"id":"fabrics","label":"Fabrics & Drapes","icon":"🧵"},{"id":"tools","label":"Tools","icon":"🔧"},{"id":"effects","label":"Special Effects","icon":"✨"},{"id":"other","label":"Other","icon":"📦"}],"music":[{"id":"strings","label":"Strings","icon":"🎻"},{"id":"woodwinds","label":"Woodwinds","icon":"🎶"},{"id":"brass","label":"Brass","icon":"🎺"},{"id":"percussion","label":"Percussion","icon":"🥁"},{"id":"keyboard","label":"Keyboard","icon":"🎹"},{"id":"vocal","label":"Vocal","icon":"🎤"},{"id":"sheet_music","label":"Sheet Music","icon":"🎼"},{"id":"amplification","label":"Amplification","icon":"🔊"},{"id":"other","label":"Other","icon":"📦"}],"dance":[{"id":"costumes","label":"Costumes","icon":"👗"},{"id":"footwear","label":"Footwear","icon":"👠"},{"id":"props","label":"Props","icon":"🌂"},{"id":"sound","label":"Sound & Music","icon":"🎵"},{"id":"lighting","label":"Lighting","icon":"💡"},{"id":"mirrors","label":"Mirrors & Barres","icon":"🪞"},{"id":"other","label":"Other","icon":"📦"}],"art":[{"id":"painting","label":"Painting Supplies","icon":"🖌️"},{"id":"drawing","label":"Drawing","icon":"✏️"},{"id":"sculpture","label":"Sculpture","icon":"🗿"},{"id":"printmaking","label":"Printmaking","icon":"🖨️"},{"id":"ceramics","label":"Ceramics","icon":"🏺"},{"id":"digital","label":"Digital Media","icon":"💻"},{"id":"textiles","label":"Textiles","icon":"🧵"},{"id":"equipment","label":"Equipment","icon":"📷"},{"id":"other","label":"Other","icon":"📦"}],"booster":[{"id":"equipment","label":"Equipment","icon":"🎒"},{"id":"supplies","label":"Supplies","icon":"🧰"},{"id":"uniforms","label":"Apparel & Uniforms","icon":"👕"},{"id":"event_supplies","label":"Events","icon":"🎪"},{"id":"fundraising","label":"Fundraising","icon":"💰"},{"id":"storage","label":"Storage","icon":"🗄️"},{"id":"awards","label":"Awards","icon":"🏆"},{"id":"other","label":"Other","icon":"📦"}],"home":[{"id":"holiday","label":"Holiday & Seasonal","icon":"🎄"},{"id":"decor","label":"Decorations","icon":"✨"},{"id":"kitchen","label":"Kitchen & Dining","icon":"🍽️"},{"id":"tools","label":"Tools & Hardware","icon":"🔧"},{"id":"outdoor","label":"Garage & Outdoor","icon":"🧰"},{"id":"keepsakes","label":"Keepsakes & Memories","icon":"📷"},{"id":"electronics","label":"Electronics","icon":"🔌"},{"id":"clothing","label":"Clothing & Linens","icon":"👕"},{"id":"kids","label":"Kids & Toys","icon":"🧸"},{"id":"documents","label":"Documents & Records","icon":"📄"},{"id":"sports","label":"Sports & Hobbies","icon":"⚽"},{"id":"other","label":"Other","icon":"📦"}]};
 let CATS = VCATS.theatre; // reselected from the org's department after login
 let CAT = Object.fromEntries(CATS.map(c=>[c.id,c]));
 
@@ -690,7 +701,7 @@ function AuthScreen({onAuth}) {
 
   return h("div",{className:"auth-screen fin"},
     h("div",{className:"auth-logo"},
-      h("img",{src:"/favicon-theatre4u.svg",alt:"",style:{width:72,height:72,display:"block",margin:"0 auto 12px",objectFit:"contain"}}),
+      h("img",{src:IS_BINTROVE?"/logo-mark-bintrove.png":"/favicon-theatre4u.svg",alt:"",style:{width:72,height:72,display:"block",margin:"0 auto 12px",objectFit:"contain"}}),
       h("h1",null,APP_NAME),
       h("p",null,APP_TAGLINE)
     ),
@@ -858,7 +869,7 @@ function EditSheet({item, onClose, onSaved, userId, plan}) {
         // Photos (gallery — cover first)
         h(PhotoGallery,{imgs:imgsOf(f),max:maxImg,uploading,onAdd:handlePhoto,onRemove:removeImage,onCover:makeCover,onCaptureFile:async file=>{ if(!file) return false; const url=await uploadPhoto(file,userId); if(!url) return false; setF(p=>{const cur=imgsOf(p); if(cur.length>=maxImg) return p; const next=[...cur,url]; return {...p,images:next,img:next[0]};}); return true; }}),
         h("div",{className:"fg"},h("label",{className:"fl"},"Name"),h("input",{className:"fi",value:f.name||"",onChange:e=>upd("name",e.target.value)})),
-        h("div",{className:"fg"},h("label",{className:"fl"},"Location"),h("input",{className:"fi",value:f.location||"",onChange:e=>upd("location",e.target.value),placeholder:"e.g. Costume Closet A"})),
+        h("div",{className:"fg"},h("label",{className:"fl"},"Location"),h("input",{className:"fi",value:f.location||"",onChange:e=>upd("location",e.target.value),placeholder:IS_BINTROVE?"e.g. Garage Shelf A":"e.g. Costume Closet A"})),
         h("div",{className:"fg"},
           h("label",{className:"fl"},"Condition"),
           h("div",{className:"cond-grid"},
@@ -866,7 +877,7 @@ function EditSheet({item, onClose, onSaved, userId, plan}) {
           )
         ),
         h("div",{className:"fg"},h("label",{className:"fl"},"Availability"),h("select",{className:"fs",value:f.avail,onChange:e=>upd("avail",e.target.value)},AVAIL.map(a=>h("option",{key:a},a)))),
-        h("div",{className:"fg"},h("label",{className:"fl"},"Exchange Status"),h("select",{className:"fs",value:f.mkt,onChange:e=>upd("mkt",e.target.value)},MKT.map(m=>h("option",{key:m},m)))),
+        !IS_BINTROVE && h("div",{className:"fg"},h("label",{className:"fl"},"Exchange Status"),h("select",{className:"fs",value:f.mkt,onChange:e=>upd("mkt",e.target.value)},MKT.map(m=>h("option",{key:m},m)))),
         h("div",{className:"fg"},h("label",{className:"fl"},"Notes"),h("textarea",{className:"ft",value:f.notes||"",onChange:e=>upd("notes",e.target.value),rows:3})),
         h("button",{className:"btn btn-gold btn-full",onClick:save,disabled:saving||!f.name?.trim()},saving?"Saving…":"Save Changes")
       )
@@ -941,14 +952,14 @@ function LocationPicker({value, onChange, userId}) {
         "New Storage Location"
       ),
       h("input",{
-        className:"fi", placeholder:"Name — e.g. Costume Closet B",
+        className:"fi", placeholder:IS_BINTROVE?"Name — e.g. Garage Shelf B":"Name — e.g. Costume Closet B",
         value:newName, autoFocus:true,
         onChange:e=>setNewName(e.target.value),
         onKeyDown:e=>{ if(e.key==="Enter"){e.preventDefault();saveNew();} },
         style:{marginBottom:8}
       }),
       h("input",{
-        className:"fi", placeholder:"Description (optional) — e.g. Stage left hallway",
+        className:"fi", placeholder:IS_BINTROVE?"Description (optional) — e.g. Garage shelf A":"Description (optional) — e.g. Stage left hallway",
         value:newDesc,
         onChange:e=>setNewDesc(e.target.value),
         onKeyDown:e=>{ if(e.key==="Enter"){e.preventDefault();saveNew();} },
@@ -1093,7 +1104,7 @@ function AddSheet({onClose, onAdded, userId, plan}) {
             h("label",{className:"fl"},"Quantity"),
             h("input",{className:"fi",type:"number",min:"1",value:f.qty,onChange:e=>upd("qty",parseInt(e.target.value)||1)})
           ),
-          h("div",{className:"fg"},
+          !IS_BINTROVE && h("div",{className:"fg"},
             h("label",{className:"fl"},"Exchange Status"),
             h("select",{className:"fs",value:f.mkt,onChange:e=>upd("mkt",e.target.value)},
               MKT.map(m=>h("option",{key:m},m))
@@ -1102,7 +1113,7 @@ function AddSheet({onClose, onAdded, userId, plan}) {
         ),
         h("div",{className:"fg"},
           h("label",{className:"fl"},"Notes"),
-          h("textarea",{className:"ft",value:f.notes,onChange:e=>upd("notes",e.target.value),placeholder:"Care instructions, production history…",rows:2})
+          h("textarea",{className:"ft",value:f.notes,onChange:e=>upd("notes",e.target.value),placeholder:IS_BINTROVE?"Condition, serial number, where you bought it…":"Care instructions, production history…",rows:2})
         ),
         h("button",{className:"btn btn-gold btn-full",onClick:save,disabled:saving||!f.name.trim()},
           saving?"Saving…":h("span",{style:{display:"flex",alignItems:"center",gap:6,justifyContent:"center"}},Ic.check(18)," Add to Inventory")
@@ -1283,7 +1294,7 @@ function HomeTab({items, org, pointBalance=0, onAddItem, onViewItem}) {
     // Header
     h("div",{className:"ph"},
       h("div",{className:"logo"},
-        h("img",{className:"logo-mark",src:"/favicon-theatre4u.svg",alt:"",style:{background:"none",objectFit:"contain"}}),
+        h("img",{className:"logo-mark",src:IS_BINTROVE?"/logo-mark-bintrove.png":"/favicon-theatre4u.svg",alt:"",style:{background:"none",objectFit:"contain"}}),
         h("span",{className:"logo-text"},APP_NAME)
       ),
       h("div",{style:{fontSize:12,color:"var(--muted)",textAlign:"right",lineHeight:1.4}},
@@ -1295,7 +1306,9 @@ function HomeTab({items, org, pointBalance=0, onAddItem, onViewItem}) {
     h("div",{className:"stats-row"},
       h("div",{className:"stat-card"},h("div",{className:"stat-val"},totalQty),h("div",{className:"stat-lbl"},"Total Items")),
       h("div",{className:"stat-card"},h("div",{className:"stat-val"},items.length),h("div",{className:"stat-lbl"},"Entries")),
-      h("div",{className:"stat-card"},h("div",{className:"stat-val"},listed),h("div",{className:"stat-lbl"},"Listed")),
+      IS_BINTROVE
+        ? h("div",{className:"stat-card"},h("div",{className:"stat-val"},"$"+Math.round(items.reduce((s,i)=>s+((parseFloat(i.purchase_cost)||0)*(i.qty||1)),0)).toLocaleString()),h("div",{className:"stat-lbl"},"Value"))
+        : h("div",{className:"stat-card"},h("div",{className:"stat-val"},listed),h("div",{className:"stat-lbl"},"Listed")),
       h("div",{className:"stat-card"},h("div",{className:"stat-val"},items.filter(i=>i.img).length),h("div",{className:"stat-lbl"},"With Photos"))
     ),
     // Stage Points card (Pro/District only)
@@ -1695,14 +1708,14 @@ function InventoryTab({items, onViewItem, onAddItem, userId, org, flash, onItemS
     return f;
   },[items,search,catF]);
 
-  const SubBar = ()=>h("div",{style:{display:"flex",gap:6,margin:"0 0 10px"}},
+  const SubBar = ()=> IS_BINTROVE ? null : h("div",{style:{display:"flex",gap:6,margin:"0 0 10px"}},
     [["items","Items"],["rentals","Rentals"],["loans","Borrowed & Lent"]].map(([k,l])=>h("button",{key:k,onClick:()=>setSub(k),
       style:{flex:1,padding:"7px 6px",borderRadius:9,border:"1.5px solid",fontFamily:"'DM Sans',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",
         background:sub===k?"var(--gold)":"var(--card)",color:sub===k?"#1a1000":"var(--muted)",borderColor:sub===k?"var(--gold)":"var(--border)"}},l))
   );
   if(sub!=="items") return h("div",{style:{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}},
     h("div",{style:{padding:"calc(var(--safe-top) + 12px) 16px 0",flexShrink:0}},
-      h("h1",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:700,marginBottom:12}},"Inventory"),
+      h("h1",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:700,marginBottom:12}},IS_BINTROVE?"My Bins":"Inventory"),
       h(SubBar,null)
     ),
     h("div",{style:{flex:1,overflow:"hidden",padding:"0 16px"}},
@@ -1712,7 +1725,7 @@ function InventoryTab({items, onViewItem, onAddItem, userId, org, flash, onItemS
 
   return h("div",{style:{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}},
     h("div",{style:{padding:"calc(var(--safe-top) + 12px) 16px 4px",flexShrink:0}},
-      h("h1",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:700,marginBottom:12}},"Inventory"),
+      h("h1",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:700,marginBottom:12}},IS_BINTROVE?"My Bins":"Inventory"),
       h(SubBar,null),
       h("div",{className:"search-wrap",style:{padding:0,marginBottom:10}},
         h("div",{className:"si"},
@@ -1850,7 +1863,7 @@ function StorageLocationsManager({userId}) {
         "New Storage Location"
       ),
       h("input",{
-        className:"fi", placeholder:"Name — e.g. Costume Closet B",
+        className:"fi", placeholder:IS_BINTROVE?"Name — e.g. Garage Shelf B":"Name — e.g. Costume Closet B",
         value:newName, autoFocus:true,
         onChange:e=>setNewName(e.target.value),
         onKeyDown:e=>{ if(e.key==="Enter"){e.preventDefault();saveNew();} },
@@ -1969,7 +1982,7 @@ function ProfileTab({user, org, onSignOut}) {
     h("div",{style:{padding:"0 16px"}},
       h("div",{style:{textAlign:"center",padding:"20px 0 24px"}},
         h("div",{style:{width:72,height:72,background:"linear-gradient(135deg,var(--gold),var(--goldd))",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,margin:"0 auto 12px"}},"🎭"),
-        h("div",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:700}},org?.name||"Your Program"),
+        h("div",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:700}},org?.name||(IS_BINTROVE?"My Home":"Your Program")),
         h("div",{style:{fontSize:13,color:"var(--muted)",marginTop:3}},user?.email),
         org?.plan&&h("div",{style:{display:"inline-block",marginTop:8,padding:"3px 12px",background:"rgba(212,168,67,.15)",color:"var(--gold)",borderRadius:12,fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:.5}},org.plan," plan")
       ),
@@ -2290,13 +2303,13 @@ function App() {
   if(!user) return h(AuthScreen,{onAuth:setUser});
 
   if(loading) return h("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",gap:16}},
-    h("div",{style:{fontSize:52}},"🎭"),
-    h("div",{className:"loading"},h("div",{className:"spin"}),h("span",{style:{color:"var(--muted)",fontSize:14}},"Loading inventory…"))
+    h("div",{style:{fontSize:52}},APP_ICON),
+    h("div",{className:"loading"},h("div",{className:"spin"}),h("span",{style:{color:"var(--muted)",fontSize:14}},IS_BINTROVE?"Loading your bins…":"Loading inventory…"))
   );
 
-  // Plan gate — free users see upgrade screen
+  // Plan gate — free SCHOOL users see upgrade screen. BinTrove (home) users always get the app.
   const isPro = org?.plan === "pro" || org?.plan === "district" || org?.temp_pro === true || org?.email === "theatre4u1@gmail.com";
-  if(!isPro) return h("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",padding:32,textAlign:"center",gap:20}},
+  if(!isPro && !IS_BINTROVE) return h("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",padding:32,textAlign:"center",gap:20}},
     h("div",{style:{fontSize:64}},"📱"),
     h("div",{style:{fontFamily:"'Cormorant Garamond',serif",fontSize:32,fontWeight:700,color:"#d4a843"}},"Pro Feature"),
     h("p",{style:{fontSize:15,color:"var(--muted)",lineHeight:1.7,maxWidth:320}},
@@ -2308,11 +2321,12 @@ function App() {
 
   const navItems = [
     {id:"home",    label:"Home",       icon:Ic.home},
-    {id:"inventory",label:"Items",     icon:Ic.box},
-    ...(isPro ? [{id:"funding", label:"Funding", icon:(s=24)=>h("span",{style:{fontSize:s*0.92,lineHeight:1}},"💰")}] : []),
-    ...(isPro ? [{id:"points",  label:pointBalance>0?pointBalance+"pts":"Points",
+    {id:"inventory",label:IS_BINTROVE?"My Bins":"Items", icon:Ic.box},
+    // Funding + Points are school/arts features — never on BinTrove (home).
+    ...((isPro && !IS_BINTROVE) ? [{id:"funding", label:"Funding", icon:(s=24)=>h("span",{style:{fontSize:s*0.92,lineHeight:1}},"💰")}] : []),
+    ...((isPro && !IS_BINTROVE) ? [{id:"points",  label:pointBalance>0?pointBalance+"pts":"Points",
                   icon:(s=24)=>h("span",{style:{fontSize:s*0.92,lineHeight:1}},"🪙")}] : []),
-    {id:"profile", label:"Profile",    icon:Ic.user},
+    {id:"profile", label:IS_BINTROVE?"Account":"Profile", icon:Ic.user},
   ];
 
   return h("div",{id:"app",style:{display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
