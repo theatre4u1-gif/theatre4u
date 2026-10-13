@@ -30,6 +30,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo, nativeMode=false
   const[vertical,setVertical]=useState("theatre");
   const[zipcode,setZipcode]=useState("");
   const[stateCode,setStateCode]=useState("");
+  const[orgType,setOrgType]=useState(""); // school | college | community | other — audience for messaging
 
   useEffect(()=>{
     window.__t4u_show_auth=(m)=>{setMode(m||"login");setErr("");setVisible(true);};
@@ -133,6 +134,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo, nativeMode=false
             type:"", phone:"", location:"", bio:"",
             state: stateCode, zipcode: zipcode,
             vertical: vertical, verticals_enabled: [vertical],
+            org_type: orgType || null, // audience for email/messaging branching (school/college/community/other)
             signup_domain: (typeof window!=="undefined" && window.location && window.location.hostname.includes("artstracker")) ? "artstracker.org" : "theatre4u.org",
             // All beta signups get temp_pro — full Pro access during beta period
             temp_pro: true,
@@ -326,6 +328,15 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo, nativeMode=false
             <div><label style={labelStyle}>Program / Organization Name *</label>
               <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="William Shakespeare High School Drama" style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}/>
             </div>
+            <div><label style={labelStyle}>What kind of organization are you?</label>
+              <select value={orgType} onChange={e=>setOrgType(e.target.value)} style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}>
+                <option value="">Select…</option>
+                <option value="school">School (K–12)</option>
+                <option value="college">College / University</option>
+                <option value="community">Community theatre / company</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
             <div style={{display:"flex",gap:10}}>
               <div style={{flex:1,minWidth:0}}><label style={labelStyle}>State *</label>
                 <select value={stateCode} onChange={e=>setStateCode(e.target.value)} style={inputStyle} onFocus={e=>e.target.style.borderColor="#d4a843"} onBlur={e=>e.target.style.borderColor="#282333"}>
@@ -416,6 +427,7 @@ export function GoogleProfileSetup({user, onDone}){
   const[vertical,setVertical]=useState("theatre");
   const[zipcode,setZipcode]=useState("");
   const[stateCode,setStateCode]=useState("");
+  const[orgType,setOrgType]=useState(""); // school | college | community | other — audience for messaging
   const[ageConfirmed,setAgeConfirmed]=useState(false);
   const[termsAccepted,setTermsAccepted]=useState(false);
   const[err,setErr]=useState("");
@@ -455,6 +467,7 @@ export function GoogleProfileSetup({user, onDone}){
         type:"", phone:"", location:"", bio:"",
         state: stateCode, zipcode: zipcode,
         vertical: vertical, verticals_enabled: [vertical],
+        org_type: orgType || null, // audience for email/messaging branching (school/college/community/other)
         signup_domain: (typeof window!=="undefined" && window.location && window.location.hostname.includes("artstracker")) ? "artstracker.org" : "theatre4u.org",
         temp_pro: true,
         temp_pro_granted_at: new Date().toISOString(),
@@ -534,6 +547,15 @@ export function GoogleProfileSetup({user, onDone}){
           </div>
           <div><label style={labelStyle}>Program / Organization Name *</label>
             <input value={orgName} onChange={e=>setOrgName(e.target.value)} placeholder="Carol Channing High School Drama" style={inputStyle} onKeyDown={e=>e.key==="Enter"&&submit()}/>
+          </div>
+          <div><label style={labelStyle}>What kind of organization are you?</label>
+            <select value={orgType} onChange={e=>setOrgType(e.target.value)} style={inputStyle}>
+              <option value="">Select…</option>
+              <option value="school">School (K–12)</option>
+              <option value="college">College / University</option>
+              <option value="community">Community theatre / company</option>
+              <option value="other">Other</option>
+            </select>
           </div>
           <div style={{display:"flex",gap:10}}>
             <div style={{flex:1,minWidth:0}}><label style={labelStyle}>State *</label>

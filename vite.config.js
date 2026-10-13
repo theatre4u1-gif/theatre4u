@@ -13,6 +13,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'src/index.html'),
         artstracker: resolve(__dirname, 'src/home-artstracker.html'),
+        bintrove: resolve(__dirname, 'src/home-bintrove.html'),
       },
     },
   },

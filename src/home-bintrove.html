@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Password-reset forwarder: route recovery links to the set-password page before the app loads -->
+    <script>
+      (function(){var h=location.hash||"";if(h.indexOf("type=recovery")>-1&&location.pathname.indexOf("reset-password")===-1){location.replace("/reset-password.html"+h);}})();
+    </script>
+
+    <!-- Google Drive photo import helper (defines window.t4uPickFromDrive; SDKs load lazily on first use) -->
+    <script src="/drive-import.js" defer></script>
+
+    <!-- ═══ PRIMARY SEO ═══════════════════════════════════════════════════ -->
+    <title>BinTrove — Home Storage, Organized | Know What's in Every Bin</title>
+    <meta name="description" content="BinTrove helps you catalog everything you own — holiday decorations, garage, keepsakes, and whole-home contents. Snap a photo, print a QR label, and find anything in seconds. Perfect for moving, too. Free to start."/>
+    <meta name="keywords" content="home inventory app, home storage organizer, what's in every bin, moving inventory app, moving box labels, packing checklist, holiday decoration storage, garage organization, QR labels for storage bins, home organization app, storage bin labels, declutter, downsizing inventory, home contents inventory, home inventory for insurance"/>
+    <meta name="author" content="BinTrove"/>
+    <meta name="robots" content="index, follow"/>
+    <link rel="canonical" href="https://bintrove.com/"/>
+
+    <!-- ═══ OPEN GRAPH ════════════════════════════════════════════════════ -->
+    <meta property="og:type" content="website"/>
+    <meta property="og:url" content="https://bintrove.com/"/>
+    <meta property="og:title" content="BinTrove — Home Storage, Organized"/>
+    <meta property="og:description" content="Snap a photo, stick on a QR label, and find anything in every bin in seconds. Catalog holiday decorations, the garage, keepsakes, and your whole home — and label every box when you move."/>
+    <meta property="og:image" content="https://bintrove.com/og-bintrove.png"/>
+    <meta property="og:image:width" content="1200"/>
+    <meta property="og:image:height" content="630"/>
+    <meta property="og:image:alt" content="BinTrove — catalog every bin and box, and find anything in your home in seconds"/>
+    <meta property="og:site_name" content="BinTrove"/>
+    <meta property="og:locale" content="en_US"/>
+
+    <!-- ═══ TWITTER / X CARD ══════════════════════════════════════════════ -->
+    <meta name="twitter:card" content="summary_large_image"/>
+    <meta name="twitter:title" content="BinTrove — Home Storage, Organized"/>
+    <meta name="twitter:description" content="Snap a photo, print a QR label, find anything in every bin in seconds. Great for holidays, the garage, keepsakes — and moving. Free to start."/>
+    <meta name="twitter:image" content="https://bintrove.com/og-bintrove.png"/>
+
+    <!-- ═══ STRUCTURED DATA — SoftwareApplication ════════════════════════ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "BinTrove",
+      "url": "https://bintrove.com",
+      "description": "Home inventory and storage-organization app. Catalog your bins and boxes, print QR labels, and find anything in your home in seconds — including when you move.",
+      "applicationCategory": "LifestyleApplication",
+      "operatingSystem": "Web, iOS, Android",
+      "offers": {
+        "@type": "AggregateOffer",
+        "lowPrice": "0",
+        "highPrice": "89",
+        "priceCurrency": "USD",
+        "offerCount": "4"
+      },
+      "creator": {
+        "@type": "Organization",
+        "name": "Artstracker LLC"
+      },
+      "featureList": [
+        "Catalog every bin, box, and item in your home",
+        "Snap a photo and it becomes an inventory item",
+        "QR code labels for bins and boxes — scan to see what's inside",
+        "Organize by location (closet, garage, attic, storage unit)",
+        "Moving made easy — label boxes and set a destination room",
+        "Search everything you own in seconds",
+        "CSV export of your full home inventory"
+      ],
+      "screenshot": "https://bintrove.com/og-bintrove.png"
+    }
+    </script>
+
+    <!-- ═══ STRUCTURED DATA — FAQ ══════════════════════════════════════════ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is BinTrove free?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. BinTrove is free to start with up to 30 items and 3 bins. Paid plans run $24 to $89 per year for more bins and items, plus reports and CSV export."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What can I use BinTrove for?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Anything you store at home — holiday decorations, the garage, tools, kitchen overflow, keepsakes, kids' things, and seasonal clothing. Snap a photo, print a QR label for the bin, and find what's inside without opening every box."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does BinTrove help when I move?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Photograph and label each box as you pack, set its destination room, and you have a searchable manifest of the whole move. Scan a box to see what's inside before you cut the tape, and unpack by priority instead of guessing."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need to download an app?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. BinTrove works in any web browser. On your phone you can install it to your home screen with Add to Home Screen for one-tap access and your camera — no App Store download required."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <!-- ═══ PWA & MOBILE ═══════════════════════════════════════════════════ -->
+    <meta name="theme-color" content="#0F6E6B"/>
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+    <meta name="apple-mobile-web-app-title" content="BinTrove"/>
+    <link rel="apple-touch-icon" href="/apple-touch-icon-bintrove.png"/>
+    <link rel="icon" type="image/png" href="/favicon-bintrove.png"/>
+    <link rel="manifest" href="/manifest-bintrove.json"/>
+    <!-- Register service worker so the app is installable on Android (iOS installs via Add to Home Screen). Network-first = always current. -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function(){ navigator.serviceWorker.register('/sw.js').catch(function(){}); });
+      }
+    </script>
+
+    <!-- ═══ PERFORMANCE ════════════════════════════════════════════════════ -->
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://ldmmphwivnnboyhlxipl.supabase.co"/>
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com"/>
+
+    <!-- ═══ ANALYTICS — Lightweight visit tracker (shared site_visits table; brand-agnostic) ══ -->
+    <script>
+    (function(){
+      var sid = sessionStorage.getItem('t4u_sid');
+      if(!sid){ sid = Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('t4u_sid',sid); }
+      var p = new URLSearchParams(location.search);
+      var utm = { source: p.get('utm_source'), medium: p.get('utm_medium'), campaign: p.get('utm_campaign') };
+      if(utm.source) sessionStorage.setItem('t4u_utm', JSON.stringify(utm));
+      var savedUtm = JSON.parse(sessionStorage.getItem('t4u_utm')||'{}');
+      fetch('https://ldmmphwivnnboyhlxipl.supabase.co/rest/v1/site_visits', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          session_id: sid,
+          page: location.pathname || '/',
+          referrer: document.referrer || null,
+          utm_source: savedUtm.source || null,
+          utm_medium: savedUtm.medium || null,
+          utm_campaign: savedUtm.campaign || null,
+          user_agent: navigator.userAgent
+        })
+      }).catch(function(){});
+      window.__t4u_sid = sid;
+      window.__t4u_utm = savedUtm;
+    })();
+    </script>
+
+    <!-- ═══ TODO (BinTrove-specific marketing tags) ════════════════════════
+         Add a SEPARATE BinTrove GA4 property + (optional) Meta Pixel here so
+         home/consumer traffic does NOT mix into the Theatre4u/ArtsTracker
+         analytics or ad audiences. Intentionally omitted until those IDs exist. -->
+
+    <script type="module" src="/main.jsx"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      <div style="font-family:sans-serif;max-width:700px;margin:60px auto;padding:0 24px;color:#1a1008">
+        <h1>BinTrove — Home Storage, Organized</h1>
+        <p>BinTrove helps you catalog everything you own — holiday decorations, the garage, tools, keepsakes, seasonal clothing, and whole-home contents. Snap a photo, print a QR label for every bin, and find anything in seconds. It's just as handy when you move: label every box and know exactly what's inside and where it goes.</p>
+        <h2>What you can do</h2>
+        <ul>
+          <li>Catalog every bin, box, and item in your home</li>
+          <li>Snap a photo and it becomes an inventory item</li>
+          <li>Print QR code labels — scan any bin to see what's inside</li>
+          <li>Organize by location: closet, garage, attic, storage unit</li>
+          <li>Moving made easy — label boxes and set a destination room</li>
+          <li>Search everything you own in seconds</li>
+          <li>Free to start — no credit card required</li>
+        </ul>
+        <p>Visit <a href="https://bintrove.com">bintrove.com</a> to create your free account.</p>
+        <p style="margin-top:16px;font-size:12px;color:#888">© 2026 Artstracker LLC · BinTrove is operated by Artstracker LLC, a California limited liability company.</p>
+      </div>
+    </noscript>
+  </body>
+</html>

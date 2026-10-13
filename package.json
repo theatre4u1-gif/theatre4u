@@ -12,7 +12,11 @@
     "app:sync": "npm run build && node mobile/fix-index.mjs && npx cap sync",
     "app:ios": "npm run app:sync && npx cap open ios",
     "app:android": "npm run app:sync && npx cap open android",
-    "app:assets": "npx @capacitor/assets generate --assetPath mobile/assets"
+    "app:assets": "npx @capacitor/assets generate --assetPath mobile/assets",
+    "app:bintrove:sync": "npm run build && node mobile/fix-index.mjs && BRAND=bintrove npx cap sync",
+    "app:bintrove:ios": "npm run app:bintrove:sync && BRAND=bintrove npx cap open ios",
+    "app:bintrove:android": "npm run app:bintrove:sync && BRAND=bintrove npx cap open android",
+    "app:bintrove:assets": "BRAND=bintrove npx @capacitor/assets generate --assetPath mobile/assets-bintrove"
   },
   "dependencies": {
     "react": "^18.2.0",

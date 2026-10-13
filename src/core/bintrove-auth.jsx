@@ -68,11 +68,21 @@ export function BinTroveAuthScreen({ onAuth }) {
             type: "", phone: "", location: "", bio: "",
             kind: "home", home_plan: "free",
             vertical: "home", verticals_enabled: ["home"],
+            org_type: "home", // audience for email/messaging branching — home accounts
             terms_accepted_at: new Date().toISOString(),
             terms_version: "2026-08",
           }, { onConflict: "id", ignoreDuplicates: false });
           // Funnel tracking (fire-and-forget).
           try { await SB.from("signup_events").insert({ org_id: data.user.id, referrer: (typeof document !== "undefined" ? document.referrer : null) || null }); } catch (e) {}
+          // Fire the welcome email + admin notice (same path as the school signup).
+          // send-sequence-email resolves the BinTrove brand + home series from the org (org_type=home).
+          try {
+            fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/signup-notify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ org_id: data.user.id, org_email: em, is_team_member: false }),
+            }).catch(() => {}); // fire and forget — never block signup
+          } catch (e) {}
           if (data.session) { if (typeof onAuth === "function") onAuth(data.user); }
           else { setDone(true); }
         }

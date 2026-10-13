@@ -1,0 +1,41 @@
+{
+  "name": "BinTrove — Home Storage, Organized",
+  "short_name": "BinTrove",
+  "description": "Catalog your bins and boxes, print QR labels, and find anything in your home in seconds.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FBF7F0",
+  "theme_color": "#0F6E6B",
+  "orientation": "portrait-primary",
+  "categories": ["lifestyle", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icon-192-bintrove.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512-bintrove.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add Item",
+      "short_name": "Add",
+      "description": "Add a new item to your home inventory",
+      "url": "/?action=add",
+      "icons": [{ "src": "/icon-192-bintrove.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My Bins",
+      "short_name": "Bins",
+      "description": "Browse everything in your bins",
+      "url": "/?page=inventory",
+      "icons": [{ "src": "/icon-192-bintrove.png", "sizes": "192x192" }]
+    }
+  ]
+}

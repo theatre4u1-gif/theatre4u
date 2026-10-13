@@ -13,21 +13,28 @@ import{createClient}from'https://esm.sh/@supabase/supabase-js@2';
 
 const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type'};
 
-type Brand={name:string;plain:string;site:string;host:string;from:string;reply:string;emoji:string;pro:string;mark:string;mw:number;mh:number;tag:string};
+type Brand={name:string;plain:string;site:string;host:string;from:string;reply:string;emoji:string;pro:string;mark:string;mw:number;mh:number;tag:string;ink:string};
 const BRANDS:Record<string,Brand>={
   theatre4u:{name:'Theatre4u&#x2122;',plain:'Theatre4u',site:'https://theatre4u.org',host:'theatre4u.org',
     from:'Bob Zick at Theatre4u <hello@theatre4u.org>',reply:'hello@theatre4u.org',emoji:'&#x1F3AD;',pro:'$15',
-    mark:'https://theatre4u.org/logo-mark-theatre4u.png',mw:57,mh:44,tag:'Built for the people who make theatre happen.'},
+    mark:'https://theatre4u.org/logo-mark-theatre4u.png',mw:57,mh:44,tag:'Built for the people who make theatre happen.',ink:'#4C1035'},
   artstracker:{name:'ArtsTracker',plain:'ArtsTracker',site:'https://artstracker.org',host:'artstracker.org',
     from:'Bob Zick at ArtsTracker <hello@theatre4u.org>',reply:'hello@artstracker.org',emoji:'&#x1F3A8;',pro:'$59',
-    mark:'https://theatre4u.org/logo-mark-artstracker.png',mw:62,mh:44,tag:'Arts programs, organized.'},
+    mark:'https://theatre4u.org/logo-mark-artstracker.png',mw:62,mh:44,tag:'Arts programs, organized.',ink:'#4C1035'},
+  // BinTrove (home). FROM stays the Resend-verified theatre4u.org domain with BinTrove reply-to
+  // until bintrove.com is verified in Resend; then switch from to hello@bintrove.com.
+  bintrove:{name:'BinTrove',plain:'BinTrove',site:'https://bintrove.com',host:'bintrove.com',
+    from:'Bob Zick at BinTrove <hello@theatre4u.org>',reply:'hello@bintrove.com',emoji:'&#x1F4E6;',pro:'$24',
+    mark:'https://bintrove.com/logo-mark-bintrove.png',mw:44,mh:44,tag:'Home storage, organized.',ink:'#0A5450'},
 };
-// Non-theatre verticals are ArtsTracker-only; theatre programs follow the domain they signed up on.
-const brandFor=(signup_domain?:string,vertical?:string):Brand=>
-  ((vertical||'theatre')!=='theatre')?BRANDS.artstracker
+// Home orgs → BinTrove. Non-theatre arts verticals → ArtsTracker. Theatre follows signup domain.
+const brandFor=(signup_domain?:string,vertical?:string,org_type?:string):Brand=>
+  ((vertical||'theatre')==='home'||org_type==='home')?BRANDS.bintrove
+  :((vertical||'theatre')!=='theatre')?BRANDS.artstracker
   :((signup_domain||'').includes('artstracker')?BRANDS.artstracker:BRANDS.theatre4u);
 
-type Vert={items:string;itemsShort:string;one:string;exchange:string;event:string;space:string;team:string;deep:string};
+type Vert={items:string;itemsShort:string;one:string;exchange:string;event:string;space:string;team:string;deep:string;
+  org?:string;oversight?:string;money?:string;budgetWord?:string;prop28?:string;risk?:string;community?:string};
 const VERTS:Record<string,Vert>={
   theatre:{items:'costumes, props, lighting, and sets',itemsShort:'costumes, props, lighting, sets, and storage bins',
     one:'a costume, a prop, a lighting fixture',exchange:'Backstage Exchange',event:'show',space:'scene shop',
@@ -45,9 +52,42 @@ const VERTS:Record<string,Vert>={
     one:'a folding table, a canopy, a cash box',exchange:'The Exchange',event:'event',space:'storage room',
     team:'volunteers',deep:'the canopy that went home with a volunteer last fall'},
 };
-const vertFor=(v?:string):Vert=>VERTS[v||'theatre']||VERTS.theatre;
+// Audience overrides by org_type (school | college | community | other). Only the lines that
+// assume "school" get branched; everything else stays shared. Default (unknown) = neutral.
+type Aud={org:string;oversight:string;money:string;budgetWord:string;prop28:string;risk:string;teamTheatre:string;spaceTheatre:string};
+const AUDS:Record<string,Aud>={
+  school:{org:'your program',oversight:'your administration',
+    money:'grants, donations, district funding, and booster funds',budgetWord:'budget conversations',
+    prop28:'California programs: the Funding Tracker works great for Prop 28 compliance documentation specifically. Other states: it works just as well for any grant or funding program your district uses.',
+    risk:'what district risk management wants to see',teamTheatre:'stage manager, crew, and house volunteers',spaceTheatre:'scene shop'},
+  college:{org:'your department',oversight:'your department chair',
+    money:'department budget, grants, and donations',budgetWord:'budget conversations',
+    prop28:'Grants and department funding: the Funding Tracker keeps your documentation ready for whatever your institution requires.',
+    risk:'what your institution and risk management want to see',teamTheatre:'crew, assistants, and student workers',spaceTheatre:'shop'},
+  community:{org:'your company',oversight:'your board',
+    money:'grants, donations, ticket revenue, and membership dues',budgetWord:'board reports',
+    prop28:'Community theatres: the Funding Tracker is just as useful for grant reporting and your annual board report.',
+    risk:'what your insurer and board want to see',teamTheatre:'cast, crew, and volunteers',spaceTheatre:'storage, green room, or set shop'},
+  other:{org:'your program',oversight:'your leadership',
+    money:'grants and donations',budgetWord:'budget conversations',
+    prop28:'The Funding Tracker keeps your grant and donation documentation ready whenever you need it.',
+    risk:'what your insurer and leadership want to see',teamTheatre:'your team and volunteers',spaceTheatre:'storage space'},
+};
+const audFor=(t?:string):Aud=>AUDS[t||'other']||AUDS.other;
+// Merge the vertical's base vocabulary with audience-aware fields. For theatre, team + space also
+// shift by audience (school vs community); other verticals keep their base team/space.
+const vertFor=(v?:string,org_type?:string):Vert=>{
+  const base=VERTS[v||'theatre']||VERTS.theatre;
+  const A=audFor(org_type);
+  const isTheatre=(v||'theatre')==='theatre';
+  return {...base,
+    org:A.org,oversight:A.oversight,money:A.money,budgetWord:A.budgetWord,prop28:A.prop28,risk:A.risk,
+    team:isTheatre?A.teamTheatre:base.team,
+    space:isTheatre?A.spaceTheatre:base.space,
+  };
+};
 
-const hdr=(B:Brand)=>`<div style="background:#FBF7F0;padding:20px 24px 16px;text-align:center;border-bottom:3px solid #d4a843"><img src="${B.mark}" alt="" width="${B.mw}" height="${B.mh}" style="border:0;vertical-align:middle"/><span style="font-family:Georgia,serif;font-size:25px;font-weight:700;color:#4C1035;vertical-align:middle;margin-left:10px">${B.name}</span><div style="font-size:11px;color:#6D625E;margin-top:6px;letter-spacing:.02em">${B.tag}</div></div>`;
+const hdr=(B:Brand)=>`<div style="background:#FBF7F0;padding:20px 24px 16px;text-align:center;border-bottom:3px solid #d4a843"><img src="${B.mark}" alt="" width="${B.mw}" height="${B.mh}" style="border:0;vertical-align:middle"/><span style="font-family:Georgia,serif;font-size:25px;font-weight:700;color:${B.ink};vertical-align:middle;margin-left:10px">${B.name}</span><div style="font-size:11px;color:#6D625E;margin-top:6px;letter-spacing:.02em">${B.tag}</div></div>`;
 const ftr=(B:Brand)=>`<div style="padding:12px 28px;border-top:1px solid #e8e0d0;text-align:center;font-size:11px;color:#aaa">${B.name} &mdash; Artstracker LLC &middot; <a href="${B.site}" style="color:#aaa">${B.host}</a></div>`;
 // Full CAN-SPAM footer (postal address + unsubscribe). Injected at send time in place of ftr(B).
 const ADDR='Artstracker LLC &middot; 10441 Stanford Ave., #1155, Garden Grove, CA 92842';
@@ -92,7 +132,7 @@ const EMAILS:Record<number,EmailDef>={
 1:{subject:(B)=>`Welcome to ${B.plain} — you're in!`,
   html:(B,V,name,org)=>wrap(B,`
     ${p(`Hi ${name},`)}
-    ${p(`You just created your ${B.plain} account, and I'm really glad you're here. ${org} is joining a growing community of programs across the country who are building something genuinely useful together.`)}
+    ${p(`You just created your ${B.plain} account, and I'm really glad you're here. ${org} is joining a growing community of programs and theatre companies across the country who are building something genuinely useful together.`)}
     ${p("You're on the free plan — your first <strong>25 items are free forever</strong>, no credit card. Here's what's waiting for you:")}
     ${gold([
       `&#x1F4E6; Inventory — add ${V.itemsShort}. Every item gets a QR code.`,
@@ -122,7 +162,7 @@ const EMAILS:Record<number,EmailDef>={
     ])}
     ${p(`Start with whatever has been hardest to keep track of — ${V.deep}.`,'font-size:14px;color:#555;')}
   `)},
-3:{subject:(B)=>`Here's everything ${B.plain} can do for your program`,
+3:{subject:(B,V)=>`Here's everything ${B.plain} can do for ${V.org}`,
   html:(B,V,name,org)=>wrap(B,`
     ${p(`Hi ${name},`)}
     ${p(`You've had a few days to explore — here's a full picture of what ${B.plain} can do for ${org}, including some things you might not have found yet.`)}
@@ -130,8 +170,8 @@ const EMAILS:Record<number,EmailDef>={
     ${stripe('&#x1F465; Your Team',`Invite your ${V.team}. Each role has the right level of access. New members can join instantly with a QR code.`)}
     ${stripe('&#x1F3AD; Events',`Track your ${V.event}s by season. Associate items with each one and build a historical record of what you used.`)}
     ${stripe(`&#x1F504; ${V.exchange}`,'Browse what other programs across the country are renting, lending, or selling — and list your own. Programs in CA, OH, MO, NC, NH, NY, VA, GA, and PA are already active.')}
-    ${stripe('&#x1F4CA; Reports','Generate inventory reports by category, condition, location, or value. Export to CSV. Useful for grants, audits, and budget conversations.')}
-    ${stripe('&#x1F4B0; Funding Tracker','Track grants, donations, and district funding. Log expenditures as you go and see your balance at any time — the documentation builds itself.')}
+    ${stripe('&#x1F4CA; Reports',`Generate inventory reports by category, condition, location, or value. Export to CSV. Useful for grants, audits, and ${V.budgetWord}.`)}
+    ${stripe('&#x1F4B0; Funding Tracker',`Track ${V.money}. Log expenditures as you go and see your balance at any time — the documentation builds itself.`)}
     ${PRICING(B,V)}
   `)},
 4:{subject:(B,V)=>`Your ${V.space} has neighbors — meet ${V.exchange}`,
@@ -152,29 +192,29 @@ const EMAILS:Record<number,EmailDef>={
 5:{subject:()=>'The funding tracker that does your paperwork for you',
   html:(B,V,name,org)=>wrap(B,`
     ${p(`Hi ${name},`)}
-    ${p(`One of the most practical things ${B.plain} can do for ${org} is track your funding — grants, donations, district allocations, booster funds — and build the documentation your administration needs, automatically.`)}
+    ${p(`One of the most practical things ${B.plain} can do for ${org} is track your funding — ${V.money} — and build the documentation ${V.oversight} needs, automatically.`)}
     ${ul([
       'Create a funding source for each grant or allocation by name and amount',
       'Log expenditures as you spend — the running balance updates automatically',
       'Pull a full report by source and date range at any time',
       'Hand your administration exactly what they need at year-end, already organized',
     ])}
-    ${p('California programs: the Funding Tracker works great for Prop 28 compliance documentation specifically. Other states: it works just as well for any grant or funding program your district uses.','font-size:13px;color:#888;line-height:1.6;')}
+    ${p(V.prop28,'font-size:13px;color:#888;line-height:1.6;')}
     ${parchment(`<strong style="color:#1a0f00;font-size:14px">To get started:</strong>${ol([
       `Sign in at <a href="${B.site}" style="color:#8b6914;font-weight:700">${B.host}</a>`,
       'Click <strong>Funding Tracker</strong> in the left sidebar',
       'Click <strong>+ Add Funding Source</strong> and enter the name and amount received',
       'Log expenditures as you spend — the balance stays current automatically',
     ])}`)}
-    ${sm("Have a specific reporting format your district or grant requires? Reply and describe it — I'll see if we can add it.")}
+    ${sm(`Have a specific reporting format ${V.oversight} or a grant requires? Reply and describe it — I'll see if we can add it.`)}
   `)},
 6:{subject:()=>'A report that might change your next budget conversation',
   html:(B,V,name,org)=>wrap(B,`
     ${p(`Hi ${name},`)}
-    ${p(`Once ${org} has items in inventory, ${B.plain} can turn that data into reports that are genuinely useful — not just for you, but for the conversations you need to have with your administration.`)}
+    ${p(`Once ${org} has items in inventory, ${B.plain} can turn that data into reports that are genuinely useful — not just for you, but for the conversations you need to have with ${V.oversight}.`)}
     ${stripe('For budget conversations','Generate a report showing your total inventory value. Walking into a meeting with a document that shows your program manages $40,000+ in physical assets changes how that conversation goes.')}
     ${stripe('For grant applications','Many grants ask you to document existing resources. Export your inventory as a CSV and attach it — clean, organized, done in about 30 seconds.')}
-    ${stripe('For insurance and audits','Every item, its condition, location, and estimated value, all in one place with a full history. Exactly what district risk management wants to see.')}
+    ${stripe('For insurance and audits',`Every item, its condition, location, and estimated value, all in one place with a full history. Exactly ${V.risk}.`)}
     ${stripe('For end-of-year reviews',`Show what you acquired, what you used, and what's ready for next season. Filter by ${V.event}, category, or condition.`)}
     ${parchment(`<strong style="color:#1a0f00;font-size:14px">How to run a report:</strong>${ol([
       `Sign in at <a href="${B.site}" style="color:#8b6914;font-weight:700">${B.host}</a>`,
@@ -186,8 +226,105 @@ const EMAILS:Record<number,EmailDef>={
   `)},
 };
 
+// ── BinTrove (home) welcome series — home-aimed copy; no Exchange/Funding/team/arts language.
+// Free = first 30 items and 3 bins; paid plans from $24/year.
+const HOME_PRICING=()=>gold([
+  '&#x2713; Free to start &mdash; your first <strong>30 items and 3 bins are free</strong>, no credit card',
+  '&#x2713; When you outgrow it, plans start at <strong>$24/year</strong> for more bins and items',
+  '&#x2713; Everything you add stays yours &mdash; nothing is lost',
+]);
+const HOME_EMAILS:Record<number,EmailDef>={
+0:{subject:()=>`BinTrove is live — know what's in every bin`,
+  html:(B,_V,name)=>wrap(B,`
+    ${p(`Hi ${name},`)}
+    ${p(`Thanks for checking out BinTrove. The idea is simple: every bin, box, and tote in your home gets a photo and a QR label, so you can find anything in seconds instead of digging through the garage.`)}
+    ${gold([
+      '&#x1F4E6; <strong>Catalog</strong> every bin and item in one searchable place &mdash; each with its own QR code',
+      '&#x1F3F7;&#xFE0F; <strong>QR labels</strong> &mdash; stick one on a bin, scan it with your phone, see what&#39;s inside without opening it',
+      '&#x1F4CD; <strong>Locations</strong> &mdash; know which closet, shelf, or storage unit everything lives in',
+      '&#x1F50E; <strong>Search</strong> &mdash; &ldquo;where are the Christmas lights?&rdquo; &rarr; found',
+    ])}
+    ${p('Start free — your first <strong>30 items and 3 bins are free</strong>, no credit card.','font-size:14px;color:#555;')}
+    ${signinBox(B)}
+    ${sm("Questions before you start? Just reply — I'm here.")}
+  `)},
+1:{subject:()=>`Welcome to BinTrove — you're in!`,
+  html:(B,_V,name)=>wrap(B,`
+    ${p(`Hi ${name},`)}
+    ${p(`You just created your BinTrove account — glad you're here. Whether it's the garage, the holiday closet, a storage unit, or a whole move, BinTrove's job is to make sure you always know what you have and where it is.`)}
+    ${p("You're on the free plan — <strong>30 items and 3 bins, free forever</strong>, no card. Here's what's waiting:")}
+    ${gold([
+      '&#x1F4E6; Add items — snap a photo and it becomes an item. Each one gets a QR code.',
+      '&#x1F3F7;&#xFE0F; Print QR labels for your bins — scan to see what&#39;s inside.',
+      '&#x1F4CD; Set up bins and locations so everything has a home.',
+      '&#x1F50E; Search everything you own in seconds.',
+    ])}
+    ${signinBox(B)}
+    ${p("I'll send a few short tips over the next couple weeks — just useful things to try when you're ready.",'font-size:14px;color:#555;')}
+    ${sm('Questions? Just reply — I read every one.')}
+  `)},
+2:{subject:()=>'Your first bin, in about 90 seconds',
+  html:(B,_V,name)=>wrap(B,`
+    ${p(`Hi ${name},`)}
+    ${p(`The fastest way to feel what BinTrove does is to catalog one bin. Pick the one you dig through most — holiday decorations, tools, the kids' outgrown clothes.`)}
+    ${parchment(`<strong style="color:#1a0f00;font-size:14px">Here's how:</strong>${ol([
+      `Sign in at <a href="${B.site}" style="color:#8b6914;font-weight:700">${B.host}</a>`,
+      'Tap <strong>My Bins &rarr; + Add</strong>',
+      'Snap photos of a few things in the bin (each becomes an item) and name the bin&#39;s location',
+      'Print the bin&#39;s <strong>QR label</strong> from the Labels tab and stick it on',
+    ])}`)}
+    ${p('Now scan that label with your phone — there&#39;s everything inside, without lifting the lid.','font-size:14px;color:#555;')}
+    ${sm('Start with whatever has been hardest to find.')}
+  `)},
+3:{subject:()=>'Everything BinTrove can do',
+  html:(B,_V,name)=>wrap(B,`
+    ${p(`Hi ${name},`)}
+    ${p(`A few days in — here's the full picture.`)}
+    ${stripe('&#x1F4E6; Catalog','Every item in one searchable place, each with a QR code. Filter by category, condition, or location.')}
+    ${stripe('&#x1F3F7;&#xFE0F; QR labels','Print from any home printer, or order durable pre-printed labels. Scan any bin to see its contents.')}
+    ${stripe('&#x1F4CD; Bins &amp; locations','Closet, garage, attic, storage unit — know where everything lives.')}
+    ${stripe('&#x1F50E; Search','Find anything you own instantly.')}
+    ${stripe('&#x1F4CA; Reports','A full list of everything you own, with a CSV export — great for insurance or a home inventory.')}
+    ${HOME_PRICING()}
+  `)},
+4:{subject:()=>'Moving? Label every box, unpack by room',
+  html:(B,_V,name)=>wrap(B,`
+    ${p(`Hi ${name},`)}
+    ${p(`If a move is anywhere on your horizon, this is where BinTrove earns its keep.`)}
+    ${ul([
+      '<strong>Packing:</strong> snap each box, give it a QR label — an instant manifest, no Sharpie scrawl.',
+      '<strong>The move:</strong> set each box&#39;s location to its destination room (&ldquo;Kitchen,&rdquo; &ldquo;Primary bed&rdquo;).',
+      '<strong>Unpacking:</strong> scan a box to see what&#39;s inside before you cut the tape; unpack by priority.',
+    ])}
+    ${cta(B,'Start your move list →')}
+    ${sm('Even a few labeled boxes will save you a frustrating afternoon on the other end.')}
+  `)},
+5:{subject:()=>'Never buy a second box of ornaments again',
+  html:(B,_V,name)=>wrap(B,`
+    ${p(`Hi ${name},`)}
+    ${p(`The stuff that comes out once a year is exactly the stuff we forget we own. A few labeled holiday bins means:`)}
+    ${ul([
+      'You find the lights, the ornaments, and the wrap in minutes, not an afternoon.',
+      'You stop re-buying things you already have in a bin somewhere.',
+      "When the season's over, everything goes back labeled.",
+    ])}
+    ${parchment('<strong style="color:#1a0f00;font-size:14px">Tip:</strong> make a bin location called &ldquo;Holiday — Garage Shelf A,&rdquo; tag each bin, done.')}
+    ${cta(B,'Set up your holiday bins →')}
+  `)},
+6:{subject:()=>"A home inventory you'll be glad you have",
+  html:(B,_V,name,org)=>wrap(B,`
+    ${p(`Hi ${name},`)}
+    ${p(`Once your bins are in BinTrove, you've quietly built something valuable: a complete, photographed record of what you own.`)}
+    ${stripe('For insurance','If anything is ever lost, stolen, or damaged, you have photos, locations, and a list — exportable to CSV in seconds.')}
+    ${stripe('For peace of mind',"No more &ldquo;do we already have one of these?&rdquo;")}
+    ${stripe('For downsizing or an estate','Everything documented in one place.')}
+    ${HOME_PRICING()}
+    ${p('Thanks for giving BinTrove a try — reply anytime.','font-size:14px;color:#555;')}
+  `)},
+};
+
 async function sendEmail(to:string,num:number,name:string,org:string,key:string,B:Brand,V:Vert,unsubUrl=''):Promise<string|null>{
-  const e=EMAILS[num];
+  const e=(B.plain==='BinTrove'?HOME_EMAILS:EMAILS)[num];
   if(!e)return null;
   const first=name?.split(' ')[0]||'there';
   const html=e.html(B,V,first,org).replace(ftr(B),ftrFull(B,unsubUrl));
@@ -221,10 +358,10 @@ Deno.serve(async(req:Request)=>{
     if(!org_id||!email_num)return new Response(JSON.stringify({error:'org_id and email_num required'}),{status:400,headers:{...CORS,'Content-Type':'application/json'}});
     const{data:ex}=await SB.from('email_sequence').select('id').eq('org_id',org_id).eq('email_num',email_num).maybeSingle();
     if(ex)return new Response(JSON.stringify({ok:true,skipped:'already sent'}),{headers:{...CORS,'Content-Type':'application/json'}});
-    const{data:org}=await SB.from('orgs').select('id,name,email,director_name,plan,vertical,signup_domain,email_opt_out,unsubscribe_token,account_status,deleted_at').eq('id',org_id).single();
+    const{data:org}=await SB.from('orgs').select('id,name,email,director_name,plan,vertical,org_type,signup_domain,email_opt_out,unsubscribe_token,account_status,deleted_at').eq('id',org_id).single();
     if(!org)return new Response(JSON.stringify({error:'org not found'}),{status:404,headers:{...CORS,'Content-Type':'application/json'}});
     if(org.email_opt_out||org.deleted_at||['closed','deleted'].includes(org.account_status))return new Response(JSON.stringify({ok:true,skipped:'opted out or closed'}),{headers:{...CORS,'Content-Type':'application/json'}});
-    const B=brandFor(org.signup_domain,org.vertical), V=vertFor(org.vertical);
+    const B=brandFor(org.signup_domain,org.vertical,org.org_type), V=vertFor(org.vertical,org.org_type);
     const name=org.director_name||org.name||'there';
     const unsubUrl=`${Deno.env.get('SUPABASE_URL')}/functions/v1/unsubscribe/${org.unsubscribe_token}`;
     const rid=await sendEmail(org.email,email_num,name,org.name,KEY,B,V,unsubUrl);
