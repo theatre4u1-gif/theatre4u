@@ -354,6 +354,17 @@ type Tip={id:string;score:(u:Usage,month:number)=>number;subject:(B:Brand,V:Vert
 
 // Arts pool (Theatre4u + ArtsTracker) — vocab/audience via V. Higher score = more relevant now.
 const ARTS_TIPS:Tip[]=[
+  {id:'a_catalog',score:(u)=>u.items<5?60:(u.items<10?25:5),
+    subject:(B)=>`Keep building — ${B.plain} gets more useful with every item`,
+    html:(B,V,name,org)=>wrap(B,`
+      ${p(`Hi ${name},`)}
+      ${p(`${org} is off to a start — the real payoff comes once more of your ${V.items} are in. The fuller your inventory, the faster everyone finds what they need.`)}
+      ${ul([
+        'Add items in a batch — snap a photo and fill in the details later',
+        'Every item gets its own QR code automatically',
+        `Start with whatever has been hardest to keep track of — ${V.deep}`,
+      ])}
+      ${cta(B,'Add your next items →')}`)},
   {id:'a_reports',score:(u)=>u.items>=10?62:(u.items>=3?30:0),
     subject:(B,V)=>`A report that changes the ${V.budgetWord}`,
     html:(B,V,name,org)=>wrap(B,`

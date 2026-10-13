@@ -153,64 +153,86 @@ async function sendErrorAlert(subject: string, detail: string) {
   }).catch((e: Error) => console.error("sendErrorAlert:", e.message));
 }
 
+// Brand resolver for customer-facing billing emails. Mirrors send-sequence-email's brandFor:
+// home → BinTrove, non-theatre vertical → ArtsTracker, theatre → by signup domain.
+// NOTE: `from` stays hello@theatre4u.org (the Resend-verified domain) for every brand until
+// bintrove.com / artstracker.org verify in Resend; then flip each B.from to its own hello@ address.
+type WBrand = { plain: string; display: string; host: string; site: string; from: string; reply: string; ink: string; accent: string; planLabel: string; manage: string; pick: string; freeNote: string };
+const WBRANDS: Record<string, WBrand> = {
+  theatre4u: { plain: "Theatre4u", display: "Theatre4u&#x2122;", host: "theatre4u.org", site: "https://theatre4u.org",
+    from: "Bob Zick at Theatre4u <hello@theatre4u.org>", reply: "hello@theatre4u.org", ink: "#4C1035", accent: "#d4a843",
+    planLabel: "Pro plan", manage: "Settings &rarr; Plans &rarr; Manage Billing", pick: "Settings &rarr; Plans, then choose <strong>Pro</strong>", freeNote: "You still have access to your first 25 items" },
+  artstracker: { plain: "ArtsTracker", display: "ArtsTracker", host: "artstracker.org", site: "https://artstracker.org",
+    from: "Bob Zick at ArtsTracker <hello@theatre4u.org>", reply: "hello@artstracker.org", ink: "#4C1035", accent: "#d4a843",
+    planLabel: "Pro plan", manage: "Settings &rarr; Plans &rarr; Manage Billing", pick: "Settings &rarr; Plans, then choose <strong>Pro</strong>", freeNote: "You still have access to your first 25 items" },
+  bintrove: { plain: "BinTrove", display: "BinTrove", host: "bintrove.com", site: "https://bintrove.com",
+    from: "Bob Zick at BinTrove <hello@theatre4u.org>", reply: "hello@bintrove.com", ink: "#0A5450", accent: "#1C9E8F",
+    planLabel: "plan", manage: "Account", pick: "Account, then pick a plan", freeNote: "Your bins and items are safe on the Free plan" },
+};
+function brandForOrg(o?: { vertical?: string; org_type?: string; signup_domain?: string }): WBrand {
+  const v = o?.vertical || "theatre", t = o?.org_type, d = o?.signup_domain || "";
+  if (v === "home" || t === "home") return WBRANDS.bintrove;
+  if (v !== "theatre") return WBRANDS.artstracker;
+  return d.includes("artstracker") ? WBRANDS.artstracker : WBRANDS.theatre4u;
+}
+
 // Customer-facing heads-up on a failed charge, so subscribers can fix their card before they lapse.
-async function sendCardFailedEmail(toEmail: string) {
+async function sendCardFailedEmail(toEmail: string, B: WBrand = WBRANDS.theatre4u) {
   if (!RESEND_KEY || !toEmail) return;
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f5f0e8;font-family:Arial,sans-serif">
 <div style="max-width:560px;margin:0 auto;background:#fff">
-  <div style="background:#FBF7F0;padding:20px 24px 16px;text-align:center;border-bottom:3px solid #d4a843"><span style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#4C1035">Theatre4u&#x2122;</span></div>
+  <div style="background:#FBF7F0;padding:20px 24px 16px;text-align:center;border-bottom:3px solid ${B.accent}"><span style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${B.ink}">${B.display}</span></div>
   <div style="padding:26px 28px 20px">
     <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 16px">Hi there,</p>
-    <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 16px">Quick heads-up: the latest payment for your Theatre4u Pro plan didn't go through. Usually it's just an expired card or a billing change &mdash; nothing to worry about.</p>
+    <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 16px">Quick heads-up: the latest payment for your ${B.plain} ${B.planLabel} didn't go through. Usually it's just an expired card or a billing change &mdash; nothing to worry about.</p>
     <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 12px">Your account is still active, and we'll automatically retry the card over the next few days. To avoid any interruption, you can update your payment method anytime:</p>
     <ol style="font-size:15px;color:#333;line-height:1.9;margin:0 0 16px;padding-left:20px">
-      <li>Sign in at <a href="https://theatre4u.org" style="color:#a5731f;font-weight:700">theatre4u.org</a></li>
-      <li>Go to <strong>Settings &rarr; Plans &rarr; Manage Billing</strong></li>
+      <li>Sign in at <a href="${B.site}" style="color:#a5731f;font-weight:700">${B.host}</a></li>
+      <li>Go to <strong>${B.manage}</strong></li>
       <li>Update your card</li>
     </ol>
     <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 16px">Everything in your inventory is safe. If something has changed or you have any questions, please do not hesitate to let me know.</p>
     <p style="font-size:15px;color:#333;margin:22px 0 2px">Warmly,</p>
     <p style="font-size:15px;font-weight:700;color:#1a0f00;margin:0">Bob Zick</p>
-    <p style="font-size:13px;color:#888;margin:2px 0 0">Founder, Theatre4u &middot; hello@theatre4u.org</p>
+    <p style="font-size:13px;color:#888;margin:2px 0 0">Founder, ${B.plain} &middot; ${B.reply}</p>
   </div>
-  <div style="padding:12px 28px;border-top:1px solid #e8e0d0;text-align:center;font-size:11px;color:#aaa">Theatre4u&#x2122; &middot; Artstracker LLC</div>
+  <div style="padding:12px 28px;border-top:1px solid #e8e0d0;text-align:center;font-size:11px;color:#aaa">${B.display} &middot; Artstracker LLC</div>
 </div></body></html>`;
   await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { "Authorization": `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: "Bob Zick at Theatre4u <hello@theatre4u.org>", reply_to: "hello@theatre4u.org", to: [toEmail],
-      subject: "Your Theatre4u payment didn't go through — a quick fix keeps your Pro access", html }),
+    body: JSON.stringify({ from: B.from, reply_to: B.reply, to: [toEmail],
+      subject: `Your ${B.plain} payment didn't go through — a quick fix keeps your access`, html }),
   }).catch((e: Error) => console.error("sendCardFailedEmail:", e.message));
 }
 
 // Final notice when retries are exhausted and the subscription is canceled for non-payment,
 // so no one lapses to Free without a heads-up. Only sent for payment-failure cancellations.
-async function sendDowngradeEmail(toEmail: string) {
+async function sendDowngradeEmail(toEmail: string, B: WBrand = WBRANDS.theatre4u) {
   if (!RESEND_KEY || !toEmail) return;
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f5f0e8;font-family:Arial,sans-serif">
 <div style="max-width:560px;margin:0 auto;background:#fff">
-  <div style="background:#FBF7F0;padding:20px 24px 16px;text-align:center;border-bottom:3px solid #d4a843"><span style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#4C1035">Theatre4u&#x2122;</span></div>
+  <div style="background:#FBF7F0;padding:20px 24px 16px;text-align:center;border-bottom:3px solid ${B.accent}"><span style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${B.ink}">${B.display}</span></div>
   <div style="padding:26px 28px 20px">
     <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 16px">Hi there,</p>
-    <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 16px">After a few unsuccessful attempts to renew your Theatre4u Pro plan, your subscription has ended and your account has moved to our Free plan.</p>
-    <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 16px">Everything in your inventory is safe &mdash; nothing has been deleted. You still have access to your first 25 items, and you can pick your Pro features back up anytime:</p>
+    <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 16px">After a few unsuccessful attempts to renew your ${B.plain} ${B.planLabel}, your subscription has ended and your account has moved to our Free plan.</p>
+    <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 16px">Everything in your inventory is safe &mdash; nothing has been deleted. ${B.freeNote}, and you can pick your paid features back up anytime:</p>
     <ol style="font-size:15px;color:#333;line-height:1.9;margin:0 0 16px;padding-left:20px">
-      <li>Sign in at <a href="https://theatre4u.org" style="color:#a5731f;font-weight:700">theatre4u.org</a></li>
-      <li>Go to <strong>Settings &rarr; Plans</strong></li>
-      <li>Choose <strong>Pro</strong></li>
+      <li>Sign in at <a href="${B.site}" style="color:#a5731f;font-weight:700">${B.host}</a></li>
+      <li>Go to <strong>${B.pick}</strong></li>
     </ol>
     <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 16px">If the card trouble was a mistake or something has changed, please do not hesitate to let me know &mdash; I'm happy to help get you back up and running.</p>
     <p style="font-size:15px;color:#333;margin:22px 0 2px">Warmly,</p>
     <p style="font-size:15px;font-weight:700;color:#1a0f00;margin:0">Bob Zick</p>
-    <p style="font-size:13px;color:#888;margin:2px 0 0">Founder, Theatre4u &middot; hello@theatre4u.org</p>
+    <p style="font-size:13px;color:#888;margin:2px 0 0">Founder, ${B.plain} &middot; ${B.reply}</p>
   </div>
-  <div style="padding:12px 28px;border-top:1px solid #e8e0d0;text-align:center;font-size:11px;color:#aaa">Theatre4u&#x2122; &middot; Artstracker LLC</div>
+  <div style="padding:12px 28px;border-top:1px solid #e8e0d0;text-align:center;font-size:11px;color:#aaa">${B.display} &middot; Artstracker LLC</div>
 </div></body></html>`;
   await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { "Authorization": `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: "Bob Zick at Theatre4u <hello@theatre4u.org>", reply_to: "hello@theatre4u.org", to: [toEmail],
-      subject: "Your Theatre4u plan has switched to Free", html }),
+    body: JSON.stringify({ from: B.from, reply_to: B.reply, to: [toEmail],
+      subject: `Your ${B.plain} plan has switched to Free`, html }),
   }).catch((e: Error) => console.error("sendDowngradeEmail:", e.message));
 }
 
@@ -231,18 +253,18 @@ async function verifyStripeSignature(payload: string, sigHeader: string, secret:
   }
 }
 
-async function findOrg(customerId?: string, email?: string, orgId?: string): Promise<{ id: string; name: string; email: string; vertical: string } | null> {
+async function findOrg(customerId?: string, email?: string, orgId?: string): Promise<{ id: string; name: string; email: string; vertical: string; org_type?: string; signup_domain?: string } | null> {
   try {
     if (orgId) {
-      const { data } = await sb.from("orgs").select("id,name,email,vertical").eq("id", orgId).single();
+      const { data } = await sb.from("orgs").select("id,name,email,vertical,org_type,signup_domain").eq("id", orgId).single();
       if (data) return data;
     }
     if (customerId) {
-      const { data } = await sb.from("orgs").select("id,name,email,vertical").eq("stripe_customer_id", customerId).single();
+      const { data } = await sb.from("orgs").select("id,name,email,vertical,org_type,signup_domain").eq("stripe_customer_id", customerId).single();
       if (data) return data;
     }
     if (email) {
-      const { data } = await sb.from("orgs").select("id,name,email,vertical").eq("email", email.toLowerCase().trim()).single();
+      const { data } = await sb.from("orgs").select("id,name,email,vertical,org_type,signup_domain").eq("email", email.toLowerCase().trim()).single();
       if (data) return data;
     }
     return null;
@@ -451,7 +473,7 @@ Deno.serve(async (req: Request) => {
           }).eq("id", org.id);
           // Only email on involuntary (dunning-exhausted) cancellations, not voluntary ones.
           const cancelReason = ((data.cancellation_details as Record<string, unknown>)?.reason ?? "") as string;
-          if (cancelReason === "payment_failure") await sendDowngradeEmail(org.email);
+          if (cancelReason === "payment_failure") await sendDowngradeEmail(org.email, brandForOrg(org));
         }
         break;
       }
@@ -507,7 +529,7 @@ Deno.serve(async (req: Request) => {
           await sendPaymentAlert({ eventType, orgName: org.name, orgEmail: org.email,
             plan: "unknown", interval: "", amountCents: amountDue, isFailed: true });
           // Let the subscriber know so they can fix their card before they lapse.
-          await sendCardFailedEmail(org.email);
+          await sendCardFailedEmail(org.email, brandForOrg(org));
         }
         break;
       }
