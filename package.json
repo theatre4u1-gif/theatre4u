@@ -16,7 +16,11 @@
     "app:bintrove:sync": "npm run build && node mobile/fix-index.mjs && BRAND=bintrove npx cap sync",
     "app:bintrove:ios": "npm run app:bintrove:sync && BRAND=bintrove npx cap open ios",
     "app:bintrove:android": "npm run app:bintrove:sync && BRAND=bintrove npx cap open android",
-    "app:bintrove:assets": "BRAND=bintrove npx @capacitor/assets generate --assetPath mobile/assets-bintrove"
+    "app:bintrove:assets": "BRAND=bintrove npx @capacitor/assets generate --assetPath mobile/assets-bintrove",
+    "app:artstracker:sync": "npm run build && node mobile/fix-index.mjs && BRAND=artstracker npx cap sync",
+    "app:artstracker:ios": "npm run app:artstracker:sync && BRAND=artstracker npx cap open ios",
+    "app:artstracker:android": "npm run app:artstracker:sync && BRAND=artstracker npx cap open android",
+    "app:artstracker:assets": "BRAND=artstracker npx @capacitor/assets generate --assetPath mobile/assets-artstracker"
   },
   "dependencies": {
     "react": "^18.2.0",

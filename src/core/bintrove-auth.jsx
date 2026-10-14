@@ -124,12 +124,15 @@ export function BinTroveAuthScreen({ onAuth }) {
   return (
     <><style>{CSS}</style>
       <div style={{ minHeight: "100vh", background: CREAM, padding: "28px 20px 52px", fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif", color: INK }}>
-        <div style={{ maxWidth: 960, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <div style={card}>
+        <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center" }}>
+        {mode === "signup" && <BinTroveHero onStart={() => { const el = document.getElementById("bt-signup"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }} />}
+        <div id="bt-signup" style={mode === "signup" ? { ...card, marginTop: 10 } : card}>
+          {mode === "login" && (
           <div style={{ textAlign: "center", marginBottom: 6 }}>
             <img src="/logo-bintrove.png" alt={APP_NAME} style={{ height: 58 }} />
             <div style={{ color: GOLD, fontWeight: 700, fontSize: 13, marginTop: 6 }}>Home storage, organized.</div>
           </div>
+          )}
           <h2 style={{ textAlign: "center", margin: "14px 0 2px", fontSize: 22 }}>{mode === "signup" ? "Create your free account" : "Welcome back"}</h2>
           <p style={{ textAlign: "center", color: "#5d706d", fontSize: 14, margin: "0 0 10px" }}>
             {mode === "signup" ? "3 bins free forever. No credit card." : "Sign in to find what's in every bin."}
@@ -178,7 +181,7 @@ export function BinTroveAuthScreen({ onAuth }) {
 
           <div style={{ textAlign: "center", marginTop: 14, fontSize: 12, color: "#9aa29e" }}>Questions? {APP_EMAIL}</div>
         </div>
-        {mode === "signup" && <BinTroveUseCases onStart={() => window.scrollTo({ top: 0, behavior: "smooth" })} />}
+        {mode === "signup" && <BinTroveProof />}
         </div>
       </div>
       {legal === "terms" && <LegalModal title="Terms of Service" onClose={() => setLegal(null)}>{TERMS_CONTENT.map(([h, b]) => <div key={h} style={{ marginBottom: 16 }}><div style={{ fontWeight: 700, color: "#d4a843", marginBottom: 4, fontSize: 13 }}>{h}</div><div>{b}</div></div>)}</LegalModal>}
@@ -187,25 +190,43 @@ export function BinTroveAuthScreen({ onAuth }) {
   );
 }
 
-// Use-case band shown under the signup card: real before/after + in-app inventory shots.
-function BinTroveUseCases({ onStart }) {
-  const TEALc = "#0F6E6B", LINEc = "#e7e2d7", MUTc = "#5d706d", INKc = "#163230";
-  const shot = { border: "1px solid " + LINEc, borderRadius: 14, overflow: "hidden", boxShadow: "0 6px 22px rgba(15,110,107,.08)", margin: "0 auto 18px", background: "#fff" };
+// Hero shown ABOVE the signup card for new visitors: brand, pitch, the storage before/after,
+// a Start Free button (scrolls to the form), and trust chips.
+function BinTroveHero({ onStart }) {
+  const TEALc = "#0F6E6B", GOLDc = "#D3A13C", LINEc = "#e7e2d7", MUTc = "#5d706d", INKc = "#163230";
+  const chip = { color: MUTc, fontSize: 13.5, fontWeight: 600 };
   return (
-    <div style={{ width: "100%", maxWidth: 900, margin: "44px auto 0", textAlign: "center" }}>
-      <h2 style={{ fontSize: 26, fontWeight: 800, color: INKc, margin: 0 }}>See what's in every bin</h2>
-      <p style={{ color: MUTc, fontSize: 15, maxWidth: 580, margin: "8px auto 24px", lineHeight: 1.5 }}>
-        Snap it, label it, scan it. One QR code and the whole bin's contents are right there on your phone.
+    <div style={{ textAlign: "center", marginBottom: 6 }}>
+      <img src="/logo-bintrove.png" alt="BinTrove" style={{ height: 58 }} />
+      <div style={{ color: GOLDc, fontWeight: 700, fontSize: 13, marginTop: 6 }}>Home storage, organized.</div>
+      <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-.02em", color: INKc, margin: "16px auto 0", maxWidth: 620, lineHeight: 1.15 }}>
+        Know what's in <span style={{ color: TEALc }}>every bin</span> — without opening a single one.
+      </h1>
+      <p style={{ color: MUTc, fontSize: 16.5, maxWidth: 560, margin: "12px auto 22px", lineHeight: 1.5 }}>
+        Snap a photo, print a QR label, and scan any bin to see everything inside. Garage, closet, attic, or a whole move.
       </p>
-      <div style={shot}>
-        <img src="/bintrove-ba-hero.jpg" alt="Before and after — scan a bin to see what's inside" loading="lazy" style={{ width: "100%", display: "block" }} />
+      <div style={{ border: "1px solid " + LINEc, borderRadius: 16, overflow: "hidden", boxShadow: "0 10px 34px rgba(15,110,107,.12)", margin: "0 auto 20px", background: "#fff", maxWidth: 520 }}>
+        <img src="/bintrove-ba-bins.jpg" alt="Before and after — a storage room with every bin QR-labeled" style={{ width: "100%", display: "block" }} />
       </div>
-      <div style={{ ...shot, maxWidth: 520 }}>
-        <img src="/bintrove-ba-bins.jpg" alt="Before and after — a storage room with every bin QR-labeled" loading="lazy" style={{ width: "100%", display: "block" }} />
+      <button onClick={onStart} style={{ background: TEALc, color: "#fff", border: "none", fontWeight: 800, fontSize: 17, padding: "15px 34px", borderRadius: 12, cursor: "pointer" }}>Start Free →</button>
+      <div style={{ display: "flex", gap: 18, flexWrap: "wrap", justifyContent: "center", margin: "14px auto 0" }}>
+        <span style={chip}>&#10003; 3 bins free forever</span>
+        <span style={chip}>&#10003; No credit card</span>
+        <span style={chip}>&#10003; Set up in minutes</span>
       </div>
-      <div style={{ marginTop: 22 }}>
-        <button onClick={onStart} style={{ background: TEALc, color: "#fff", border: "none", fontWeight: 800, fontSize: 16, padding: "14px 30px", borderRadius: 12, cursor: "pointer" }}>Start Free →</button>
-        <div style={{ color: MUTc, fontSize: 13, marginTop: 10 }}>Your first 3 bins and 30 items are free, forever.</div>
+    </div>
+  );
+}
+
+// Proof shown below the signup card: the scan → in-app inventory shot.
+function BinTroveProof() {
+  const LINEc = "#e7e2d7", MUTc = "#5d706d", INKc = "#163230";
+  return (
+    <div style={{ width: "100%", maxWidth: 900, margin: "40px auto 0", textAlign: "center" }}>
+      <h2 style={{ fontSize: 22, fontWeight: 800, color: INKc, margin: 0 }}>See it in action</h2>
+      <p style={{ color: MUTc, fontSize: 14.5, maxWidth: 520, margin: "6px auto 20px", lineHeight: 1.5 }}>Scan a bin's QR code and its whole contents are right there on your phone.</p>
+      <div style={{ border: "1px solid " + LINEc, borderRadius: 16, overflow: "hidden", boxShadow: "0 6px 22px rgba(15,110,107,.08)", background: "#fff" }}>
+        <img src="/bintrove-ba-hero.jpg" alt="Scan a bin to see what's inside" loading="lazy" style={{ width: "100%", display: "block" }} />
       </div>
     </div>
   );
