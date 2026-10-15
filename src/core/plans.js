@@ -36,6 +36,25 @@ export const BINTROVE_LINKS = {
   home:      "https://buy.stripe.com/cNi28q8gF9lp3TtgvhgA80k", // $59/yr
   home_plus: "https://buy.stripe.com/aFa14m0OdeFJ0Hhdj5gA80l", // $89/yr
 };
+// ── BinTrove AI Scan allotments ─────────────────────────────────────────────
+// Photo → AI suggests a catalog entry, user confirms. Metered per plan; the
+// scan-item edge function enforces this server-side against ai_scan_log.
+//   period "lifetime" = one trial pool ever (Free)
+//   period "month"    = refreshes at the start of each calendar month (UTC)
+//   period "window"   = counted within the Move pass's 30-day window
+export const SCAN_LIMITS = {
+  free:      { limit: 10,  period: "lifetime" },
+  starter:   { limit: 50,  period: "month" },
+  home:      { limit: 150, period: "month" },
+  home_plus: { limit: 500, period: "month" },
+  move:      { limit: 150, period: "window" },
+};
+// Map an orgs.home_plan value (null/"free"/"starter"/"home"/"home_plus"/"move")
+// to its scan allotment. Unknown or empty → Free.
+export function scanLimitFor(homePlan) {
+  return SCAN_LIMITS[homePlan || "free"] || SCAN_LIMITS.free;
+}
+
 export const BINTROVE_PLANS_DEF = {
   free:      { label:"Free",      maxBins:3,        maxItems:30,       annualPrice:0,  users:1,
     blurb:"Try it out — catalog a few bins and see how it works.",

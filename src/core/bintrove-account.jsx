@@ -3,7 +3,17 @@
 // when IS_BINTROVE. Separate file — school profile/settings are never touched.
 import React, { useState, useEffect } from "react";
 import { SB, callEdgeFn } from "./supabase.js";
-import { BINTROVE_PLANS_DEF, BINTROVE_LINKS, stripeLink } from "./plans.js";
+import { BINTROVE_PLANS_DEF, BINTROVE_LINKS, stripeLink, scanLimitFor } from "./plans.js";
+
+// Start of the current scan period for a plan (mirrors scan-item edge function).
+function scanPeriodStart(plan, planExpiresAt) {
+  const def = scanLimitFor(plan);
+  const now = new Date();
+  if (def.period === "lifetime") return new Date(0);
+  if (def.period === "month") return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  if (planExpiresAt) return new Date(new Date(planExpiresAt).getTime() - 30 * 86400000);
+  return new Date(now.getTime() - 30 * 86400000);
+}
 
 const TEAL = "#0F6E6B", TEAL_D = "#0A5450", GOLD = "#D3A13C", INK = "#163230", CREAM = "#FBF4E6", LINE = "#e7e2d7", MUT = "#5d706d";
 const ORDER = ["free", "starter", "home", "home_plus"];
@@ -14,21 +24,25 @@ export function BinTroveAccount({ user, org }) {
   const def = BINTROVE_PLANS_DEF[plan] || BINTROVE_PLANS_DEF.free;
   const [bins, setBins] = useState(null);
   const [items, setItems] = useState(null);
+  const [scans, setScans] = useState(null);
   const orgId = org?.id || user?.id;
+  const scanDef = scanLimitFor(plan);
 
   useEffect(() => {
     let live = true;
     (async () => {
       try {
-        const [b, i] = await Promise.all([
+        const since = scanPeriodStart(plan, org?.plan_expires_at).toISOString();
+        const [b, i, s] = await Promise.all([
           SB.from("storage_locations").select("*", { count: "exact", head: true }).eq("org_id", orgId),
           SB.from("items").select("*", { count: "exact", head: true }).eq("org_id", orgId),
+          SB.from("ai_scan_log").select("id", { count: "exact", head: true }).eq("org_id", orgId).eq("status", "ok").gte("created_at", since),
         ]);
-        if (live) { setBins(b.count ?? 0); setItems(i.count ?? 0); }
-      } catch (e) { if (live) { setBins(0); setItems(0); } }
+        if (live) { setBins(b.count ?? 0); setItems(i.count ?? 0); setScans(s.count ?? 0); }
+      } catch (e) { if (live) { setBins(0); setItems(0); setScans(0); } }
     })();
     return () => { live = false; };
-  }, [orgId]);
+  }, [orgId, plan]);
 
   const signOut = async () => { try { await SB.auth.signOut(); } catch (e) {} window.location.href = "/"; };
   const [closing, setClosing] = useState(false);
@@ -97,6 +111,16 @@ export function BinTroveAccount({ user, org }) {
           <span><b>Items</b></span><span style={{ color: MUT }}>{items == null ? "…" : items} of {fmtCap(def.maxItems)}</span>
         </div>
         <Bar used={items || 0} cap={def.maxItems} />
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginTop: 12 }}>
+          <span><b>AI scans</b> <span style={{ fontWeight: 400, color: MUT, fontSize: 12 }}>{scanDef.period === "lifetime" ? "(trial)" : scanDef.period === "month" ? "(this month)" : "(this move)"}</span></span>
+          <span style={{ color: MUT }}>{scans == null ? "…" : scans} of {scanDef.limit}</span>
+        </div>
+        <Bar used={scans || 0} cap={scanDef.limit} />
+        <div style={{ fontSize: 12, color: MUT, marginTop: 6 }}>
+          {scans != null && scans >= scanDef.limit
+            ? (plan === "home_plus" ? "You've used this month's scans — they refresh on the 1st." : "Out of scans — upgrade for more, or keep adding items by hand.")
+            : "Snap a photo of an item and AI fills in the details for you."}
+        </div>
       </div>
 
       {plan !== "home_plus" && (

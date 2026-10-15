@@ -178,6 +178,11 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
   const[svng,setSvng]=useState(false);
   const[showCam,setShowCam]=useState(false);
   const fr=useRef();
+  // ── BinTrove AI Scan (confirm-before-save) ──
+  const[scanning,setScanning]=useState(false);
+  const[scanInfo,setScanInfo]=useState(null); // {confidence,used,limit} after a good scan
+  const[scanErr,setScanErr]=useState("");
+  const scanRef=useRef();
   const upd=(k,v)=>setF(p=>({...p,[k]:v}));
   // Keep a ref always pointing at latest form state so the footer button works
 
@@ -202,6 +207,38 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
   const handlePhoto=e=>processPhoto(e.target.files?.[0]);
   const handleDrive=()=>{ if(window.t4uPickFromDrive){window.t4uPickFromDrive(processPhoto);} else {alert("Google Drive import isn't ready yet — please refresh the page and try again.");} };
   const capturePhoto=async file=>{ if(!file) return false; const url = userId ? await uploadPhoto(file, userId) : await resizeImg(file); if(!url) return false; addImage(url); return true; };
+  // AI Scan: upload the photo, ask scan-item to identify it, prefill the form for the user to confirm.
+  const runScan=async file=>{
+    if(!file||scanning) return;
+    setScanErr(""); setScanInfo(null); setScanning(true);
+    try{
+      const url = userId ? await uploadPhoto(file, userId) : await resizeImg(file);
+      if(!url){ setScanErr("That photo couldn't be used — try another."); setScanning(false); if(scanRef.current)scanRef.current.value=""; return; }
+      if(imgsOf(f).length<maxImg) addImage(url); // the scanned photo becomes the item photo
+      const { data:{ session } } = await SB.auth.getSession();
+      const res = await fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/scan-item",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${session?.access_token||""}` },
+        body: JSON.stringify({ url }),
+      });
+      const d = await res.json().catch(()=>({}));
+      if(!res.ok || d.error){ setScanErr(d.message||"The scan didn't work — you can still add the item manually."); setScanning(false); if(scanRef.current)scanRef.current.value=""; return; }
+      const s = d.suggestion||{};
+      setF(p=>({
+        ...p,
+        name: (p.name&&p.name.trim()) ? p.name : (s.name||""),
+        category: s.category || p.category,
+        condition: s.condition || p.condition,
+        qty: s.quantity || p.qty || 1,
+        notes: (p.notes&&p.notes.trim()) ? p.notes : (s.notes||""),
+        purchase_cost: ((p.purchase_cost===""||p.purchase_cost==null)&&s.est_value!=null) ? s.est_value : p.purchase_cost,
+      }));
+      if(s.est_value!=null) setFundOpen(true); // reveal the value field we just filled
+      setScanInfo({ confidence:s.confidence||"medium", used:d.used, limit:d.limit });
+    }catch(e){ setScanErr("The scan didn't work — you can still add the item manually."); }
+    setScanning(false);
+    if(scanRef.current)scanRef.current.value="";
+  };
   const addTag=()=>{const t=ti.trim().toLowerCase();if(t&&!(f.tags||[]).includes(t))upd("tags",[...(f.tags||[]),t]);setTi("");};
   // Load active funding sources for the "charge to fund" dropdown
   const[fundSources,setFundSources]=useState([]);
@@ -256,6 +293,15 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
 
   return(
     <div className="fg2">
+      {IS_BINTROVE && scanInfo && (
+        <div className="fg fu" style={{background:"#E6F4F1",border:"1px solid #1C9E8F",borderRadius:8,padding:"10px 12px",fontSize:12.5,color:"#0A5450"}}>
+          ✨ <b>Filled in from your photo</b> ({scanInfo.confidence} confidence). Check everything and edit before saving — the value is an estimate.
+          {scanInfo.limit!=null && <span style={{color:"#0F6E6B"}}> &nbsp;·&nbsp; {Math.max(0,scanInfo.limit-scanInfo.used)} scans left.</span>}
+        </div>
+      )}
+      {IS_BINTROVE && scanErr && (
+        <div className="fg fu" style={{background:"#fff4f4",border:"1px solid #e0a0a0",borderRadius:8,padding:"10px 12px",fontSize:12.5,color:"#8a2a2a"}}>{scanErr}</div>
+      )}
       <div className="fg fu"><label className="fl">Item Name *</label><input className="fi" value={f.name} onChange={e=>upd("name",e.target.value)} placeholder={"e.g. "+EX_ITEM} autoFocus/></div>
       <div className="fg"><label className="fl">Category</label><select className="fs" value={f.category} onChange={e=>upd("category",e.target.value)}>{vCATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</select></div>
       <div className="fg"><label className="fl">Condition</label><select className="fs" value={f.condition} onChange={e=>upd("condition",e.target.value)}>{vCONDS.map(c=><option key={c}>{c}</option>)}</select></div>
@@ -355,6 +401,14 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
       </div>
       <div className="fg fu sdiv">
         <div className="slbl">📷 {maxImg>1?"Photos":"Photo"} {maxImg>1&&<span style={{fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:10,color:"var(--muted)"}}>({imgsOf(f).length}/{maxImg})</span>}</div>
+        {IS_BINTROVE && (
+          <div style={{marginBottom:10}}>
+            <button type="button" className="btn btn-g btn-sm" disabled={scanning||upl} style={{opacity:(scanning||upl)?.6:1}}
+              onClick={()=>scanRef.current&&scanRef.current.click()}>{scanning?"Scanning…":"✨ Scan with AI"}</button>
+            <input ref={scanRef} type="file" accept="image/*" capture="environment" hidden onChange={e=>runScan(e.target.files&&e.target.files[0])}/>
+            <span style={{fontSize:11,color:"var(--muted)",marginLeft:8}}>Snap a photo and we'll fill in the details for you.</span>
+          </div>
+        )}
         <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
           {imgsOf(f).map((u,i)=>(
             <div key={u+"_"+i} className="ph-wrap" style={{position:"relative"}}>
