@@ -98,8 +98,19 @@ export function BinTroveAccount({ user, org }) {
     );
   };
 
+  const moveLink = BINTROVE_LINKS.move ? stripeLink(BINTROVE_LINKS.move, user?.id, user?.email) : null;
+  const moveDaysLeft = (plan === "move" && org?.plan_expires_at)
+    ? Math.max(0, Math.ceil((new Date(org.plan_expires_at).getTime() - Date.now()) / 86400000)) : null;
+
   return (
     <div style={wrap}>
+      {plan === "move" && (
+        <div style={{ ...card, background: "linear-gradient(135deg,#0A5450,#0F6E6B)", color: "#fff", border: "none" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: .3, opacity: .9 }}>📦 MOVE PASS ACTIVE</div>
+          <div style={{ fontSize: 22, fontWeight: 800, margin: "4px 0 6px" }}>Unlimited bins & items{moveDaysLeft != null ? ` · ${moveDaysLeft} day${moveDaysLeft !== 1 ? "s" : ""} left` : ""}</div>
+          <div style={{ fontSize: 13.5, opacity: .92, lineHeight: 1.5 }}>When your 30 days end, your account returns to Free and <b>everything you cataloged stays safe</b>. Want to keep unlimited access? Upgrade to a yearly plan below anytime.</div>
+        </div>
+      )}
       <div style={card}>
         <div style={{ fontSize: 13, color: MUT, fontWeight: 700, letterSpacing: .3 }}>YOUR PLAN</div>
         <div style={{ fontSize: 24, fontWeight: 800, margin: "2px 0 14px", color: TEAL }}>{def.label}</div>
@@ -129,6 +140,20 @@ export function BinTroveAccount({ user, org }) {
           <div style={{ color: MUT, fontSize: 14, marginBottom: 16 }}>Upgrade any time — billed yearly, cancel whenever. More bins, more items, household sharing.</div>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             {ORDER.filter(id => id !== "free").map(tierCard)}
+          </div>
+        </div>
+      )}
+
+      {moveLink && plan !== "move" && plan !== "home_plus" && (
+        <div style={{ ...card, borderColor: TEAL, background: "linear-gradient(135deg,#F3FBF9,#E6F4F1)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+            <div style={{ flex: "1 1 280px" }}>
+              <div style={{ fontWeight: 800, fontSize: 18, color: TEAL_D }}>📦 Moving soon?</div>
+              <div style={{ color: INK, fontSize: 14, lineHeight: 1.55, margin: "6px 0 0" }}>
+                Get <b>unlimited bins & items for 30 days</b> plus 150 AI scans to catalog every box before the truck arrives — one payment, no subscription. After 30 days you’re back on Free with everything saved.
+              </div>
+            </div>
+            <a href={moveLink} style={{ whiteSpace: "nowrap", padding: "12px 20px", background: TEAL, color: "#fff", fontWeight: 800, borderRadius: 10, textDecoration: "none", fontSize: 15 }}>Get Move — $29 →</a>
           </div>
         </div>
       )}

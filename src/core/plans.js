@@ -35,6 +35,12 @@ export const BINTROVE_LINKS = {
   starter:   "https://buy.stripe.com/3cIeVcgNb4150Hh2ErgA80j", // $24/yr
   home:      "https://buy.stripe.com/cNi28q8gF9lp3TtgvhgA80k", // $59/yr
   home_plus: "https://buy.stripe.com/aFa14m0OdeFJ0Hhdj5gA80l", // $89/yr
+  // ── BinTrove Move — $29 one-time, 30-day unlimited pass ──
+  // PASTE the Stripe Payment Link URL here once created (see hub). The link must carry
+  // metadata type=bintrove_move and after_completion redirect to https://bintrove.com/?paid=1.
+  // The stripe-webhook grants home_plan=move + plan_expires_at=now+30d off that metadata,
+  // so it does NOT need the price ID. Empty string = Move not yet live (UI hides it).
+  move:      "https://buy.stripe.com/8x2bJ0eF39lp61B92PgA80m", // $29 one-time · price_1UQfaIBRkceXoRsJATOZsmgK · metadata type=bintrove_move
 };
 // ── BinTrove AI Scan allotments ─────────────────────────────────────────────
 // Photo → AI suggests a catalog entry, user confirms. Metered per plan; the
@@ -68,6 +74,10 @@ export const BINTROVE_PLANS_DEF = {
   home_plus: { label:"Home Plus", maxBins:Infinity, maxItems:Infinity, annualPrice:89, users:5,
     blurb:"No limits — perfect for a big house or a move.",
     features:["Everything in Home","Unlimited bins & items","Share with up to 5"] },
+  // One-time Move pass: unlimited for 30 days, then reverts to Free (data preserved).
+  move:      { label:"Move", maxBins:Infinity, maxItems:Infinity, annualPrice:29, users:5, oneTime:true, windowDays:30,
+    blurb:"Moving? Unlimited bins & items for 30 days — one payment, no subscription.",
+    features:["Unlimited bins & items for 30 days","150 AI scans to catalog fast","Household sharing","All data preserved after it ends"] },
 };
 
 export const PLANS_DEF = {

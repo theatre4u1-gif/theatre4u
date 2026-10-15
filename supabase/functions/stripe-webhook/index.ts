@@ -323,6 +323,39 @@ Deno.serve(async (req: Request) => {
           break;
         }
 
+        // ── BinTrove Move pass — one-time payment, 30-day unlimited window ──
+        // Granted off the payment link's metadata.type (not a price ID). Sets home_plan=move
+        // + plan_expires_at=now+30d. A daily pg_cron job reverts expired move orgs to free.
+        // Never flips an org that already holds a paid home subscription (home_plus stays).
+        if (data.mode === "payment" && meta?.type === "bintrove_move") {
+          const org = await findOrg(customerId, customerEmail, clientRef || undefined);
+          const amt = (data.amount_total as number) || 2900;
+          if (org) {
+            const { data: cur } = await sb.from("orgs").select("home_plan, stripe_subscription_id").eq("id", org.id).single();
+            const curPlan = (cur?.home_plan || "free") as string;
+            const hasHomeSub = !!cur?.stripe_subscription_id && ["starter","home","home_plus"].includes(curPlan);
+            if (!hasHomeSub) {
+              await sb.from("orgs").update({
+                home_plan: "move",
+                plan_expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
+                stripe_customer_id: customerId,
+              }).eq("id", org.id);
+            }
+            await sendPaymentAlert({ eventType, orgName: org.name, orgEmail: org.email,
+              plan: "BinTrove Move" + (hasHomeSub ? " (kept existing sub)" : ""), interval: "one-time", amountCents: amt });
+          } else {
+            await sendErrorAlert("BinTrove Move paid with no matching org",
+              `A Move pass checkout completed (${eventId}) but no org matched customer ${customerId} / ${customerEmail} / ref ${clientRef}. The customer paid but was not provisioned. Provision manually (home_plan=move, plan_expires_at=now+30d).`);
+          }
+          await logPayment({ stripe_event_id: eventId, stripe_event_type: eventType,
+            stripe_customer_id: customerId, stripe_payment_intent: data.payment_intent,
+            amount_cents: amt, currency: "usd", status: "succeeded",
+            description: "BinTrove Move pass (30-day)", customer_email: customerEmail,
+            org_id: org?.id ?? null, org_name: org?.name ?? null,
+            stripe_created_at: event.created ? new Date((event.created as number) * 1000).toISOString() : null });
+          break;
+        }
+
         if (data.mode !== "subscription") {
           await logPayment({ stripe_event_id: eventId, stripe_event_type: eventType,
             stripe_customer_id: customerId, status: "succeeded", customer_email: customerEmail,

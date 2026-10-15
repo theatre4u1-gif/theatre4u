@@ -1005,17 +1005,46 @@ function AddSheet({onClose, onAdded, userId, plan}) {
   const [f, setF] = useState({name:"",category:CATS[0].id,condition:"Good",size:"N/A",qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,avail:"In Stock",tags:[],img:null,images:[]});
   const [saving, setSaving] = useState(false);
   const [uploading, setUpl] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanInfo, setScanInfo] = useState(null); // {confidence,used,limit}
+  const [scanErr, setScanErr] = useState("");
   const fileRef = useRef();
   const upd = (k,v) => setF(p=>({...p,[k]:v}));
+
+  // AI Scan (BinTrove): send the uploaded photo to scan-item, prefill the form for confirmation.
+  const scanPhoto = async (url) => {
+    try {
+      const { data:{ session } } = await SB.auth.getSession();
+      const res = await fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/scan-item",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+(session?.access_token||"") },
+        body: JSON.stringify({ url })
+      });
+      const d = await res.json().catch(()=>({}));
+      if(!res.ok || d.error){ setScanErr(d.message||"Couldn't scan that photo — fill in the details below."); return; }
+      const s = d.suggestion||{};
+      setF(p=>({...p,
+        name:(p.name&&p.name.trim())?p.name:(s.name||""),
+        category:s.category||p.category,
+        condition:s.condition||p.condition,
+        qty:s.quantity||p.qty||1,
+        notes:(p.notes&&p.notes.trim())?p.notes:(s.notes||""),
+        purchase_cost:((p.purchase_cost===""||p.purchase_cost==null)&&s.est_value!=null)?s.est_value:p.purchase_cost,
+      }));
+      setScanInfo({confidence:s.confidence||"medium",used:d.used,limit:d.limit});
+    } catch(e){ setScanErr("Couldn't scan that photo — fill in the details below."); }
+  };
 
   const maxImg = maxImgFor(plan);
   const handlePhoto = async e => {
     const file = e.target.files?.[0]; if(!file) return;
+    setScanErr(""); setScanInfo(null);
     setUpl(true);
     const url = await uploadPhoto(file, userId);
-    if(url) { setF(p=>({...p,images:[url],img:url})); setStep("details"); }
-    else setStep("details");
+    if(url) setF(p=>({...p,images:[url],img:url}));
     setUpl(false);
+    if(url && IS_BINTROVE){ setScanning(true); await scanPhoto(url); setScanning(false); }
+    setStep("details");
   };
   const handleMorePhoto = async e => {
     const files = Array.from(e.target.files||[]); if(!files.length) return;
@@ -1052,18 +1081,21 @@ function AddSheet({onClose, onAdded, userId, plan}) {
         h("button",{style:{background:"none",border:"none",color:"var(--muted)",cursor:"pointer"},onClick:onClose},Ic.x(22))
       ),
       h("div",{className:"sheet-bd"},
-        h("p",{style:{fontSize:14,color:"var(--muted)",marginBottom:20,lineHeight:1.6}},"Start with a photo — it takes just a few seconds and makes your inventory searchable and visual."),
+        h("p",{style:{fontSize:14,color:"var(--muted)",marginBottom:20,lineHeight:1.6}},
+          IS_BINTROVE
+            ? "Start with a photo — we'll identify the item and fill in the details for you. You can edit anything before saving."
+            : "Start with a photo — it takes just a few seconds and makes your inventory searchable and visual."),
         h("label",{className:"photo-area",style:{aspectRatio:"4/3",cursor:"pointer"}},
-          uploading
+          (uploading||scanning)
             ? h("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",gap:10}},
-                h("div",{className:"spin"}),h("span",{style:{color:"var(--muted)",fontSize:13}},"Uploading…"))
+                h("div",{className:"spin"}),h("span",{style:{color:"var(--muted)",fontSize:13}},scanning?"Identifying…":"Uploading…"))
             : f.img
               ? h("img",{src:f.img,alt:""})
-              : [h("div",{key:"i",className:"pa-icon"},"📷"),h("div",{key:"t",className:"pa-txt"},"Tap to take photo")],
+              : [h("div",{key:"i",className:"pa-icon"},"📷"),h("div",{key:"t",className:"pa-txt"},IS_BINTROVE?"Tap to take photo — AI will fill it in":"Tap to take photo")],
           h("input",{ref:fileRef,type:"file",accept:"image/*",capture:"environment",hidden:true,onChange:handlePhoto})
         ),
         h("div",{style:{display:"flex",gap:10,marginTop:4}},
-          h("button",{className:"btn btn-gold",style:{flex:2},onClick:()=>fileRef.current?.click()},Ic.cam(17)," Take Photo"),
+          h("button",{className:"btn btn-gold",style:{flex:2},onClick:()=>fileRef.current?.click()},Ic.cam(17),IS_BINTROVE?" Scan with AI":" Take Photo"),
           h("button",{className:"btn btn-ghost",style:{flex:1},onClick:skipPhoto},"Skip →")
         )
       )
@@ -1078,6 +1110,8 @@ function AddSheet({onClose, onAdded, userId, plan}) {
         h("button",{style:{background:"none",border:"none",color:"var(--muted)",cursor:"pointer"},onClick:()=>setStep("photo")},Ic.back(22))
       ),
       h("div",{className:"sheet-bd"},
+        IS_BINTROVE && scanInfo ? h("div",{style:{background:"#E6F4F1",border:"1px solid #1C9E8F",borderRadius:8,padding:"10px 12px",fontSize:12.5,color:"#0A5450",marginBottom:12}},"✨ Filled in from your photo ("+scanInfo.confidence+" confidence). Check everything and edit before saving — the value is an estimate."+(scanInfo.limit!=null?" · "+Math.max(0,scanInfo.limit-scanInfo.used)+" scans left.":"")) : null,
+        IS_BINTROVE && scanErr ? h("div",{style:{background:"#fff4f4",border:"1px solid #e0a0a0",borderRadius:8,padding:"10px 12px",fontSize:12.5,color:"#8a2a2a",marginBottom:12}},scanErr) : null,
         h(PhotoGallery,{imgs:imgsOf(f),max:maxImg,uploading,onAdd:handleMorePhoto,onRemove:removeImage,onCover:makeCover,onCaptureFile:async file=>{ if(!file) return false; const url=await uploadPhoto(file,userId); if(!url) return false; setF(p=>{const cur=imgsOf(p); if(cur.length>=maxImg) return p; const next=[...cur,url]; return {...p,images:next,img:next[0]};}); return true; }}),
         h("div",{className:"fg"},
           h("label",{className:"fl"},"Item Name *"),

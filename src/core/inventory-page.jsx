@@ -13,7 +13,7 @@ import { IS_NATIVE_APP, printHtml, shareLabelsAsImage } from "./native.js";
 import { BG, usp } from "../lib/backgrounds.js";
 import { getExchangeName, getVertical, getCatGfx, getCats, getTerm } from "../lib/verticals.js";
 import { CSVImport } from "./marketplace.jsx";
-import { ItemForm, ItemDetail } from "./items.jsx";
+import { ItemForm, ItemDetail, uploadPhoto } from "./items.jsx";
 import { BulkPhotoAdd } from "./bulk-photo-add.jsx";
 import { LocationsPanel } from "./locations.jsx";
 import { ExternalLoans } from "./external-loans.jsx";
@@ -23,6 +23,7 @@ import { UpgradePrompt } from "./billing.jsx";
 export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, memberRole="director",plan="free",headerNote=null,schoolName=null,org=null, deepLinkLocationId=null, onDeepLinkConsumed=null, deepLinkCategory=null, onDeepLinkCategoryConsumed=null, enableLoans=false, onImported=null, onItemSync=null, openAddSignal=0, deepLinkItemId=null, onDeepLinkItemConsumed=null}){
     const[upgradeReason,setUpgradeReason]=useState(null);
   const[pendingMsg,setPendingMsg]=useState("");
+  const[showBatch,setShowBatch]=useState(false); // BinTrove AI batch (scan a box)
   // The BinTrove door is always the "home" vertical — regardless of the underlying org's
   // stored vertical (e.g. an admin viewing bintrove.com with a theatre org). This drives
   // categories, conditions, availability, the hero gradient and the sub copy, all at once.
@@ -466,6 +467,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
                 <div onClick={()=>setAddMenu(false)} style={{position:"fixed",inset:0,zIndex:40}}/>
                 <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",zIndex:41,background:"var(--cream)",border:"1px solid var(--border)",borderRadius:"var(--rm)",boxShadow:"var(--sh2)",minWidth:236,overflow:"hidden"}}>
                   <button className="addmenu-item" onClick={()=>{setAddMenu(false);const max=PLANS_DEF[plan]?.maxItems??25;if(items.length>=max){setUpgradeReason(EM.planItemLimit.body);return;}setActive(null);setModal("a");}}>✚&nbsp;&nbsp;Add one item{submitsForReview?" (for approval)":""}</button>
+                  {IS_BINTROVE&&<button className="addmenu-item" onClick={()=>{setAddMenu(false);setShowBatch(true);}}>✨&nbsp;&nbsp;Scan a box (AI)</button>}
                   {!isStudentTier&&<button className="addmenu-item" onClick={()=>{setAddMenu(false);setShowBulk(true);}}>📸&nbsp;&nbsp;Bulk add from photos</button>}
                   {!isStudentTier&&<button className="addmenu-item" onClick={()=>{setAddMenu(false);setShowImport(true);}}>⬆&nbsp;&nbsp;Import from CSV</button>}
                 </div>
@@ -802,8 +804,132 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
       {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{del(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete}/></Modal>}
       {showImport&&<CSVImport userId={userId} vertical={vVertical} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",userId).order("added",{ascending:false}).limit(2000);if(data&&onImported)onImported(data);refetch();}}/>}
       {showBulk&&<BulkPhotoAdd userId={userId} vertical={vVertical} cats={vCATS} onClose={()=>setShowBulk(false)} onImport={(data)=>{if(onImported)onImported(data);refetch();}}/>}
+      {showBatch&&<BatchScanModal userId={userId} cats={vCATS} onClose={()=>setShowBatch(false)} onAdd={onAdd} onDone={()=>{setShowBatch(false);refetch();}}/>}
     </div>
     </>)}
   </>
+  );
+}
+// ── BinTrove AI Batch Scan ("Scan a box") ────────────────────────────────────
+// One photo of an open box/shelf → scan-item (mode:batch) → a review list the user
+// edits/keeps → bulk-add via onAdd. One photo counts as one scan. Confirm-before-save.
+function BatchScanModal({ userId, cats = [], onClose, onAdd, onDone }) {
+  const [step, setStep] = useState("photo");   // photo | loading | review
+  const [img, setImg] = useState(null);
+  const [rows, setRows] = useState([]);         // [{keep,name,category,condition,qty,est_value,notes,confidence}]
+  const [err, setErr] = useState("");
+  const [info, setInfo] = useState(null);       // {used,limit}
+  const [adding, setAdding] = useState(false);
+  const fileRef = React.useRef();
+
+  const CONDS = ["New", "Good", "Used", "Fragile", "For Donation"];
+  const TEAL = "#0F6E6B", TEAL_D = "#0A5450", LINE = "#e7e2d7", MUT = "#5d706d";
+  const overlay = { position: "fixed", inset: 0, zIndex: 120, background: "rgba(10,30,28,.5)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "24px 12px", overflowY: "auto" };
+  const sheet = { background: "#fff", borderRadius: 16, maxWidth: 640, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,.3)", overflow: "hidden" };
+  const head = { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid " + LINE };
+  const body = { padding: 20 };
+
+  const runScan = async (file) => {
+    if (!file) return;
+    setErr(""); setStep("loading");
+    try {
+      const url = await uploadPhoto(file, userId);
+      if (!url) { setErr("That photo couldn't be used — try another."); setStep("photo"); return; }
+      setImg(url);
+      const { data: { session } } = await SB.auth.getSession();
+      const res = await fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/scan-item", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + (session?.access_token || "") },
+        body: JSON.stringify({ url, mode: "batch" }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || d.error) { setErr(d.message || "The scan didn't work — try a clearer photo or add items manually."); setStep("photo"); return; }
+      const list = (d.suggestions || []).map(s => ({ ...s, qty: s.quantity || 1, keep: true }));
+      if (!list.length) { setErr("Couldn't make out any items. Try a closer photo."); setStep("photo"); return; }
+      setRows(list); setInfo({ used: d.used, limit: d.limit }); setStep("review");
+    } catch (e) { setErr("The scan didn't work — try again or add items manually."); setStep("photo"); }
+  };
+
+  const updRow = (i, k, v) => setRows(p => p.map((r, idx) => idx === i ? { ...r, [k]: v } : r));
+  const keptCount = rows.filter(r => r.keep).length;
+
+  const addKept = async () => {
+    if (adding || !keptCount) return;
+    setAdding(true);
+    try {
+      for (const r of rows) {
+        if (!r.keep || !r.name.trim()) continue;
+        await onAdd({
+          id: uid(), name: r.name.trim(), category: r.category, condition: r.condition,
+          qty: parseInt(r.qty, 10) || 1, notes: r.notes || "", img: img, images: img ? [img] : [],
+          purchase_cost: (r.est_value != null ? r.est_value : ""), avail: "In Stock", mkt: "Not Listed",
+          added: new Date().toISOString(), review_status: "approved",
+        });
+      }
+    } catch (e) {}
+    setAdding(false);
+    if (onDone) onDone();
+  };
+
+  return (
+    <div style={overlay} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={sheet}>
+        <div style={head}>
+          <div style={{ fontWeight: 800, fontSize: 17, color: TEAL_D }}>✨ Scan a box</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 22, color: MUT, cursor: "pointer", lineHeight: 1 }}>×</button>
+        </div>
+        <div style={body}>
+          {step === "photo" && (
+            <div>
+              <p style={{ fontSize: 14, color: MUT, lineHeight: 1.6, marginTop: 0 }}>Take one photo of an open box or shelf. AI will list everything it sees, and you pick what to add. One photo uses one scan.</p>
+              {err && <div style={{ background: "#fff4f4", border: "1px solid #e0a0a0", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#8a2a2a", marginBottom: 12 }}>{err}</div>}
+              <button className="btn btn-g" onClick={() => fileRef.current && fileRef.current.click()}>📸 Take / choose photo</button>
+              <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={e => runScan(e.target.files && e.target.files[0])} />
+            </div>
+          )}
+          {step === "loading" && (
+            <div style={{ textAlign: "center", padding: "30px 0", color: MUT }}>
+              {img && <img src={img} alt="" style={{ maxWidth: 220, borderRadius: 10, marginBottom: 14, display: "block", margin: "0 auto 14px" }} />}
+              <div>Identifying everything in the photo…</div>
+            </div>
+          )}
+          {step === "review" && (
+            <div>
+              <div style={{ display: "flex", gap: 12, marginBottom: 14, alignItems: "flex-start" }}>
+                {img && <img src={img} alt="" style={{ width: 92, height: 92, objectFit: "cover", borderRadius: 10, flexShrink: 0 }} />}
+                <div style={{ fontSize: 13, color: TEAL_D }}>
+                  <b>Found {rows.length} item{rows.length !== 1 ? "s" : ""}.</b> Uncheck anything you don't want, edit the rest, then add them. Values are estimates.
+                  {info && info.limit != null && <div style={{ color: MUT, marginTop: 4 }}>{Math.max(0, info.limit - info.used)} scans left this period.</div>}
+                </div>
+              </div>
+              <div style={{ maxHeight: 360, overflowY: "auto", border: "1px solid " + LINE, borderRadius: 10 }}>
+                {rows.map((r, i) => (
+                  <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 12px", borderBottom: i < rows.length - 1 ? "1px solid " + LINE : "none", opacity: r.keep ? 1 : .5 }}>
+                    <input type="checkbox" checked={r.keep} onChange={e => updRow(i, "keep", e.target.checked)} style={{ width: 18, height: 18, flexShrink: 0 }} />
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                      <input className="fi" value={r.name} onChange={e => updRow(i, "name", e.target.value)} placeholder="Item name" style={{ fontWeight: 600 }} />
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        <select className="fs" value={r.category} onChange={e => updRow(i, "category", e.target.value)} style={{ flex: "1 1 130px" }}>
+                          {cats.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+                        </select>
+                        <select className="fs" value={r.condition} onChange={e => updRow(i, "condition", e.target.value)} style={{ width: 110 }}>
+                          {CONDS.map(c => <option key={c}>{c}</option>)}
+                        </select>
+                        <input className="fi" type="number" min="1" value={r.qty} onChange={e => updRow(i, "qty", e.target.value)} title="Quantity" style={{ width: 62 }} />
+                        <input className="fi" type="number" min="0" value={r.est_value == null ? "" : r.est_value} onChange={e => updRow(i, "est_value", e.target.value === "" ? null : Number(e.target.value))} placeholder="$ value" style={{ width: 90 }} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 10, marginTop: 16, justifyContent: "flex-end" }}>
+                <button className="btn btn-o" onClick={onClose} disabled={adding}>Cancel</button>
+                <button className="btn btn-g" onClick={addKept} disabled={adding || !keptCount}>{adding ? "Adding…" : "Add " + keptCount + " item" + (keptCount !== 1 ? "s" : "")}</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
