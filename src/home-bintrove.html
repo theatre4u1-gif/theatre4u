@@ -166,10 +166,40 @@
     })();
     </script>
 
-    <!-- ═══ TODO (BinTrove-specific marketing tags) ════════════════════════
-         Add a SEPARATE BinTrove GA4 property + (optional) Meta Pixel here so
-         home/consumer traffic does NOT mix into the Theatre4u/ArtsTracker
-         analytics or ad audiences. Intentionally omitted until those IDs exist. -->
+    <!-- ═══ BinTrove marketing analytics (consumer) ════════════════════════
+         SEPARATE from Theatre4u/ArtsTracker so home traffic never mixes into
+         the school analytics/ad audiences. Paste your IDs below; each tag only
+         loads if its ID is filled in. Fire conversions from the app with
+         window.btTrack('sign_up') and window.btTrack('purchase', {value, currency}). -->
+    <script>
+      window.BT_GA4    = "G-JN6PRW5MB0";  /* BinTrove GA4 Measurement ID */
+      window.BT_META   = "";  /* Meta (Facebook) Pixel ID, e.g. "123456789012345" */
+      window.BT_TIKTOK = "";  /* TikTok Pixel ID, e.g. "C1XXXXXXXXXXXXXXXXXX" */
+      (function () {
+        if (window.BT_GA4) {
+          var g = document.createElement("script"); g.async = true;
+          g.src = "https://www.googletagmanager.com/gtag/js?id=" + window.BT_GA4;
+          document.head.appendChild(g);
+          window.dataLayer = window.dataLayer || [];
+          window.gtag = function () { dataLayer.push(arguments); };
+          gtag("js", new Date()); gtag("config", window.BT_GA4);
+        }
+        if (window.BT_META) {
+          !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version="2.0";n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,"script","https://connect.facebook.net/en_US/fbevents.js");
+          fbq("init", window.BT_META); fbq("track", "PageView");
+        }
+        if (window.BT_TIKTOK) {
+          !function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"];ttq.setAndDefer=function(e,n){e[n]=function(){e.push([n].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(e){for(var n=ttq._i[e]||[],i=0;i<ttq.methods.length;i++)ttq.setAndDefer(n,ttq.methods[i]);return n};ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{};ttq._i[e]=[];ttq._i[e]._u=r;ttq._t=ttq._t||{};ttq._t[e]=+new Date;ttq._o=ttq._o||{};ttq._o[e]=n||{};var s=d.createElement("script");s.type="text/javascript";s.async=!0;s.src=r+"?sdkid="+e+"&lib="+t;var a=d.getElementsByTagName("script")[0];a.parentNode.insertBefore(s,a)};ttq.load(window.BT_TIKTOK);ttq.page()}(window,document,"ttq");
+        }
+        /* Unified conversion tracker — safe no-op until IDs are set. */
+        window.btTrack = function (event, params) {
+          params = params || {};
+          try { if (window.BT_GA4 && window.gtag) gtag("event", event, params); } catch (e) {}
+          try { if (window.BT_META && window.fbq) { var m = event === "purchase" ? "Purchase" : event === "sign_up" ? "CompleteRegistration" : "Lead"; fbq("track", m, params); } } catch (e) {}
+          try { if (window.BT_TIKTOK && window.ttq) { var k = event === "purchase" ? "CompletePayment" : event === "sign_up" ? "CompleteRegistration" : "SubmitForm"; ttq.track(k, params); } } catch (e) {}
+        };
+      })();
+    </script>
 
     <script type="module" src="/main.jsx"></script>
   </head>

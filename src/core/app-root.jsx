@@ -238,6 +238,19 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── BinTrove ad-conversion: fire a purchase event on return from Stripe ──
+  // (no-op until the GA4/Meta/TikTok IDs are set in home-bintrove.html)
+  useEffect(()=>{
+    if(!IS_BINTROVE) return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if(params.get("paid")==="1" || params.get("payment_success") || params.get("session_id")) {
+        if(typeof window !== "undefined" && window.btTrack) window.btTrack("purchase");
+      }
+    } catch(e) {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Detect post-Stripe-payment redirect and refresh org plan ────────────────
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState("");
   const [billingPaused, setBillingPaused] = useState(false); // admin kill-switch (site_content global/billing_paused)

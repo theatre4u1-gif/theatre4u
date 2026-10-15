@@ -74,6 +74,8 @@ export function BinTroveAuthScreen({ onAuth }) {
           }, { onConflict: "id", ignoreDuplicates: false });
           // Funnel tracking (fire-and-forget).
           try { await SB.from("signup_events").insert({ org_id: data.user.id, referrer: (typeof document !== "undefined" ? document.referrer : null) || null }); } catch (e) {}
+          // Ad-conversion event (BinTrove GA4/Meta/TikTok — no-op until IDs are set in home-bintrove.html).
+          try { if (typeof window !== "undefined" && window.btTrack) window.btTrack("sign_up"); } catch (e) {}
           // Fire the welcome email + admin notice (same path as the school signup).
           // send-sequence-email resolves the BinTrove brand + home series from the org (org_type=home).
           try {
