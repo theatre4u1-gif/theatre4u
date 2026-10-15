@@ -467,7 +467,8 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
                 <div onClick={()=>setAddMenu(false)} style={{position:"fixed",inset:0,zIndex:40}}/>
                 <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",zIndex:41,background:"var(--cream)",border:"1px solid var(--border)",borderRadius:"var(--rm)",boxShadow:"var(--sh2)",minWidth:236,overflow:"hidden"}}>
                   <button className="addmenu-item" onClick={()=>{setAddMenu(false);const max=PLANS_DEF[plan]?.maxItems??25;if(items.length>=max){setUpgradeReason(EM.planItemLimit.body);return;}setActive(null);setModal("a");}}>✚&nbsp;&nbsp;Add one item{submitsForReview?" (for approval)":""}</button>
-                  {IS_BINTROVE&&<button className="addmenu-item" onClick={()=>{setAddMenu(false);setShowBatch(true);}}>✨&nbsp;&nbsp;Scan a box (AI)</button>}
+                  {IS_BINTROVE&&<button className="addmenu-item" onClick={()=>{setAddMenu(false);setShowBatch(true);}}>✨&nbsp;&nbsp;Scan multiple items (AI)</button>}
+                  {IS_BINTROVE&&<div style={{padding:"0 14px 10px",fontSize:11,color:"var(--muted)",lineHeight:1.45}}>Snap one photo of a shelf, drawer, or wall of books — AI lists each item so you can add them all at once.</div>}
                   {!isStudentTier&&<button className="addmenu-item" onClick={()=>{setAddMenu(false);setShowBulk(true);}}>📸&nbsp;&nbsp;Bulk add from photos</button>}
                   {!isStudentTier&&<button className="addmenu-item" onClick={()=>{setAddMenu(false);setShowImport(true);}}>⬆&nbsp;&nbsp;Import from CSV</button>}
                 </div>
@@ -875,13 +876,13 @@ function BatchScanModal({ userId, cats = [], onClose, onAdd, onDone }) {
     <div style={overlay} onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={sheet}>
         <div style={head}>
-          <div style={{ fontWeight: 800, fontSize: 17, color: TEAL_D }}>✨ Scan a box</div>
+          <div style={{ fontWeight: 800, fontSize: 17, color: TEAL_D }}>✨ Scan multiple items</div>
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 22, color: MUT, cursor: "pointer", lineHeight: 1 }}>×</button>
         </div>
         <div style={body}>
           {step === "photo" && (
             <div>
-              <p style={{ fontSize: 14, color: MUT, lineHeight: 1.6, marginTop: 0 }}>Take one photo of an open box or shelf. AI will list everything it sees, and you pick what to add. One photo uses one scan.</p>
+              <p style={{ fontSize: 14, color: MUT, lineHeight: 1.6, marginTop: 0 }}>Take one photo of several things at once — a shelf, a drawer, a wall of books, a pile of holiday decorations. AI lists each item it sees and you pick what to add. One photo uses one scan.</p>
               {err && <div style={{ background: "#fff4f4", border: "1px solid #e0a0a0", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#8a2a2a", marginBottom: 12 }}>{err}</div>}
               <button className="btn btn-g" onClick={() => fileRef.current && fileRef.current.click()}>📸 Take / choose photo</button>
               <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={e => runScan(e.target.files && e.target.files[0])} />
