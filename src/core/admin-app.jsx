@@ -190,7 +190,7 @@ export function AdminApp() {
       {["overview", "programs", "usage", "money", "watch"].includes(mod) && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 24px", background: "#241608", borderBottom: "1px solid rgba(240,230,211,.08)" }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(240,230,211,.5)", textTransform: "uppercase", letterSpacing: .5, marginRight: 2 }}>Site</span>
-          {[["all", "Both"], ["theatre4u", "Theatre4u"], ["artstracker", "ArtsTracker"]].map(([id, label]) => (
+          {[["all", "All"], ["theatre4u", "Theatre4u"], ["artstracker", "ArtsTracker"], ["bintrove", "BinTrove"]].map(([id, label]) => (
             <button key={id} onClick={() => setDoor(id)}
               style={{ padding: "5px 14px", borderRadius: 7, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, fontWeight: 700, background: door === id ? "#c4922a" : "rgba(240,230,211,.08)", color: door === id ? "#1a0f06" : "rgba(240,230,211,.75)" }}>{label}</button>
           ))}

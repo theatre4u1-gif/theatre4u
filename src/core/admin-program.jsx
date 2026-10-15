@@ -5,6 +5,7 @@
 // here), private message content is never shown, and every change is written to audit_log.
 import React, { useState, useEffect } from "react";
 import { SB, callEdgeFn } from "./supabase.js";
+import { lastActiveTs } from "../lib/admin-metrics.js";
 
 const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
 const fmtWhen = (iso) => iso ? new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—";
@@ -233,7 +234,8 @@ export function ProgramDetail({ org: seed, onBack, onChanged }) {
           {factRow("Location", org.location || org.city || "—")}
           {factRow("Plan", org.plan || "free")}
           {factRow("Joined", fmtDate(org.created_at))}
-          {factRow("Last seen", fmtWhen(org.last_seen))}
+          {factRow("Last active", (() => { const t = lastActiveTs(org, usage); return t ? fmtWhen(new Date(t).toISOString()) : "No activity yet"; })())}
+          {factRow("Owner last sign-in", fmtWhen(org.last_seen))}
           {factRow("Subscription", org.subscription_status || (org.stripe_subscription_id ? "active" : "—"))}
           {org.plan_expires_at && factRow("Plan expires", fmtDate(org.plan_expires_at))}
           {org.beta_end_date && factRow("Beta ends", fmtDate(org.beta_end_date))}

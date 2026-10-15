@@ -116,7 +116,7 @@ export const getPointsName = (vertical) => (!vertical || vertical === "theatre")
 
 // The brand-door host/url for a specific program (music/dance/art/booster => ArtsTracker;
 // theatre follows its signup domain). Use for QR codes and links tied to a program.
-export const doorHost = (org) => doorOf(org) === "artstracker" ? "artstracker.org" : "theatre4u.org";
+export const doorHost = (org) => { const d = doorOf(org); return d === "artstracker" ? "artstracker.org" : d === "bintrove" ? "bintrove.com" : "theatre4u.org"; };
 export const doorUrl  = (org) => "https://" + doorHost(org);
 
 export function itemShareUrl(item) {

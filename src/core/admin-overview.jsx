@@ -55,7 +55,7 @@ function RadarRow({ icon, tone, count, label, cta, onClick }) {
   );
 }
 
-function ProgramsTable({ rows, onToggleBeta, busyId, onOpen }) {
+function ProgramsTable({ rows, onToggleBeta, busyId, onOpen, usageMap }) {
   const [q, setQ] = useState("");
   const filtered = rows.filter(o => { const s = (o.name || "") + " " + (o.email || "") + " " + (o.location || o.city || ""); return s.toLowerCase().includes(q.toLowerCase()); });
   return (
@@ -65,7 +65,7 @@ function ProgramsTable({ rows, onToggleBeta, busyId, onOpen }) {
       <div style={{ overflowX: "auto", border: "1px solid #e6e0d6", borderRadius: 10 }}>
         <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff" }}>
           <thead><tr>
-            <th style={th}>Program</th><th style={th}>Plan</th><th style={th}>Location</th><th style={th}>Last seen</th><th style={th}>Joined</th><th style={th}></th>
+            <th style={th}>Program</th><th style={th}>Plan</th><th style={th}>Location</th><th style={th}>Last active</th><th style={th}>Joined</th><th style={th}></th>
           </tr></thead>
           <tbody>
             {filtered.map(o => (
@@ -73,7 +73,7 @@ function ProgramsTable({ rows, onToggleBeta, busyId, onOpen }) {
                 <td style={td}><div onClick={() => onOpen && onOpen(o)} style={{ fontWeight: 700, color: "#a5731f", cursor: "pointer", textDecoration: "underline" }}>{o.name || "(no name)"}</div><div style={{ fontSize: 11.5, color: "#9a9284" }}>{o.email || ""}</div></td>
                 <td style={td}><span style={badge(planColor(o))}>{planLabel(o)}</span></td>
                 <td style={td}>{o.location || o.city || "—"}</td>
-                <td style={td}>{agoDays(o.last_seen)}</td>
+                <td style={td}>{(() => { const t = lastActiveTs(o, usageMap && usageMap[o.id]); return t ? agoDays(new Date(t).toISOString()) : "no activity yet"; })()}</td>
                 <td style={td}>{fmtDate(o.created_at)}</td>
                 <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>
                   {!o.stripe_subscription_id && !o.founding_member && (
@@ -283,7 +283,7 @@ export function OverviewDashboard({ door = "all" }) {
   ];
   const attentionTotal = radar.reduce((a, r) => a + r.count, 0);
 
-  const byDoor = ["theatre4u", "artstracker"].map(d => {
+  const byDoor = ["theatre4u", "artstracker", "bintrove"].map(d => {
     const list = orgs.filter(o => doorOf(o) === d);
     return { d, total: list.length, active: list.filter(o => ["a7", "a30"].includes(bucketOf(o))).length, paying: list.filter(o => o.stripe_subscription_id).length, founding: list.filter(o => o.founding_member).length };
   });
@@ -299,8 +299,8 @@ export function OverviewDashboard({ door = "all" }) {
   if (drill) {
     const back = <button onClick={() => setDrill(null)} style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid #d5cfc4", background: "#fff", color: "#555", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", marginBottom: 16 }}>← Back to Pulse</button>;
     let body = null, title = drill.label;
-    if (drill.type === "programs") body = <ProgramsTable rows={seg[drill.filter] || []} onToggleBeta={toggleBeta} busyId={busyId} onOpen={setDetailOrg} />;
-    else if (drill.type === "atrisk") { title = "At-risk programs (paying/founding, quiet 14+ days)"; body = <ProgramsTable rows={atRisk} onToggleBeta={toggleBeta} busyId={busyId} onOpen={setDetailOrg} />; }
+    if (drill.type === "programs") body = <ProgramsTable rows={seg[drill.filter] || []} onToggleBeta={toggleBeta} busyId={busyId} onOpen={setDetailOrg} usageMap={usageMap} />;
+    else if (drill.type === "atrisk") { title = "At-risk programs (paying/founding, quiet 14+ days)"; body = <ProgramsTable rows={atRisk} onToggleBeta={toggleBeta} busyId={busyId} onOpen={setDetailOrg} usageMap={usageMap} />; }
     else if (drill.type === "reports") { title = "Content reports"; body = <AdminContentReports />; }
     else if (drill.type === "anomalies") { title = "Data anomalies"; body = <DataHealthDashboard />; }
     else if (drill.type === "feedback") { title = "Feedback"; body = <SimpleTable empty="No feedback yet." rows={feedback} cols={[{ h: "Program", cell: r => r.org_name || "—" }, { h: "Type", cell: r => r.category || "—" }, { h: "Rating", cell: r => r.rating != null ? r.rating + "★" : "—" }, { h: "Status", cell: r => <span style={badge((r.status || "new") === "new" ? "#e91e63" : "#8a8272")}>{r.status || "new"}</span> }, { h: "When", cell: r => fmtDate(r.created_at) }]} />; }
@@ -344,7 +344,7 @@ export function OverviewDashboard({ door = "all" }) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           {byDoor.map(b => (
             <div key={b.d} style={{ border: "1px solid #eee6d9", borderRadius: 10, padding: "12px 14px" }}>
-              <div style={{ fontWeight: 800, color: b.d === "theatre4u" ? "#a5731f" : "#b06fc9", marginBottom: 8 }}>{DOOR_LABEL[b.d]}</div>
+              <div style={{ fontWeight: 800, color: b.d === "theatre4u" ? "#a5731f" : b.d === "bintrove" ? "#0F6E6B" : "#b06fc9", marginBottom: 8 }}>{DOOR_LABEL[b.d]}</div>
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 13, color: "#3a3a3a" }}>
                 <span><strong style={{ fontSize: 18 }}>{b.total}</strong> programs</span>
                 <span><strong style={{ fontSize: 18 }}>{b.active}</strong> active</span>
