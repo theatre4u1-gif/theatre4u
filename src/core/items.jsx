@@ -158,7 +158,7 @@ export async function uploadPhoto(file, userId) {
   } catch(e) { console.error("uploadPhoto failed:", e); return null; }
 }
 
-export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical="theatre",plan="free",suggestedTags=[]}){
+export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical="theatre",plan="free",suggestedTags=[],scanEnabled=true}){
   const vConfig = getVertical(vertical);
   // Per-vertical example text (QA-4, 2026-07-04)
   const EX_ITEM = {theatre:"Victorian Ball Gown", music:"Yamaha Trumpet", dance:"Ballet Slippers (Pair)", art:"Acrylic Paint Set", booster:"Folding Table", home:"Holiday lights"}[vertical] || "Storage Bin";
@@ -219,7 +219,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
       const res = await fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/scan-item",{
         method:"POST",
         headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${session?.access_token||""}` },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, vertical, categories: vCATS.map(c=>({id:c.id,label:c.label})), conditions: vCONDS }),
       });
       const d = await res.json().catch(()=>({}));
       if(!res.ok || d.error){ setScanErr(d.message||"The scan didn't work — you can still add the item manually."); setScanning(false); if(scanRef.current)scanRef.current.value=""; return; }
@@ -293,13 +293,13 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
 
   return(
     <div className="fg2">
-      {IS_BINTROVE && scanInfo && (
+      {scanInfo && (
         <div className="fg fu" style={{background:"#E6F4F1",border:"1px solid #1C9E8F",borderRadius:8,padding:"10px 12px",fontSize:12.5,color:"#0A5450"}}>
-          ✨ <b>Filled in from your photo</b> ({scanInfo.confidence} confidence). Check everything and edit before saving — the value is an estimate.
+          <b>Filled in from your photo</b> ({scanInfo.confidence} confidence). Check everything and edit before saving — the value is an estimate.
           {scanInfo.limit!=null && <span style={{color:"#0F6E6B"}}> &nbsp;·&nbsp; {Math.max(0,scanInfo.limit-scanInfo.used)} scans left.</span>}
         </div>
       )}
-      {IS_BINTROVE && scanErr && (
+      {scanErr && (
         <div className="fg fu" style={{background:"#fff4f4",border:"1px solid #e0a0a0",borderRadius:8,padding:"10px 12px",fontSize:12.5,color:"#8a2a2a"}}>{scanErr}</div>
       )}
       <div className="fg fu"><label className="fl">Item Name *</label><input className="fi" value={f.name} onChange={e=>upd("name",e.target.value)} placeholder={"e.g. "+EX_ITEM} autoFocus/></div>
@@ -401,12 +401,12 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
       </div>
       <div className="fg fu sdiv">
         <div className="slbl">📷 {maxImg>1?"Photos":"Photo"} {maxImg>1&&<span style={{fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:10,color:"var(--muted)"}}>({imgsOf(f).length}/{maxImg})</span>}</div>
-        {IS_BINTROVE && (
+        {userId && scanEnabled && (
           <div style={{marginBottom:10}}>
             <button type="button" className="btn btn-g btn-sm" disabled={scanning||upl} style={{opacity:(scanning||upl)?.6:1}}
-              onClick={()=>scanRef.current&&scanRef.current.click()}>{scanning?"Scanning…":"✨ Scan with AI"}</button>
+              onClick={()=>scanRef.current&&scanRef.current.click()}>{scanning?"Scanning…":"📷 Scan item"}</button>
             <input ref={scanRef} type="file" accept="image/*" capture="environment" hidden onChange={e=>runScan(e.target.files&&e.target.files[0])}/>
-            <span style={{fontSize:11,color:"var(--muted)",marginLeft:8}}>Snap a photo and we'll fill in the details for you.</span>
+            <span style={{fontSize:11,color:"var(--muted)",marginLeft:8}}>Snap a photo and we'll fill in the details — review before saving.</span>
           </div>
         )}
         <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>

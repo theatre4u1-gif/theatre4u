@@ -61,6 +61,26 @@ export function scanLimitFor(homePlan) {
   return SCAN_LIMITS[homePlan || "free"] || SCAN_LIMITS.free;
 }
 
+// ── School AI Scan allotments (Theatre4u / ArtsTracker) — bundled into the plan, metered monthly.
+// Free gets a small taste (the 25-item Free cap already limits how much it can save); Pro and up
+// get a generous monthly pool. Kept in sync with SCAN_LIMITS_SCHOOL in the scan-item edge function.
+export const SCHOOL_SCAN_LIMITS = {
+  free:          { limit: 3,    period: "month" },
+  pro:           { limit: 100,  period: "month" },
+  district:      { limit: 300,  period: "month" },
+  district_m:    { limit: 600,  period: "month" },
+  district_l:    { limit: 1000, period: "month" },
+  at_pro:        { limit: 100,  period: "month" },
+  at_district_s: { limit: 300,  period: "month" },
+  at_district_m: { limit: 600,  period: "month" },
+  at_district_l: { limit: 1000, period: "month" },
+  enterprise:    { limit: 5000, period: "month" },
+  at_enterprise: { limit: 5000, period: "month" },
+};
+export function schoolScanLimitFor(plan) {
+  return SCHOOL_SCAN_LIMITS[plan || "free"] || SCHOOL_SCAN_LIMITS.free;
+}
+
 export const BINTROVE_PLANS_DEF = {
   free:      { label:"Free",      maxBins:3,        maxItems:30,       annualPrice:0,  users:1,
     blurb:"Try it out — catalog a few bins and see how it works.",

@@ -943,6 +943,7 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
             {[
               {key:"community_enabled",  icon:"🎪", label:"Community Board",  desc:"Appear in the community directory and post to the shared board. Other programs can see your posts."},
               {key:"marketplace_enabled",icon:"🏪", label:"Backstage Exchange",  desc:"Share selected items with other theatre programs in the region. You control exactly which items are posted. Browse what others have available."},
+              {key:"scan_enabled",       icon:"📷", label:"AI item scanning",  desc:"Let you and your team photograph an item (or a whole shelf or rack) and have the details filled in for you to review before saving. Uses your plan's monthly scan allowance. Turn off to hide the Scan buttons entirely."},
             ].map(({key,icon,label,desc})=>(
               <div key={key} style={{display:"flex",alignItems:"flex-start",gap:14,padding:"12px 0",borderBottom:"1px solid var(--border)"}}>
                 <div style={{fontSize:22,marginTop:2}}>{icon}</div>

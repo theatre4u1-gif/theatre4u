@@ -28,6 +28,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
   // stored vertical (e.g. an admin viewing bintrove.com with a theatre org). This drives
   // categories, conditions, availability, the hero gradient and the sub copy, all at once.
   const vVertical=IS_BINTROVE ? "home" : (org?.vertical||"theatre");
+  const scanEnabled = org?.scan_enabled !== false; // photo-scan tool; off only if a director disabled it in Settings
   const multiV=!IS_BINTROVE && ((org?.verticals_enabled)||[]).length>1;  // multi-department org → scope lists to the active department (never on the home door)
   const vCATS=getCatsMerged(vVertical);
   const vCfg=getVertical(vVertical);
@@ -467,8 +468,8 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
                 <div onClick={()=>setAddMenu(false)} style={{position:"fixed",inset:0,zIndex:40}}/>
                 <div style={{position:"absolute",right:0,top:"calc(100% + 6px)",zIndex:41,background:"var(--cream)",border:"1px solid var(--border)",borderRadius:"var(--rm)",boxShadow:"var(--sh2)",minWidth:236,overflow:"hidden"}}>
                   <button className="addmenu-item" onClick={()=>{setAddMenu(false);const max=PLANS_DEF[plan]?.maxItems??25;if(items.length>=max){setUpgradeReason(EM.planItemLimit.body);return;}setActive(null);setModal("a");}}>✚&nbsp;&nbsp;Add one item{submitsForReview?" (for approval)":""}</button>
-                  {IS_BINTROVE&&<button className="addmenu-item" onClick={()=>{setAddMenu(false);setShowBatch(true);}}>✨&nbsp;&nbsp;Scan multiple items (AI)</button>}
-                  {IS_BINTROVE&&<div style={{padding:"0 14px 10px",fontSize:11,color:"var(--muted)",lineHeight:1.45}}>Snap one photo of a shelf, drawer, or wall of books — AI lists each item so you can add them all at once.</div>}
+                  {canAdd&&scanEnabled&&<button className="addmenu-item" onClick={()=>{setAddMenu(false);setShowBatch(true);}}>📷&nbsp;&nbsp;Scan several items</button>}
+                  {canAdd&&scanEnabled&&<div style={{padding:"0 14px 10px",fontSize:11,color:"var(--muted)",lineHeight:1.45}}>{IS_BINTROVE?"Snap one photo of a shelf, drawer, or wall of books — it lists each item so you can add them all at once.":"Snap one photo of a shelf of props or a rack of costumes — it lists each item, which you review before saving."}</div>}
                   {!isStudentTier&&<button className="addmenu-item" onClick={()=>{setAddMenu(false);setShowBulk(true);}}>📸&nbsp;&nbsp;Bulk add from photos</button>}
                   {!isStudentTier&&<button className="addmenu-item" onClick={()=>{setAddMenu(false);setShowImport(true);}}>⬆&nbsp;&nbsp;Import from CSV</button>}
                 </div>
@@ -796,16 +797,16 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
       />}
       {modal==="a"&&(<Modal title="Add New Item" onClose={()=>setModal(null)}
          >
-          <ItemForm onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={vVertical} plan={plan} suggestedTags={allTags}/>
+          <ItemForm onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={vVertical} plan={plan} suggestedTags={allTags} scanEnabled={scanEnabled}/>
         </Modal>)}
       {modal==="e"&&active&&(<Modal title="Edit Item" onClose={()=>setModal(null)}
          >
-          <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={vVertical} plan={plan} suggestedTags={allTags}/>
+          <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={vVertical} plan={plan} suggestedTags={allTags} scanEnabled={scanEnabled}/>
         </Modal>)}
       {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{del(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete}/></Modal>}
       {showImport&&<CSVImport userId={userId} vertical={vVertical} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",userId).order("added",{ascending:false}).limit(2000);if(data&&onImported)onImported(data);refetch();}}/>}
       {showBulk&&<BulkPhotoAdd userId={userId} vertical={vVertical} cats={vCATS} onClose={()=>setShowBulk(false)} onImport={(data)=>{if(onImported)onImported(data);refetch();}}/>}
-      {showBatch&&<BatchScanModal userId={userId} cats={vCATS} onClose={()=>setShowBatch(false)} onAdd={onAdd} onDone={()=>{setShowBatch(false);refetch();}}/>}
+      {showBatch&&<BatchScanModal userId={userId} cats={vCATS} vertical={vVertical} conds={getVertical(vVertical).conditions} onClose={()=>setShowBatch(false)} onAdd={onAdd} onDone={()=>{setShowBatch(false);refetch();}}/>}
     </div>
     </>)}
   </>
@@ -814,7 +815,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
 // ── BinTrove AI Batch Scan ("Scan a box") ────────────────────────────────────
 // One photo of an open box/shelf → scan-item (mode:batch) → a review list the user
 // edits/keeps → bulk-add via onAdd. One photo counts as one scan. Confirm-before-save.
-function BatchScanModal({ userId, cats = [], onClose, onAdd, onDone }) {
+function BatchScanModal({ userId, cats = [], vertical = "theatre", conds, onClose, onAdd, onDone }) {
   const [step, setStep] = useState("photo");   // photo | loading | review
   const [img, setImg] = useState(null);
   const [rows, setRows] = useState([]);         // [{keep,name,category,condition,qty,est_value,notes,confidence}]
@@ -823,7 +824,7 @@ function BatchScanModal({ userId, cats = [], onClose, onAdd, onDone }) {
   const [adding, setAdding] = useState(false);
   const fileRef = React.useRef();
 
-  const CONDS = ["New", "Good", "Used", "Fragile", "For Donation"];
+  const CONDS = (conds && conds.length) ? conds : ["New", "Good", "Used", "Fragile", "For Donation"];
   const TEAL = "#0F6E6B", TEAL_D = "#0A5450", LINE = "#e7e2d7", MUT = "#5d706d";
   const overlay = { position: "fixed", inset: 0, zIndex: 120, background: "rgba(10,30,28,.5)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "24px 12px", overflowY: "auto" };
   const sheet = { background: "#fff", borderRadius: 16, maxWidth: 640, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,.3)", overflow: "hidden" };
@@ -841,7 +842,7 @@ function BatchScanModal({ userId, cats = [], onClose, onAdd, onDone }) {
       const res = await fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/scan-item", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + (session?.access_token || "") },
-        body: JSON.stringify({ url, mode: "batch" }),
+        body: JSON.stringify({ url, mode: "batch", vertical, categories: cats.map(c => ({ id: c.id, label: c.label })), conditions: CONDS }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok || d.error) { setErr(d.message || "The scan didn't work — try a clearer photo or add items manually."); setStep("photo"); return; }
@@ -876,13 +877,13 @@ function BatchScanModal({ userId, cats = [], onClose, onAdd, onDone }) {
     <div style={overlay} onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={sheet}>
         <div style={head}>
-          <div style={{ fontWeight: 800, fontSize: 17, color: TEAL_D }}>✨ Scan multiple items</div>
+          <div style={{ fontWeight: 800, fontSize: 17, color: TEAL_D }}>📷 Scan several items</div>
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 22, color: MUT, cursor: "pointer", lineHeight: 1 }}>×</button>
         </div>
         <div style={body}>
           {step === "photo" && (
             <div>
-              <p style={{ fontSize: 14, color: MUT, lineHeight: 1.6, marginTop: 0 }}>Take one photo of several things at once — a shelf, a drawer, a wall of books, a pile of holiday decorations. AI lists each item it sees and you pick what to add. One photo uses one scan.</p>
+              <p style={{ fontSize: 14, color: MUT, lineHeight: 1.6, marginTop: 0 }}>Take one photo of several things at once — a shelf, a drawer, a rack of costumes, a pile of props. It lists each item it sees and you pick what to add. One photo uses one scan.</p>
               {err && <div style={{ background: "#fff4f4", border: "1px solid #e0a0a0", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#8a2a2a", marginBottom: 12 }}>{err}</div>}
               <button className="btn btn-g" onClick={() => fileRef.current && fileRef.current.click()}>📸 Take / choose photo</button>
               <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={e => runScan(e.target.files && e.target.files[0])} />

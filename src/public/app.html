@@ -1115,7 +1115,7 @@ function AddSheet({onClose, onAdded, userId, plan}) {
       h("div",{className:"sheet-bd"},
         h("p",{style:{fontSize:14,color:"var(--muted)",marginBottom:20,lineHeight:1.6}},
           IS_BINTROVE
-            ? "Snap a photo — AI identifies each item it sees and fills in the details. One thing or a whole shelf; you confirm before saving."
+            ? "Snap a photo — each item it sees gets filled in for you to review. One thing or a whole shelf; you confirm before saving."
             : "Start with a photo — it takes just a few seconds and makes your inventory searchable and visual."),
         h("label",{className:"photo-area",style:{aspectRatio:"4/3",cursor:"pointer"}},
           (uploading||scanning)
@@ -1123,11 +1123,11 @@ function AddSheet({onClose, onAdded, userId, plan}) {
                 h("div",{className:"spin"}),h("span",{style:{color:"var(--muted)",fontSize:13}},scanning?"Identifying…":"Uploading…"))
             : f.img
               ? h("img",{src:f.img,alt:""})
-              : [h("div",{key:"i",className:"pa-icon"},"📷"),h("div",{key:"t",className:"pa-txt"},IS_BINTROVE?"Tap to take photo — AI will fill it in":"Tap to take photo")],
+              : [h("div",{key:"i",className:"pa-icon"},"📷"),h("div",{key:"t",className:"pa-txt"},IS_BINTROVE?"Tap to take photo — details fill in for you":"Tap to take photo")],
           h("input",{ref:fileRef,type:"file",accept:"image/*",capture:"environment",hidden:true,onChange:handlePhoto})
         ),
         h("div",{style:{display:"flex",gap:10,marginTop:4}},
-          h("button",{className:"btn btn-gold",style:{flex:2},onClick:()=>fileRef.current?.click()},Ic.cam(17),IS_BINTROVE?" Scan with AI":" Take Photo"),
+          h("button",{className:"btn btn-gold",style:{flex:2},onClick:()=>fileRef.current?.click()},Ic.cam(17),IS_BINTROVE?" Scan item":" Take Photo"),
           h("button",{className:"btn btn-ghost",style:{flex:1},onClick:skipPhoto},"Skip →")
         )
       )
