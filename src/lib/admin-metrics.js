@@ -23,6 +23,15 @@ export function doorOf(org) {
 }
 export const DOOR_LABEL = { theatre4u: "Theatre4u", artstracker: "ArtsTracker", bintrove: "BinTrove" };
 
+// ── Canonical org predicates — so every tab counts the same population ────────
+// A program counts toward headline totals only if it is not deleted and not closed.
+// Closed accounts are shown separately (never mixed into "active" totals).
+export const isCountableOrg = (o) => !!o && !o.deleted_at && o.account_status !== "closed";
+export const isClosedOrg    = (o) => !!o && o.account_status === "closed";
+// Paying / founding exclude closed accounts (a canceled-but-closed sub is not "paying").
+export const isPayingOrg    = (o) => !!o && !!o.stripe_subscription_id && o.account_status !== "closed";
+export const isFoundingOrg  = (o) => !!o && !!o.founding_member && o.account_status !== "closed";
+
 // Bucket a "last active" timestamp into engagement tiers used across the admin.
 export function activeBucket(ts, now = Date.now()) {
   if (!ts) return "never";

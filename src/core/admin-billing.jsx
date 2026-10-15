@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { ProgramDetail } from "./admin-program.jsx";
-import { doorOf } from "../lib/admin-metrics.js";
+import { doorOf, isCountableOrg, isPayingOrg, isFoundingOrg } from "../lib/admin-metrics.js";
 
 const fmtC = (c) => "$" + ((c || 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 });
 const fmtN = (n) => "$" + (n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -106,9 +106,9 @@ export function BillingDashboard({ door = "all" }) {
   const curRow = rev.find(r => { const m = new Date(r.month); return m.getFullYear() === now.getFullYear() && m.getMonth() === now.getMonth(); });
   const revThisMonth = curRow ? (curRow.revenue_cents - (curRow.refunded_cents || 0)) : 0;
   const rev6 = rev.slice(-6).reduce((a, r) => a + (r.revenue_cents - (r.refunded_cents || 0)), 0);
-  const shown = door === "all" ? orgs : orgs.filter(o => doorOf(o) === door);
-  const paying = shown.filter(o => o.stripe_subscription_id);
-  const founding = shown.filter(o => o.founding_member);
+  const shown = (door === "all" ? orgs : orgs.filter(o => doorOf(o) === door)).filter(isCountableOrg);
+  const paying = shown.filter(isPayingOrg);
+  const founding = shown.filter(isFoundingOrg);
   const betaExp = shown.filter(o => o.beta_end_date);
   const committed = shown.reduce((a, o) => a + monthlyFor(o, distMap), 0);
   const nearestBeta = betaExp.map(o => o.beta_end_date).sort()[0];

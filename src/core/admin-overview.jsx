@@ -10,7 +10,7 @@ import { ProgramDetail } from "./admin-program.jsx";
 import { BreakEvenTracker } from "./admin-breakeven.jsx";
 import { AdminContentReports } from "./admin-reports.jsx";
 import { DataHealthDashboard } from "./admin-health.jsx";
-import { lastActiveTs, activeBucket, doorOf, DOOR_LABEL } from "../lib/admin-metrics.js";
+import { lastActiveTs, activeBucket, doorOf, DOOR_LABEL, isCountableOrg, isClosedOrg, isPayingOrg, isFoundingOrg } from "../lib/admin-metrics.js";
 
 const DAY = 86400000;
 const fmtMoney = (cents) => "$" + ((cents || 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -249,16 +249,18 @@ export function OverviewDashboard({ door = "all" }) {
   const doored = door === "all" ? orgs : orgs.filter(o => doorOf(o) === door);
   const dormant = (o) => { const t = lastActiveTs(o, usageMap[o.id]); return !t || (Date.now() - t) > 14 * DAY; };
   const atRisk = doored.filter(o => (o.stripe_subscription_id || o.founding_member) && o.account_status !== "closed" && dormant(o));
+  const countable = doored.filter(isCountableOrg); // active = not deleted, not closed
   const seg = {
-    all: doored,
-    active7: doored.filter(o => bucketOf(o) === "a7"),
-    active30: doored.filter(o => ["a7", "a30"].includes(bucketOf(o))),
-    new: doored.filter(o => o.created_at >= weekAgo),
-    newMonth: doored.filter(o => o.created_at >= monthStart),
-    paying: doored.filter(o => o.stripe_subscription_id),
-    founding: doored.filter(o => o.founding_member),
-    beta: doored.filter(o => o.temp_pro && !o.founding_member && !o.stripe_subscription_id),
-    free: doored.filter(o => o.plan === "free" && !o.temp_pro && !o.stripe_subscription_id),
+    all: countable,
+    active7: countable.filter(o => bucketOf(o) === "a7"),
+    active30: countable.filter(o => ["a7", "a30"].includes(bucketOf(o))),
+    new: countable.filter(o => o.created_at >= weekAgo),
+    newMonth: countable.filter(o => o.created_at >= monthStart),
+    paying: doored.filter(isPayingOrg),
+    founding: doored.filter(isFoundingOrg),
+    beta: countable.filter(o => o.temp_pro && !o.founding_member && !o.stripe_subscription_id),
+    free: countable.filter(o => o.plan === "free" && !o.temp_pro && !o.stripe_subscription_id),
+    closed: doored.filter(isClosedOrg),
     atrisk: atRisk,
   };
 
@@ -285,7 +287,8 @@ export function OverviewDashboard({ door = "all" }) {
 
   const byDoor = ["theatre4u", "artstracker", "bintrove"].map(d => {
     const list = orgs.filter(o => doorOf(o) === d);
-    return { d, total: list.length, active: list.filter(o => ["a7", "a30"].includes(bucketOf(o))).length, paying: list.filter(o => o.stripe_subscription_id).length, founding: list.filter(o => o.founding_member).length };
+    const act = list.filter(isCountableOrg);
+    return { d, total: act.length, active: act.filter(o => ["a7", "a30"].includes(bucketOf(o))).length, paying: list.filter(isPayingOrg).length, founding: list.filter(isFoundingOrg).length };
   });
   const visitors7 = new Set(pv.map(r => r.session_id).filter(Boolean)).size;
   const avgMin = sessions.length ? Math.round(sessions.reduce((a, s) => a + s.mins, 0) / sessions.length) : null;

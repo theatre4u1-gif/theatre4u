@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { ProgramDetail } from "./admin-program.jsx";
-import { lastActiveTs, activeBucket, doorOf } from "../lib/admin-metrics.js";
+import { lastActiveTs, activeBucket, doorOf, isCountableOrg } from "../lib/admin-metrics.js";
 
 const DAY = 86400000;
 const dayKey = (d) => new Date(d).toISOString().slice(0, 10);
@@ -49,7 +49,7 @@ export function UsageDashboard({ door = "all" }) {
         const sess14 = new Date(Date.now() - 14 * DAY).toISOString();
         const [loginRes, orgsRes, usageRes, sessRes, locRes, invRes] = await Promise.all([
           SB.from("login_events").select("org_id,created_at").gte("created_at", login30).limit(50000),
-          SB.from("orgs").select("id,name,plan,temp_pro,founding_member,stripe_subscription_id,last_seen,created_at,deleted_at,vertical,signup_domain").is("deleted_at", null),
+          SB.from("orgs").select("id,name,plan,temp_pro,founding_member,stripe_subscription_id,last_seen,created_at,deleted_at,account_status,vertical,signup_domain").is("deleted_at", null),
           SB.from("org_platform_usage").select("*").limit(20000),
           SB.from("app_sessions").select("org_id,started_at,last_seen_at").gte("started_at", sess14).limit(20000),
           SB.from("storage_locations").select("org_id").limit(50000),
@@ -62,7 +62,7 @@ export function UsageDashboard({ door = "all" }) {
         const usageMap = {}; (usageRes.data || []).forEach(u => { usageMap[u.org_id] = u; });
         // Door filter (same rule everywhere): keep only this door's programs/logins/sessions/usage.
         const inDoor = (id) => door === "all" || (orgById[id] && doorOf(orgById[id]) === door);
-        const orgs = door === "all" ? orgsAll : orgsAll.filter(o => doorOf(o) === door);
+        const orgs = (door === "all" ? orgsAll : orgsAll.filter(o => doorOf(o) === door)).filter(isCountableOrg);
 
         const now = Date.now();
         // Consistent "last active" = most recent of sign-in / last item added / last exchange.

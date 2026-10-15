@@ -17,8 +17,10 @@ const RECURRING_COST_CATS = ["Software / SaaS", "Hosting", "Payment fees"];
 const FREE_ITEM_LIMIT = 25;
 
 const PRO = { theatre4u: 15, artstracker: 59 };
+const PRO_ANNUAL = { theatre4u: 150, artstracker: 590 };
 const PRO_FOUNDING = 9.99; // founding Pro rate when a specific rate isn't stored on the org
 const DISTRICT = { theatre4u: { S: 49, M: 99, L: 179 }, artstracker: { S: 199, M: 399, L: 699 } };
+const DISTRICT_ANNUAL = { theatre4u: { S: 500, M: 999, L: 1799 }, artstracker: { S: 1990, M: 3990, L: 6990 } };
 const money = (n) => "$" + (Math.round(n * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 });
 
 function tierOf(maxSchools) { const m = maxSchools || 6; return m <= 6 ? "S" : m <= 15 ? "M" : "L"; }
@@ -39,11 +41,12 @@ function orgMonthly(o, itemCount, districtMap) {
   const paying = !!o.stripe_subscription_id;
   const over = (itemCount || 0) >= FREE_ITEM_LIMIT;
   if (!paying && !over) return { amt: 0, kind: "free" };
+  const annual = paying && (o.plan_interval || "") === "annual"; // normalize annual to per-month (matches Billing)
   if (isDistrict) {
-    const ms = districtMap[o.district_id];
-    return { amt: DISTRICT[door][tierOf(ms)], kind: paying ? "paying" : "projected" };
+    const t = tierOf(districtMap[o.district_id]);
+    return { amt: annual ? DISTRICT_ANNUAL[door][t] / 12 : DISTRICT[door][t], kind: paying ? "paying" : "projected" };
   }
-  return { amt: PRO[door], kind: paying ? "paying" : "projected" };
+  return { amt: annual ? PRO_ANNUAL[door] / 12 : PRO[door], kind: paying ? "paying" : "projected" };
 }
 
 export function BreakEvenTracker({ cost }) {
@@ -56,14 +59,14 @@ export function BreakEvenTracker({ cost }) {
       try {
         const ledgerCutoff = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
         const [orgsRes, itemsRes, distRes, ledgerRes] = await Promise.all([
-          SB.from("orgs").select("id,name,plan,vertical,signup_domain,stripe_subscription_id,founding_member,founding_rate_monthly,district_id,absorbed_into_district,account_status,deleted_at,admin_notes"),
-          SB.from("items").select("org_id").limit(50000),
+          SB.from("orgs").select("id,name,plan,plan_interval,vertical,signup_domain,stripe_subscription_id,founding_member,founding_rate_monthly,district_id,absorbed_into_district,account_status,deleted_at,admin_notes"),
+          SB.from("org_platform_usage").select("org_id,total_items"),
           SB.from("districts").select("id,max_schools"),
           SB.from("business_ledger").select("amount_cents,category,entry_date").eq("type", "expense").gte("entry_date", ledgerCutoff),
         ]);
         if (!alive) return;
         if (orgsRes.error) throw orgsRes.error;
-        const counts = {}; (itemsRes.data || []).forEach(r => { counts[r.org_id] = (counts[r.org_id] || 0) + 1; });
+        const counts = {}; (itemsRes.data || []).forEach(r => { counts[r.org_id] = r.total_items || 0; }); // same item source as every other tab
         const districtMap = {}; (distRes.data || []).forEach(d => { districtMap[d.id] = d.max_schools; });
         // Live operating cost: recurring infrastructure over the last 90 days, averaged per month.
         const recurCents = (ledgerRes.data || []).filter(r => RECURRING_COST_CATS.includes(r.category)).reduce((a, r) => a + (r.amount_cents || 0), 0);
