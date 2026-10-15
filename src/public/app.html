@@ -1008,43 +1008,75 @@ function AddSheet({onClose, onAdded, userId, plan}) {
   const [scanning, setScanning] = useState(false);
   const [scanInfo, setScanInfo] = useState(null); // {confidence,used,limit}
   const [scanErr, setScanErr] = useState("");
+  const [batchItems, setBatchItems] = useState([]); // per-item results when a photo has several things
+  const [batchImg, setBatchImg] = useState(null);
+  const [addingBatch, setAddingBatch] = useState(false);
   const fileRef = useRef();
   const upd = (k,v) => setF(p=>({...p,[k]:v}));
 
-  // AI Scan (BinTrove): send the uploaded photo to scan-item, prefill the form for confirmation.
+  // AI Scan (BinTrove): batch mode — identify EACH item in the photo. One item -> prefill the
+  // single form; several -> a review list. Returns the next step to show.
   const scanPhoto = async (url) => {
     try {
       const { data:{ session } } = await SB.auth.getSession();
       const res = await fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/scan-item",{
         method:"POST",
         headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+(session?.access_token||"") },
-        body: JSON.stringify({ url })
+        body: JSON.stringify({ url, mode:"batch" })
       });
       const d = await res.json().catch(()=>({}));
-      if(!res.ok || d.error){ setScanErr(d.message||"Couldn't scan that photo — fill in the details below."); return; }
-      const s = d.suggestion||{};
-      setF(p=>({...p,
-        name:(p.name&&p.name.trim())?p.name:(s.name||""),
-        category:s.category||p.category,
-        condition:s.condition||p.condition,
-        qty:s.quantity||p.qty||1,
-        notes:(p.notes&&p.notes.trim())?p.notes:(s.notes||""),
-        purchase_cost:((p.purchase_cost===""||p.purchase_cost==null)&&s.est_value!=null)?s.est_value:p.purchase_cost,
-      }));
-      setScanInfo({confidence:s.confidence||"medium",used:d.used,limit:d.limit});
-    } catch(e){ setScanErr("Couldn't scan that photo — fill in the details below."); }
+      if(!res.ok || d.error){ setScanErr(d.message||"Couldn't scan that photo — fill in the details below."); return "details"; }
+      const list = (d.suggestions||[]).filter(s=>s&&s.name);
+      if(list.length<=1){
+        const s = list[0]||{};
+        setF(p=>({...p,
+          name:(p.name&&p.name.trim())?p.name:(s.name||""),
+          category:s.category||p.category,
+          condition:s.condition||p.condition,
+          qty:s.quantity||p.qty||1,
+          notes:(p.notes&&p.notes.trim())?p.notes:(s.notes||""),
+          purchase_cost:((p.purchase_cost===""||p.purchase_cost==null)&&s.est_value!=null)?s.est_value:p.purchase_cost,
+        }));
+        if(s.name) setScanInfo({confidence:s.confidence||"medium",used:d.used,limit:d.limit});
+        return "details";
+      }
+      // Several items — build the review list.
+      setBatchItems(list.map(s=>({ keep:true, name:s.name||"", category:s.category||CATS[0].id, condition:s.condition||"Good", qty:s.quantity||1, est_value:(s.est_value==null?"":s.est_value) })));
+      setScanInfo({used:d.used,limit:d.limit});
+      return "review";
+    } catch(e){ setScanErr("Couldn't scan that photo — fill in the details below."); return "details"; }
   };
 
   const maxImg = maxImgFor(plan);
   const handlePhoto = async e => {
     const file = e.target.files?.[0]; if(!file) return;
-    setScanErr(""); setScanInfo(null);
+    setScanErr(""); setScanInfo(null); setBatchItems([]);
     setUpl(true);
     const url = await uploadPhoto(file, userId);
-    if(url) setF(p=>({...p,images:[url],img:url}));
+    if(url) { setF(p=>({...p,images:[url],img:url})); setBatchImg(url); }
     setUpl(false);
-    if(url && IS_BINTROVE){ setScanning(true); await scanPhoto(url); setScanning(false); }
-    setStep("details");
+    let next = "details";
+    if(url && IS_BINTROVE){ setScanning(true); next = await scanPhoto(url) || "details"; setScanning(false); }
+    setStep(next);
+  };
+  const updBatch = (i,k,v) => setBatchItems(p=>p.map((r,idx)=>idx===i?{...r,[k]:v}:r));
+  const keptBatch = batchItems.filter(r=>r.keep).length;
+  const addBatch = async () => {
+    if(addingBatch || !keptBatch) return;
+    setAddingBatch(true);
+    let last=null;
+    for(const r of batchItems){
+      if(!r.keep || !r.name.trim()) continue;
+      const row = { org_id:userId, name:r.name.trim(), category:r.category, condition:r.condition,
+        qty:parseInt(r.qty,10)||1, avail:"In Stock", mkt:"Not Listed",
+        purchase_cost:(r.est_value===""||r.est_value==null)?null:Number(r.est_value),
+        img:batchImg, images:batchImg?[batchImg]:[] };
+      const {data} = await SB.from("items").insert(row).select().single();
+      if(data) last=data;
+    }
+    setAddingBatch(false);
+    if(last) onAdded(last);
+    onClose();
   };
   const handleMorePhoto = async e => {
     const files = Array.from(e.target.files||[]); if(!files.length) return;
@@ -1083,7 +1115,7 @@ function AddSheet({onClose, onAdded, userId, plan}) {
       h("div",{className:"sheet-bd"},
         h("p",{style:{fontSize:14,color:"var(--muted)",marginBottom:20,lineHeight:1.6}},
           IS_BINTROVE
-            ? "Start with a photo — we'll identify the item and fill in the details for you. You can edit anything before saving."
+            ? "Snap a photo — AI identifies each item it sees and fills in the details. One thing or a whole shelf; you confirm before saving."
             : "Start with a photo — it takes just a few seconds and makes your inventory searchable and visual."),
         h("label",{className:"photo-area",style:{aspectRatio:"4/3",cursor:"pointer"}},
           (uploading||scanning)
@@ -1097,6 +1129,41 @@ function AddSheet({onClose, onAdded, userId, plan}) {
         h("div",{style:{display:"flex",gap:10,marginTop:4}},
           h("button",{className:"btn btn-gold",style:{flex:2},onClick:()=>fileRef.current?.click()},Ic.cam(17),IS_BINTROVE?" Scan with AI":" Take Photo"),
           h("button",{className:"btn btn-ghost",style:{flex:1},onClick:skipPhoto},"Skip →")
+        )
+      )
+    )
+  );
+
+  if(step==="review") return h("div",{className:"sheet-overlay",onClick:e=>e.target===e.currentTarget&&onClose()},
+    h("div",{className:"sheet"},
+      h("div",{className:"sheet-handle"}),
+      h("div",{className:"sheet-hd"},
+        h("h2",null,"Items found"),
+        h("button",{style:{background:"none",border:"none",color:"var(--muted)",cursor:"pointer"},onClick:()=>setStep("photo")},Ic.back(22))
+      ),
+      h("div",{className:"sheet-bd"},
+        h("div",{style:{display:"flex",gap:12,marginBottom:14,alignItems:"flex-start"}},
+          batchImg?h("img",{src:batchImg,alt:"",style:{width:72,height:72,objectFit:"cover",borderRadius:10,flexShrink:0}}):null,
+          h("div",{style:{fontSize:13,color:"#0A5450"}},
+            h("b",null,"Found "+batchItems.length+" item"+(batchItems.length!==1?"s":"")+"."),
+            " Uncheck anything you don't want, edit the rest, then add them. Values are estimates.",
+            scanInfo&&scanInfo.limit!=null?h("div",{style:{color:"var(--muted)",marginTop:4}},Math.max(0,scanInfo.limit-scanInfo.used)+" scans left."):null
+          )
+        ),
+        batchItems.map((r,i)=>h("div",{key:i,style:{display:"flex",gap:8,alignItems:"flex-start",padding:"10px 0",borderTop:i>0?"1px solid var(--border)":"none",opacity:r.keep?1:.5}},
+          h("input",{type:"checkbox",checked:r.keep,onChange:e=>updBatch(i,"keep",e.target.checked),style:{width:20,height:20,marginTop:4,flexShrink:0}}),
+          h("div",{style:{flex:1,display:"flex",flexDirection:"column",gap:6}},
+            h("input",{className:"fi",value:r.name,onChange:e=>updBatch(i,"name",e.target.value),placeholder:"Item name",style:{fontWeight:600}}),
+            h("div",{style:{display:"flex",gap:6}},
+              h("select",{className:"fi",value:r.category,onChange:e=>updBatch(i,"category",e.target.value),style:{flex:1}},CATS.map(c=>h("option",{key:c.id,value:c.id},c.icon+" "+c.label))),
+              h("input",{className:"fi",type:"number",min:"1",value:r.qty,onChange:e=>updBatch(i,"qty",e.target.value),style:{width:56},title:"Qty"}),
+              h("input",{className:"fi",type:"number",min:"0",value:r.est_value,onChange:e=>updBatch(i,"est_value",e.target.value),placeholder:"$",style:{width:72},title:"Est. value"})
+            )
+          )
+        )),
+        h("div",{style:{display:"flex",gap:10,marginTop:16}},
+          h("button",{className:"btn btn-ghost",style:{flex:1},onClick:onClose,disabled:addingBatch},"Cancel"),
+          h("button",{className:"btn btn-gold",style:{flex:2},onClick:addBatch,disabled:addingBatch||!keptBatch},addingBatch?"Adding…":("Add "+keptBatch+" item"+(keptBatch!==1?"s":"")))
         )
       )
     )
