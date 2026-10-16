@@ -1058,7 +1058,7 @@ function AddSheet({onClose, onAdded, userId, plan}) {
     if(url) { setF(p=>({...p,images:[url],img:url})); setBatchImg(url); }
     setUpl(false);
     let next = "details";
-    if(url && SCAN_ENABLED){ setScanning(true); next = await scanPhoto(url, scanMode) || "details"; setScanning(false); }
+    if(url && SCAN_ENABLED && scanMode!=="none"){ setScanning(true); next = await scanPhoto(url, scanMode) || "details"; setScanning(false); }
     setStep(next);
   };
   const updBatch = (i,k,v) => setBatchItems(p=>p.map((r,idx)=>idx===i?{...r,[k]:v}:r));
@@ -1134,10 +1134,13 @@ function AddSheet({onClose, onAdded, userId, plan}) {
                 h("button",{className:"btn btn-gold",style:{flex:1},onClick:()=>{setScanMode("single");fileRef.current?.click();}},Ic.cam(17)," Scan one item"),
                 h("button",{className:"btn btn-gold",style:{flex:1},onClick:()=>{setScanMode("batch");fileRef.current?.click();}},Ic.cam(17)," Scan several items")
               ),
-              h("button",{className:"btn btn-ghost",onClick:skipPhoto},"Skip, enter by hand →")
+              h("div",{style:{display:"flex",gap:10}},
+                h("button",{className:"btn btn-ghost",style:{flex:1},onClick:()=>{setScanMode("none");fileRef.current?.click();}},"Take a photo"),
+                h("button",{className:"btn btn-ghost",style:{flex:1},onClick:skipPhoto},"Skip →")
+              )
             )
           : h("div",{style:{display:"flex",gap:10,marginTop:4}},
-              h("button",{className:"btn btn-gold",style:{flex:2},onClick:()=>{setScanMode("single");fileRef.current?.click();}},Ic.cam(17)," Take Photo"),
+              h("button",{className:"btn btn-gold",style:{flex:2},onClick:()=>{setScanMode("none");fileRef.current?.click();}},Ic.cam(17)," Take Photo"),
               h("button",{className:"btn btn-ghost",style:{flex:1},onClick:skipPhoto},"Skip →")
             )
       )
