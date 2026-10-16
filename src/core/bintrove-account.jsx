@@ -77,7 +77,12 @@ export function BinTroveAccount({ user, org }) {
     return (
       <div key={id} style={{ ...card, marginBottom: 0, flex: 1, minWidth: 180, textAlign: "center", borderColor: id === "home" ? TEAL : LINE, boxShadow: id === "home" ? "0 8px 24px rgba(15,110,107,.12)" : "none" }}>
         <div style={{ fontWeight: 800, fontSize: 18 }}>{t.label}</div>
-        <div style={{ fontSize: 26, fontWeight: 800, margin: "6px 0 2px" }}>{id === "free" ? "$0" : "$" + t.annualPrice}<span style={{ fontSize: 13, fontWeight: 500, color: MUT }}>{id === "free" ? "" : "/yr"}</span></div>
+        {id === "free"
+          ? <div style={{ fontSize: 26, fontWeight: 800, margin: "6px 0 2px" }}>$0<span style={{ fontSize: 13, fontWeight: 500, color: MUT }}> /forever</span></div>
+          : <div style={{ margin: "6px 0 2px" }}>
+              <div style={{ fontSize: 26, fontWeight: 800 }}>${(t.annualPrice / 12).toFixed(2)}<span style={{ fontSize: 13, fontWeight: 500, color: MUT }}>/mo</span></div>
+              <div style={{ fontSize: 11.5, color: MUT, marginTop: 1 }}>billed annually (${t.annualPrice}/yr)</div>
+            </div>}
         <div style={{ fontSize: 13, color: MUT, marginBottom: 8 }}>{fmtCap(t.maxBins)} bins · {fmtCap(t.maxItems)} items</div>
         {t.blurb && <div style={{ fontSize: 12.5, color: INK, lineHeight: 1.5, marginBottom: 10, minHeight: 36 }}>{t.blurb}</div>}
         {Array.isArray(t.features) && (
