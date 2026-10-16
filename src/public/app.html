@@ -470,6 +470,7 @@ function buildCats(vertical){
   CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
 }
 const CONDS = ["New","Excellent","Good","Fair","Poor","For Parts"];
+let SCAN_ENABLED = true; // photo-scan tool availability (all brands); set from org.scan_enabled on login
 const AVAIL = ["In Stock","In Use","Checked Out","Being Repaired","Lost","Retired"];
 const MKT   = ["Not Listed","For Rent","For Sale","Rent or Sale","For Loan"];
 const fmt$ = n => "$" + Number(n||0).toFixed(2);
@@ -1011,39 +1012,40 @@ function AddSheet({onClose, onAdded, userId, plan}) {
   const [batchItems, setBatchItems] = useState([]); // per-item results when a photo has several things
   const [batchImg, setBatchImg] = useState(null);
   const [addingBatch, setAddingBatch] = useState(false);
+  const [scanMode, setScanMode] = useState("single"); // "single" | "batch" — chosen before the photo
   const fileRef = useRef();
   const upd = (k,v) => setF(p=>({...p,[k]:v}));
 
   // AI Scan (BinTrove): batch mode — identify EACH item in the photo. One item -> prefill the
   // single form; several -> a review list. Returns the next step to show.
-  const scanPhoto = async (url) => {
+  const scanPhoto = async (url, mode) => {
     try {
       const { data:{ session } } = await SB.auth.getSession();
       const res = await fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/scan-item",{
         method:"POST",
         headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+(session?.access_token||"") },
-        body: JSON.stringify({ url, mode:"batch" })
+        body: JSON.stringify({ url, mode, categories: CATS.map(c=>({id:c.id,label:c.label})), conditions: CONDS })
       });
       const d = await res.json().catch(()=>({}));
       if(!res.ok || d.error){ setScanErr(d.message||"Couldn't scan that photo — fill in the details below."); return "details"; }
-      const list = (d.suggestions||[]).filter(s=>s&&s.name);
-      if(list.length<=1){
-        const s = list[0]||{};
-        setF(p=>({...p,
-          name:(p.name&&p.name.trim())?p.name:(s.name||""),
-          category:s.category||p.category,
-          condition:s.condition||p.condition,
-          qty:s.quantity||p.qty||1,
-          notes:(p.notes&&p.notes.trim())?p.notes:(s.notes||""),
-          purchase_cost:((p.purchase_cost===""||p.purchase_cost==null)&&s.est_value!=null)?s.est_value:p.purchase_cost,
-        }));
-        if(s.name) setScanInfo({confidence:s.confidence||"medium",used:d.used,limit:d.limit});
-        return "details";
+      if(mode==="batch"){
+        const list = (d.suggestions||[]).filter(s=>s&&s.name);
+        if(!list.length){ setScanErr("Couldn't make out separate items — try a closer photo, or fill in the details below."); return "details"; }
+        setBatchItems(list.map(s=>({ keep:true, name:s.name||"", category:s.category||CATS[0].id, condition:s.condition||"Good", qty:s.quantity||1, est_value:(s.est_value==null?"":s.est_value) })));
+        setScanInfo({used:d.used,limit:d.limit});
+        return "review";
       }
-      // Several items — build the review list.
-      setBatchItems(list.map(s=>({ keep:true, name:s.name||"", category:s.category||CATS[0].id, condition:s.condition||"Good", qty:s.quantity||1, est_value:(s.est_value==null?"":s.est_value) })));
-      setScanInfo({used:d.used,limit:d.limit});
-      return "review";
+      const s = d.suggestion||{};
+      setF(p=>({...p,
+        name:(p.name&&p.name.trim())?p.name:(s.name||""),
+        category:s.category||p.category,
+        condition:s.condition||p.condition,
+        qty:s.quantity||p.qty||1,
+        notes:(p.notes&&p.notes.trim())?p.notes:(s.notes||""),
+        purchase_cost:((p.purchase_cost===""||p.purchase_cost==null)&&s.est_value!=null)?s.est_value:p.purchase_cost,
+      }));
+      if(s.name) setScanInfo({confidence:s.confidence||"medium",used:d.used,limit:d.limit});
+      return "details";
     } catch(e){ setScanErr("Couldn't scan that photo — fill in the details below."); return "details"; }
   };
 
@@ -1056,7 +1058,7 @@ function AddSheet({onClose, onAdded, userId, plan}) {
     if(url) { setF(p=>({...p,images:[url],img:url})); setBatchImg(url); }
     setUpl(false);
     let next = "details";
-    if(url && IS_BINTROVE){ setScanning(true); next = await scanPhoto(url) || "details"; setScanning(false); }
+    if(url && SCAN_ENABLED){ setScanning(true); next = await scanPhoto(url, scanMode) || "details"; setScanning(false); }
     setStep(next);
   };
   const updBatch = (i,k,v) => setBatchItems(p=>p.map((r,idx)=>idx===i?{...r,[k]:v}:r));
@@ -1114,8 +1116,8 @@ function AddSheet({onClose, onAdded, userId, plan}) {
       ),
       h("div",{className:"sheet-bd"},
         h("p",{style:{fontSize:14,color:"var(--muted)",marginBottom:20,lineHeight:1.6}},
-          IS_BINTROVE
-            ? "Snap a photo — each item it sees gets filled in for you to review. One thing or a whole shelf; you confirm before saving."
+          SCAN_ENABLED
+            ? "Scan one item, or scan several at once (a shelf or rack) — the details fill in for you to review before anything is saved."
             : "Start with a photo — it takes just a few seconds and makes your inventory searchable and visual."),
         h("label",{className:"photo-area",style:{aspectRatio:"4/3",cursor:"pointer"}},
           (uploading||scanning)
@@ -1123,13 +1125,21 @@ function AddSheet({onClose, onAdded, userId, plan}) {
                 h("div",{className:"spin"}),h("span",{style:{color:"var(--muted)",fontSize:13}},scanning?"Identifying…":"Uploading…"))
             : f.img
               ? h("img",{src:f.img,alt:""})
-              : [h("div",{key:"i",className:"pa-icon"},"📷"),h("div",{key:"t",className:"pa-txt"},IS_BINTROVE?"Tap to take photo — details fill in for you":"Tap to take photo")],
+              : [h("div",{key:"i",className:"pa-icon"},"📷"),h("div",{key:"t",className:"pa-txt"},SCAN_ENABLED?"Tap to take a photo — details fill in for you":"Tap to take photo")],
           h("input",{ref:fileRef,type:"file",accept:"image/*",capture:"environment",hidden:true,onChange:handlePhoto})
         ),
-        h("div",{style:{display:"flex",gap:10,marginTop:4}},
-          h("button",{className:"btn btn-gold",style:{flex:2},onClick:()=>fileRef.current?.click()},Ic.cam(17),IS_BINTROVE?" Scan item":" Take Photo"),
-          h("button",{className:"btn btn-ghost",style:{flex:1},onClick:skipPhoto},"Skip →")
-        )
+        SCAN_ENABLED
+          ? h("div",{style:{display:"flex",flexDirection:"column",gap:8,marginTop:4}},
+              h("div",{style:{display:"flex",gap:10}},
+                h("button",{className:"btn btn-gold",style:{flex:1},onClick:()=>{setScanMode("single");fileRef.current?.click();}},Ic.cam(17)," Scan one item"),
+                h("button",{className:"btn btn-gold",style:{flex:1},onClick:()=>{setScanMode("batch");fileRef.current?.click();}},Ic.cam(17)," Scan several items")
+              ),
+              h("button",{className:"btn btn-ghost",onClick:skipPhoto},"Skip, enter by hand →")
+            )
+          : h("div",{style:{display:"flex",gap:10,marginTop:4}},
+              h("button",{className:"btn btn-gold",style:{flex:2},onClick:()=>{setScanMode("single");fileRef.current?.click();}},Ic.cam(17)," Take Photo"),
+              h("button",{className:"btn btn-ghost",style:{flex:1},onClick:skipPhoto},"Skip →")
+            )
       )
     )
   );
@@ -2354,6 +2364,7 @@ function App() {
       const{data:orgData}=await SB.from("orgs").select("*").eq("id",targetOrgId).single();
       if(orgData){
         setOrg({...orgData, _memberRole:memberRole});
+        SCAN_ENABLED = orgData.scan_enabled !== false; // photo-scan tool on unless disabled in Settings
         // Build the category list from the org's department, its custom categories, and any renames.
         CAT_LABELS_M = orgData.category_labels || {};
         const{data:catRows}=await SB.from("org_categories").select("id,vertical,label").eq("org_id",targetOrgId);
