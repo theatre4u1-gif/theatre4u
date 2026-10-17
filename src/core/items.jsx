@@ -158,7 +158,7 @@ export async function uploadPhoto(file, userId) {
   } catch(e) { console.error("uploadPhoto failed:", e); return null; }
 }
 
-export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical="theatre",plan="free",suggestedTags=[],scanEnabled=true}){
+export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,vertical="theatre",plan="free",suggestedTags=[],scanEnabled=true,customFields=[]}){
   const vConfig = getVertical(vertical);
   // Per-vertical example text (QA-4, 2026-07-04)
   const EX_ITEM = {theatre:"Victorian Ball Gown", music:"Yamaha Trumpet", dance:"Ballet Slippers (Pair)", art:"Acrylic Paint Set", booster:"Folding Table", home:"Holiday lights"}[vertical] || "Storage Bin";
@@ -169,8 +169,9 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
   const vAVAIL  = vConfig.availability;
   const vMKT    = vConfig.marketOptions;
   const defaultCat = vCATS[0]?.id || "costumes";
-  const blank={name:"",category:defaultCat,condition:vCONDS[2]||"Good",size:vSIZES.includes("N/A")?"N/A":vSIZES[0],qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,loan_period:2,deposit:0,avail:"In Stock",img:null,images:[],tags:[],purchase_cost:"",purchase_date:"",purchase_vendor:"",funding_source_id:"",low_stock_threshold:0};
+  const blank={name:"",category:defaultCat,condition:vCONDS[2]||"Good",size:vSIZES.includes("N/A")?"N/A":vSIZES[0],qty:1,location:"",notes:"",mkt:"Not Listed",rent:0,sale:0,loan_period:2,deposit:0,avail:"In Stock",img:null,images:[],tags:[],purchase_cost:"",purchase_date:"",purchase_vendor:"",funding_source_id:"",low_stock_threshold:0,custom:{}};
   const[f,setF]=useState(item||blank);
+  const setCustom=(label,val)=>setF(p=>({...p,custom:{...(p.custom||{}),[label]:val}}));
   const[ti,setTi]=useState("");
   const[upl,setUpl]=useState(false);
   const[sugOpen,setSugOpen]=useState(false); // suggested-tags picker collapsed by default
@@ -309,6 +310,12 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
         <input className="fi" list="t4u-size-opts" value={f.size||""} onChange={e=>upd("size",e.target.value)} placeholder="e.g. M, 6, 42 Long, 44 Waist"/>
         <datalist id="t4u-size-opts">{vSIZES.map(s=><option key={s} value={s}/>)}</datalist>
       </div>
+      {customFields.length>0 && customFields.map(cf=>(
+        <div className="fg" key={cf.label}>
+          <label className="fl">{cf.label}</label>
+          <input className="fi" value={(f.custom&&f.custom[cf.label])||""} onChange={e=>setCustom(cf.label,e.target.value)} placeholder={cf.placeholder||""}/>
+        </div>
+      ))}
       <div className="fg"><label className="fl">Quantity</label><input className="fi" type="number" min="0" step="1" placeholder="1" value={f.qty||""} onChange={e=>upd("qty",parseInt(e.target.value)||0)}/></div>
       {(vertical==="art"||vertical==="booster") && (
         <div className="fg"><label className="fl">Low-stock alert at <span style={{fontWeight:400,textTransform:"none",letterSpacing:0,fontSize:10,color:"var(--muted)"}}>(0 = off)</span></label><input className="fi" type="number" min="0" step="1" placeholder="0" value={f.low_stock_threshold||""} onChange={e=>upd("low_stock_threshold",parseInt(e.target.value)||0)}/></div>
@@ -640,7 +647,7 @@ export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, ca
       </div>
       {(item.tags||[]).length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>{item.tags.map(t=><span key={t} style={{background:"rgba(196,118,26,.12)",color:"var(--cog)",fontSize:12.5,fontWeight:700,padding:"3px 9px",borderRadius:3}}>#{t}</span>)}</div>}
       <div className="dt-sec"><h3>Details</h3>
-        {[...(schoolName?[["School Site",<span style={{fontWeight:700,color:"#42a5f5"}}>🏫 {schoolName}</span>]]:[]),["Condition",item.condition],["Size",item.size],["Quantity",item.qty],["Availability",item.avail],["Location",item.location||"—"],["Notes",item.notes||"—"],["Added",item.added?new Date(item.added).toLocaleDateString():"—"],...(item.display_id?[["Item ID",<span style={{fontWeight:800,fontSize:14,color:"var(--amber)",fontFamily:"monospace",letterSpacing:1}}>{item.display_id}</span>]]:[]),["UUID",<span style={{fontFamily:"monospace",fontSize:11,color:"var(--faint)"}}>{item.id}</span>]].map(([l,v])=>(
+        {[...(schoolName?[["School Site",<span style={{fontWeight:700,color:"#42a5f5"}}>🏫 {schoolName}</span>]]:[]),["Condition",item.condition],["Size",item.size],["Quantity",item.qty],["Availability",item.avail],["Location",item.location||"—"],...(item.custom?Object.entries(item.custom).filter(([k,v])=>v!=null&&v!=="").map(([k,v])=>[k,v]):[]),["Notes",item.notes||"—"],["Added",item.added?new Date(item.added).toLocaleDateString():"—"],...(item.display_id?[["Item ID",<span style={{fontWeight:800,fontSize:14,color:"var(--amber)",fontFamily:"monospace",letterSpacing:1}}>{item.display_id}</span>]]:[]),["UUID",<span style={{fontFamily:"monospace",fontSize:11,color:"var(--faint)"}}>{item.id}</span>]].map(([l,v])=>(
           <div className="dt-row" key={l}><span className="dt-lbl">{l}</span><span>{v}</span></div>
         ))}
       </div>

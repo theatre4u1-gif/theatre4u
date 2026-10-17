@@ -288,7 +288,15 @@ export function OverviewDashboard({ door = "all" }) {
   const byDoor = ["theatre4u", "artstracker", "bintrove"].map(d => {
     const list = orgs.filter(o => doorOf(o) === d);
     const act = list.filter(isCountableOrg);
-    return { d, total: act.length, active: act.filter(o => ["a7", "a30"].includes(bucketOf(o))).length, paying: list.filter(isPayingOrg).length, founding: list.filter(isFoundingOrg).length };
+    const o = { d, total: act.length, active: act.filter(o => ["a7", "a30"].includes(bucketOf(o))).length, paying: list.filter(isPayingOrg).length, founding: list.filter(isFoundingOrg).length };
+    if (d === "bintrove") {
+      // bintrove.com visits land in page_views with the host in `page` (last 7 days loaded above).
+      const bt = pv.filter(r => (r.page || "").toLowerCase().includes("bintrove"));
+      o.visits = bt.length;
+      o.visitors = new Set(bt.map(r => r.session_id).filter(Boolean)).size;
+      o.fromAds = bt.filter(r => /facebook|fbclid|instagram|tiktok|ttclid|\bmeta\b|\bfb\b/i.test((r.utm_source || "") + " " + (r.referrer || ""))).length;
+    }
+    return o;
   });
   const visitors7 = new Set(pv.map(r => r.session_id).filter(Boolean)).size;
   const avgMin = sessions.length ? Math.round(sessions.reduce((a, s) => a + s.mins, 0) / sessions.length) : null;
@@ -354,6 +362,13 @@ export function OverviewDashboard({ door = "all" }) {
                 <span><strong style={{ fontSize: 18 }}>{b.paying}</strong> paying</span>
                 <span><strong style={{ fontSize: 18 }}>{b.founding}</strong> founding</span>
               </div>
+              {b.d === "bintrove" && b.visits != null && (
+                <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid #f0ece3", display: "flex", gap: 16, flexWrap: "wrap", fontSize: 13, color: "#3a3a3a" }}>
+                  <span><strong style={{ fontSize: 18 }}>{b.visits}</strong> visits (7d)</span>
+                  <span><strong style={{ fontSize: 18 }}>{b.visitors}</strong> visitors</span>
+                  <span><strong style={{ fontSize: 18 }}>{b.fromAds}</strong> from ads</span>
+                </div>
+              )}
             </div>
           ))}
         </div>

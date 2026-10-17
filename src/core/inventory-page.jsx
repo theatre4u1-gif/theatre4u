@@ -29,6 +29,8 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
   // categories, conditions, availability, the hero gradient and the sub copy, all at once.
   const vVertical=IS_BINTROVE ? "home" : (org?.vertical||"theatre");
   const scanEnabled = org?.scan_enabled !== false; // photo-scan tool; off only if a director disabled it in Settings
+  // Custom item fields defined for THIS department (per-department: a field with no vertical = all departments).
+  const customFields = (org?.item_fields || []).filter(ff => ff && ff.label && (!ff.vertical || ff.vertical === vVertical));
   const multiV=!IS_BINTROVE && ((org?.verticals_enabled)||[]).length>1;  // multi-department org → scope lists to the active department (never on the home door)
   const vCATS=getCatsMerged(vVertical);
   const vCfg=getVertical(vVertical);
@@ -244,7 +246,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
       .eq("org_id",userId)
       .or("review_status.is.null,review_status.eq.approved");
     if(multiV && deptF!=="all") q=q.eq("vertical",deptF);  // department filter (default = active department; "all" = every department)
-    if(qstr) q=q.or(`name.ilike.*${qstr}*,notes.ilike.*${qstr}*,description.ilike.*${qstr}*,location.ilike.*${qstr}*,display_id.ilike.*${qstr}*`);
+    if(qstr) q=q.ilike("search_text",`*${qstr.toLowerCase()}*`); // one index over every field (name, notes, size, tags, custom fields, …)
     if(catF!=="all") q=q.eq("category",catF);
     if(condF!=="all") q=q.eq("condition",condF);
     if(availF!=="all") q=q.eq("avail",availF);
@@ -719,7 +721,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
                       <div className="inv-cat" style={{color:cat.color}}>{cat.icon} {cat.label}</div>
                       <div className="inv-name">{item.name}</div>
                       {item.location&&<div style={{fontSize:12,color:"var(--muted)",marginBottom:4,display:"flex",alignItems:"center",gap:3}}>📍 {item.location}</div>}
-                      <div className="inv-meta">{item.display_id&&<span className="chip" style={{fontFamily:"monospace",fontWeight:800,color:"var(--amber)",letterSpacing:.5}}>{item.display_id}</span>}<span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span>{item.low_stock_threshold>0&&item.qty<=item.low_stock_threshold&&<span className="chip" style={{background:"rgba(230,74,25,.18)",color:"#ff7043",fontWeight:800}}>⚠ Low Stock</span>}{item.size!=="N/A"&&<span className="chip">{item.size}</span>}<span className="chip">{item.avail}</span></div>
+                      <div className="inv-meta">{item.display_id&&<span className="chip" style={{fontFamily:"monospace",fontWeight:800,color:"var(--amber)",letterSpacing:.5}}>{item.display_id}</span>}<span className="chip">{item.condition}</span><span className="chip">×{item.qty}</span>{item.low_stock_threshold>0&&item.qty<=item.low_stock_threshold&&<span className="chip" style={{background:"rgba(230,74,25,.18)",color:"#ff7043",fontWeight:800}}>⚠ Low Stock</span>}{item.size!=="N/A"&&<span className="chip">{item.size}</span>}{item.custom&&Object.entries(item.custom).filter(([k,v])=>v!=null&&v!=="").map(([k,v])=><span className="chip" key={k} title={k}>{k}: {String(v)}</span>)}<span className="chip">{item.avail}</span></div>
                       <div className="inv-foot"><span className={`mkt-badge ${mktCls(item.mkt)}`}>{item.mkt}</span>{item.mkt==="For Loan"?<span style={{fontSize:12,color:"#00838f",fontWeight:700}}>{item.loan_period||2}wk loan{item.deposit>0?" · "+fmt$(item.deposit)+" dep.":""}</span>:item.mkt!=="Not Listed"&&<span className="price">{item.rent>0?fmt$(item.rent)+"/wk":""}{item.rent>0&&item.sale>0?" · ":""}{item.sale>0?fmt$(item.sale):""}</span>}</div>
                     </div>
                   </div>
@@ -797,11 +799,11 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
       />}
       {modal==="a"&&(<Modal title="Add New Item" onClose={()=>setModal(null)}
          >
-          <ItemForm onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={vVertical} plan={plan} suggestedTags={allTags} scanEnabled={scanEnabled}/>
+          <ItemForm onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={vVertical} plan={plan} suggestedTags={allTags} scanEnabled={scanEnabled} customFields={customFields}/>
         </Modal>)}
       {modal==="e"&&active&&(<Modal title="Edit Item" onClose={()=>setModal(null)}
          >
-          <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={vVertical} plan={plan} suggestedTags={allTags} scanEnabled={scanEnabled}/>
+          <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={vVertical} plan={plan} suggestedTags={allTags} scanEnabled={scanEnabled} customFields={customFields}/>
         </Modal>)}
       {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{del(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete}/></Modal>}
       {showImport&&<CSVImport userId={userId} vertical={vVertical} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",userId).order("added",{ascending:false}).limit(2000);if(data&&onImported)onImported(data);refetch();}}/>}

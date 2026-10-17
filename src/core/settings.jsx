@@ -615,6 +615,81 @@ function SelfServiceDeleteAccount({ user, org }) {
   );
 }
 
+function CustomFieldsManager({ org, setOrg, userId, memberRole=null }){
+  const primary = org?.vertical || "theatre";
+  const enabled = (org?.verticals_enabled?.length ? org.verticals_enabled : [primary]);
+  const canManage = !memberRole || memberRole==="director" || memberRole==="program_director";
+  const [scope,setScope] = useState("all"); // "all" or a vertical id
+  const [label,setLabel] = useState("");
+  const [placeholder,setPlaceholder] = useState("");
+  const [busy,setBusy] = useState(false);
+  const [err,setErr] = useState("");
+  const fields = org?.item_fields || [];
+  const vName = (vid) => (org?.vertical_labels && org.vertical_labels[vid] && org.vertical_labels[vid].label) || (VERTICALS_LIST.find(x=>x.id===vid)||{}).label || vid;
+
+  const persist = async(next)=>{
+    setBusy(true); setErr("");
+    const { error } = await SB.from("orgs").update({ item_fields: next }).eq("id", userId);
+    setBusy(false);
+    if(error){ setErr("Couldn't save. Please try again."); return false; }
+    if(setOrg) setOrg(p=>({ ...p, item_fields: next }));
+    return true;
+  };
+  const add = async()=>{
+    const nm = label.trim();
+    if(!nm) return;
+    const vertical = scope==="all" ? null : scope;
+    if(fields.some(f=>f.label===nm && (f.vertical||null)===vertical)){ setErr("That field already exists for this department."); return; }
+    const next = [...fields, { label:nm, placeholder:placeholder.trim()||"", vertical }];
+    if(await persist(next)){ setLabel(""); setPlaceholder(""); }
+  };
+  const del = async(i)=>{
+    const f = fields[i];
+    if(!window.confirm(`Remove the field "${f.label}"? Existing items keep any value already entered; the field just stops appearing on the form.`)) return;
+    const next = fields.filter((_,idx)=>idx!==i);
+    persist(next);
+  };
+
+  if(!canManage) return <p style={{fontSize:13,color:"var(--muted)"}}>Only the account owner or a director can manage custom fields.</p>;
+
+  const rowStyle = {display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",background:"rgba(255,255,255,.04)",borderRadius:6};
+  return(
+    <div>
+      {enabled.length>1 && (
+        <div style={{marginBottom:12}}>
+          <label style={{fontSize:12,fontWeight:700,color:"var(--muted)",display:"block",marginBottom:4}}>Shows on</label>
+          <select className="fs" value={scope} onChange={e=>setScope(e.target.value)}>
+            <option value="all">All departments</option>
+            {enabled.map(vid=><option key={vid} value={vid}>{vName(vid)} only</option>)}
+          </select>
+        </div>
+      )}
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
+        <input className="fs" style={{flex:1,minWidth:160}} placeholder="Field name (e.g. Bust, Waist, Inseam)" value={label}
+          onChange={e=>setLabel(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")add();}} maxLength={40}/>
+        <input className="fs" style={{flex:1,minWidth:160}} placeholder="Hint (optional, e.g. in inches)" value={placeholder}
+          onChange={e=>setPlaceholder(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")add();}} maxLength={60}/>
+        <button className="btn btn-g" onClick={add} disabled={busy||!label.trim()}>Add field</button>
+      </div>
+      {err&&<p style={{color:"#ff7043",fontSize:12,marginBottom:8}}>{err}</p>}
+      {fields.length===0
+        ? <p style={{fontSize:13,color:"var(--muted)",margin:"6px 0"}}>No custom fields yet. Add measurements, serial numbers, or any detail you want on every item — it becomes searchable and shows on the item card.</p>
+        : <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:4}}>
+            {fields.map((f,i)=>(
+              <div style={rowStyle} key={f.label+"_"+(f.vertical||"all")+"_"+i}>
+                <span style={{fontWeight:600}}>{f.label}
+                  {f.placeholder?<span style={{color:"var(--muted)",fontWeight:400,fontSize:12}}> — {f.placeholder}</span>:null}
+                  <span style={{marginLeft:8,fontSize:11,color:"var(--faint)"}}>{f.vertical?vName(f.vertical):"All departments"}</span>
+                </span>
+                <button style={{background:"none",border:"none",cursor:"pointer",color:"#ff7043",fontSize:12,fontFamily:"inherit",padding:2}} onClick={()=>del(i)}>Remove</button>
+              </div>
+            ))}
+          </div>}
+      <p style={{fontSize:11,color:"var(--muted)",marginTop:12,fontStyle:"italic"}}>Custom fields appear on the item form under Size. Values are fully searchable and show on each item card.</p>
+    </div>
+  );
+}
+
 function CustomCategoriesManager({ org, setOrg, userId, memberRole=null }){
   const primary = org?.vertical || "theatre";
   const enabled = (org?.verticals_enabled?.length ? org.verticals_enabled : [primary]);
@@ -953,7 +1028,7 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
                 </div>
                 <label style={{display:"flex",alignItems:"center",cursor:"pointer",flexShrink:0}}>
                   <input type="checkbox"
-                    checked={!!(org&&org[key])}
+                    checked={key==="scan_enabled" ? (org?.scan_enabled!==false) : !!(org&&org[key])}
                     onChange={async e=>{
                       const val = e.target.checked;
                       const updated = {...org,[key]:val};
@@ -963,7 +1038,7 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
                     style={{width:18,height:18,cursor:"pointer",accentColor:"var(--gold)"}}
                   />
                   <span style={{marginLeft:8,fontSize:13,color:"var(--muted)",fontWeight:600}}>
-                    {org&&org[key]?"On":"Off"}
+                    {(key==="scan_enabled" ? (org?.scan_enabled!==false) : (org&&org[key]))?"On":"Off"}
                   </span>
                 </label>
               </div>
@@ -1019,6 +1094,11 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
         <div className="card card-p">
           <div className="sh"><h2>🗂️ Custom Categories</h2><p>Add your own inventory categories alongside the built-in ones.</p></div>
           <CustomCategoriesManager org={org} setOrg={setOrg} userId={userId} memberRole={memberRole}/>
+        </div>
+
+        <div className="card card-p">
+          <div className="sh"><h2>📋 Custom Fields</h2><p>Add extra details to every item — measurements, serial numbers, anything your program tracks. Each field is searchable and shows on the item card.</p></div>
+          <CustomFieldsManager org={org} setOrg={setOrg} userId={userId} memberRole={memberRole}/>
         </div>
 
         <div className="sc">

@@ -174,7 +174,7 @@
     <script>
       window.BT_GA4    = "G-JN6PRW5MB0";  /* BinTrove GA4 Measurement ID */
       window.BT_META   = "2352624095273685";  /* Meta (Facebook) Pixel ID */
-      window.BT_TIKTOK = "";  /* TikTok Pixel ID, e.g. "C1XXXXXXXXXXXXXXXXXX" */
+      window.BT_TIKTOK = "DB9GK6JC77UDN3PL1LDG";  /* BinTrove Website Pixel */
       (function () {
         if (window.BT_GA4) {
           var g = document.createElement("script"); g.async = true;
@@ -198,6 +198,24 @@
           try { if (window.BT_META && window.fbq) { var m = event === "purchase" ? "Purchase" : event === "sign_up" ? "CompleteRegistration" : "Lead"; fbq("track", m, params); } } catch (e) {}
           try { if (window.BT_TIKTOK && window.ttq) { var k = event === "purchase" ? "CompletePayment" : event === "sign_up" ? "CompleteRegistration" : "SubmitForm"; ttq.track(k, params); } } catch (e) {}
         };
+
+        /* In-house visit log — so BinTrove traffic shows in your admin alongside GA4/Meta. */
+        try {
+          var _sid = sessionStorage.getItem("bt_sid");
+          if (!_sid) { _sid = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem("bt_sid", _sid); }
+          var _q = new URLSearchParams(location.search);
+          fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/track-visit", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              page: location.hostname + location.pathname,
+              session_id: _sid,
+              referrer: document.referrer || null,
+              utm_source: _q.get("utm_source"),
+              utm_medium: _q.get("utm_medium"),
+              utm_campaign: _q.get("utm_campaign")
+            })
+          }).catch(function () {});
+        } catch (e) {}
       })();
     </script>
 
