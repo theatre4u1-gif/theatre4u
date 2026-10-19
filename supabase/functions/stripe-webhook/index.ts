@@ -236,6 +236,55 @@ async function sendDowngradeEmail(toEmail: string, B: WBrand = WBRANDS.theatre4u
   }).catch((e: Error) => console.error("sendDowngradeEmail:", e.message));
 }
 
+// Customer-facing RECEIPT for every paid invoice (the first charge AND each renewal), so
+// subscribers always have proof of payment without having to ask. Uses Stripe's own hosted
+// invoice page + PDF (no PDF generation on our side). Brand-aware. Best-effort: never throws.
+async function sendReceiptEmail(inv: Record<string, any>, toEmail: string, B: WBrand) {
+  if (!RESEND_KEY || !toEmail) return;
+  try {
+    const cents   = (inv.total ?? inv.amount_paid ?? 0) as number;
+    const amount  = "$" + (cents / 100).toFixed(2);
+    const paidAt  = (inv.status_transitions?.paid_at ?? inv.created ?? Math.floor(Date.now() / 1000)) as number;
+    const dateStr = new Date(paidAt * 1000).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "America/Los_Angeles" });
+    const number  = (inv.number ?? "") as string;
+    const lineDesc = (inv.lines?.data?.[0]?.description ?? `${B.plain} ${B.planLabel}`) as string;
+    const hosted  = (inv.hosted_invoice_url ?? "") as string;
+    const pdf     = (inv.invoice_pdf ?? "") as string;
+    const btn = (href: string, label: string, solid: boolean) =>
+      `<a href="${href}" style="display:inline-block;${solid ? `background:${B.accent};color:#1a0f00;` : `background:#fff;color:${B.ink};border:1.5px solid ${B.accent};`}padding:11px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;margin:0 6px 8px 0">${label}</a>`;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f5f0e8;font-family:Arial,sans-serif">
+<div style="max-width:560px;margin:0 auto;background:#fff">
+  <div style="background:#FBF7F0;padding:20px 24px 16px;text-align:center;border-bottom:3px solid ${B.accent}"><span style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${B.ink}">${B.display}</span></div>
+  <div style="padding:26px 28px 20px">
+    <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 16px">Hi there,</p>
+    <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 18px">Thank you &mdash; your payment to ${B.plain} was received. Here is your receipt:</p>
+    <div style="background:#f5f0e8;border-radius:8px;padding:16px 18px;margin:0 0 18px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8b6914;margin-bottom:4px">Payment received</div>
+      <div style="font-size:28px;font-weight:700;color:#1a1200;margin-bottom:10px">${amount}</div>
+      <table cellpadding="4" cellspacing="0" style="width:100%;border-collapse:collapse;font-size:14px;color:#444">
+        <tr><td style="color:#777;width:110px;padding:3px 0">Date</td><td style="padding:3px 0">${dateStr}</td></tr>
+        <tr><td style="color:#777;padding:3px 0">Description</td><td style="padding:3px 0">${lineDesc}</td></tr>
+        ${number ? `<tr><td style="color:#777;padding:3px 0">Invoice</td><td style="padding:3px 0">${number}</td></tr>` : ""}
+        <tr><td style="color:#777;padding:3px 0">Billed to</td><td style="padding:3px 0">${toEmail}</td></tr>
+      </table>
+    </div>
+    ${(hosted || pdf) ? `<div style="margin:0 0 18px">${hosted ? btn(hosted, "View invoice", true) : ""}${pdf ? btn(pdf, "Download PDF", false) : ""}</div>` : ""}
+    <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 16px">You can always find your past invoices and receipts in your account under <strong>${B.manage.split("&rarr;")[0].trim()} &rarr; Invoices</strong>. If you need anything else for your records, just reply to this email.</p>
+    <p style="font-size:15px;color:#333;margin:22px 0 2px">Warmly,</p>
+    <p style="font-size:15px;font-weight:700;color:#1a0f00;margin:0">Bob Zick</p>
+    <p style="font-size:13px;color:#888;margin:2px 0 0">Founder, ${B.plain} &middot; ${B.reply}</p>
+  </div>
+  <div style="padding:12px 28px;border-top:1px solid #e8e0d0;text-align:center;font-size:11px;color:#aaa;line-height:1.7">${B.display} &middot; Artstracker LLC &middot; 10441 Stanford Ave., #1155, Garden Grove, CA 92842</div>
+</div></body></html>`;
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: B.from, reply_to: B.reply, to: [toEmail],
+        subject: `Your ${B.plain} payment receipt — ${amount}${number ? ` (Invoice ${number})` : ""}`, html }),
+    }).catch((e: Error) => console.error("sendReceiptEmail:", e.message));
+  } catch (e) { console.error("sendReceiptEmail build:", String(e)); }
+}
+
 async function verifyStripeSignature(payload: string, sigHeader: string, secret: string): Promise<boolean> {
   try {
     const parts = sigHeader.split(",");
@@ -525,6 +574,16 @@ Deno.serve(async (req: Request) => {
         const org        = await findOrg(customerId);
 
         if (org) await sb.from("orgs").update({ subscription_status: "active" }).eq("id", org.id);
+
+        // Customer receipt on EVERY paid invoice (first charge + renewals). Separate from the
+        // revenue log below, which skips the first charge to avoid double-counting with
+        // checkout.session.completed — receipts should go out every time, including the first.
+        await sendReceiptEmail(
+          data,
+          ((data.customer_email as string) || org?.email || "").toLowerCase().trim(),
+          org ? brandForOrg(org) : WBRANDS.theatre4u,
+        );
+
         if (!isRenewal) break;
 
         await logPayment({ stripe_event_id: eventId, stripe_event_type: eventType,

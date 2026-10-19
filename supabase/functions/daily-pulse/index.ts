@@ -16,6 +16,16 @@ const money = (c: number) => '$' + (Math.round((c || 0)) / 100).toLocaleString(u
 const p = (t: string, extra = '') => `<p style="font-size:14px;color:#3a3a3a;line-height:1.6;margin:0 0 10px;${extra}">${t}</p>`;
 const h = (t: string) => `<div style="font-size:12px;font-weight:800;color:#8a8272;text-transform:uppercase;letter-spacing:.5px;margin:22px 0 8px">${t}</div>`;
 
+// Per signup platform (which brand door they came through): BinTrove, ArtsTracker, or Theatre4u.
+const PLAT_EMOJI: Record<string, string> = { BinTrove: '📦', ArtsTracker: '🎨', Theatre4u: '🎭' };
+// "(1 Theatre4u, 1 BinTrove)" when a day's signups span more than one brand; empty for a single brand.
+function platSummary(d: any): string {
+  const by = d.new_signups_by_platform || {};
+  const keys = Object.keys(by);
+  if (keys.length <= 1) return '';
+  return ' (' + keys.map(k => `${by[k]} ${k}`).join(', ') + ')';
+}
+
 function compose(d: any): { subject: string; html: string; text: string } {
   const fmtDay = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', month: 'long', day: 'numeric' }).format(new Date());
   const sign = d.new_signups || [];
@@ -26,20 +36,22 @@ function compose(d: any): { subject: string; html: string; text: string } {
   let headline: string;
   if (pastDue.length) headline = `${pastDue.length} paying program${pastDue.length === 1 ? ' has' : 's have'} a failed payment to look at.`;
   else if (d.payments_24h_count > 0) headline = `${d.payments_24h_count} new payment${d.payments_24h_count === 1 ? '' : 's'} in the last 24 hours, ${money(d.payments_24h_cents)}.`;
-  else if (d.new_signups_count > 0) headline = `${d.new_signups_count} new program${d.new_signups_count === 1 ? '' : 's'} joined in the last 24 hours.`;
+  else if (d.new_signups_count > 0) headline = `${d.new_signups_count} new program${d.new_signups_count === 1 ? '' : 's'} joined in the last 24 hours${platSummary(d)}.`;
   else if (atRisk.length) headline = `${atRisk.length} paying or founding program${atRisk.length === 1 ? ' has' : 's have'} gone quiet. Everything else is steady.`;
   else headline = 'A quiet 24 hours. No new signups, no new payments, nothing at risk.';
 
   // New signups section
   let signHtml: string, signText: string;
   if (sign.length) {
-    signHtml = p(`${d.new_signups_count} new program${d.new_signups_count === 1 ? '' : 's'} in the last 24 hours:`);
+    signHtml = p(`${d.new_signups_count} new program${d.new_signups_count === 1 ? '' : 's'} in the last 24 hours${platSummary(d)}:`);
     signHtml += '<ul style="margin:0 0 10px;padding-left:18px">' + sign.map((o: any) => {
+      const plat = o.platform || 'Theatre4u';
+      const pe = PLAT_EMOJI[plat] || '';
       const where = o.state ? ` (${o.state})` : '';
       const items = (o.items > 0) ? `${o.items} item${o.items === 1 ? '' : 's'} added` : 'no items yet, may need a nudge';
-      return `<li style="font-size:14px;color:#3a3a3a;line-height:1.7"><strong>${o.name || o.email || 'New program'}</strong>${where}, ${o.plan || 'free'}, ${items}.</li>`;
+      return `<li style="font-size:14px;color:#3a3a3a;line-height:1.7"><strong>${o.name || o.email || 'New program'}</strong> on <strong>${pe} ${plat}</strong>${where}, ${o.plan || 'free'}, ${items}.</li>`;
     }).join('') + '</ul>';
-    signText = sign.map((o: any) => `  ${o.name || o.email}${o.state ? ' (' + o.state + ')' : ''}, ${o.plan || 'free'}, ${o.items > 0 ? o.items + ' items' : 'no items yet'}`).join('\n');
+    signText = sign.map((o: any) => `  [${o.platform || 'Theatre4u'}] ${o.name || o.email}${o.state ? ' (' + o.state + ')' : ''}, ${o.plan || 'free'}, ${o.items > 0 ? o.items + ' items' : 'no items yet'}`).join('\n');
   } else {
     signHtml = p('No new signups in the last 24 hours.');
     signText = '  No new signups in the last 24 hours.';
@@ -63,7 +75,7 @@ function compose(d: any): { subject: string; html: string; text: string } {
   }
 
   const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:8px 4px;color:#2a2a2a">`
-    + `<div style="font-size:12px;color:#8a8272;text-transform:uppercase;letter-spacing:.5px">Theatre4u daily pulse</div>`
+    + `<div style="font-size:12px;color:#8a8272;text-transform:uppercase;letter-spacing:.5px">Daily pulse</div>`
     + `<div style="font-size:12px;color:#9a9284;margin-bottom:14px">${fmtDay}</div>`
     + `<div style="font-size:16px;font-weight:800;line-height:1.5;margin:0 0 6px">${headline}</div>`
     + h('New signups') + signHtml
@@ -73,7 +85,7 @@ function compose(d: any): { subject: string; html: string; text: string } {
     + `</div>`;
 
   const text = [
-    `Theatre4u daily pulse, ${fmtDay}`, '', headline, '',
+    `Daily pulse, ${fmtDay}`, '', headline, '',
     'New signups:', signText, '',
     `Subscriptions: ${d.active_subs} active, ${d.founding_count} founding, ${d.total_active_programs} total programs.`,
     `Revenue this month: ${money(d.revenue_month_cents)}. Payments last 24h: ${d.payments_24h_count} (${money(d.payments_24h_cents)}).`,
@@ -81,7 +93,7 @@ function compose(d: any): { subject: string; html: string; text: string } {
     '', atRisk.length ? `At risk: ${atRisk.map((o: any) => (o.name || o.email) + ' (' + o.days + 'd)').join(', ')}` : 'At risk: none.',
   ].filter(x => x !== '').join('\n');
 
-  return { subject: `Theatre4u daily pulse, ${fmtDay}`, html, text };
+  return { subject: `Daily pulse, ${fmtDay}`, html, text };
 }
 
 Deno.serve(async (req: Request) => {

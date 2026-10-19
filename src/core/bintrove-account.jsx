@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { SB, callEdgeFn } from "./supabase.js";
 import { BINTROVE_PLANS_DEF, BINTROVE_LINKS, stripeLink, scanLimitFor } from "./plans.js";
+import { AccountInvoices } from "./billing.jsx";
 
 // Start of the current scan period for a plan (mirrors scan-item edge function).
 function scanPeriodStart(plan, planExpiresAt) {
@@ -162,6 +163,8 @@ export function BinTroveAccount({ user, org }) {
           </div>
         </div>
       )}
+
+      <AccountInvoices orgId={org?.id || user?.id} accent={TEAL} ink={INK} />
 
       <div style={card}>
         <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 12 }}>Account</div>

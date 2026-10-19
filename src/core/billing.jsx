@@ -283,3 +283,68 @@ export function UpgradePlans({ compact = false, userId = null, userEmail = null,
     </div>
   );
 }
+
+// Account → Invoices: the signed-in owner's payment history, pulled live from Stripe via the
+// list-invoices edge function. Each row links to Stripe's hosted invoice + PDF receipt.
+// Brand-adaptable via the accent/ink props (BinTrove passes teal; schools use the gold defaults).
+export function AccountInvoices({ orgId = null, accent = "var(--gold)", ink = "var(--ink)", heading = "Invoices" }) {
+  const [status, setStatus] = useState("loading"); // loading | ok | none | error
+  const [invoices, setInvoices] = useState([]);
+  const [err, setErr] = useState("");
+
+  const load = async () => {
+    setStatus("loading"); setErr("");
+    try {
+      const { data } = await SB.auth.getSession();
+      const token = data?.session?.access_token;
+      if (!token) { setStatus("error"); setErr("Please sign in again."); return; }
+      const res = await callEdgeFn("list-invoices", { org_id: orgId || null }, token);
+      if (res?.error) { setStatus("error"); setErr(res.message || "Couldn't load invoices."); return; }
+      const list = Array.isArray(res?.invoices) ? res.invoices : [];
+      setInvoices(list);
+      setStatus(list.length ? "ok" : "none");
+    } catch (e) { setStatus("error"); setErr("Couldn't load invoices. Please try again."); }
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [orgId]);
+
+  const fmtMoney = (c, cur = "usd") => { const u = (cur || "usd").toUpperCase(); return (u === "USD" ? "$" : "") + ((c || 0) / 100).toFixed(2) + (u === "USD" ? "" : " " + u); };
+  const fmtDate = (unix) => unix ? new Date(unix * 1000).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—";
+  const link = { color: accent, fontWeight: 700, textDecoration: "none", fontSize: 13 };
+
+  return (
+    <div className="card card-p" style={{ marginBottom: 20 }}>
+      <div className="sh"><h2 style={{ color: ink }}>🧾 {heading}</h2><p>Your payment history. Open or download a PDF receipt for your records anytime — and we email you a receipt automatically after each payment.</p></div>
+      {status === "loading" && <p style={{ fontSize: 13, color: "var(--muted)" }}>Loading your invoices…</p>}
+      {status === "error" && <p style={{ fontSize: 13, color: "#c0392b" }}>{err} <button onClick={load} style={{ background: "none", border: "none", color: accent, cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }}>Retry</button></p>}
+      {status === "none" && <p style={{ fontSize: 13, color: "var(--muted)" }}>No invoices yet. Once you're on a paid plan, every payment shows up here with a downloadable receipt.</p>}
+      {status === "ok" && (
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+            <thead><tr style={{ textAlign: "left", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
+              <th style={{ padding: "8px 10px", fontWeight: 700 }}>Date</th>
+              <th style={{ padding: "8px 10px", fontWeight: 700 }}>Description</th>
+              <th style={{ padding: "8px 10px", fontWeight: 700 }}>Amount</th>
+              <th style={{ padding: "8px 10px", fontWeight: 700 }}>Status</th>
+              <th style={{ padding: "8px 10px", fontWeight: 700 }}>Receipt</th>
+            </tr></thead>
+            <tbody>
+              {invoices.map(inv => (
+                <tr key={inv.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                  <td style={{ padding: "8px 10px" }}>{fmtDate(inv.created)}</td>
+                  <td style={{ padding: "8px 10px" }}>{inv.description || "Subscription"}{inv.number ? <span style={{ color: "var(--faint)", fontSize: 11 }}> · {inv.number}</span> : null}</td>
+                  <td style={{ padding: "8px 10px", fontWeight: 700 }}>{fmtMoney(inv.amount_cents, inv.currency)}</td>
+                  <td style={{ padding: "8px 10px" }}><span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: .5, color: inv.paid ? "#1a7f37" : "#c07a00" }}>{inv.paid ? "Paid" : (inv.status || "—")}</span></td>
+                  <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
+                    {inv.invoice_pdf && <a href={inv.invoice_pdf} target="_blank" rel="noreferrer" style={link}>PDF</a>}
+                    {inv.invoice_pdf && inv.hosted_invoice_url && <span style={{ color: "var(--faint)" }}> · </span>}
+                    {inv.hosted_invoice_url && <a href={inv.hosted_invoice_url} target="_blank" rel="noreferrer" style={link}>View</a>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}

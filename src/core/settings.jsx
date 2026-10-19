@@ -6,7 +6,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { SB, callEdgeFn } from "./supabase.js";
 import { EM } from "./messages.js";
 import { Ic } from "./icons.jsx";
-import { UpgradePlans } from "./billing.jsx";
+import { UpgradePlans, AccountInvoices } from "./billing.jsx";
 import { isAdminEmail, APP_NAME, APP_EMAIL, APP_HOST } from "./config.js";
 import { setCustomCats } from "./inventory.js";
 import { VERTICALS_LIST, getCats } from "../lib/verticals.js";
@@ -975,6 +975,9 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
             </div>
           )}
         </div>
+
+        {/* Invoices — payment history + downloadable receipts (only shown to the account owner) */}
+        {!memberRole && <AccountInvoices orgId={userId} />}
 
         {/* Data */}
         {/* Admin Test Panel — only visible to admin email */}
