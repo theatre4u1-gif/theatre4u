@@ -92,7 +92,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo, nativeMode=false
         if(error){
           if(error.message?.toLowerCase().includes('already registered')||error.message?.toLowerCase().includes('already exists')){
             setMode("login");
-            setErr("An account with this email already exists — switching you to Sign In. Use Forgot password if needed.");
+            setErr(EM.signupEmailTaken.body);
             setLoading(false); return;
           }
           throw error;
@@ -101,7 +101,7 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo, nativeMode=false
         // array. Detect it and route to Sign In instead of a dead-end "check your email" screen.
         if(data?.user && Array.isArray(data.user.identities) && data.user.identities.length===0){
           setMode("login");
-          setErr("An account with this email already exists — switching you to Sign In. Use Forgot password if needed.");
+          setErr(EM.signupEmailTaken.body);
           setLoading(false); return;
         }
         if(data.user){

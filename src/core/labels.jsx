@@ -472,7 +472,8 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
     { id:"avery",  ico:"🗒", t:"Label sheets (Avery)",          d:"Peel and stick on any printer. Cheapest and easiest.", rec:true },
     { id:"plain",  ico:"🖨", t:"Plain paper (any size)",         d:"Pick a size, print, cut out, and tape on. No supplies." },
     { id:"ptouch", ico:"🏷", t:"Label printer (Brother P-touch)", d:"Download a CSV and print from the Brother app." },
-    { id:"order",  ico:"📬", t:"Order pre-printed",              d:"We mail durable labels. Stick now, assign later." },
+    // Ordering pre-printed labels is a school-program service only; BinTrove is print-at-home.
+    ...(IS_BINTROVE ? [] : [{ id:"order", ico:"📬", t:"Order pre-printed", d:"We mail durable labels. Stick now, assign later." }]),
   ];
   const printBtnLabel = printLane==="avery" ? "🗒 Print on Avery" : printLane==="ptouch" ? "⬇ Download CSV for Brother app" : "🖨 Print";
   const stepLabel = { fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:1,color:"var(--muted)",marginBottom:8 };
@@ -487,7 +488,9 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
       <div style={{marginBottom:18}}>
         <h1 style={{fontFamily:"var(--serif)",fontSize:26,margin:"0 0 4px"}}>🏷 QR Label Manager</h1>
         <p style={{fontSize:13,color:"var(--muted)",margin:0}}>
-          Print labels instantly from your browser · Assign pre-ordered labels to inventory items · Order durable physical labels by mail
+          {IS_BINTROVE
+            ? "Print labels instantly from your browser — plain paper, Avery sheets, or a Brother label maker"
+            : "Print labels instantly from your browser · Assign pre-ordered labels to inventory items · Order durable physical labels by mail"}
         </p>
       </div>
 
@@ -499,8 +502,11 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
           {[
             {n:"1",ico:"🖨",t:"Print now — free",
               b:"Use the Print tab to instantly generate and print QR code labels for any items. Works from any home printer. Best for getting started quickly."},
-            {n:"2",ico:"📬",t:"Order durable labels",
-              b:IS_BINTROVE?"Order professional polyester or weatherproof vinyl labels printed by WePrintBarcodes and mailed to you. Pre-coded — stick them on bins now, assign to items anytime.":"Order professional polyester or weatherproof vinyl labels printed by WePrintBarcodes and mailed to your school. Pre-coded — stick them on bins now, assign to items anytime."},
+            IS_BINTROVE
+              ? {n:"2",ico:"🏷",t:"Make them last",
+                 b:"For labels that survive garages, attics, and storage units, print on Avery sticker sheets or use a Brother label maker. No ordering, no waiting."}
+              : {n:"2",ico:"📬",t:"Order durable labels",
+                 b:"Order professional polyester or weatherproof vinyl labels printed by WePrintBarcodes and mailed to your school. Pre-coded — stick them on bins now, assign to items anytime."},
             {n:"3",ico:"🔗",t:"Assign codes to items",
               b:"Got physical labels? Use the Assign tab to link any label code to any inventory item — current or future. Scan the label with any phone camera to pull up the item instantly."},
           ].map(s=>(
@@ -520,7 +526,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
 
       {/* Tab bar */}
       <div style={{display:"flex",gap:3,marginBottom:22,borderBottom:"1px solid var(--border)",paddingBottom:10}}>
-        {[["print","🖨 Print Labels"],["assign","🔗 Assign a Label"],["gear","🛒 Label Gear"],["order","📬 Orders"]].filter(([id])=>id!=="order"||isAdmin).map(([id,lbl])=>(
+        {[["print","🖨 Print Labels"],["assign","🔗 Assign a Label"],["gear","🛒 Label Gear"],["order","📬 Orders"]].filter(([id])=>(id!=="order"||isAdmin)&&(id!=="assign"||!IS_BINTROVE)).map(([id,lbl])=>(
           <button key={id} onClick={()=>setTab(id)}
             style={{padding:"7px 16px",borderRadius:"8px 8px 0 0",border:"none",cursor:"pointer",fontSize:13,
               fontWeight:tab===id?700:500,background:tab===id?"var(--gold)":"transparent",

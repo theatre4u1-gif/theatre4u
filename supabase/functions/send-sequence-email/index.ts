@@ -285,7 +285,7 @@ const HOME_EMAILS:Record<number,EmailDef>={
     ${p(`Hi ${name},`)}
     ${p(`A few days in — here's the full picture.`)}
     ${stripe('&#x1F4E6; Catalog','Every item in one searchable place, each with a QR code. Filter by category, condition, or location.')}
-    ${stripe('&#x1F3F7;&#xFE0F; QR labels','Print from any home printer, or order durable pre-printed labels. Scan any bin to see its contents.')}
+    ${stripe('&#x1F3F7;&#xFE0F; QR labels','Print from any home printer on plain paper or Avery sticker sheets, or use a Brother label maker. Scan any bin to see its contents.')}
     ${stripe('&#x1F4CD; Bins &amp; locations','Closet, garage, attic, storage unit — know where everything lives.')}
     ${stripe('&#x1F50E; Search','Find anything you own instantly.')}
     ${stripe('&#x1F4CA; Reports','A full list of everything you own, with a CSV export — great for insurance or a home inventory.')}
@@ -481,8 +481,8 @@ const HOME_TIPS:Tip[]=[
       ${p(`Hi ${name},`)}
       ${p(`This is where BinTrove earns its keep: stick a QR label on a bin, scan it with your phone, and see what&#39;s inside without opening it.`)}
       ${ul([
-        'Print from any home printer onto plain paper or sticker sheets',
-        'Or order durable pre-printed labels that last for years',
+        'Print from any home printer onto plain paper or Avery sticker sheets',
+        'For labels that last for years, use a Brother label maker',
         'Scan to view — no app required just to look inside',
       ])}
       ${cta(B,'Print bin labels →')}`)},

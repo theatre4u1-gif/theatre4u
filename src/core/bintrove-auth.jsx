@@ -26,6 +26,7 @@ export function BinTroveAuthScreen({ onAuth }) {
   const [legal, setLegal] = useState(null);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [collision, setCollision] = useState(false); // email already registered somewhere in the company
 
   const submit = async () => {
     setErr("");
@@ -49,13 +50,13 @@ export function BinTroveAuthScreen({ onAuth }) {
         });
         if (error) {
           if (error.message?.toLowerCase().includes("already registered") || error.message?.toLowerCase().includes("already exists")) {
-            setMode("login"); setErr("An account with this email already exists — switching you to Sign In."); setLoading(false); return;
+            setErr(""); setCollision(true); setLoading(false); return;
           }
           throw error;
         }
         // Supabase anti-enumeration: duplicate signup → no error, empty identities array.
         if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-          setMode("login"); setErr("An account with this email already exists — switching you to Sign In."); setLoading(false); return;
+          setErr(""); setCollision(true); setLoading(false); return;
         }
         if (data.user) {
           // Create the HOME org. The caps trigger keys off kind='home'; home_plan='free'.
@@ -153,7 +154,7 @@ export function BinTroveAuthScreen({ onAuth }) {
           {mode === "signup" && (
             <input style={field} placeholder="Your name" value={name} onChange={e => setName(e.target.value)} />
           )}
-          <input style={field} type="email" placeholder="you@email.com" value={email} onChange={e => setEmail(e.target.value)} />
+          <input style={field} type="email" placeholder="you@email.com" value={email} onChange={e => { setEmail(e.target.value); if (collision) setCollision(false); }} />
           <input style={field} type="password" placeholder={mode === "signup" ? "Create a password (6+ characters)" : "Password"} value={pass} onChange={e => setPass(e.target.value)} onKeyDown={e => { if (e.key === "Enter") submit(); }} />
           {mode === "signup" && (
             <input style={field} placeholder="Household name (optional)" value={household} onChange={e => setHousehold(e.target.value)} />
@@ -174,9 +175,30 @@ export function BinTroveAuthScreen({ onAuth }) {
 
           {err && <div style={{ marginTop: 12, background: "#fdecec", border: "1px solid #f3b4b4", color: "#9b2c2c", padding: "10px 12px", borderRadius: 10, fontSize: 14 }}>{err}</div>}
 
+          {collision && (
+            <div style={{ marginTop: 12, background: "#eef6f5", border: "1px solid " + TEAL, borderRadius: 12, padding: "14px 15px", fontSize: 14, color: INK, lineHeight: 1.55 }}>
+              <div style={{ fontWeight: 700, color: TEAL_D, marginBottom: 6 }}>This email already has an account</div>
+              <p style={{ margin: "0 0 12px" }}>
+                BinTrove, Theatre4u, and ArtsTracker are one company and share a single login. Sign in with this email, or use a different one to create a separate BinTrove account.
+              </p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button onClick={() => { setCollision(false); setErr(""); setPass(""); setMode("login"); }}
+                  style={{ flex: "1 1 140px", background: TEAL, color: "#fff", border: "none", padding: "10px 12px", fontSize: 14, fontWeight: 700, borderRadius: 9, cursor: "pointer" }}>
+                  Sign in instead
+                </button>
+                <button onClick={() => { setCollision(false); setErr(""); setEmail(""); }}
+                  style={{ flex: "1 1 140px", background: "#fff", color: TEAL_D, border: "1.5px solid " + TEAL, padding: "10px 12px", fontSize: 14, fontWeight: 700, borderRadius: 9, cursor: "pointer" }}>
+                  Use a different email
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!collision && (
           <button onClick={submit} disabled={loading} style={{ width: "100%", marginTop: 16, background: loading ? TEAL_D : TEAL, color: "#fff", border: "none", padding: "14px", fontSize: 16, fontWeight: 700, borderRadius: 11, cursor: loading ? "default" : "pointer" }}>
             {loading ? "One moment…" : (mode === "signup" ? "Start Free →" : "Sign In →")}
           </button>
+          )}
 
           {mode === "login" && (
             <div style={{ textAlign: "center", marginTop: 10 }}>

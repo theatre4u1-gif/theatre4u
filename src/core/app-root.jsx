@@ -1306,7 +1306,9 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
         <GoogleProfileSetup user={user} onDone={()=>{ setNeedsProfile(false); setLoaded(false); }}/>
       )}
       {/* ── Onboarding overlay ─ shown once to new users ── */}
-      {user && onboardingStep !== null && onboardingStep < 4 && (
+      {/* Arts-only wizard (program bio, Backstage Exchange, Community Board). BinTrove is a
+          home product and has no program/community/exchange, so it never shows this. */}
+      {user && !IS_BINTROVE && onboardingStep !== null && onboardingStep < 4 && (
         (onboardingStep === 0 ||
          onboardingStep === 1 ||
          (onboardingStep === 2 && items.length >= 1) ||
