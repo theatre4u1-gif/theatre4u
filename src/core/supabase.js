@@ -1,10 +1,10 @@
 // Supabase client + edge-function helper (shared backbone) — extracted from App.jsx.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SUPABASE_URL, SUPABASE_ANON } from "./config.js";
 
-const _SB_REAL = createClient(
-  "https://ldmmphwivnnboyhlxipl.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA"
-);
+// Backend is brand-switched in config.js: BinTrove → its own project, schools → the
+// shared Theatre4u/ArtsTracker project. So consumer data and school data never mix.
+const _SB_REAL = createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // SB_ACTIVE is the mutable backend — swapped to demoStore in demo mode.
 // All SB.xxx() calls throughout the app use this transparently via the Proxy.

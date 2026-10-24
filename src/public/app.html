@@ -267,11 +267,15 @@ const isIOSChrome = isIOS && isChrome;
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches
                   || window.navigator.standalone === true;
 
-// ── Supabase ──────────────────────────────────────────────────────────────────
-const SB = createClient(
-  "https://ldmmphwivnnboyhlxipl.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA"
-);
+// ── Supabase (brand-switched backend: BinTrove runs on its OWN project so
+//    consumer home data never shares a database with school/student data) ──────
+const _BACKEND = location.hostname.includes("bintrove")
+  ? { url: "https://mdwuholylehviwezmadf.supabase.co",
+      anon: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kd3Vob2x5bGVodml3ZXptYWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NTMxMTUsImV4cCI6MjEwODQyOTExNX0.qi0bttnxQp5Z5_3tMpkKX-c5BM6vbYIHDniUKvi1Fe0" }
+  : { url: "https://ldmmphwivnnboyhlxipl.supabase.co",
+      anon: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA" };
+const SB_URL = _BACKEND.url;
+const SB = createClient(_BACKEND.url, _BACKEND.anon);
 
 // ── Domain-aware branding (ArtsTracker vs Theatre4u) ──────────────────────────
 const IS_BINTROVE   = location.hostname.includes("bintrove");
@@ -1021,7 +1025,7 @@ function AddSheet({onClose, onAdded, userId, plan}) {
   const scanPhoto = async (url, mode) => {
     try {
       const { data:{ session } } = await SB.auth.getSession();
-      const res = await fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/scan-item",{
+      const res = await fetch(`${SB_URL}/functions/v1/scan-item`,{
         method:"POST",
         headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+(session?.access_token||"") },
         body: JSON.stringify({ url, mode, categories: CATS.map(c=>({id:c.id,label:c.label})), conditions: CONDS })

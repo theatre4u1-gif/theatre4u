@@ -6,7 +6,7 @@ import React, { useState } from "react";
 import { SB } from "./supabase.js";
 import { EM } from "./messages.js";
 import { CSS } from "./styles.js";
-import { APP_NAME, APP_EMAIL } from "./config.js";
+import { APP_NAME, APP_EMAIL, SUPABASE_URL } from "./config.js";
 import { LegalModal } from "./ui.jsx";
 import { TERMS_CONTENT, PRIVACY_CONTENT } from "./legal.js";
 import { authErrKey } from "./helpers.js";
@@ -80,7 +80,7 @@ export function BinTroveAuthScreen({ onAuth }) {
           // Fire the welcome email + admin notice (same path as the school signup).
           // send-sequence-email resolves the BinTrove brand + home series from the org (org_type=home).
           try {
-            fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/signup-notify", {
+            fetch(`${SUPABASE_URL}/functions/v1/signup-notify`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ org_id: data.user.id, org_email: em, is_team_member: false }),

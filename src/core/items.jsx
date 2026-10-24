@@ -3,7 +3,7 @@
 // item components rendered by Inventory and Marketplace. uploadPhoto moved in
 // (used only here).
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { APP_HOST, APP_URL, APP_NAME, IS_BINTROVE } from "./config.js";
+import { APP_HOST, APP_URL, APP_NAME, IS_BINTROVE, SUPABASE_URL } from "./config.js";
 import { SB } from "./supabase.js";
 import { EM } from "./messages.js";
 import { Ic } from "./icons.jsx";
@@ -217,7 +217,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
       if(!url){ setScanErr("That photo couldn't be used — try another."); setScanning(false); if(scanRef.current)scanRef.current.value=""; return; }
       if(imgsOf(f).length<maxImg) addImage(url); // the scanned photo becomes the item photo
       const { data:{ session } } = await SB.auth.getSession();
-      const res = await fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/scan-item",{
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/scan-item`,{
         method:"POST",
         headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${session?.access_token||""}` },
         body: JSON.stringify({ url, vertical, categories: vCATS.map(c=>({id:c.id,label:c.label})), conditions: vCONDS }),

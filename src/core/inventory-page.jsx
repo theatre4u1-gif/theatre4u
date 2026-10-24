@@ -1,6 +1,6 @@
 // INVENTORY PAGE — extracted from App.jsx (modularization).
 import React, { useState, useEffect, useMemo } from "react";
-import { APP_HOST, IS_BINTROVE } from "./config.js";
+import { APP_HOST, IS_BINTROVE, SUPABASE_URL } from "./config.js";
 import { SB } from "./supabase.js";
 import { Modal, HeroImg, CatCard, CatThumb } from "./ui.jsx";
 import { Ic } from "./icons.jsx";
@@ -841,7 +841,7 @@ function BatchScanModal({ userId, cats = [], vertical = "theatre", conds, onClos
       if (!url) { setErr("That photo couldn't be used — try another."); setStep("photo"); return; }
       setImg(url);
       const { data: { session } } = await SB.auth.getSession();
-      const res = await fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/scan-item", {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/scan-item`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + (session?.access_token || "") },
         body: JSON.stringify({ url, mode: "batch", vertical, categories: cats.map(c => ({ id: c.id, label: c.label })), conditions: CONDS }),

@@ -21,7 +21,7 @@ import { CreditsPage } from "./points.jsx";
 import { Reports } from "./reports.jsx";
 import { FundingPage } from "./funding.jsx";
 import { ExternalLoans } from "./external-loans.jsx";
-import { HOSTNAME, IS_THEATRE4U, IS_ARTSTRACKER, IS_BINTROVE, APP_NAME, APP_SUBTITLE, APP_EMAIL, APP_URL, ADMIN_EMAILS, isAdminEmail, ADMIN_EMAIL, LOGO_ICON, FAVICON, TOUCH_ICON, LOGO_FULL, LOGO_MARK } from "./config.js";
+import { HOSTNAME, IS_THEATRE4U, IS_ARTSTRACKER, IS_BINTROVE, APP_NAME, APP_SUBTITLE, APP_EMAIL, APP_URL, ADMIN_EMAILS, isAdminEmail, ADMIN_EMAIL, LOGO_ICON, FAVICON, TOUCH_ICON, LOGO_FULL, LOGO_MARK, SUPABASE_URL } from "./config.js";
 import { BinTroveAuthScreen } from "./bintrove-auth.jsx";
 import { BinTroveAccount } from "./bintrove-account.jsx";
 import { BinTroveHome } from "./bintrove-home.jsx";
@@ -378,7 +378,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
           try{
             const _created = orgData?.created_at ? Date.parse(orgData.created_at) : 0;
             if(orgData && !realMembership && (Date.now()-_created) < 10*60*1000){
-              fetch("https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/signup-notify",{
+              fetch(`${SUPABASE_URL}/functions/v1/signup-notify`,{
                 method:"POST", headers:{"Content-Type":"application/json"},
                 body:JSON.stringify({org_id:orgData.id, org_email:orgData.email, is_team_member:false}),
               }).catch(()=>{});

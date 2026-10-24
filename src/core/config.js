@@ -28,6 +28,24 @@ export const APP_EMAIL      = IS_BINTROVE ? "hello@bintrove.com"   : (IS_THEATRE
 export const APP_URL        = IS_BINTROVE ? "https://bintrove.com" : (IS_THEATRE4U ? "https://theatre4u.org" : "https://artstracker.org");
 export const APP_HOST       = IS_BINTROVE ? "bintrove.com"         : (IS_THEATRE4U ? "theatre4u.org" : "artstracker.org");
 
+// ── Backend (Supabase project), switched by brand ──────────────────────────
+// BinTrove runs on its OWN Supabase project so consumer home data never shares a
+// database with school/student data. Theatre4u + ArtsTracker share the schools
+// project (one arts/education world). Anon keys are publishable — safe in client
+// code by design (see vault: browser-api-keys-public); RLS restricts all access.
+const BACKENDS = {
+  schools:  {
+    url:  "https://ldmmphwivnnboyhlxipl.supabase.co",
+    anon: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkbW1waHdpdm5uYm95aGx4aXBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxODA2MDUsImV4cCI6MjA3OTc1NjYwNX0.U2acfM5Ew7leACj4TWEy7EKwHi92270B1lt78dEjEfA",
+  },
+  bintrove: {
+    url:  "https://mdwuholylehviwezmadf.supabase.co",
+    anon: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kd3Vob2x5bGVodml3ZXptYWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NTMxMTUsImV4cCI6MjEwODQyOTExNX0.qi0bttnxQp5Z5_3tMpkKX-c5BM6vbYIHDniUKvi1Fe0",
+  },
+};
+export const SUPABASE_URL  = IS_BINTROVE ? BACKENDS.bintrove.url  : BACKENDS.schools.url;
+export const SUPABASE_ANON = IS_BINTROVE ? BACKENDS.bintrove.anon : BACKENDS.schools.anon;
+
 // Standalone admin app host (admin.artstracker.org). On previews/localhost, ?admin=1 forces it (for testing pre-DNS).
 export const IS_ADMIN_HOST = (() => {
   if (HOSTNAME.startsWith("admin.")) return true;

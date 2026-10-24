@@ -1,4 +1,9 @@
-// signup-notify v10
+// signup-notify v11
+// v11: fixed duplicate admin/welcome emails. The DB trigger and the client both call this on
+// every director signup; the old "read notified, then send, then set notified" dedup was a
+// check-then-act race (both callers saw notified=false and both sent). Dedup is now an atomic
+// claim: only the caller that flips the row false->true (or inserts it already-claimed) sends;
+// the other skips. On send failure the claim is released so the 5-minute sweep still retries.
 // Sends admin alert + welcome email for directors
 // Sends "You're in" team email for team members — no org created, no sequence
 // v9: the team "You're in" email is now brand/door aware (Theatre4u vs ArtsTracker).
@@ -101,9 +106,25 @@ Deno.serve(async(req:Request)=>{
     if(!org&&org_email){const{data}=await SB.from('orgs').select('*').eq('email',org_email).maybeSingle();org=data;}
     if(!org) return new Response(JSON.stringify({error:'org not found'}),{status:404,headers:{...CORS,'Content-Type':'application/json'}});
 
-    // Deduplicate
-    const{data:existing}=await SB.from('signup_notifications').select('id,notified').eq('org_id',org.id).maybeSingle();
-    if(existing?.notified) return new Response(JSON.stringify({ok:true,skipped:'already notified'}),{headers:{...CORS,'Content-Type':'application/json'}});
+    // Atomic dedup claim — the DB trigger and the client both hit this on every signup.
+    // 1) Try to flip an existing unnotified row false->true. A conditional UPDATE is atomic,
+    //    so of two concurrent callers only one gets a row back.
+    const SKIP_RESP=()=>new Response(JSON.stringify({ok:true,skipped:'already notified'}),{headers:{...CORS,'Content-Type':'application/json'}});
+    const nowIso=new Date().toISOString();
+    const{data:claimRow}=await SB.from('signup_notifications')
+      .update({notified:true,notified_at:nowIso,org_name:org.name,org_email:org.email,plan:org.plan})
+      .eq('org_id',org.id).eq('notified',false)
+      .select('id').maybeSingle();
+    if(!claimRow){
+      // No unnotified row was claimed: either it's already notified, or no row exists yet.
+      const{data:existing}=await SB.from('signup_notifications').select('id').eq('org_id',org.id).maybeSingle();
+      if(existing) return SKIP_RESP();                   // already notified (or just claimed by the other caller)
+      // No row yet — insert it already-claimed. org_id is unique, so a concurrent insert loses and we skip.
+      const{error:insErr}=await SB.from('signup_notifications')
+        .insert({org_id:org.id,org_name:org.name,org_email:org.email,plan:org.plan,notified:true,notified_at:nowIso});
+      if(insErr) return SKIP_RESP();
+    }
+    // We own the claim from here on; only one caller reaches the sends below.
 
     // Count only real programs: exclude test/internal accounts and closed/deleted orgs, plus the
     // known duplicate Coppell student orgs (the id list is temporary — remove it after the dedup
@@ -147,10 +168,11 @@ Deno.serve(async(req:Request)=>{
       console.log('Welcome email #1:',await seqRes.json());
     }
 
-    await SB.from('signup_notifications').upsert(
-      {org_id:org.id,org_name:org.name,org_email:org.email,plan:org.plan,notified:adminRes.ok,notified_at:new Date().toISOString()},
-      {onConflict:'org_id'}
-    );
+    // Row is already claimed (notified=true) from the dedup step above. If the admin alert
+    // failed, release the claim so the 5-minute sweep retries this signup later.
+    if(!adminRes.ok){
+      await SB.from('signup_notifications').update({notified:false}).eq('org_id',org.id);
+    }
 
     return new Response(JSON.stringify({ok:true}),{headers:{...CORS,'Content-Type':'application/json'}});
   }catch(e){
