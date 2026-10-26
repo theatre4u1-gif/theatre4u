@@ -152,6 +152,7 @@ Output ONLY the JSON object, no prose, no markdown fences.`;
       }),
     });
     if (!r.ok) {
+      console.error("Anthropic scan failed:", r.status, await r.text().catch(() => ""));
       await sb.from("ai_scan_log").insert({ org_id: orgId, mode, status: "error" });
       return json({ error: "ai", message: "The scan didn't go through. Please try again or add the item manually." }, 502);
     }

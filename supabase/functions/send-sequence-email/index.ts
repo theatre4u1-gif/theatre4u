@@ -148,15 +148,14 @@ const EMAILS:Record<number,EmailDef>={
     ${p("I'll send you a few short tips over the next few weeks — just useful things to try when you're ready for them.",'font-size:14px;color:#555;')}
     ${sm('Questions? Just reply — I read every one.')}
   `)},
-2:{subject:()=>'Ready for your first item? It takes about 90 seconds.',
+2:{subject:()=>'Add your first 10 items — the fast way (from your phone)',
   html:(B,V,name,org)=>wrap(B,`
     ${p(`Hi ${name},`)}
-    ${p(`The fastest way to feel what ${B.plain} can do for ${org} is to add one item to your inventory. Just one — ${V.one}, anything sitting in your ${V.space} right now.`)}
-    ${parchment(`<strong style="color:#1a0f00;font-size:14px">Here's how:</strong>${ol([
-      `Sign in at <a href="${B.site}" style="color:#8b6914;font-weight:700">${B.host}</a>`,
-      'Click <strong>Inventory</strong> in the left sidebar',
-      'Click <strong>+ Add</strong>',
-      'Fill in the name, category, condition, and quantity — then Save',
+    ${p(`The fastest way to feel what ${B.plain} can do for ${org} is to get your first items in — aim for about <strong>10</strong>. It takes just a few minutes, especially from your phone.`)}
+    ${parchment(`<strong style="color:#1a0f00;font-size:14px">Three fast ways to add items:</strong>${ol([
+      `<strong>Scan several at once (newest, fastest):</strong> point your camera at a shelf or a rack and our AI lists every item it sees &mdash; you just review and save. The quickest way to add 10+ in one go.`,
+      `<strong>From your phone:</strong> open the mobile app at <a href="${B.site}/app.html" style="color:#8b6914;font-weight:700">${B.host}/app.html</a> and snap items with your camera as you walk your ${V.space}.`,
+      `<strong>One at a time:</strong> sign in at <a href="${B.site}" style="color:#8b6914;font-weight:700">${B.host}</a>, open <strong>Inventory</strong>, and click <strong>+ Add</strong>.`,
     ])}`)}
     ${p('A few things that might surprise you:','font-size:14px;color:#555;font-weight:700;')}
     ${ul([

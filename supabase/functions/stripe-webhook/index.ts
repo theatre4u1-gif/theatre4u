@@ -47,6 +47,20 @@ const PRICE_TO_HOME: Record<string, { home_plan: string; interval: string }> = {
   "price_1UPn6UBRkceXoRsJTZUcCOOg": { home_plan: "home_plus", interval: "annual" }, // $89/yr
 };
 
+// Which project is this webhook deployed in? BinTrove runs on its own Supabase project
+// with its own Stripe webhook endpoint. Because one Stripe account fans every event out
+// to BOTH endpoints, each webhook must act ONLY on its own brand's prices — otherwise a
+// BinTrove payment whose email matches a schools org could mis-write that schools org.
+// Set PROJECT_BRAND=bintrove as a secret on the BinTrove project; schools leaves it unset.
+// Detect the BinTrove project ROBUSTLY from the auto-injected SUPABASE_URL (Supabase sets
+// it; it can't be mistyped or forgotten), with an optional PROJECT_BRAND override. The
+// earlier version relied solely on PROJECT_BRAND, which silently fails if that secret is
+// unset or has stray whitespace — so a paid BinTrove upgrade would not provision.
+const IS_BINTROVE_PROJECT =
+  (Deno.env.get("SUPABASE_URL") || "").includes("mdwuholylehviwezmadf") ||
+  (Deno.env.get("PROJECT_BRAND") || "").trim().toLowerCase() === "bintrove";
+const PROJECT_BRAND = IS_BINTROVE_PROJECT ? "bintrove" : "schools";
+
 // Stripe moved current_period_end/start onto the subscription ITEM in recent API versions.
 // Read the subscription-level field first, then fall back to the first item.
 function periodEndsFromSub(sub: Record<string, unknown>): { start: number | null; end: number | null } {
@@ -377,6 +391,7 @@ Deno.serve(async (req: Request) => {
         // + plan_expires_at=now+30d. A daily pg_cron job reverts expired move orgs to free.
         // Never flips an org that already holds a paid home subscription (home_plus stays).
         if (data.mode === "payment" && meta?.type === "bintrove_move") {
+          if (!IS_BINTROVE_PROJECT) break; // BinTrove product — ignore on the schools webhook
           const org = await findOrg(customerId, customerEmail, clientRef || undefined);
           const amt = (data.amount_total as number) || 2900;
           if (org) {
@@ -438,6 +453,19 @@ Deno.serve(async (req: Request) => {
               alertAmountCents = baseUnit ? await netOfDiscount(sub, baseUnit) : subAmountCents;
             }
           } catch (e) { console.error("Failed to fetch subscription:", e); }
+        }
+
+        // Brand guard: only provision prices that belong to THIS project's brand. A home
+        // price arriving at the schools webhook (or a school price at the BinTrove webhook)
+        // is another project's customer fanned out by the shared Stripe account — ignore it
+        // entirely (no log, no write) so it can never touch the wrong project's orgs.
+        {
+          const isHomePrice   = !!(priceId && PRICE_TO_HOME[priceId]);
+          const isSchoolPrice = !!(priceId && PRICE_TO_PLAN[priceId]);
+          if ((IS_BINTROVE_PROJECT && isSchoolPrice) || (!IS_BINTROVE_PROJECT && isHomePrice)) {
+            console.log("stripe-webhook: ignoring cross-brand checkout", { priceId, project: PROJECT_BRAND });
+            break;
+          }
         }
 
         const org = await findOrg(customerId, customerEmail, clientRef || undefined);

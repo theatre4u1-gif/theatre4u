@@ -642,7 +642,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
             <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:14}}>
               <div>
                 <div style={{fontSize:16,fontWeight:800,color:"var(--text)",marginBottom:3}}>👋 Getting started</div>
-                <div style={{fontSize:13,color:"var(--muted)"}}>Three quick steps to get your inventory organized. This guide hides once you have a few items.</div>
+                <div style={{fontSize:13,color:"var(--muted)"}}>Add your first 10 items to get going — here's the fastest way. This guide hides once you're set up.</div>
               </div>
               <button onClick={dismissGs} title="Hide this guide"
                 style={{border:"none",background:"transparent",color:"var(--faint)",fontSize:20,lineHeight:1,
@@ -654,11 +654,13 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
                   <span style={{width:22,height:22,borderRadius:"50%",background:"var(--gold)",color:"#1a0f00",fontSize:12,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>1</span>
                   <span style={{fontSize:14,fontWeight:800,color:"var(--text)"}}>Add your items</span>
                 </div>
-                <div style={{fontSize:12.5,color:"var(--muted)",marginBottom:10,lineHeight:1.45}}>Snap or pick photos and each one becomes an item — fastest way to build your catalog. Start with one area, like a single rack or shelf.</div>
+                <div style={{fontSize:12.5,color:"var(--muted)",marginBottom:10,lineHeight:1.45}}>Aim for your first 10 — it only takes a few minutes. Fastest of all: point your camera at a whole shelf or rack and let AI list everything on it at once.</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                  {!isStudentTier&&<button className="btn btn-g btn-sm" onClick={()=>setShowBulk(true)}>📸 Add from photos</button>}
+                  {canAdd&&scanEnabled&&<button className="btn btn-g btn-sm" onClick={()=>setShowBatch(true)}>📷 Scan several at once</button>}
+                  {!isStudentTier&&<button className="btn btn-o btn-sm" onClick={()=>setShowBulk(true)}>📸 Add from photos</button>}
                   <button className="btn btn-o btn-sm" onClick={()=>{setActive(null);setModal("a");}}>One at a time{submitsForReview?" (for approval)":""}</button>
                 </div>
+                <div style={{fontSize:12,color:"var(--muted)",marginTop:10,paddingTop:10,borderTop:"1px solid var(--border)",lineHeight:1.45}}>📱 On your phone? Adding is fastest there — snap items with your camera as you go. <a href="/app.html" target="_blank" rel="noreferrer" style={{color:"#8b6914",fontWeight:700,textDecoration:"none"}}>Open the mobile app →</a></div>
               </div>
               <div style={{background:"var(--white)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 14px 16px"}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
