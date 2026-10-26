@@ -153,7 +153,7 @@ const EMAILS:Record<number,EmailDef>={
     ${p(`Hi ${name},`)}
     ${p(`The fastest way to feel what ${B.plain} can do for ${org} is to get your first items in — aim for about <strong>10</strong>. It takes just a few minutes, especially from your phone.`)}
     ${parchment(`<strong style="color:#1a0f00;font-size:14px">Three fast ways to add items:</strong>${ol([
-      `<strong>Scan several at once (newest, fastest):</strong> point your camera at a shelf or a rack and our AI lists every item it sees &mdash; you just review and save. The quickest way to add 10+ in one go.`,
+      `<strong>Scan several at once (newest, fastest):</strong> point your camera at a shelf or a rack and ${B.plain} lists every item it sees &mdash; you just review and save. The quickest way to add 10+ in one go.`,
       `<strong>From your phone:</strong> open the mobile app at <a href="${B.site}/app.html" style="color:#8b6914;font-weight:700">${B.host}/app.html</a> and snap items with your camera as you walk your ${V.space}.`,
       `<strong>One at a time:</strong> sign in at <a href="${B.site}" style="color:#8b6914;font-weight:700">${B.host}</a>, open <strong>Inventory</strong>, and click <strong>+ Add</strong>.`,
     ])}`)}

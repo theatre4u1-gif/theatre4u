@@ -654,7 +654,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
                   <span style={{width:22,height:22,borderRadius:"50%",background:"var(--gold)",color:"#1a0f00",fontSize:12,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>1</span>
                   <span style={{fontSize:14,fontWeight:800,color:"var(--text)"}}>Add your items</span>
                 </div>
-                <div style={{fontSize:12.5,color:"var(--muted)",marginBottom:10,lineHeight:1.45}}>Aim for your first 10 — it only takes a few minutes. Fastest of all: point your camera at a whole shelf or rack and let AI list everything on it at once.</div>
+                <div style={{fontSize:12.5,color:"var(--muted)",marginBottom:10,lineHeight:1.45}}>Aim for your first 10 — it only takes a few minutes. Fastest of all: point your camera at a whole shelf or rack and it lists everything it sees, so you can add them all at once.</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
                   {canAdd&&scanEnabled&&<button className="btn btn-g btn-sm" onClick={()=>setShowBatch(true)}>📷 Scan several at once</button>}
                   {!isStudentTier&&<button className="btn btn-o btn-sm" onClick={()=>setShowBulk(true)}>📸 Add from photos</button>}
