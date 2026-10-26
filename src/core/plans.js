@@ -65,7 +65,7 @@ export function scanLimitFor(homePlan) {
 // Free gets a small taste (the 25-item Free cap already limits how much it can save); Pro and up
 // get a generous monthly pool. Kept in sync with SCAN_LIMITS_SCHOOL in the scan-item edge function.
 export const SCHOOL_SCAN_LIMITS = {
-  free:          { limit: 3,    period: "month" },
+  free:          { limit: 10,   period: "month" },
   pro:           { limit: 100,  period: "month" },
   district:      { limit: 300,  period: "month" },
   district_m:    { limit: 600,  period: "month" },

@@ -28,7 +28,7 @@ const SCAN_LIMITS_HOME: Record<string, Limit> = {
 };
 // School (Theatre4u / ArtsTracker) allotments — keep in sync with SCHOOL_SCAN_LIMITS in plans.js.
 const SCAN_LIMITS_SCHOOL: Record<string, Limit> = {
-  free: { limit: 3, period: "month" }, pro: { limit: 100, period: "month" },
+  free: { limit: 10, period: "month" }, pro: { limit: 100, period: "month" },
   district: { limit: 300, period: "month" }, district_m: { limit: 600, period: "month" }, district_l: { limit: 1000, period: "month" },
   at_pro: { limit: 100, period: "month" }, at_district_s: { limit: 300, period: "month" }, at_district_m: { limit: 600, period: "month" }, at_district_l: { limit: 1000, period: "month" },
   enterprise: { limit: 5000, period: "month" }, at_enterprise: { limit: 5000, period: "month" },
