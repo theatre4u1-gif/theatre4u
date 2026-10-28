@@ -62,7 +62,7 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
   if(theme.accent&&String(theme.accent).trim()) themeVars["--gold"]=theme.accent;
   if(theme.primary&&String(theme.primary).trim()) themeVars["--goldd"]=theme.primary;
   // Landing section order + visibility (set in the admin Content editor → Page layout).
-  const DEFAULT_SECTION_ORDER=["hero","social","features","howitworks","testimonials","pricing","finalcta","story"];
+  const DEFAULT_SECTION_ORDER=["hero","social","testimonials","features","howitworks","pricing","finalcta","story"];
   const savedOrder=(content["landing.layout.order"]||"").split(",").map(s=>s.trim()).filter(Boolean);
   const sectionOrder=[...savedOrder.filter(id=>DEFAULT_SECTION_ORDER.includes(id)), ...DEFAULT_SECTION_ORDER.filter(id=>!savedOrder.includes(id))];
   const ord=(id)=>{const i=sectionOrder.indexOf(id);return i<0?90:i;};

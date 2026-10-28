@@ -50,18 +50,19 @@ export const DEFAULT_SOCIAL = {
 // Real customer testimonials (from beta_feedback, used with permission). Admin can override
 // via site_content key "landing.testimonials.items". Shown on the public landing as social proof.
 // Only quotes whose owner has given explicit permission go live here.
+// Names shown as first name + last initial only.
 // APPROVED (2026-10-28, email replies to hello@theatre4u.org): Rita McLary, Paul Musick.
 // PENDING permission (do NOT publish until they reply yes) — restore to the arrays when approved:
-//   { quote: "Very easy to use — the ability to create information in the moment is wonderful.", name: "Kathryn Woods", org: "Baldwinsville Theatre Guild", location: "Baldwinsville, NY", stars: 5 },
-//   { quote: "Much easier than building from scratch in a spreadsheet — the import feature saved me a ton of work.", name: "Ashley Rabon", org: "Artbarn Community Theatre", location: "Brookline, MA", stars: 5 },
+//   { quote: "Very easy to use — the ability to create information in the moment is wonderful.", name: "Kathryn W.", org: "Baldwinsville Theatre Guild", location: "Baldwinsville, NY", stars: 5 },
+//   { quote: "Much easier than building from scratch in a spreadsheet — the import feature saved me a ton of work.", name: "Ashley R.", org: "Artbarn Community Theatre", location: "Brookline, MA", stars: 5 },
 export const DEFAULT_TESTIMONIALS = {
   theatre4u: [
-    { quote: "I love how easy it is to add items to my inventory!", name: "Rita McLary", org: "Grand Haven High School Drama", location: "Grand Haven, MI", stars: 5 },
-    { quote: "The system is easy to use.", name: "Paul Musick", org: "Triad Pride Acting Company", location: "Greensboro, NC", stars: 5 },
+    { quote: "I love how easy it is to add items to my inventory!", name: "Rita M.", org: "Grand Haven High School Drama", location: "Grand Haven, MI", stars: 5 },
+    { quote: "The system is easy to use.", name: "Paul M.", org: "Triad Pride Acting Company", location: "Greensboro, NC", stars: 5 },
   ],
   artstracker: [
-    { quote: "I love how easy it is to add items to my inventory!", name: "Rita McLary", org: "Grand Haven High School Drama", location: "Grand Haven, MI", stars: 5 },
-    { quote: "The system is easy to use.", name: "Paul Musick", org: "Triad Pride Acting Company", location: "Greensboro, NC", stars: 5 },
+    { quote: "I love how easy it is to add items to my inventory!", name: "Rita M.", org: "Grand Haven High School Drama", location: "Grand Haven, MI", stars: 5 },
+    { quote: "The system is easy to use.", name: "Paul M.", org: "Triad Pride Acting Company", location: "Greensboro, NC", stars: 5 },
   ],
 };
 
