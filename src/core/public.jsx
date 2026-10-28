@@ -8,7 +8,7 @@ import { CAT_MAP } from "./inventory.js";
 import { QR } from "./qr.js";
 import { CSS } from "./styles.js";
 import { usp } from "../lib/backgrounds.js";
-import { DEFAULT_FEATURES, DEFAULT_STEPS, DEFAULT_SOCIAL, DEFAULT_STORY_STATS, parseFeatures } from "../lib/landing-defaults.js";
+import { DEFAULT_FEATURES, DEFAULT_STEPS, DEFAULT_SOCIAL, DEFAULT_STORY_STATS, DEFAULT_TESTIMONIALS, parseFeatures } from "../lib/landing-defaults.js";
 
 // ── Visit tracking (used by the public landing page) ─────────────────────────
 const TRACK_URL = "https://ldmmphwivnnboyhlxipl.supabase.co/functions/v1/track-visit";
@@ -62,7 +62,7 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
   if(theme.accent&&String(theme.accent).trim()) themeVars["--gold"]=theme.accent;
   if(theme.primary&&String(theme.primary).trim()) themeVars["--goldd"]=theme.primary;
   // Landing section order + visibility (set in the admin Content editor → Page layout).
-  const DEFAULT_SECTION_ORDER=["hero","social","features","howitworks","pricing","finalcta","story"];
+  const DEFAULT_SECTION_ORDER=["hero","social","features","howitworks","testimonials","pricing","finalcta","story"];
   const savedOrder=(content["landing.layout.order"]||"").split(",").map(s=>s.trim()).filter(Boolean);
   const sectionOrder=[...savedOrder.filter(id=>DEFAULT_SECTION_ORDER.includes(id)), ...DEFAULT_SECTION_ORDER.filter(id=>!savedOrder.includes(id))];
   const ord=(id)=>{const i=sectionOrder.indexOf(id);return i<0?90:i;};
@@ -91,6 +91,8 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
 
   // Steps: admin override (site_content) or the shared defaults for this door.
   const steps = parseFeatures(content["landing.steps.items"]) || DEFAULT_STEPS[IS_ARTSTRACKER?"artstracker":"theatre4u"];
+  // Testimonials: admin override (site_content) or the curated real quotes for this door.
+  const testimonials = parseFeatures(content["landing.testimonials.items"]) || DEFAULT_TESTIMONIALS[IS_ARTSTRACKER?"artstracker":"theatre4u"];
 
   return(<div style={{background:"var(--ink)",minHeight:"100vh",color:"var(--linen)",fontFamily:"'DM Sans',sans-serif",...themeVars}}>
     
@@ -217,6 +219,26 @@ export function LandingPage({onSignIn, onSignUp, onTakeTour=null}){
             </div>
           ))}
         </div>
+      </div>
+    </div>
+
+    {/* ── Testimonials ── */}
+    <div style={{order:ord("testimonials"),display:vis("testimonials")?"block":"none",padding:"80px 32px",maxWidth:1100,margin:"0 auto",width:"100%"}}>
+      <div style={{textAlign:"center",marginBottom:48}}>
+        <div style={{fontSize:12,fontWeight:800,textTransform:"uppercase",letterSpacing:2,color:"var(--gold)",marginBottom:10}}>{c("landing.testimonials.eyebrow","Loved by programs like yours")}</div>
+        <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"clamp(28px,4vw,42px)",color:"#fff"}}>{c("landing.testimonials.heading","What directors are saying")}</h2>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:20}}>
+        {testimonials.map((t,i)=>(
+          <div key={i} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:14,padding:"24px 22px",display:"flex",flexDirection:"column"}}>
+            <div style={{color:"var(--gold)",fontSize:15,letterSpacing:2,marginBottom:12}}>{"★".repeat(Math.max(1,Math.min(5,t.stars||5)))}</div>
+            <p style={{fontSize:15,color:"rgba(255,255,255,.85)",lineHeight:1.65,fontStyle:"italic",marginBottom:16,flex:1}}>&ldquo;{t.quote}&rdquo;</p>
+            <div style={{borderTop:"1px solid rgba(255,255,255,.08)",paddingTop:12}}>
+              <div style={{fontSize:14,fontWeight:700,color:"#fff"}}>{t.name}</div>
+              <div style={{fontSize:12.5,color:"rgba(255,255,255,.5)"}}>{t.org}{t.location?" · "+t.location:""}</div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
 
