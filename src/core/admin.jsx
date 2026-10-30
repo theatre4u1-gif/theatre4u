@@ -2198,7 +2198,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
               <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:16 }}>
                 {dirList.map(d=>(
                   <div key={d.email} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:"var(--parch)", borderRadius:8, border:"1px solid var(--border)" }}>
-                    <div style={{ flex:1, fontSize:13, fontWeight:600 }}>{d.email}<span style={{ display:"block", fontSize:11, fontWeight:500, color:"var(--muted)" }}>{d.vertical ? (getVertical(d.vertical).icon+" "+getVertical(d.vertical).label) : "Whole school"}</span></div>
+                    <div style={{ flex:1, fontSize:13, fontWeight:600 }}>{d.email}<span style={{ display:"block", fontSize:11, fontWeight:500, color:"var(--muted)" }}>{d.vertical ? ((dirSchool.vertical_labels?.[d.vertical]?.icon||getVertical(d.vertical).icon)+" "+(dirSchool.vertical_labels?.[d.vertical]?.label||getVertical(d.vertical).label)) : "Whole school"}</span></div>
                     <button onClick={()=>removeDirector(d.email)} style={{ padding:"3px 10px", borderRadius:6, border:"1px solid rgba(194,24,91,.3)", background:"transparent", color:"var(--red)", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>Remove</button>
                   </div>
                 ))}
@@ -2215,7 +2215,7 @@ export function DistrictDashboard({ user, plan, onSwitchSchool, isFacilitator = 
                 return dv.length>1 ? (
                   <select className="fs" value={dirVertical} onChange={e=>setDirVertical(e.target.value)} style={{ flex:"0 0 auto" }}>
                     <option value="">Whole school (all departments)</option>
-                    {dv.map(v=><option key={v} value={v}>{getVertical(v).icon} {getVertical(v).label}</option>)}
+                    {dv.map(v=><option key={v} value={v}>{dirSchool.vertical_labels?.[v]?.icon||getVertical(v).icon} {dirSchool.vertical_labels?.[v]?.label||getVertical(v).label}</option>)}
                   </select>
                 ) : null;
               })()}
