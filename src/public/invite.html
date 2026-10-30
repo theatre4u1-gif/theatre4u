@@ -204,10 +204,13 @@ const joinCode = params.get('code')  || '';
 let inviteData = null; // will be populated from DB
 
 const ROLE_LABELS = {
-  co_director:   'Co-Director',
-  stage_manager: 'Stage Manager',
-  crew:          'Crew',
-  house:         'House',
+  co_director:      'Co-Director',
+  director:         'Co-Director',
+  program_director: 'Department Leader',
+  coordinator:      'School Coordinator',
+  stage_manager:    'Stage Manager',
+  crew:             'Crew',
+  house:            'House',
 };
 
 function show(id) {
@@ -442,8 +445,37 @@ async function init() {
     }
   }
 
-  // If already signed in, accept immediately and show success
+  // If already signed in:
   if (session) {
+    const myEmail     = (session.user?.email || '').toLowerCase();
+    const inviteEmail = (inviteData?.email || '').toLowerCase();
+    // Signed in as someone OTHER than the person this invite was sent to — don't
+    // silently accept it under the wrong account (that consumes the invite for the
+    // real recipient). Let them sign out and use the invited email, or opt in.
+    if (inviteEmail && myEmail && myEmail !== inviteEmail) {
+      document.getElementById('main').innerHTML = `
+        <div style="text-align:center;padding:8px 0">
+          <div style="font-size:40px;margin-bottom:12px">⚠️</div>
+          <h2 style="font-family:Georgia,serif;font-size:20px;color:var(--gold);margin-bottom:8px">Signed in as someone else</h2>
+          <p style="color:var(--t2);font-size:14px;line-height:1.7;margin-bottom:18px">
+            This invite is for <strong style="color:var(--t1)">${inviteEmail}</strong>, but you're signed in as
+            <strong style="color:var(--t1)">${myEmail}</strong>.<br>
+            To join as ${inviteEmail}, sign out and sign in (or create an account) with that email.
+          </p>
+          <button id="switch-btn" style="width:100%;padding:12px;border:none;border-radius:8px;background:var(--gold);color:#1a0f00;font-weight:700;font-size:15px;cursor:pointer;margin-bottom:10px">Sign out &amp; use ${inviteEmail}</button>
+          <button id="continue-btn" style="width:100%;padding:12px;border:1px solid var(--t3);border-radius:8px;background:transparent;color:var(--t2);font-size:14px;cursor:pointer">Add this to my current account instead</button>
+        </div>`;
+      show('main');
+      document.getElementById('switch-btn').onclick = async () => { await SB.auth.signOut(); location.reload(); };
+      document.getElementById('continue-btn').onclick = async () => {
+        const { data: invResult, error: invErr } = await acceptInvite();
+        if (!invErr && (invResult?.success || invResult?.error?.includes('Already a member'))) {
+          showSuccess(invResult?.org_name || inviteData?.org_name || 'the program', invResult?.role || inviteData?.role);
+        } else { showErr(invResult?.error || 'Could not join the team. Please contact ' + BRAND_EMAIL + '.'); }
+      };
+      return;
+    }
+    // Signed in as the invited person (or the invite has no specific email) → accept now.
     const { data: invResult, error: invErr } = await acceptInvite();
     if (!invErr && invResult?.success) {
       showSuccess(invResult.org_name || inviteData?.org_name || 'the program', invResult.role || inviteData?.role);
