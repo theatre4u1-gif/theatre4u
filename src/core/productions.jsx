@@ -6,7 +6,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { APP_NAME, APP_HOST } from "./config.js";
 import { SB } from "./supabase.js";
 import { Modal } from "./ui.jsx";
-import { CATS, CAT } from "./inventory.js";
+import { CATS, CAT, itemCat } from "./inventory.js";
 import { Ic } from "./icons.jsx";
 import { parseCSV } from "./helpers.js";
 import { usp } from "../lib/backgrounds.js";
@@ -1057,7 +1057,7 @@ function ProductionNeedsChecklist({ prod, allItems, userId, org, onNavigateToExc
             return acc;
           }, {})
         ).map(([catId, catNeeds]) => {
-          const cat = CAT[catId] || CAT.other;
+          const cat = itemCat(org?.vertical, catId);
           return (
             <div key={catId} style={{ marginBottom:20 }}>
               <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase",
@@ -1343,7 +1343,7 @@ function ProductionDetail({ prod, allItems, userId, onEdit, onDelete, onClose, o
         <div style={{ textAlign:"center", padding:24, color:"var(--muted)" }}>No items match your search.</div>
       ) : (
         Object.entries(byCategory).map(([catId, items]) => {
-          const cat = CAT[catId] || CAT.other;
+          const cat = itemCat(org?.vertical, catId);
           return (
             <div key={catId} style={{ marginBottom:20 }}>
               <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:1.5,
