@@ -85,19 +85,28 @@ function TransferOwnership({ orgId, orgName }) {
   );
 }
 
-function TeamSettings({ userId, orgName, plan }) {
+function TeamSettings({ userId, orgName, plan, org }) {
   const [members,  setMembers]  = useState([]);
   const [invites,  setInvites]  = useState([]);
   const [joinCode, setJoinCode] = useState(null);
   const [loading,  setLoading]  = useState(true);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole,  setInviteRole]  = useState("crew");
+  const [inviteVertical, setInviteVertical] = useState(""); // "" = whole school (all departments); else a specific department
   const [sending,  setSending]  = useState(false);
   const [msg,      setMsg]      = useState("");
   const [showCode, setShowCode] = useState(false);
   const [qrUrl,    setQrUrl]    = useState(null);
 
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(""), 3500); };
+
+  // Departments this school has open (ArtsTracker multi-department). When there are
+  // 2+, a team member can be assigned to one department (they then see only that
+  // department's inventory) or left school-wide. Labels honor the account's renames.
+  const enabledDepts = ((org?.verticals_enabled)||[]).filter(Boolean);
+  const multiDept = enabledDepts.length > 1;
+  const vLabel = (vid) => (org?.vertical_labels?.[vid]?.label) || (VERTICALS_LIST.find(x=>x.id===vid)||{}).label || vid;
+  const vIcon  = (vid) => (org?.vertical_labels?.[vid]?.icon)  || (VERTICALS_LIST.find(x=>x.id===vid)||{}).icon  || "📁";
 
   const inviteUrl = joinCode ? `https://${APP_HOST}/invite.html?code=${joinCode}` : null;
 
@@ -196,6 +205,7 @@ function TeamSettings({ userId, orgName, plan }) {
       org_id: userId,
       email: inviteEmail.trim().toLowerCase(),
       role: inviteRole,
+      vertical: (multiDept && inviteVertical) ? inviteVertical : null,
       invite_type: "email",
     }).select().single();
     if (error || !data) {
@@ -246,6 +256,14 @@ function TeamSettings({ userId, orgName, plan }) {
     flash("✓ Invite cancelled");
   };
 
+  // Change a member's department (vertical). "" = whole school (all departments).
+  const changeVertical = async (memberId, newVertical) => {
+    const v = newVertical || null;
+    await SB.from("org_members").update({ vertical: v }).eq("id", memberId);
+    setMembers(p => p.map(m => m.id === memberId ? { ...m, vertical: v } : m));
+    flash("✓ Department updated");
+  };
+
   // Change a member's role
   const changeRole = async (memberId, newRole) => {
     await SB.from("org_members").update({ role: newRole }).eq("id", memberId);
@@ -291,9 +309,19 @@ function TeamSettings({ userId, orgName, plan }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 13 }}>{m.email}</div>
                   <div style={{ fontSize: 11, color: "var(--faint)" }}>
+                    {multiDept && <><strong style={{color:"var(--muted)"}}>{m.vertical ? (vIcon(m.vertical)+" "+vLabel(m.vertical)) : "🏫 Whole school"}</strong> · </>}
                     Joined {new Date(m.joined_at).toLocaleDateString()}
                   </div>
                 </div>
+                {multiDept && (
+                  <select value={m.vertical || ""} onChange={e => changeVertical(m.id, e.target.value)}
+                    title="Department this member manages (controls which inventory they see)"
+                    style={{ background: "var(--parch)", border: "1px solid var(--bd)", borderRadius: 6,
+                      padding: "4px 8px", color: "var(--text)", fontSize: 12, fontFamily: "inherit" }}>
+                    <option value="">🏫 Whole school</option>
+                    {enabledDepts.map(v => <option key={v} value={v}>{vIcon(v)} {vLabel(v)}</option>)}
+                  </select>
+                )}
                 <select value={m.role} onChange={e => changeRole(m.id, e.target.value)}
                   style={{ background: "var(--parch)", border: "1px solid var(--bd)", borderRadius: 6,
                     padding: "4px 8px", color: "var(--text)", fontSize: 12, fontFamily: "inherit" }}>
@@ -324,7 +352,7 @@ function TeamSettings({ userId, orgName, plan }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: 13 }}>{inv.email}</div>
                 <div style={{ fontSize: 11, color: "var(--faint)" }}>
-                  {ROLE_MAP[inv.role]?.label} · Expires {new Date(inv.expires_at).toLocaleDateString()}
+                  {ROLE_MAP[inv.role]?.label || inv.role}{multiDept && <> · {inv.vertical ? (vIcon(inv.vertical)+" "+vLabel(inv.vertical)) : "🏫 Whole school"}</>} · Expires {new Date(inv.expires_at).toLocaleDateString()}
                 </div>
               </div>
               <button onClick={() => {
@@ -358,6 +386,13 @@ function TeamSettings({ userId, orgName, plan }) {
             className="fs" style={{ flex: "0 0 auto", minWidth: 130 }}>
             {[{ id: "director", label: "Co-Director", icon: "🎬" }, ...ROLES].map(r => <option key={r.id} value={r.id}>{r.icon} {r.label}</option>)}
           </select>
+          {multiDept && (
+            <select value={inviteVertical} onChange={e => setInviteVertical(e.target.value)}
+              className="fs" style={{ flex: "0 0 auto", minWidth: 150 }} title="Which department this person manages">
+              <option value="">🏫 Whole school</option>
+              {enabledDepts.map(v => <option key={v} value={v}>{vIcon(v)} {vLabel(v)}</option>)}
+            </select>
+          )}
           <button className="btn bp" onClick={sendInvite} disabled={sending || !inviteEmail.trim()}
             style={{ whiteSpace: "nowrap" }}>
             {sending ? "Sending…" : "Send Invite"}
@@ -365,7 +400,11 @@ function TeamSettings({ userId, orgName, plan }) {
         </div>
         {inviteEmail && (
           <div style={{ fontSize: 11, color: "var(--faint)", marginTop: 6 }}>
-            They'll get a link to join your team at <strong>{orgName}</strong> as <strong>{ROLE_MAP[inviteRole]?.label || (inviteRole === "director" ? "Co-Director" : inviteRole)}</strong>.
+            They'll get a link to join your team at <strong>{orgName}</strong> as <strong>{ROLE_MAP[inviteRole]?.label || (inviteRole === "director" ? "Co-Director" : inviteRole)}</strong>
+            {multiDept && (inviteVertical
+              ? <> for <strong>{vLabel(inviteVertical)}</strong> only — they'll see only that department's inventory.</>
+              : <> with access to <strong>all departments</strong>.</>)}
+            {!multiDept && <>.</>}
           </div>
         )}
       </div>
@@ -1006,7 +1045,7 @@ export function Settings({ org, setOrg, onSeed, user, userId, items, setItems, p
           </div>
         )}
 
-        {!memberRole&&<TeamSettings userId={userId} orgName={org?.name||"Your Program"} plan={plan}/>}
+        {!memberRole&&<TeamSettings userId={userId} orgName={org?.name||"Your Program"} plan={plan} org={org}/>}
 
         {!memberRole&&<TransferOwnership orgId={userId} orgName={org?.name||"Your Program"}/>}
 
