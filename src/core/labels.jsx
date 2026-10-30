@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
-import { CAT } from "./inventory.js";
+import { CAT, itemCat } from "./inventory.js";
 import { QR } from "./qr.js";
 import { APP_NAME, APP_EMAIL, APP_URL, IS_BINTROVE } from "./config.js";
 import { doorOf } from "../lib/admin-metrics.js";
@@ -146,7 +146,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
   const locCount = (locId) => myItems.filter(i=>i.location_id===locId).length;
 
   const normItem = (i) => {
-    const cat = CAT[i.category]||CAT.other;
+    const cat = itemCat(i.vertical, i.category);
     return { id:i.id, kind:"item", qrPath:"/#/item/"+i.id, title:i.name,
       catLabel:cat.label, icon:cat.icon, color:cat.color||"#888",
       loc:i.location||"", code:i.display_id||i.id.slice(0,8).toUpperCase(),
@@ -815,7 +815,7 @@ export function LabelsPage({ org, userId, items=[], isAdmin=false }) {
               </div>
               <div style={{...card,overflow:"hidden"}}>
                 {myItems.filter(i=>i.label_code).map(item=>{
-                  const cat = CAT[item.category]||CAT.other;
+                  const cat = itemCat(item.vertical, item.category);
                   return(
                     <div key={item.id} style={{display:"flex",alignItems:"center",gap:10,
                       padding:"9px 14px",borderBottom:"1px solid var(--border)"}}>

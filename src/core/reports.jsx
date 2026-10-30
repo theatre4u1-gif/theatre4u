@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { APP_NAME, IS_ARTSTRACKER, IS_BINTROVE } from "./config.js";
 import { SB } from "./supabase.js";
-import { CAT, CATS, CONDS, AVAIL, MKT } from "./inventory.js";
+import { CAT, CATS, CONDS, AVAIL, MKT, getCatsMerged } from "./inventory.js";
 import { BG, usp, VERTICAL_BG_GRAD } from "../lib/backgrounds.js";
 import { Ic } from "./icons.jsx";
 import { UpgradePlans } from "./billing.jsx";
@@ -18,10 +18,10 @@ export function Reports({ items, plan="free", org=null, userId=null, userEmail=n
   // conditions / availability so breakdowns are correct; school hosts keep the static
   // theatre vocab exactly as before (byte-identical).
   const V      = IS_BINTROVE ? "home" : (org?.vertical || "theatre");
-  const vCATS  = IS_BINTROVE ? getCats(V)                          : CATS;
+  const vCATS  = getCatsMerged(V);
   const vCONDS = IS_BINTROVE ? (getVertical(V).conditions   || CONDS) : CONDS;
   const vAVAIL = IS_BINTROVE ? (getVertical(V).availability || AVAIL) : AVAIL;
-  const catOf  = id => (IS_BINTROVE ? (vCATS.find(c=>c.id===id) || {icon:"📦",label:id}) : (CAT[id]||CAT.other));
+  const catOf  = id => (vCATS.find(c=>c.id===id) || {icon:"📦",label:id});
   // Per-item value for totals/exports. Home (BinTrove) users enter "Purchase & Value"
   // (purchase_cost); school/arts use the listing price (sale). Fall back across both.
   const valOf = i => IS_BINTROVE ? (parseFloat(i.purchase_cost)||parseFloat(i.sale)||0) : (parseFloat(i.sale)||0);

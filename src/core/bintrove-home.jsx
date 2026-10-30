@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { SB } from "./supabase.js";
 import { getCat } from "../lib/verticals.js";
+import { itemCat } from "./inventory.js";
 
 const TEAL = "#0F6E6B", TEAL_D = "#0A5450", GOLD = "#D3A13C", INK = "#163230", CREAM = "#FBF4E6", LINE = "#e7e2d7", MUT = "#5d706d";
 
@@ -76,7 +77,7 @@ export function BinTroveHome({ items = [], org, goInventory }) {
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 10 }}>
             {recent.map((it, i) => {
-              const c = getCat("home", it.category);
+              const c = itemCat("home", it.category);
               return (
                 <div key={it.id || i} style={{ border: "1px solid " + LINE, borderRadius: 11, padding: "11px 13px" }}>
                   <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.name || "Untitled"}</div>

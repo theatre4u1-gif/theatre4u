@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { SB, callEdgeFn } from "./supabase.js";
 import { EM } from "./messages.js";
 import { Modal, CatCard } from "./ui.jsx";
-import { CAT, CATS, CONDS } from "./inventory.js";
+import { CAT, CATS, CONDS, itemCat } from "./inventory.js";
 import { stripeLink } from "./plans.js";
 import { usp } from "../lib/backgrounds.js";
 import { getVertical } from "../lib/verticals.js";
@@ -3367,7 +3367,7 @@ export function AdminDailyDigest() {
               <div style={card}>
                 {sectionHead("📦","Items Added",data.newItems.length)}
                 {data.newItems.slice(0,30).map(i=>{
-                  const cat = CAT[i.category]||CAT.other;
+                  const cat = itemCat(i.vertical, i.category);
                   return(
                     <div key={i.id} style={{padding:"8px 14px",borderBottom:"1px solid var(--border)",
                       display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>

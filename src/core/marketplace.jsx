@@ -795,7 +795,7 @@ export function CSVImport({ onImport, onClose, userId, vertical="theatre" }) {
                     </thead>
                     <tbody>
                       {parsed.slice(0,100).map((item,i)=>{
-                        const cat=CAT[item.category]||CAT.other;
+                        const cat=itemCat(vertical, item.category);
                         return(
                           <tr key={i} style={{borderTop:"1px solid var(--border)",
                             background:i%2===0?"transparent":"rgba(18,6,0,.03)"}}>
