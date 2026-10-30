@@ -10,6 +10,7 @@ import { EM } from "./messages.js";
 import { FbShareBtn, Modal } from "./ui.jsx";
 import { usp } from "../lib/backgrounds.js";
 import { getVertical, getTerm } from "../lib/verticals.js";
+import { vLabelOf } from "./inventory.js";
 
 // ══════════════════════════════════════════════════════════════════════════════
 // COMMUNITY BOARD
@@ -331,7 +332,7 @@ function CommunityPage({userId, org, plan}) {
           <img src={usp("photo-1503095396549-807759245b35",1100,290)} alt="Community" loading="eager"/>
           <div className="hero-fade"/>
           <div className="hero-body">
-            <div className="hero-eyebrow">🎪 {getVertical(org?.vertical).label} Community</div>
+            <div className="hero-eyebrow">🎪 {vLabelOf(org?.vertical)} Community</div>
             <h1 className="hero-title" style={{fontSize:44}}>Community Board</h1>
             <p className="hero-sub">{getTerm(org?.vertical,"communityIntro")}</p>
           </div>
@@ -458,9 +459,9 @@ export function CommunityGate({userId, org, setOrg, plan}) {
           <img src={usp("photo-1503095396549-807759245b35",1100,290)} alt="Community" loading="eager"/>
           <div className="hero-fade"/>
           <div className="hero-body">
-            <div className="hero-eyebrow">🎪 {getVertical(org?.vertical).label} Community</div>
+            <div className="hero-eyebrow">🎪 {vLabelOf(org?.vertical)} Community</div>
             <h1 className="hero-title" style={{fontSize:44}}>Community Board</h1>
-            <p className="hero-sub">Connect with {getVertical(org?.vertical).label.toLowerCase()} programs across the network.</p>
+            <p className="hero-sub">Connect with {vLabelOf(org?.vertical).toLowerCase()} programs across the network.</p>
           </div>
           <div className="hero-bar"/>
         </div>
@@ -471,7 +472,7 @@ export function CommunityGate({userId, org, setOrg, plan}) {
           <div style={{fontSize:44,marginBottom:16,textAlign:"center"}}>🎪</div>
           <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:26,marginBottom:12,textAlign:"center"}}>Join the Community Board</h2>
           <p style={{color:"var(--muted)",fontSize:14,lineHeight:1.7,marginBottom:20,textAlign:"center",maxWidth:500,margin:"0 auto 20px"}}>
-            The Community Board is a shared space for {getVertical(org?.vertical).label} programs to connect — post updates, notices, photos, and requests. Other opted-in programs can see your posts.
+            The Community Board is a shared space for {vLabelOf(org?.vertical)} programs to connect — post updates, notices, photos, and requests. Other opted-in programs can see your posts.
           </p>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:24}}>
             {[

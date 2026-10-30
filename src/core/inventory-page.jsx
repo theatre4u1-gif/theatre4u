@@ -6,7 +6,7 @@ import { Modal, HeroImg, CatCard, CatThumb } from "./ui.jsx";
 import { Ic } from "./icons.jsx";
 import { EM } from "./messages.js";
 import { fmt$, uid, doorUrl } from "./helpers.js";
-import { CAT, CATS, CAT_GFX, CONDS, SIZES, AVAIL, MKT, getCatsMerged, customCatsFor } from "./inventory.js";
+import { CAT, CATS, CAT_GFX, CONDS, SIZES, AVAIL, MKT, getCatsMerged, customCatsFor, vLabelOf, vIconOf } from "./inventory.js";
 import { QR } from "./qr.js";
 import { PLANS_DEF } from "./plans.js";
 import { IS_NATIVE_APP, printHtml, shareLabelsAsImage } from "./native.js";
@@ -439,7 +439,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
           <div className="vtog"><button className={view==="grid"?"on":""} onClick={()=>setView("grid")}>Grid</button><button className={view==="table"?"on":""} onClick={()=>setView("table")}>Table</button><button className={view==="locations"?"on":""} onClick={()=>setView("locations")}>📦 {IS_BINTROVE?"Bins":"Locations"}</button></div>
           {multiV&&view!=="locations"&&<select value={deptF} onChange={e=>setDeptF(e.target.value)} title="Filter by department" style={{padding:"6px 11px",borderRadius:7,border:"1.5px solid var(--border)",background:"transparent",fontSize:13,fontFamily:"inherit",color:"var(--muted)",cursor:"pointer"}}>
             <option value="all">All departments</option>
-            {deptList.map(v=><option key={v} value={v}>{getVertical(v).icon} {getVertical(v).label}</option>)}
+            {deptList.map(v=><option key={v} value={v}>{vIconOf(v)} {vLabelOf(v)}</option>)}
           </select>}
           {view!=="locations"&&<select value={sortBy} onChange={e=>setSortBy(e.target.value)} title="Sort items" style={{padding:"6px 11px",borderRadius:7,border:"1.5px solid var(--border)",background:"transparent",fontSize:13,fontFamily:"inherit",color:"var(--muted)",cursor:"pointer"}}>
             <option value="newest">Sort: Newest</option>

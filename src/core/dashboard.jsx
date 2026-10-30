@@ -6,7 +6,7 @@ import { SB } from "./supabase.js";
 import { Ic } from "./icons.jsx";
 import { CatCard, HeroImg } from "./ui.jsx";
 import { fmt$, getPointsName } from "./helpers.js";
-import { CAT, CATS, getCatsMerged } from "./inventory.js";
+import { CAT, CATS, getCatsMerged, vIconOf } from "./inventory.js";
 import { POINTS_FREE_MONTH } from "./points-config.js";
 import { BG, usp } from "../lib/backgrounds.js";
 import { getVertical, getExchangeName, getCatGfx, getTerm } from "../lib/verticals.js";
@@ -526,7 +526,7 @@ export function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMa
             );})}
           </div>
         ):(
-          <div className="empty"><div className="empty-ico">{getVertical(vVertical).icon}</div><h3>Welcome to Your Program</h3><p>Load sample data from Settings, or add your first item to begin.</p></div>
+          <div className="empty"><div className="empty-ico">{vIconOf(vVertical)}</div><h3>Welcome to Your Program</h3><p>Load sample data from Settings, or add your first item to begin.</p></div>
         )}
       </div>
     </div>

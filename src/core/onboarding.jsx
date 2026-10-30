@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { APP_NAME } from "./config.js";
 import { SB } from "./supabase.js";
 import { getVertical, getTerm, getExchangeName } from "../lib/verticals.js";
+import { vLabelOf, vIconOf } from "./inventory.js";
 import { getPointsName } from "./helpers.js";
 
 export function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav }) {
@@ -99,7 +100,7 @@ export function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav })
     <div style={ov}>
       <div style={box}>
         <div style={{...hdr, paddingTop:36}}>
-          <div style={{fontSize:52, marginBottom:12}}>{getVertical(org?.vertical).icon}</div>
+          <div style={{fontSize:52, marginBottom:12}}>{vIconOf(org?.vertical)}</div>
           <h2 style={{fontFamily:"'Playfair Display',serif", fontSize:26, marginBottom:8, color:"var(--ink,#1a0f00)"}}>
             Welcome to {APP_NAME}
           </h2>
@@ -250,7 +251,7 @@ export function OnboardingOverlay({ step, org, userId, items, onUpdate, onNav })
         <div style={hdr}>
           <div style={{fontSize:44, marginBottom:10}}>🎪</div>
           <h2 style={{fontFamily:"'Playfair Display',serif", fontSize:22, marginBottom:6, color:"var(--ink,#1a0f00)"}}>
-            Want to connect with other {getVertical(org?.vertical).label.toLowerCase()} programs?
+            Want to connect with other {vLabelOf(org?.vertical).toLowerCase()} programs?
           </h2>
           <p style={{fontSize:13, color:"var(--muted,#685f76)", lineHeight:1.65, marginBottom:0}}>
             {APP_NAME} has two optional community features. Both are completely opt-in — nothing is shared until you say so.
