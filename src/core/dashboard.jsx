@@ -6,7 +6,7 @@ import { SB } from "./supabase.js";
 import { Ic } from "./icons.jsx";
 import { CatCard, HeroImg } from "./ui.jsx";
 import { fmt$, getPointsName } from "./helpers.js";
-import { CAT, CATS, getCatsMerged, vIconOf } from "./inventory.js";
+import { CAT, CATS, getCatsMerged, vIconOf, itemCat } from "./inventory.js";
 import { POINTS_FREE_MONTH } from "./points-config.js";
 import { BG, usp } from "../lib/backgrounds.js";
 import { getVertical, getExchangeName, getCatGfx, getTerm } from "../lib/verticals.js";
@@ -427,7 +427,7 @@ export function Dashboard({items,org,plan="free",pointBalance=0,goInventory,goMa
                 animation:`mkt-scroll ${highlights.length * 6}s linear infinite`,
               }}>
                 {[...highlights,...highlights].map((item,i)=>{
-                  const cat=CAT[item.category]||CAT.other;
+                  const cat=itemCat(item.vertical, item.category);
                   const orgName=item.orgs?.name||"";
                   const mktCls=item.mkt==="For Rent"?"mb-rent":item.mkt==="For Sale"?"mb-sale":item.mkt==="For Loan"?"mb-loan":"mb-both";
                   return(

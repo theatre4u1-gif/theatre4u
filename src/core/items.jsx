@@ -9,7 +9,7 @@ import { EM } from "./messages.js";
 import { Ic } from "./icons.jsx";
 import { FbShareBtn } from "./ui.jsx";
 import { resizeImg, itemShareUrl, itemShareText, fmt$ } from "./helpers.js";
-import { CAT, CAT_GFX, MKT, customCatsFor, getCatsMerged } from "./inventory.js";
+import { CAT, CAT_GFX, MKT, customCatsFor, getCatsMerged, itemCat } from "./inventory.js";
 import { QR } from "./qr.js";
 import { printHtml, shareImageDataUrl, IS_NATIVE_APP, nativeTakePhoto } from "./native.js";
 
@@ -559,7 +559,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
 }
 
 export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=true, canDelete=true}){
-  const cat=CAT[item.category]||CAT.other;
+  const cat=itemCat(item.vertical, item.category);
   const[lb,setLb]=useState(false);
   const[qr,setQr]=useState(null);
   const[showAddToProd,setShowAddToProd]=useState(false);

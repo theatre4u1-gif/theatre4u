@@ -83,3 +83,14 @@ export function getCatsMerged(vertical){
   const v = vertical||"theatre";
   return [...applyCatOverrides(v, getCats(v)), ...customCatsFor(v)];
 }
+// Full category object ({id,label,icon,color,grad}) for an item, honoring the
+// item's own department (vertical), any per-org category rename, and custom
+// categories. Falls back to the theatre built-ins, then "Other" — so legacy
+// theatre items and unknown ids stay safe. Use this anywhere an item's category
+// is displayed, instead of the theatre-only CAT[item.category] lookup.
+export function itemCat(vertical, catId){
+  const v = vertical || "theatre";
+  const found = getCatsMerged(v).find(c => c.id === catId);
+  if (found) return found;
+  return CAT[catId] || CAT.other;
+}
