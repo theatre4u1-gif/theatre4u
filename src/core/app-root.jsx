@@ -131,6 +131,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   const [isCoord,     setIsCoord]        = useState(false); // user is a School Coordinator of >=1 school → show "My School"
   const [memberRole,  setMemberRole]    = useState(null); // null=owner/director, or stage_manager/crew/house/program_director
   const [memberships, setMemberships]   = useState([]); // all program memberships (for multi-program directors)
+  const [memberVerticals, setMemberVerticals] = useState(null); // dept-scoped member → array of accessible verticals; null = full access (owner / coordinator / site-wide)
   const [activeVertical, setActiveVertical] = useState(null); // active department for multi-vertical accounts; null until org loads
   const [unreadCount,   setUnreadCount]   = useState(0);
   const [openConvId,    setOpenConvId]    = useState(null);
@@ -307,7 +308,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
     (async()=>{
       // Check if user is a member of one or more orgs (team member or program director)
       const { data: memberRows } = await SB.from("org_members")
-        .select("org_id, role, orgs(*)")
+        .select("org_id, role, vertical, orgs(*)")
         .eq("user_id", user.id);
       // Load EVERY org this user OWNS (owner_id-based, Phase 8) — a multi-program owner
       // now sees all owned programs in the switcher, not just the one whose id === user.id.
@@ -332,6 +333,16 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       const realMembership = (activeEntry && !isOwned) ? activeEntry : null;
       const targetOrgId = activeEntry ? activeEntry.org_id : user.id;
       const memberRole  = realMembership ? realMembership.role : null;
+      // Department scoping. A member whose org_members row(s) for this org all carry a
+      // specific vertical (e.g. a teacher over one department) is limited to those
+      // departments. A NULL vertical (coordinator / site-wide) or an owner = full access.
+      // Mirrors the items RLS (is_org_member_for_vertical: vertical IS NULL OR vertical = item.vertical).
+      const _myRowsForActiveOrg = (memberRows||[]).filter(m => m.org_id === targetOrgId);
+      const _siteWide = isOwned || _myRowsForActiveOrg.some(m => !m.vertical);
+      const _memberVerticals = (realMembership && !_siteWide)
+        ? [...new Set(_myRowsForActiveOrg.map(m => m.vertical).filter(Boolean))]
+        : null;
+      setMemberVerticals(_memberVerticals);
 
       const{data:orgRow}=await SB.from("orgs").select("*").eq("id",targetOrgId).single();
       // Guard the legacy "org.id === user.id ⇒ owner" fallback. If the user owns no orgs
@@ -361,8 +372,12 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
         setOnboardingStep(orgData.onboarding_step ?? 0);
         // Multi-vertical: choose the active department — saved pref if still enabled, else the org's primary
         const _enabled = (orgData.verticals_enabled?.length ? orgData.verticals_enabled : [orgData.vertical || "theatre"]);
+        // A dept-scoped member only lands in (and can pick) a department they can access.
+        const _pool = (_memberVerticals && _memberVerticals.length) ? _enabled.filter(v=>_memberVerticals.includes(v)) : _enabled;
+        const _poolSafe = _pool.length ? _pool : _enabled;
         const _savedV = (()=>{ try { return localStorage.getItem("t4u_active_vertical_"+targetOrgId); } catch(e){ return null; } })();
-        setActiveVertical(_enabled.includes(_savedV) ? _savedV : (orgData.vertical || _enabled[0] || "theatre"));
+        setActiveVertical(_poolSafe.includes(_savedV) ? _savedV
+          : ((_memberVerticals && _memberVerticals.length) ? _poolSafe[0] : (orgData.vertical || _poolSafe[0] || "theatre")));
       } else { setPlanState(effectivePlan); }
       // OAuth (Google) login tracking — the password path logs at sign-in; OAuth redirects skip
       // it, so log here once per OAuth round-trip. Uses the same record_login RPC (owners + members).
@@ -474,11 +489,17 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   // Multi-vertical view state: the enabled departments, the active one, and a view-org +
   // filtered items for working-context pages. Single-vertical accounts are unaffected
   // (multiVertical=false → viewOrg=org, vItems=items, no switcher shown).
-  const enabledVerticals = (org?.verticals_enabled?.length ? org.verticals_enabled : [org?.vertical || "theatre"]);
-  const curVertical = activeVertical || org?.vertical || "theatre";
+  const _allEnabled = (org?.verticals_enabled?.length ? org.verticals_enabled : [org?.vertical || "theatre"]);
+  // Dept-scoped members only ever see their own department(s) — in the switcher, the
+  // inventory department filter (viewOrg.verticals_enabled), and everywhere downstream.
+  const enabledVerticals = (memberVerticals && memberVerticals.length)
+    ? (_allEnabled.filter(v=>memberVerticals.includes(v)).length ? _allEnabled.filter(v=>memberVerticals.includes(v)) : memberVerticals)
+    : _allEnabled;
+  const curVertical = activeVertical && enabledVerticals.includes(activeVertical) ? activeVertical : (enabledVerticals[0] || org?.vertical || "theatre");
   const multiVertical = enabledVerticals.length > 1;
-  const viewOrg = multiVertical ? { ...org, vertical: curVertical } : org;
-  const vItems = multiVertical ? items.filter(i => (i.vertical||"theatre") === curVertical) : items;
+  const viewOrg = { ...org, vertical: curVertical, verticals_enabled: enabledVerticals };
+  const vItems = (multiVertical || (memberVerticals && memberVerticals.length))
+    ? items.filter(i => (i.vertical||"theatre") === curVertical) : items;
   // Empty string → null for optional numeric/date/uuid columns Postgres would reject.
   // Shared by the main add/edit and the district school-context handlers so neither drifts.
   const sanitizeItemRow = (row) => {
