@@ -6,7 +6,7 @@ import { APP_NAME, APP_URL, IS_BINTROVE } from "./config.js";
 import { SB } from "./supabase.js";
 import { Modal } from "./ui.jsx";
 import { EM } from "./messages.js";
-import { CAT } from "./inventory.js";
+import { CAT, itemCat } from "./inventory.js";
 import { PIN_COLORS, ROW_LABELS, COL_LABELS } from "./storage-map.js";
 import { QR } from "./qr.js";
 
@@ -531,7 +531,7 @@ export function LocationsPanel({ userId, items, onEditItem, onDeleteItem, vertic
             </div>
           ) : (
             browseItems.map(item => {
-              const cat = CAT[item.category] || CAT.other;
+              const cat = itemCat(item.vertical, item.category);
               return (
                 <div key={item.id} style={{ display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:"1px solid var(--linen)" }}>
                   <div style={{ width:36,height:36,background:cat.color+"22",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0 }}>{cat.icon}</div>
