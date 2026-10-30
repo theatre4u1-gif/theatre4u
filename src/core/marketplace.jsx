@@ -9,7 +9,7 @@ import { Modal, Pager, FbShareBtn, HeroImg, CatCard } from "./ui.jsx";
 import { Ic } from "./icons.jsx";
 import { EM } from "./messages.js";
 import { fmt$, itemShareUrl, itemShareText, CSV_FIELDS, parseCSV, autoMatch, getPointsName } from "./helpers.js";
-import { CAT, CATS, CONDS, SIZES, AVAIL, MKT } from "./inventory.js";
+import { CAT, CATS, CONDS, SIZES, AVAIL, MKT, itemCat } from "./inventory.js";
 import { BG, usp } from "../lib/backgrounds.js";
 import { getExchangeName } from "../lib/verticals.js";
 import { zipToCoords, milesBetween, STATE_NAMES } from "../lib/geo.js";
@@ -266,7 +266,7 @@ function Marketplace({items,org,plan="free",activeSchool=null,allSchoolsMode=fal
             </div>
           :<div className="inv-grid">
             {paged.map(item=>{
-              const cat=CAT[item.category]||CAT.other;
+              const cat=itemCat(item.vertical, item.category);
               const isOwn = item.org_id===org?.id;
               const dist = userCoords?.lat&&item.org_lat
                 ? Math.round(milesBetween(userCoords.lat,userCoords.lng,item.org_lat,item.org_lng))
