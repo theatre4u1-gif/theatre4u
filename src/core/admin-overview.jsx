@@ -76,12 +76,12 @@ function ProgramsTable({ rows, onToggleBeta, busyId, onOpen, usageMap }) {
                 <td style={td}>{(() => { const t = lastActiveTs(o, usageMap && usageMap[o.id]); return t ? agoDays(new Date(t).toISOString()) : "no activity yet"; })()}</td>
                 <td style={td}>{fmtDate(o.created_at)}</td>
                 <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>
-                  {!o.stripe_subscription_id && !o.founding_member && (
+                  {!o.stripe_subscription_id && !o.founding_member && (() => { const isPro = o.plan === "pro" && !o.temp_pro; return (
                     <button onClick={() => onToggleBeta(o)} disabled={busyId === o.id}
-                      style={{ padding: "5px 11px", borderRadius: 7, border: "1px solid " + (o.temp_pro ? "#c4922a" : "#d5cfc4"), background: o.temp_pro ? "rgba(212,168,67,.12)" : "#fff", color: o.temp_pro ? "#a5731f" : "#666", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", marginRight: 6 }}>
-                      {busyId === o.id ? "…" : o.temp_pro ? "⭐ Beta Pro on" : "Grant Beta Pro"}
+                      style={{ padding: "5px 11px", borderRadius: 7, border: "1px solid " + (isPro ? "#c4922a" : "#d5cfc4"), background: isPro ? "rgba(212,168,67,.12)" : "#fff", color: isPro ? "#a5731f" : "#666", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", marginRight: 6 }}>
+                      {busyId === o.id ? "…" : isPro ? "⭐ Pro on — remove" : "Grant Pro"}
                     </button>
-                  )}
+                    ); })()}
                   <button onClick={() => onOpen && onOpen(o)} style={{ padding: "5px 11px", borderRadius: 7, border: "1px solid #d5cfc4", background: "#fff", color: "#555", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Manage →</button>
                 </td>
               </tr>
@@ -230,12 +230,17 @@ export function OverviewDashboard({ door = "all" }) {
     return () => { alive = false; };
   }, []);
 
-  const toggleBeta = async (o) => {
-    const next = !o.temp_pro;
+  // Comp a program to real Pro (plan='pro', temp_pro=false) — full Pro features,
+  // no charge, no beta/complimentary banner. Toggles back to Free.
+  const grantPro = async (o) => {
+    const isPro = o.plan === "pro" && !o.temp_pro;
+    const fields = isPro
+      ? { plan: "free", temp_pro: false }
+      : { plan: "pro", temp_pro: false, temp_pro_granted_at: null, temp_pro_note: "Comped to Pro via admin overview" };
     setBusyId(o.id);
-    const { error } = await SB.from("orgs").update({ temp_pro: next, temp_pro_granted_at: next ? new Date().toISOString() : null, temp_pro_note: next ? "Granted via admin overview" : "Removed via admin overview" }).eq("id", o.id);
+    const { error } = await SB.from("orgs").update(fields).eq("id", o.id);
     setBusyId("");
-    if (error) { setFlash("Error: " + error.message); } else { setOrgs(prev => prev.map(x => x.id === o.id ? { ...x, temp_pro: next } : x)); setFlash("✓ Beta Pro " + (next ? "granted" : "removed")); }
+    if (error) { setFlash("Error: " + error.message); } else { setOrgs(prev => prev.map(x => x.id === o.id ? { ...x, ...fields } : x)); setFlash(isPro ? "✓ Set to Free" : "✓ Upgraded to Pro"); }
     setTimeout(() => setFlash(""), 3500);
   };
 
@@ -310,8 +315,8 @@ export function OverviewDashboard({ door = "all" }) {
   if (drill) {
     const back = <button onClick={() => setDrill(null)} style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid #d5cfc4", background: "#fff", color: "#555", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", marginBottom: 16 }}>← Back to Pulse</button>;
     let body = null, title = drill.label;
-    if (drill.type === "programs") body = <ProgramsTable rows={seg[drill.filter] || []} onToggleBeta={toggleBeta} busyId={busyId} onOpen={setDetailOrg} usageMap={usageMap} />;
-    else if (drill.type === "atrisk") { title = "At-risk programs (paying/founding, quiet 14+ days)"; body = <ProgramsTable rows={atRisk} onToggleBeta={toggleBeta} busyId={busyId} onOpen={setDetailOrg} usageMap={usageMap} />; }
+    if (drill.type === "programs") body = <ProgramsTable rows={seg[drill.filter] || []} onToggleBeta={grantPro} busyId={busyId} onOpen={setDetailOrg} usageMap={usageMap} />;
+    else if (drill.type === "atrisk") { title = "At-risk programs (paying/founding, quiet 14+ days)"; body = <ProgramsTable rows={atRisk} onToggleBeta={grantPro} busyId={busyId} onOpen={setDetailOrg} usageMap={usageMap} />; }
     else if (drill.type === "reports") { title = "Content reports"; body = <AdminContentReports />; }
     else if (drill.type === "anomalies") { title = "Data anomalies"; body = <DataHealthDashboard />; }
     else if (drill.type === "feedback") { title = "Feedback"; body = <SimpleTable empty="No feedback yet." rows={feedback} cols={[{ h: "Program", cell: r => r.org_name || "—" }, { h: "Type", cell: r => r.category || "—" }, { h: "Rating", cell: r => r.rating != null ? r.rating + "★" : "—" }, { h: "Status", cell: r => <span style={badge((r.status || "new") === "new" ? "#e91e63" : "#8a8272")}>{r.status || "new"}</span> }, { h: "When", cell: r => fmtDate(r.created_at) }]} />; }

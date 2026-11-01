@@ -136,10 +136,10 @@ export function AuthOverlay({onAuth, pendingInvite, inviteInfo, nativeMode=false
             vertical: vertical, verticals_enabled: [vertical],
             org_type: orgType || null, // audience for email/messaging branching (school/college/community/other)
             signup_domain: (typeof window!=="undefined" && window.location && window.location.hostname.includes("artstracker")) ? "artstracker.org" : "theatre4u.org",
-            // All beta signups get temp_pro — full Pro access during beta period
-            temp_pro: true,
-            temp_pro_granted_at: new Date().toISOString(),
-            temp_pro_note: "Beta signup — auto-granted",
+            // Beta has ended — new signups start on the Free plan (no temp_pro),
+            // so they never see the "complimentary period ended" prompt. They
+            // upgrade to Pro from the normal in-app upgrade buttons.
+            temp_pro: false,
             // Record acceptance of Terms + Privacy at signup (audit trail)
             terms_accepted_at: new Date().toISOString(),
             terms_version: "2026-08",

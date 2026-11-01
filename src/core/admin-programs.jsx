@@ -61,12 +61,19 @@ export function ProgramsDashboard({ door = "all" }) {
     return () => { alive = false; };
   }, []);
 
-  const toggleBeta = async (o) => {
-    const next = !o.temp_pro; setBusyId(o.id);
-    const { error } = await SB.from("orgs").update({ temp_pro: next, temp_pro_granted_at: next ? new Date().toISOString() : null, temp_pro_note: next ? "Granted via admin programs" : "Removed via admin programs" }).eq("id", o.id);
+  // Comp a program to real Pro (plan='pro', temp_pro=false) — full Pro features,
+  // no charge, and no "complimentary/beta" banner. Toggles back to Free.
+  // For District or other plans, use the per-program console's Plan dropdown.
+  const grantPro = async (o) => {
+    const isPro = o.plan === "pro" && !o.temp_pro;
+    const next = isPro
+      ? { plan: "free", temp_pro: false }
+      : { plan: "pro", temp_pro: false, temp_pro_granted_at: null, temp_pro_note: "Comped to Pro via admin" };
+    setBusyId(o.id);
+    const { error } = await SB.from("orgs").update(next).eq("id", o.id);
     setBusyId("");
     if (error) setFlash("Error: " + error.message);
-    else { setOrgs(prev => prev.map(x => x.id === o.id ? { ...x, temp_pro: next } : x)); setFlash("✓ Beta Pro " + (next ? "granted" : "removed")); }
+    else { setOrgs(prev => prev.map(x => x.id === o.id ? { ...x, ...next } : x)); setFlash(isPro ? "✓ Set to Free" : "✓ Upgraded to Pro"); }
     setTimeout(() => setFlash(""), 3500);
   };
 
@@ -142,12 +149,12 @@ export function ProgramsDashboard({ door = "all" }) {
                     <td style={td}>{agoDays(lastActiveTs(o, o._um) ? new Date(lastActiveTs(o, o._um)).toISOString() : o.last_seen)}</td>
                     <td style={td}>{fmtDate(o.created_at)}</td>
                     <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>
-                      {!o.stripe_subscription_id && !o.founding_member && o.account_status !== "closed" && (
-                        <button onClick={() => toggleBeta(o)} disabled={busyId === o.id}
-                          style={{ padding: "5px 11px", borderRadius: 7, border: "1px solid " + (o.temp_pro ? "#c4922a" : "#d5cfc4"), background: o.temp_pro ? "rgba(212,168,67,.12)" : "#fff", color: o.temp_pro ? "#a5731f" : "#666", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", marginRight: 6 }}>
-                          {busyId === o.id ? "…" : o.temp_pro ? "⭐ Beta Pro on" : "Grant Beta Pro"}
+                      {!o.stripe_subscription_id && !o.founding_member && o.account_status !== "closed" && (() => { const isPro = o.plan === "pro" && !o.temp_pro; return (
+                        <button onClick={() => grantPro(o)} disabled={busyId === o.id}
+                          style={{ padding: "5px 11px", borderRadius: 7, border: "1px solid " + (isPro ? "#c4922a" : "#d5cfc4"), background: isPro ? "rgba(212,168,67,.12)" : "#fff", color: isPro ? "#a5731f" : "#666", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", marginRight: 6 }}>
+                          {busyId === o.id ? "…" : isPro ? "⭐ Pro on — remove" : "Grant Pro"}
                         </button>
-                      )}
+                        ); })()}
                       <button onClick={() => setDetailOrg(o)} style={{ padding: "5px 11px", borderRadius: 7, border: "1px solid #d5cfc4", background: "#fff", color: "#555", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Manage →</button>
                     </td>
                   </tr>

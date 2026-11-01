@@ -305,8 +305,9 @@ async function handleSignup() {
     state: stateCode, zipcode: zipcode,
     vertical: 'theatre', verticals_enabled: ['theatre'],
     signup_domain: signupDomain,
-    temp_pro: true, temp_pro_granted_at: new Date().toISOString(),
-    temp_pro_note: 'Beta signup via join.html landing page',
+    // Beta has ended — new signups start on Free (no temp_pro), so they never
+    // see the "complimentary period ended" prompt. Upgrade to Pro from the app.
+    temp_pro: false,
     terms_accepted_at: new Date().toISOString(), terms_version: '2026-08',
   },{onConflict:'id',ignoreDuplicates:false}).catch(()=>{});
 

@@ -194,6 +194,22 @@ export function ProgramDetail({ org: seed, onBack, onChanged }) {
     flash("✓ " + (next ? onNote : offNote));
   };
 
+  // Comp a program to real Pro (plan='pro', temp_pro=false) — full Pro features,
+  // no charge, no beta/complimentary banner. Toggles back to Free. For District,
+  // set the plan in the Discounts/rate panel or via the plan field.
+  const grantPro = async () => {
+    const isPro = org.plan === "pro" && !org.temp_pro;
+    const fields = isPro
+      ? { plan: "free", temp_pro: false }
+      : { plan: "pro", temp_pro: false, temp_pro_granted_at: null, temp_pro_note: "Comped to Pro via support console" };
+    setBusy("grantpro");
+    const { error } = await SB.from("orgs").update(fields).eq("id", seed.id);
+    setBusy("");
+    if (error) { flash("Error: " + error.message); return; }
+    patch(fields, "admin_grant_pro", isPro ? "Set to Free" : "Comped to Pro");
+    flash(isPro ? "✓ Set to Free" : "✓ Upgraded to Pro");
+  };
+
   const closeAccount = async () => {
     if (closeConfirm !== "CLOSE") { flash("Type CLOSE to confirm"); return; }
     setBusy("close");
@@ -285,12 +301,12 @@ export function ProgramDetail({ org: seed, onBack, onChanged }) {
       <div style={box}>
         <h3 style={h3}>Support actions</h3>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
-          {!org.stripe_subscription_id && !org.founding_member && (
-            <button onClick={() => toggle("temp_pro", "Beta Pro granted", "Beta Pro removed")} disabled={busy === "temp_pro"}
-              style={{ padding: "9px 15px", borderRadius: 8, border: "1px solid " + (org.temp_pro ? "#c4922a" : "#d5cfc4"), background: org.temp_pro ? "rgba(212,168,67,.12)" : "#fff", color: org.temp_pro ? "#a5731f" : "#555", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
-              {org.temp_pro ? "⭐ Beta Pro on — remove" : "Grant Beta Pro"}
+          {!org.stripe_subscription_id && !org.founding_member && (() => { const isPro = org.plan === "pro" && !org.temp_pro; return (
+            <button onClick={grantPro} disabled={busy === "grantpro"}
+              style={{ padding: "9px 15px", borderRadius: 8, border: "1px solid " + (isPro ? "#c4922a" : "#d5cfc4"), background: isPro ? "rgba(212,168,67,.12)" : "#fff", color: isPro ? "#a5731f" : "#555", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+              {busy === "grantpro" ? "…" : isPro ? "⭐ Pro on — remove" : "Grant Pro"}
             </button>
-          )}
+          ); })()}
           <button onClick={() => toggle("account_locked", "Account locked", "Account unlocked")} disabled={busy === "account_locked"}
             style={{ padding: "9px 15px", borderRadius: 8, border: "1px solid " + (org.account_locked ? "#8a5a00" : "#d5cfc4"), background: org.account_locked ? "rgba(138,90,0,.1)" : "#fff", color: org.account_locked ? "#8a5a00" : "#555", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
             {org.account_locked ? "🔒 Locked — unlock" : "Lock account"}
