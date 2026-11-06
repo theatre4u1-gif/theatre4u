@@ -18,7 +18,7 @@ const BRAND: Brand = (process.env.BRAND as Brand) || 'theatre4u';
 
 const BRANDS: Record<Brand, {
   appId: string; appName: string; url: string; bg: string;
-  scheme: string; iosPath?: string; androidPath?: string;
+  scheme: string; allowNavigation?: string[]; iosPath?: string; androidPath?: string;
 }> = {
   // DEFAULT — unchanged from the original Theatre4u config (native paths omitted =
   // Capacitor defaults 'ios' / 'android', so the existing projects are reused as-is).
@@ -32,8 +32,11 @@ const BRANDS: Record<Brand, {
     iosPath: 'ios-artstracker', androidPath: 'android-artstracker',
   },
   bintrove: {
+    // bintrove.com redirects to www.bintrove.com; the webview must load the
+    // canonical host directly (and allow the apex) or the redirect blanks the app.
     appId: 'com.bintrove.app', appName: 'BinTrove',
-    url: 'https://bintrove.com', bg: '#0A5450', scheme: 'bintrove',
+    url: 'https://www.bintrove.com', bg: '#0A5450', scheme: 'bintrove',
+    allowNavigation: ['www.bintrove.com', 'bintrove.com'],
     iosPath: 'ios-bintrove', androidPath: 'android-bintrove',
   },
 };
@@ -50,6 +53,7 @@ const config: CapacitorConfig = {
   server: {
     url: b.url,
     cleartext: false,
+    ...(b.allowNavigation ? { allowNavigation: b.allowNavigation } : {}),
   },
   ios: {
     contentInset: 'always',

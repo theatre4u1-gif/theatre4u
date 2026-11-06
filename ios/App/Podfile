@@ -35,4 +35,15 @@ post_install do |installer|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '17.0'
     end
   end
+  # ITMS-91061: GoogleToolboxForMac (pinned to 2.x by MLKit) ships no
+  # privacy manifest. Inject one into its framework so App Store validation
+  # stops rejecting the binary. The file is re-signed during Archive.
+  gtm_manifest = File.join(__dir__, 'PrivacyManifests', 'GoogleToolboxForMac', 'PrivacyInfo.xcprivacy')
+  if File.exist?(gtm_manifest)
+    installer.pods_project.targets.each do |t|
+      next unless t.name == 'GoogleToolboxForMac'
+      ref = installer.pods_project.new_file(gtm_manifest)
+      t.resources_build_phase.add_file_reference(ref, true)
+    end
+  end
 end
