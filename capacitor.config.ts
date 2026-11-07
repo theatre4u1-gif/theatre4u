@@ -23,12 +23,19 @@ const BRANDS: Record<Brand, {
   // DEFAULT — unchanged from the original Theatre4u config (native paths omitted =
   // Capacitor defaults 'ios' / 'android', so the existing projects are reused as-is).
   theatre4u: {
+    // theatre4u.org 301-redirects to www.theatre4u.org; load the canonical host
+    // directly (and allow the apex) or the webview bounces the app to the system
+    // browser on the cross-host redirect. (Same pattern as BinTrove below.)
     appId: 'org.theatre4u.app', appName: 'Theatre4u',
-    url: 'https://theatre4u.org', bg: '#0d0b11', scheme: 'theatre4u',
+    url: 'https://www.theatre4u.org', bg: '#0d0b11', scheme: 'theatre4u',
+    allowNavigation: ['www.theatre4u.org', 'theatre4u.org'],
   },
   artstracker: {
+    // artstracker.org 301-redirects to www.artstracker.org — load www directly and
+    // allow the apex, else the redirect kicks the app out to the system browser.
     appId: 'org.artstracker.app', appName: 'ArtsTracker',
-    url: 'https://artstracker.org', bg: '#0d0b11', scheme: 'artstracker',
+    url: 'https://www.artstracker.org', bg: '#0d0b11', scheme: 'artstracker',
+    allowNavigation: ['www.artstracker.org', 'artstracker.org'],
     iosPath: 'ios-artstracker', androidPath: 'android-artstracker',
   },
   bintrove: {
