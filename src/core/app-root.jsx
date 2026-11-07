@@ -1081,7 +1081,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
 
               <div className="sb-foot">
                 <div style={{display:"flex",gap:5,flexDirection:"column"}}>
-                  {(plan==="pro"||plan==="district"||isAdmin)&&!isDemo&&(
+                  {(plan==="pro"||plan==="district"||isAdmin)&&!isDemo&&!IS_NATIVE_APP&&(
                     <a href="/app.html" target="_blank" rel="noreferrer" className="btn btn-o btn-sm btn-full"
                       style={{color:"var(--goldink)",borderColor:"rgba(212,168,67,.3)",fontSize:12,padding:"7px 12px",textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
                       📱 Mobile App
