@@ -423,7 +423,14 @@ tr:hover td{background:rgba(243,230,204,.55)}
 
 /* ══════════ NATIVE MOBILE APP (only inside the Capacitor shell) ══════════ */
 /* Scoped to body.t4u-native so NONE of this affects the website. */
+/* Never let the page scroll/render sideways — the #1 cause of edge cut-offs and
+   the webview "shrinking to fit" (which pushed the bottom bar off screen). Any row
+   wider than the phone scrolls inside itself instead of widening the whole page. */
+html.t4u-native,body.t4u-native{overflow-x:hidden;max-width:100vw}
+.t4u-native .shell,.t4u-native .main,.t4u-native .scroll-area{overflow-x:hidden;max-width:100vw}
 .t4u-native .topbar{padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;gap:10px}
+/* Brand name must fit the 244px sidebar on one line (was breaking "ArtsTrac/ker"). */
+.t4u-native .sb-name{font-size:21px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .t4u-native .topbar-title{font-size:20px}
 .t4u-native .menu-btn{display:none}            /* bottom-bar "More" replaces the hamburger */
 .t4u-native .sb-inner{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}  /* clear bottom bar so Sign Out isn't cut off */

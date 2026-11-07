@@ -687,7 +687,17 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   },[]);
   const isDesk = typeof window !== "undefined" && window.innerWidth > 900;
   // Inside the native app, tag the page so the mobile-only stylesheet applies.
-  useEffect(()=>{ if(IS_NATIVE_APP && typeof document!=="undefined"){ document.body.classList.add("t4u-native"); document.documentElement.classList.add("t4u-native"); } },[]);
+  useEffect(()=>{ if(IS_NATIVE_APP && typeof document!=="undefined"){
+    document.body.classList.add("t4u-native"); document.documentElement.classList.add("t4u-native");
+    // Lock the webview to scale 1 so content can't drift larger / cut off at the
+    // edges (iOS "shrink to fit" on overflow, or an accidental pinch). viewport-fit
+    // cover lets us pad for the notch/home-indicator via env(safe-area-*).
+    try {
+      let vp = document.querySelector('meta[name="viewport"]');
+      if(!vp){ vp=document.createElement('meta'); vp.setAttribute('name','viewport'); document.head.appendChild(vp); }
+      vp.setAttribute('content','width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');
+    } catch(e){}
+  } },[]);
   // Native app: finish Google sign-in when the OS returns via the deep link.
   useEffect(()=>{ if(IS_NATIVE_APP){ initOAuthDeepLink(SB); } },[]);
   const listed = items.filter(i=>i.mkt!=="Not Listed").length;
