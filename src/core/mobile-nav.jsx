@@ -23,7 +23,7 @@ export function MobileNav({ page, onHome, onInventory, onScan, onAdd, onMore }) 
       paddingBottom: "env(safe-area-inset-bottom,0px)",
       boxShadow: "0 -4px 18px rgba(0,0,0,.35)",
     }}>
-      <Item icon={Ic.home} label="Home" active={page==="home"} onClick={onHome} />
+      <Item icon={Ic.home} label="Home" active={page==="home"||page==="dashboard"} onClick={onHome} />
       <Item icon={Ic.box} label="Inventory" active={page==="inventory"} onClick={onInventory} />
       <Item icon={Ic.search} label="Scan" active={false} onClick={onScan} />
       <Item icon={Ic.plus} label="Add" active={false} onClick={onAdd} />

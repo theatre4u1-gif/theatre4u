@@ -115,7 +115,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   const [items,setItems]   = useState([]);
   const [org,setOrg]       = useState({name:"",type:"",email:"",phone:"",location:"",bio:""});
   const [plan,setPlanState] = useState("free"); // derived from org.plan
-  const [page,setPage]     = useState(IS_NATIVE_APP ? "home" : "dashboard");
+  const [page,setPage]     = useState("dashboard");
   const [addSignal,setAddSignal] = useState(0); // bump to auto-open the Add-Item form on the inventory page
   const [deepLinkItem,setDeepLinkItem] = useState(null); // scanned item id → open its detail in-app
   const [legalPage,setLegalPage] = useState(null);
@@ -1320,7 +1320,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       {IS_NATIVE_APP && user && (
         <MobileNav
           page={page}
-          onHome={()=>{ setMob(false); setPage("home"); }}
+          onHome={()=>{ setMob(false); setPage("dashboard"); }}
           onInventory={()=>{ setMob(false); setPage("inventory"); }}
           onScan={handleNativeScan}
           onAdd={()=>{ setMob(false); setAddSignal(n=>n+1); setPage("inventory"); }}
