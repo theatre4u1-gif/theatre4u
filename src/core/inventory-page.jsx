@@ -840,6 +840,35 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
 // ── BinTrove AI Batch Scan ("Scan a box") ────────────────────────────────────
 // One photo of an open box/shelf → scan-item (mode:batch) → a review list the user
 // edits/keeps → bulk-add via onAdd. One photo counts as one scan. Confirm-before-save.
+// Crop a sub-region out of an image URL into a JPEG File, using a normalized
+// [x,y,w,h] box (0..1). A little padding is added so items aren't clipped. Returns
+// null if the image can't be read (e.g. CORS-tainted) so callers fall back safely.
+function cropToFile(srcUrl, box) {
+  return new Promise((resolve) => {
+    try {
+      const im = new Image();
+      im.crossOrigin = "anonymous";
+      im.onload = () => {
+        try {
+          const W = im.naturalWidth, H = im.naturalHeight;
+          let [x, y, w, h] = box;
+          const pad = 0.04;
+          x = Math.max(0, x - pad); y = Math.max(0, y - pad);
+          w = Math.min(1 - x, w + pad * 2); h = Math.min(1 - y, h + pad * 2);
+          const sx = Math.round(x * W), sy = Math.round(y * H), sw = Math.round(w * W), sh = Math.round(h * H);
+          if (sw < 8 || sh < 8) return resolve(null);
+          const cv = document.createElement("canvas");
+          cv.width = sw; cv.height = sh;
+          cv.getContext("2d").drawImage(im, sx, sy, sw, sh, 0, 0, sw, sh);
+          cv.toBlob((blob) => resolve(blob ? new File([blob], "crop.jpg", { type: "image/jpeg" }) : null), "image/jpeg", 0.85);
+        } catch (e) { resolve(null); }
+      };
+      im.onerror = () => resolve(null);
+      im.src = srcUrl;
+    } catch (e) { resolve(null); }
+  });
+}
+
 function BatchScanModal({ userId, cats = [], vertical = "theatre", conds, onClose, onAdd, onDone }) {
   const [step, setStep] = useState("photo");   // photo | loading | review
   const [img, setImg] = useState(null);
@@ -871,14 +900,30 @@ function BatchScanModal({ userId, cats = [], vertical = "theatre", conds, onClos
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok || d.error) { setErr(d.message || "The scan didn't work — try a clearer photo or add items manually."); setStep("photo"); return; }
-      const list = (d.suggestions || []).map(s => ({ ...s, qty: s.quantity || 1, keep: true }));
+      const list = (d.suggestions || []).map(s => ({ ...s, qty: s.quantity || 1, keep: true, img: url, cropping: !!s.box }));
       if (!list.length) { setErr("Couldn't make out any items. Try a closer photo."); setStep("photo"); return; }
       setRows(list); setInfo({ used: d.used, limit: d.limit }); setStep("review");
+      // Auto-crop each item out of the shelf photo so its picture shows just that item
+      // (best-effort — falls back to the full photo, and the user can replace it per item).
+      list.forEach(async (s, idx) => {
+        if (!s.box) return;
+        let cropped = null;
+        try { const file = await cropToFile(url, s.box); if (file) cropped = await uploadPhoto(file, userId); } catch (e) {}
+        setRows(p => p.map((r, i) => i === idx ? { ...r, img: cropped || r.img, cropping: false } : r));
+      });
     } catch (e) { setErr("The scan didn't work — try again or add items manually."); setStep("photo"); }
   };
 
   const updRow = (i, k, v) => setRows(p => p.map((r, idx) => idx === i ? { ...r, [k]: v } : r));
   const keptCount = rows.filter(r => r.keep).length;
+
+  // Replace one item's photo (snap or choose) — e.g. when the auto-crop isn't tight.
+  const retakePhoto = async (i, file) => {
+    if (!file) return;
+    setRows(p => p.map((r, idx) => idx === i ? { ...r, cropping: true } : r));
+    let u = null; try { u = await uploadPhoto(file, userId); } catch (e) {}
+    setRows(p => p.map((r, idx) => idx === i ? { ...r, img: u || r.img, cropping: false } : r));
+  };
 
   const addKept = async () => {
     if (adding || !keptCount) return;
@@ -888,7 +933,7 @@ function BatchScanModal({ userId, cats = [], vertical = "theatre", conds, onClos
         if (!r.keep || !r.name.trim()) continue;
         await onAdd({
           id: uid(), name: r.name.trim(), category: r.category, condition: r.condition,
-          qty: parseInt(r.qty, 10) || 1, notes: r.notes || "", img: img, images: img ? [img] : [],
+          qty: parseInt(r.qty, 10) || 1, notes: r.notes || "", img: (r.img || img), images: (r.img || img) ? [r.img || img] : [],
           purchase_cost: (r.est_value != null ? r.est_value : ""), avail: "In Stock", mkt: "Not Listed",
           added: new Date().toISOString(), review_status: "approved",
         });
@@ -931,8 +976,18 @@ function BatchScanModal({ userId, cats = [], vertical = "theatre", conds, onClos
               </div>
               <div style={{ maxHeight: 360, overflowY: "auto", border: "1px solid " + LINE, borderRadius: 10 }}>
                 {rows.map((r, i) => (
-                  <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 12px", borderBottom: i < rows.length - 1 ? "1px solid " + LINE : "none", opacity: r.keep ? 1 : .5 }}>
-                    <input type="checkbox" checked={r.keep} onChange={e => updRow(i, "keep", e.target.checked)} style={{ width: 18, height: 18, flexShrink: 0 }} />
+                  <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "10px 12px", borderBottom: i < rows.length - 1 ? "1px solid " + LINE : "none", opacity: r.keep ? 1 : .5 }}>
+                    <input type="checkbox" checked={r.keep} onChange={e => updRow(i, "keep", e.target.checked)} style={{ width: 18, height: 18, flexShrink: 0, marginTop: 4 }} />
+                    <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                      <div style={{ width: 54, height: 54, borderRadius: 8, overflow: "hidden", background: "#f3f0e8", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid " + LINE }}>
+                        {r.cropping ? <span style={{ fontSize: 10, color: MUT }}>…</span>
+                          : (r.img ? <img src={r.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 18 }}>🖼</span>)}
+                      </div>
+                      <label style={{ fontSize: 10, color: TEAL, cursor: "pointer", fontWeight: 700 }}>
+                        Replace
+                        <input type="file" accept="image/*" capture="environment" hidden onChange={e => { retakePhoto(i, e.target.files && e.target.files[0]); e.target.value = ""; }} />
+                      </label>
+                    </div>
                     <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
                       <input className="fi" value={r.name} onChange={e => updRow(i, "name", e.target.value)} placeholder="Item name" style={{ fontWeight: 600 }} />
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -945,6 +1000,7 @@ function BatchScanModal({ userId, cats = [], vertical = "theatre", conds, onClos
                         <input className="fi" type="number" min="1" value={r.qty} onChange={e => updRow(i, "qty", e.target.value)} title="Quantity" style={{ width: 62 }} />
                         <input className="fi" type="number" min="0" value={r.est_value == null ? "" : r.est_value} onChange={e => updRow(i, "est_value", e.target.value === "" ? null : Number(e.target.value))} placeholder="$ value" style={{ width: 90 }} />
                       </div>
+                      <input className="fi" value={r.notes || ""} onChange={e => updRow(i, "notes", e.target.value)} placeholder="Notes (color, size, material…)" style={{ fontSize: 13 }} />
                     </div>
                   </div>
                 ))}

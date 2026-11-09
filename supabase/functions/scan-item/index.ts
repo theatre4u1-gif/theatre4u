@@ -131,8 +131,9 @@ ${catLines}
 - notes: one short phrase (color, size, material, era), under 12 words.
 - confidence: "high", "medium", or "low".`;
     const SYSTEM = mode === "batch"
-      ? `You help catalog inventory. You are shown ONE photo containing MULTIPLE distinct ${noun}s (e.g. a shelf, a rack, a bin). Identify each clearly distinct one (group identical ones into a single entry with a quantity). Return up to ${MAX_BATCH} entries as strict JSON: an object with key "items" whose value is an array, each entry having keys: name, category, condition, quantity, est_value, notes, confidence.
+      ? `You help catalog inventory. You are shown ONE photo containing MULTIPLE distinct ${noun}s (e.g. a shelf, a rack, a bin). Identify each clearly distinct one (group identical ones into a single entry with a quantity). Return up to ${MAX_BATCH} entries as strict JSON: an object with key "items" whose value is an array, each entry having keys: name, category, condition, quantity, est_value, notes, confidence, box.
 ${FIELDS}
+- box: the item's location in the image as [x, y, w, h], each a number from 0 to 1 (x,y = top-left corner as a fraction of width/height; w,h = width/height as a fraction). Make the box tightly enclose just that one item. Required for every item.
 Only include items you can actually see. Output ONLY the JSON object, no prose, no markdown fences.`
       : `You help catalog inventory. You are shown ONE photo of a single ${noun} (or a small group logged as one entry). Return ONE catalog entry as strict JSON with keys: name, category, condition, quantity, est_value, notes, confidence.
 ${FIELDS}
@@ -170,8 +171,16 @@ Output ONLY the JSON object, no prose, no markdown fences.`;
       let quantity = parseInt(String(raw.quantity ?? 1), 10); if (!Number.isFinite(quantity) || quantity < 1) quantity = 1;
       let estValue: number | null = null; const ev = Number(raw.est_value);
       if (Number.isFinite(ev) && ev >= 0) estValue = Math.round(ev * 100) / 100;
+      // Optional normalized bounding box [x,y,w,h] in 0..1 (batch mode) so the client
+      // can crop the shelf photo down to just this item. Null if missing/invalid.
+      let box: number[] | null = null;
+      const b = (raw as { box?: unknown }).box;
+      if (Array.isArray(b) && b.length === 4 && b.every((n) => Number.isFinite(Number(n)))) {
+        const n = b.map((v) => Math.max(0, Math.min(1, Number(v))));
+        if (n[2] > 0.01 && n[3] > 0.01) box = [n[0], n[1], n[2], n[3]];
+      }
       return { name: String(raw.name ?? "").slice(0, 120), category, condition, quantity, est_value: estValue,
-        notes: String(raw.notes ?? "").slice(0, 160), confidence: ["high", "medium", "low"].includes(String(raw.confidence)) ? String(raw.confidence) : "medium" };
+        notes: String(raw.notes ?? "").slice(0, 160), confidence: ["high", "medium", "low"].includes(String(raw.confidence)) ? String(raw.confidence) : "medium", box };
     };
     const brand = isHome ? "bintrove" : "school";
 

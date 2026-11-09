@@ -19,7 +19,7 @@ export function BulkPhotoAdd({ userId, vertical = "theatre", cats = [], onClose,
   const addFile = async (file) => {
     if (!file) return;
     const key = uid();
-    setRows((p) => [...p, { key, name: baseName(file.name), category: defaultCat, qty: 1, img: null, uploading: true }]);
+    setRows((p) => [...p, { key, name: baseName(file.name), category: defaultCat, qty: 1, notes: "", img: null, uploading: true }]);
     const url = userId ? await uploadPhoto(file, userId) : null;
     setRows((p) => p.map((r) => (r.key === key ? { ...r, img: url, uploading: false } : r)));
   };
@@ -51,7 +51,7 @@ export function BulkPhotoAdd({ userId, vertical = "theatre", cats = [], onClose,
       size: "N/A",
       qty: parseInt(r.qty) || 1,
       location: "",
-      notes: "",
+      notes: (r.notes || "").trim(),
       mkt: "Not Listed",
       rent: 0, sale: 0, loan_period: 2, deposit: 0,
       avail: "In Stock",
@@ -102,7 +102,7 @@ export function BulkPhotoAdd({ userId, vertical = "theatre", cats = [], onClose,
         ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "24px 0", fontSize: 13 }}>No photos yet — add some above.</div>
         : <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {rows.map((r) => (
-              <div key={r.key} style={{ display: "flex", gap: 8, alignItems: "center", border: "1px solid var(--border)", borderRadius: 8, padding: 8 }}>
+              <div key={r.key} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", border: "1px solid var(--border)", borderRadius: 8, padding: 8 }}>
                 <div style={{ width: 48, height: 48, borderRadius: 6, overflow: "hidden", flexShrink: 0, background: "rgba(255,255,255,.04)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {r.uploading ? <span style={{ fontSize: 10, color: "var(--muted)" }}>…</span>
                     : (r.img ? <img src={r.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 18 }}>🖼</span>)}
@@ -113,6 +113,7 @@ export function BulkPhotoAdd({ userId, vertical = "theatre", cats = [], onClose,
                 </select>
                 <input className="fi" style={{ width: 56 }} type="number" min="1" step="1" value={r.qty} onChange={(e) => upd(r.key, "qty", parseInt(e.target.value) || 1)} title="Quantity" />
                 <button type="button" className="ico-btn" aria-label="Remove photo" onClick={() => remove(r.key)} title="Remove">✕</button>
+                <input className="fi" style={{ flexBasis: "100%" }} value={r.notes || ""} onChange={(e) => upd(r.key, "notes", e.target.value)} placeholder="Notes (optional) — color, size, material…" />
               </div>
             ))}
           </div>}
