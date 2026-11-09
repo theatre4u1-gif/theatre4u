@@ -558,7 +558,7 @@ export function ItemForm({item,onSave,onCancel,userId,marketplaceEnabled=false,v
   );
 }
 
-export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=true, canDelete=true}){
+export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, canEdit=true, canDelete=true, confirmDelete=true}){
   const cat=itemCat(item.vertical, item.category);
   const[lb,setLb]=useState(false);
   const[qr,setQr]=useState(null);
@@ -704,7 +704,7 @@ export function ItemDetail({item,onEdit,onDelete,userId=null,schoolName=null, ca
       </div>
       <div style={{display:"flex",gap:8,marginTop:16,flexWrap:"wrap"}}>
         {canEdit&&onEdit&&<button className="btn btn-p btn-sm" onClick={onEdit}><span style={{width:14,height:14,display:"flex"}}>{Ic.edit}</span>Edit</button>}
-        {canDelete&&onDelete&&<button className="btn btn-d btn-sm" onClick={()=>{if(window.confirm("Delete this item?"))onDelete(item.id)}}><span style={{width:14,height:14,display:"flex"}}>{Ic.trash}</span>Delete</button>}
+        {canDelete&&onDelete&&<button className="btn btn-d btn-sm" onClick={()=>{if(!confirmDelete){onDelete(item.id);return;}if(window.confirm("Delete this item?"))onDelete(item.id)}}><span style={{width:14,height:14,display:"flex"}}>{Ic.trash}</span>Delete</button>}
         {!IS_BINTROVE && userId && <button className="btn btn-o btn-sm" onClick={()=>setShowAddToProd(true)}>🎭 {getTerm(item.vertical,"addToProduction")}</button>}
         {item.mkt!=="Not Listed"&&<FbShareBtn
           url={itemShareUrl(item)}

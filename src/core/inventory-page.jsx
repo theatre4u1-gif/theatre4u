@@ -97,6 +97,16 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
   // Department (vertical) filter — defaults to the active department; "all" shows every department. Resets when the active department changes.
   const[deptF,setDeptF]=useState(vVertical);
   useEffect(()=>{setDeptF(vVertical)},[vVertical]);
+  // Delete confirmation is handled by an in-app modal (not window.confirm, which
+  // iOS Safari can silently suppress — leaving "tap delete, nothing happens").
+  const[confirmDel,setConfirmDel]=useState(null); // {id, name} | null
+  const doConfirmedDelete = async () => {
+    if(!confirmDel) return;
+    const id = confirmDel.id;
+    setConfirmDel(null);
+    await del(id);
+    setModal(null); setActive(null);
+  };
   const deptList=((org?.verticals_enabled)||[]).filter(Boolean);
   const[hoverImg,setHoverImg]=useState(null); // full-size photo shown on card hover
   const[tagF,setTagF]=useState(()=>new Set()); // active tag filters (item must have ALL selected)
@@ -773,7 +783,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
                       <td><span className={"mkt-badge "+mktCls(item.mkt)}>{item.mkt}</span></td>
                       <td><div style={{display:"flex",gap:4}}>
                         {!selectMode&&<button className="ico-btn" aria-label="Edit item" onClick={e=>{e.stopPropagation();openE(item)}}>{Ic.edit}</button>}
-                        {!selectMode&&canDelete&&<button className="ico-btn" aria-label="Delete item" style={{color:"var(--red)"}} onClick={e=>{e.stopPropagation();if(window.confirm("Delete?"))del(item.id)}}>{Ic.trash}</button>}
+                        {!selectMode&&canDelete&&<button className="ico-btn" aria-label="Delete item" style={{color:"var(--red)"}} onClick={e=>{e.stopPropagation();setConfirmDel({id:item.id,name:item.name})}}>{Ic.trash}</button>}
                       </div></td>
                     </tr>
                   );
@@ -797,7 +807,7 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
         items={items}
         vertical={vVertical}
         onEditItem={item=>{setActive(item);setModal("e");}}
-        onDeleteItem={id=>{del(id);}}
+        onDeleteItem={id=>setConfirmDel({id,name:"this item"})}
       />}
       {modal==="a"&&(<Modal title="Add New Item" onClose={()=>setModal(null)}
          >
@@ -807,7 +817,18 @@ export function Inventory({items:itemsRaw=[],onAdd,onEdit,onDelete,userId, membe
          >
           <ItemForm item={active} onSave={handleSave} onCancel={()=>setModal(null)} userId={userId} marketplaceEnabled={!!org?.marketplace_enabled} vertical={vVertical} plan={plan} suggestedTags={allTags} scanEnabled={scanEnabled} customFields={customFields}/>
         </Modal>)}
-      {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>{del(id);setModal(null);setActive(null)}):null} canEdit={canEdit} canDelete={canDelete}/></Modal>}
+      {modal==="d"&&active&&<Modal title="Item Details" onClose={()=>{setModal(null);setActive(null)}}><ItemDetail item={active} userId={userId} schoolName={schoolName} onEdit={canEdit?()=>setModal("e"):null} onDelete={canDelete?(id=>setConfirmDel({id,name:(active?.name||"this item")})):null} canEdit={canEdit} canDelete={canDelete} confirmDelete={false}/></Modal>}
+      {confirmDel&&<Modal title="Delete item?" onClose={()=>setConfirmDel(null)}>
+        <div style={{padding:"4px 2px 2px"}}>
+          <p style={{fontFamily:"'Lora',serif",fontSize:16,color:"var(--ink)",margin:"0 0 20px"}}>
+            Delete <strong>{confirmDel.name||"this item"}</strong>? This can’t be undone.
+          </p>
+          <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+            <button className="btn btn-o" onClick={()=>setConfirmDel(null)}>Cancel</button>
+            <button className="btn btn-d" onClick={doConfirmedDelete}><span style={{width:14,height:14,display:"flex"}}>{Ic.trash}</span>Delete</button>
+          </div>
+        </div>
+      </Modal>}
       {showImport&&<CSVImport userId={userId} vertical={vVertical} onClose={()=>setShowImport(false)} onImport={async()=>{setShowImport(false);const{data}=await SB.from("items").select("*").eq("org_id",userId).order("added",{ascending:false}).limit(2000);if(data&&onImported)onImported(data);refetch();}}/>}
       {showBulk&&<BulkPhotoAdd userId={userId} vertical={vVertical} cats={vCATS} onClose={()=>setShowBulk(false)} onImport={(data)=>{if(onImported)onImported(data);refetch();}}/>}
       {showBatch&&<BatchScanModal userId={userId} cats={vCATS} vertical={vVertical} conds={getVertical(vVertical).conditions} onClose={()=>setShowBatch(false)} onAdd={onAdd} onDone={()=>{setShowBatch(false);refetch();}}/>}
