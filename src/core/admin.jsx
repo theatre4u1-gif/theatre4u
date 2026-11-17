@@ -1428,17 +1428,21 @@ export function AdminHub({ currentUser, org, only, initialTab }) {
 export function SchoolCoordinatorDashboard({ user, onSwitchSchool }) {
   const [schools, setSchools] = useState([]);
   const [leaders, setLeaders] = useState({}); // org_id -> program_director rows
+  const [roster, setRoster]   = useState({}); // org_id -> all member rows
   const [msg, setMsg] = useState("");
   const load = async () => {
     const { data } = await SB.rpc("my_coordinator_schools");
     const list = data || [];
     setSchools(list);
-    const map = {};
+    const map = {}, rmap = {};
     for (const sc of list) {
       const { data: ls } = await SB.rpc("get_school_leaders", { p_org_id: sc.id });
       map[sc.id] = (ls || []).filter(r => r.role === "program_director");
+      const { data: rm } = await SB.rpc("get_school_roster", { p_org_id: sc.id });
+      rmap[sc.id] = rm || [];
     }
     setLeaders(map);
+    setRoster(rmap);
   };
   useEffect(() => { load(); }, [user?.id]);
   const flash = (t) => { setMsg(t); setTimeout(() => setMsg(""), 3500); };
@@ -1518,6 +1522,33 @@ export function SchoolCoordinatorDashboard({ user, onSwitchSchool }) {
                 </div>
               </div>
             )}
+            {(() => {
+              const ROLE_TXT = { coordinator: "Coordinator", program_director: "Dept Leader", co_director: "Co-Director", director: "Director", stage_manager: "Stage Mgr", crew: "Teacher", house: "View only" };
+              const mem = roster[sc.id] || [];
+              return (
+                <div style={{ borderTop: "1px solid var(--border)", paddingTop: 10, marginTop: 10 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>👥 Your team ({mem.length})</div>
+                  {mem.length === 0 ? (
+                    <div style={{ fontSize: 12, color: "var(--muted)" }}>No one has joined yet. Share the QR / join code so your teachers can sign in.</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {mem.map(m => {
+                        const L = m.vertical ? labelOf(sc, m.vertical) : null;
+                        return (
+                          <div key={m.member_id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, padding: "4px 0", flexWrap: "wrap" }}>
+                            <span style={{ fontWeight: 600 }}>{m.full_name || m.email}</span>
+                            {m.full_name && <span style={{ color: "var(--muted)", fontSize: 12 }}>{m.email}</span>}
+                            <span style={{ padding: "1px 7px", background: "rgba(255,255,255,.08)", borderRadius: 7, fontSize: 11 }}>{ROLE_TXT[m.role] || m.role}</span>
+                            <span style={{ padding: "1px 7px", background: "rgba(66,165,245,.12)", color: "#42a5f5", borderRadius: 7, fontSize: 11 }}>{L ? (L.icon + " " + L.label) : "All departments"}</span>
+                            {!m.is_linked && <span style={{ padding: "1px 7px", background: "rgba(255,193,7,.15)", color: "#ffb300", borderRadius: 7, fontSize: 11 }}>Pending first sign-in</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         );
       })}
