@@ -69,6 +69,14 @@ nav{padding:16px 24px;display:flex;align-items:center;justify-content:space-betw
 .note{font-size:12px;color:var(--t3);text-align:center;margin-top:14px;line-height:1.6}
 
 footer{text-align:center;padding:24px;font-size:12px;color:var(--t3);border-top:1px solid var(--bd)}
+
+.dept-btn{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;text-align:left;
+  background:rgba(255,255,255,.04);border:1px solid var(--bd);border-radius:10px;color:var(--t1);
+  font-size:15px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s}
+.dept-btn:hover:not(:disabled){border-color:var(--gold);background:rgba(212,168,67,.08)}
+.dept-btn:disabled{opacity:.5;cursor:not-allowed}
+.dept-btn .d-ico{font-size:22px;flex-shrink:0}
+.dept-btn .d-sub{display:block;font-size:12px;font-weight:400;color:var(--t2);margin-top:1px}
 </style>
 </head>
 <body>
@@ -136,6 +144,20 @@ footer{text-align:center;padding:24px;font-size:12px;color:var(--t3);border-top:
         </div>
         <button class="btn" id="si-btn" onclick="handleSignin()">Sign In & Join →</button>
       </div>
+    </div>
+
+    <!-- Department pick state -->
+    <div id="deptpick" style="display:none">
+      <div class="invite-badge">
+        <div class="icon">✅</div>
+        <div>
+          <h2 id="dept-org-name">You're in!</h2>
+          <p>One quick step — which department do you teach?</p>
+        </div>
+      </div>
+      <div class="section-title">Choose your department</div>
+      <div id="dept-options" style="display:flex;flex-direction:column;gap:10px;margin-bottom:8px"></div>
+      <p class="note">This sets up your inventory so you see your department's items first. Your coordinator can change it later.</p>
     </div>
 
     <!-- Success state -->
@@ -213,8 +235,16 @@ const ROLE_LABELS = {
   house:            'House',
 };
 
+const DEPT_LABELS = {
+  theatre: { icon: '🎭', label: 'Theatre' },
+  music:   { icon: '🎵', label: 'Music' },
+  dance:   { icon: '💃', label: 'Dance' },
+  art:     { icon: '🎨', label: 'Visual Art' },
+  booster: { icon: '🤝', label: 'Booster' },
+};
+
 function show(id) {
-  ['loading','main','success','invite-error'].forEach(s => {
+  ['loading','main','deptpick','success','invite-error'].forEach(s => {
     document.getElementById(s).style.display = s === id ? '' : 'none';
   });
 }
@@ -257,6 +287,47 @@ function showSuccess(orgName, role) {
   document.getElementById('success-msg').innerHTML =
     `You've joined <strong>${orgName}</strong> as <strong>${roleLabel}</strong>.<br>Open ${BRAND_PLAIN} to see the full inventory.`;
   show('success');
+}
+
+// After a fresh join, teachers at a multi-department school pick their department.
+// Everyone else (coordinators, leaders, single-department schools) goes straight to success.
+function afterJoin(orgName, role) {
+  const r = role || 'crew';
+  const verts = (inviteData?.verticals || []).filter(v => DEPT_LABELS[v]);
+  if (r === 'crew' && inviteData?.org_id && verts.length > 1) {
+    showDeptPick(orgName, r, verts);
+  } else {
+    showSuccess(orgName, r);
+  }
+}
+
+function showDeptPick(orgName, role, verts) {
+  document.getElementById('dept-org-name').textContent = orgName || "You're in!";
+  const wrap = document.getElementById('dept-options');
+  wrap.innerHTML = '';
+  verts.forEach(v => {
+    const b = document.createElement('button');
+    b.className = 'dept-btn';
+    b.innerHTML = `<span class="d-ico">${DEPT_LABELS[v].icon}</span><span>${DEPT_LABELS[v].label}</span>`;
+    b.onclick = () => chooseDept(orgName, role, v, b);
+    wrap.appendChild(b);
+  });
+  const all = document.createElement('button');
+  all.className = 'dept-btn';
+  all.innerHTML = `<span class="d-ico">✨</span><span>I teach across several<span class="d-sub">See all departments</span></span>`;
+  all.onclick = () => chooseDept(orgName, role, null, all);
+  wrap.appendChild(all);
+  show('deptpick');
+}
+
+async function chooseDept(orgName, role, vertical, btn) {
+  document.querySelectorAll('#dept-options .dept-btn').forEach(b => { b.disabled = true; });
+  const prev = btn.innerHTML;
+  btn.innerHTML = '<span class="d-ico">⏳</span><span>Saving…</span>';
+  try {
+    await SB.rpc('set_my_department', { p_org_id: inviteData.org_id, p_vertical: vertical });
+  } catch (e) { /* non-fatal — they're already a member site-wide */ }
+  showSuccess(orgName, role);
 }
 
 async function handleSignup() {
@@ -347,7 +418,7 @@ async function handleSignup() {
     }),
   }).catch(() => {});  // fire and forget
 
-  showSuccess(orgName, role);
+  afterJoin(orgName, role);
 }
 
 async function handleSignin() {
@@ -380,7 +451,7 @@ async function handleSignin() {
     return;
   }
 
-  showSuccess(invResult?.org_name || inviteData?.org_name || 'the program', invResult?.role || inviteData?.role);
+  afterJoin(invResult?.org_name || inviteData?.org_name || 'the program', invResult?.role || inviteData?.role);
 }
 
 // ── Init: load invite info ──────────────────────────────────────────────────
@@ -390,7 +461,7 @@ async function init() {
   if (token) {
     // Look up directly from org_invites — the get_invite_by_token RPC only covers district invites
     const { data, error } = await SB.from('org_invites')
-      .select('id, role, email, token, expires_at, accepted_at, orgs(name)')
+      .select('id, role, email, token, expires_at, accepted_at, org_id, orgs(id, name, verticals_enabled)')
       .eq('token', token)
       .maybeSingle();
 
@@ -409,23 +480,26 @@ async function init() {
     }
 
     inviteData = {
-      role:     data.role,
-      org_name: data.orgs?.name,
-      email:    data.email,
+      role:      data.role,
+      org_name:  data.orgs?.name,
+      org_id:    data.org_id,
+      email:     data.email,
+      verticals: data.orgs?.verticals_enabled || [],
     };
 
   } else if (joinCode) {
     const { data } = await SB.from('org_invites')
-      .select('role, org_id, email, orgs(name)')
+      .select('role, org_id, email, orgs(id, name, verticals_enabled)')
       .ilike('join_code', joinCode.trim())
       .maybeSingle();
 
     if (data) {
       inviteData = {
-        role:     data.role,
-        org_name: data.orgs?.name,
-        org_id:   data.org_id,
-        email:    data.email,
+        role:      data.role,
+        org_name:  data.orgs?.name,
+        org_id:    data.org_id,
+        email:     data.email,
+        verticals: data.orgs?.verticals_enabled || [],
       };
     }
   } else {
@@ -470,7 +544,7 @@ async function init() {
       document.getElementById('continue-btn').onclick = async () => {
         const { data: invResult, error: invErr } = await acceptInvite();
         if (!invErr && (invResult?.success || invResult?.error?.includes('Already a member'))) {
-          showSuccess(invResult?.org_name || inviteData?.org_name || 'the program', invResult?.role || inviteData?.role);
+          afterJoin(invResult?.org_name || inviteData?.org_name || 'the program', invResult?.role || inviteData?.role);
         } else { showErr(invResult?.error || 'Could not join the team. Please contact ' + BRAND_EMAIL + '.'); }
       };
       return;
@@ -478,7 +552,7 @@ async function init() {
     // Signed in as the invited person (or the invite has no specific email) → accept now.
     const { data: invResult, error: invErr } = await acceptInvite();
     if (!invErr && invResult?.success) {
-      showSuccess(invResult.org_name || inviteData?.org_name || 'the program', invResult.role || inviteData?.role);
+      afterJoin(invResult.org_name || inviteData?.org_name || 'the program', invResult.role || inviteData?.role);
       return;
     } else if (invResult?.error?.includes('Already a member')) {
       showSuccess(inviteData?.org_name || 'the program', inviteData?.role);

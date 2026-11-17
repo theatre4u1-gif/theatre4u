@@ -306,6 +306,10 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   useEffect(()=>{
     if(!user||loaded) return;
     (async()=>{
+      // Link any memberships that were pre-staged by email (e.g. a district coordinator
+      // added before they first signed in). Backfills org_members.user_id by email so the
+      // membership queries below see them. No-op for users with nothing pending.
+      try { await SB.rpc("claim_pending_memberships"); } catch (e) { /* non-fatal */ }
       // Check if user is a member of one or more orgs (team member or program director)
       const { data: memberRows } = await SB.from("org_members")
         .select("org_id, role, vertical, orgs(*)")
