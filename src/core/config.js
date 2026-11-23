@@ -70,3 +70,9 @@ export const ADMIN_EMAILS = [
 ];
 export const isAdminEmail = (e) => ADMIN_EMAILS.includes((e||"").toLowerCase().trim());
 export const ADMIN_EMAIL  = ADMIN_EMAILS[0]; // legacy alias
+
+// "Sign in with Apple" button. OFF until Apple is configured as an OAuth provider in BOTH
+// Supabase projects (schools + bintrove): needs an Apple Developer Services ID + a Sign In
+// with Apple key. Flip to true once that's live so the button appears and actually works.
+// (Also satisfies App Store guideline 4.8 — Apple sign-in required where Google is offered.)
+export const APPLE_SIGNIN_ENABLED = true;

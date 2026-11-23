@@ -480,7 +480,15 @@ Deno.serve(async (req: Request) => {
           period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
           stripe_created_at: event.created ? new Date((event.created as number) * 1000).toISOString() : null });
 
-        const homeInfo = priceId ? PRICE_TO_HOME[priceId] : undefined;
+        let homeInfo = priceId ? PRICE_TO_HOME[priceId] : undefined;
+        // Resilience: if the price couldn't be resolved (e.g. STRIPE_SECRET_KEY missing, so the
+        // subscription fetch above was skipped), fall back to the checkout session's own
+        // metadata.home_plan so a paying BinTrove customer is still provisioned rather than
+        // silently left on free.
+        if (!homeInfo && IS_BINTROVE_PROJECT && meta?.home_plan &&
+            ["starter","home","home_plus"].includes(meta.home_plan)) {
+          homeInfo = { home_plan: meta.home_plan, interval: "annual" };
+        }
         if (org && homeInfo) {
           // BinTrove home subscription → set home_plan ONLY; never touch the school `plan`/verticals/points.
           await sb.from("orgs").update({

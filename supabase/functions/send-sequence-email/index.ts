@@ -25,10 +25,10 @@ const BRANDS:Record<string,Brand>={
   artstracker:{name:'ArtsTracker',plain:'ArtsTracker',site:'https://artstracker.org',host:'artstracker.org',
     from:'Bob Zick at ArtsTracker <hello@theatre4u.org>',reply:'hello@artstracker.org',emoji:'&#x1F3A8;',pro:'$59',
     mark:'https://theatre4u.org/logo-mark-artstracker.png',mw:62,mh:44,tag:'Arts programs, organized.',ink:'#4C1035'},
-  // BinTrove (home). FROM stays the Resend-verified theatre4u.org domain with BinTrove reply-to
-  // until bintrove.com is verified in Resend; then switch from to hello@bintrove.com.
+  // BinTrove (home). bintrove.com is verified in Resend (Nov 2026) — FROM now sends from the
+  // brand's own domain.
   bintrove:{name:'BinTrove',plain:'BinTrove',site:'https://bintrove.com',host:'bintrove.com',
-    from:'Bob Zick at BinTrove <hello@theatre4u.org>',reply:'hello@bintrove.com',emoji:'&#x1F4E6;',pro:'$24',
+    from:'Bob Zick at BinTrove <hello@bintrove.com>',reply:'hello@bintrove.com',emoji:'&#x1F4E6;',pro:'$24',
     mark:'https://bintrove.com/logo-mark-bintrove.png',mw:44,mh:44,tag:'Home storage, organized.',ink:'#0A5450'},
 };
 // Home orgs → BinTrove. Non-theatre arts verticals → ArtsTracker. Theatre follows signup domain.

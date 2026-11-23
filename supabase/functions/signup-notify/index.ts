@@ -16,12 +16,18 @@ const SKIP_EMAILS=['hello@theatre4u.org','rzick@hbuhsd.edu','theatre4u1@gmail.co
 // Brand by vertical/door: non-theatre programs = ArtsTracker; theatre follows signup_domain.
 // Defaults to Theatre4u when nothing is passed, so older callers keep working.
 type Brand={name:string;site:string;host:string;from:string;reply:string;emoji:string;exchange:string;teamWord:string};
+// NOTE on from-addresses: bintrove.com is verified in Resend, so BinTrove sends from its own
+// domain. artstracker.org is NOT yet verified in Resend, so ArtsTracker still sends via the
+// verified theatre4u.org domain but with the "ArtsTracker" display name + artstracker.org reply-to.
+// Once artstracker.org verifies, switch its from to hello@artstracker.org.
 const BRANDS:Record<string,Brand>={
   theatre4u:  {name:'Theatre4u',  site:'https://theatre4u.org',  host:'theatre4u.org',  from:'Theatre4u <hello@theatre4u.org>',  reply:'hello@theatre4u.org',  emoji:'&#x1F3AD;',exchange:'Backstage Exchange',teamWord:'backstage team'},
   artstracker:{name:'ArtsTracker',site:'https://artstracker.org',host:'artstracker.org',from:'ArtsTracker <hello@theatre4u.org>',reply:'hello@artstracker.org',emoji:'&#x1F3A8;',exchange:'The Exchange',      teamWord:'team'},
+  bintrove:   {name:'BinTrove',   site:'https://bintrove.com',   host:'bintrove.com',   from:'BinTrove <hello@bintrove.com>',    reply:'hello@bintrove.com',  emoji:'&#x1F4E6;',exchange:'The Exchange',      teamWord:'team'},
 };
 const brandFor=(d?:string,v?:string):Brand=>
-  ((v||'theatre')!=='theatre') ? BRANDS.artstracker
+  (v==='home') ? BRANDS.bintrove
+  : ((v||'theatre')!=='theatre') ? BRANDS.artstracker
   : ((d||'').includes('artstracker') ? BRANDS.artstracker : BRANDS.theatre4u);
 
 // Which brand door did this signup come through? (BinTrove = home; else arts by vertical/domain.)
@@ -32,6 +38,14 @@ function platformOf(org:any):string{
   return 'Theatre4u';
 }
 const PLAT_EMOJI:Record<string,string>={BinTrove:'&#x1F4E6;',ArtsTracker:'&#x1F3A8;',Theatre4u:'&#x1F3AD;'};
+// Admin-alert sender, branded per platform so Bob's "new signup" alert comes from the right brand.
+// ArtsTracker uses the verified theatre4u.org domain until artstracker.org verifies in Resend.
+const PLAT_FROM:Record<string,string>={
+  BinTrove:'BinTrove Alerts <hello@bintrove.com>',
+  ArtsTracker:'ArtsTracker Alerts <hello@theatre4u.org>',
+  Theatre4u:'Theatre4u Alerts <hello@theatre4u.org>',
+};
+const adminFrom=(org:any):string=>PLAT_FROM[platformOf(org)]||PLAT_FROM.Theatre4u;
 
 function adminHtml(org:any,stats:any,isTeamMember=false):string{
   const t=new Date(org.created_at||new Date()).toLocaleString('en-US',{timeZone:'America/Los_Angeles',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
@@ -90,7 +104,7 @@ Deno.serve(async(req:Request)=>{
         method:'POST',
         headers:{'Authorization':`Bearer ${KEY}`,'Content-Type':'application/json'},
         body:JSON.stringify({
-          from:'Theatre4u Alerts <hello@theatre4u.org>',
+          from:adminFrom({vertical:team_vertical,signup_domain:team_signup_domain}),
           to:[NOTIFY_EMAIL],
           subject:`Team member joined: ${toEmail} → ${orgName}`,
           html:adminHtml({name:orgName,email:toEmail,created_at:new Date().toISOString()},{total_orgs:0,total_items:0},true),
@@ -153,7 +167,7 @@ Deno.serve(async(req:Request)=>{
     const adminRes=await fetch('https://api.resend.com/emails',{
       method:'POST',
       headers:{'Authorization':`Bearer ${KEY}`,'Content-Type':'application/json'},
-      body:JSON.stringify({from:'Theatre4u Alerts <hello@theatre4u.org>',...(replyOk?{reply_to:org.email}:{}),to:[NOTIFY_EMAIL],
+      body:JSON.stringify({from:adminFrom(org),...(replyOk?{reply_to:org.email}:{}),to:[NOTIFY_EMAIL],
         subject:`New ${platformOf(org)} signup: ${org.name||org.email}${replyOk?'':' (invalid email)'}`,html:adminHtml(org,stats,false)}),
     });
     console.log('Admin email:',adminRes.status);
