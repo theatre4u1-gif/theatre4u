@@ -23,6 +23,7 @@ import { FundingPage } from "./funding.jsx";
 import { ExternalLoans } from "./external-loans.jsx";
 import { HOSTNAME, IS_THEATRE4U, IS_ARTSTRACKER, IS_BINTROVE, APP_NAME, APP_SUBTITLE, APP_EMAIL, APP_URL, ADMIN_EMAILS, isAdminEmail, ADMIN_EMAIL, LOGO_ICON, FAVICON, TOUCH_ICON, LOGO_FULL, LOGO_MARK, SUPABASE_URL } from "./config.js";
 import { BinTroveAuthScreen } from "./bintrove-auth.jsx";
+import { BlackFridayBar } from "./blackfriday.jsx";
 import { BinTroveAccount } from "./bintrove-account.jsx";
 import { BinTroveHome } from "./bintrove-home.jsx";
 import { POINT_EARN_RATES, POINTS_PER_DOLLAR, POINTS_FREE_MONTH, POINTS_MAX_BALANCE, POINTS_EXPIRE_DAYS, PLATFORM_FEE_PCT, POINTS_MIN_REDEEM, MILESTONE_POINTS } from "./points-config.js";
@@ -359,6 +360,20 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
       // memberships — send them to the finish-setup step instead of an empty app.
       // (Password signups always create the org at signup, so they never hit this.)
       if(!orgData && !realMembership && user.user_metadata?.is_team_member !== true){
+        // BinTrove (home product) social sign-ins arrive with no org. There's no program
+        // "finish setup" step for a household — create the home org inline and reload.
+        if(IS_BINTROVE){
+          const nm = user.user_metadata?.full_name || user.user_metadata?.name || "";
+          const homeName = nm ? nm + "'s Home" : "My Home";
+          await SB.from("orgs").upsert({
+            id:user.id, name:homeName, email:user.email, director_name:nm||null,
+            type:"", phone:"", location:"", bio:"",
+            kind:"home", home_plan:"free", vertical:"home", verticals_enabled:["home"], org_type:"home",
+            terms_accepted_at:new Date().toISOString(), terms_version:"2026-08",
+          },{onConflict:"id",ignoreDuplicates:false});
+          try { fetch(`${SUPABASE_URL}/functions/v1/signup-notify`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({org_id:user.id,org_email:user.email,is_team_member:false})}).catch(()=>{}); } catch(e){}
+          setLoaded(false); return; // reload; the org now exists, so this branch won't re-enter
+        }
         const { count: facCount } = await SB.from("district_members")
           .select("id",{count:"exact",head:true}).eq("user_id",user.id);
         if(!facCount){ setNeedsProfile(true); setLoaded(true); return; }
@@ -939,7 +954,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
 
   // BinTrove (app.bintrove.com): logged-out users get the consumer sign-up/sign-in — NOT the school landing.
   // Only triggers when IS_BINTROVE; Theatre4u/ArtsTracker are byte-identical.
-  if(!user && IS_BINTROVE) return(<><style>{CSS}</style><BinTroveAuthScreen onAuth={u=>{setUser(u);}}/></>);
+  if(!user && IS_BINTROVE) return(<><style>{CSS}</style><BlackFridayBar/><BinTroveAuthScreen onAuth={u=>{setUser(u);}}/></>);
 
   // Native app, not signed in → full-screen mobile sign-in (no desktop landing page).
   if(!user && IS_NATIVE_APP) return(
@@ -952,6 +967,7 @@ export function AppRoot({ demoStore = null, demoUser = null, onEnterDemo = null 
   if(!user) return(
     <>
       <style>{CSS}</style>
+      <BlackFridayBar/>
       <LandingPage
         onSignIn={()=>{
           // Show auth screen in signin mode by mounting AuthScreen with initial mode
