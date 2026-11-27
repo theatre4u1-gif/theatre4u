@@ -14,4 +14,46 @@
     <priority>0.6</priority>
   </url>
 
+  <url>
+    <loc>https://bintrove.com/blog/how-to-label-storage-bins.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://bintrove.com/blog/home-inventory-for-insurance.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://bintrove.com/blog/how-to-label-moving-boxes.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://bintrove.com/blog/how-to-store-holiday-decorations.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://bintrove.com/blog/how-to-organize-a-garage.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://bintrove.com/blog/storage-unit-inventory.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://bintrove.com/blog/moving-inventory-list.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>

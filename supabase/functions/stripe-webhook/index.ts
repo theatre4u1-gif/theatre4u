@@ -180,18 +180,24 @@ const WBRANDS: Record<string, WBrand> = {
     from: "Bob Zick at ArtsTracker <hello@theatre4u.org>", reply: "hello@artstracker.org", ink: "#4C1035", accent: "#d4a843",
     planLabel: "Pro plan", manage: "Settings &rarr; Plans &rarr; Manage Billing", pick: "Settings &rarr; Plans, then choose <strong>Pro</strong>", freeNote: "You still have access to your first 25 items" },
   bintrove: { plain: "BinTrove", display: "BinTrove", host: "bintrove.com", site: "https://bintrove.com",
-    from: "Bob Zick at BinTrove <hello@theatre4u.org>", reply: "hello@bintrove.com", ink: "#0A5450", accent: "#1C9E8F",
+    from: "Bob Zick at BinTrove <hello@bintrove.com>", reply: "hello@bintrove.com", ink: "#0A5450", accent: "#1C9E8F",
     planLabel: "plan", manage: "Account", pick: "Account, then pick a plan", freeNote: "Your bins and items are safe on the Free plan" },
 };
 function brandForOrg(o?: { vertical?: string; org_type?: string; signup_domain?: string }): WBrand {
+  // This webhook only ever handles ONE brand's prices (see the brand guard on checkout). On the
+  // BinTrove project every customer billing email is BinTrove — even if the org lookup came back
+  // empty — so never fall through to a Theatre4u default here.
+  if (IS_BINTROVE_PROJECT) return WBRANDS.bintrove;
   const v = o?.vertical || "theatre", t = o?.org_type, d = o?.signup_domain || "";
   if (v === "home" || t === "home") return WBRANDS.bintrove;
   if (v !== "theatre") return WBRANDS.artstracker;
   return d.includes("artstracker") ? WBRANDS.artstracker : WBRANDS.theatre4u;
 }
+// Default customer-email brand for this webhook when no org is resolved.
+const DEFAULT_WBRAND: WBrand = IS_BINTROVE_PROJECT ? WBRANDS.bintrove : WBRANDS.theatre4u;
 
 // Customer-facing heads-up on a failed charge, so subscribers can fix their card before they lapse.
-async function sendCardFailedEmail(toEmail: string, B: WBrand = WBRANDS.theatre4u) {
+async function sendCardFailedEmail(toEmail: string, B: WBrand = DEFAULT_WBRAND) {
   if (!RESEND_KEY || !toEmail) return;
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f5f0e8;font-family:Arial,sans-serif">
 <div style="max-width:560px;margin:0 auto;background:#fff">
@@ -222,7 +228,7 @@ async function sendCardFailedEmail(toEmail: string, B: WBrand = WBRANDS.theatre4
 
 // Final notice when retries are exhausted and the subscription is canceled for non-payment,
 // so no one lapses to Free without a heads-up. Only sent for payment-failure cancellations.
-async function sendDowngradeEmail(toEmail: string, B: WBrand = WBRANDS.theatre4u) {
+async function sendDowngradeEmail(toEmail: string, B: WBrand = DEFAULT_WBRAND) {
   if (!RESEND_KEY || !toEmail) return;
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f5f0e8;font-family:Arial,sans-serif">
 <div style="max-width:560px;margin:0 auto;background:#fff">
@@ -617,7 +623,7 @@ Deno.serve(async (req: Request) => {
         await sendReceiptEmail(
           data,
           ((data.customer_email as string) || org?.email || "").toLowerCase().trim(),
-          org ? brandForOrg(org) : WBRANDS.theatre4u,
+          org ? brandForOrg(org) : DEFAULT_WBRAND,
         );
 
         if (!isRenewal) break;

@@ -9,10 +9,30 @@
 <meta property="og:description" content="Practical guides for running an arts program: inventory, Prop 28 funding, QR labeling, productions, and more.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://theatre4u.org/blog/">
-<link rel="canonical" href="https://theatre4u.org/blog/">
+<link id="canon" rel="canonical" href="https://theatre4u.org/blog/">
 <link rel="icon" href="/favicon.ico">
+<!-- Host-aware brand swap. One file serves /blog/ on every domain; BinTrove gets its own
+     branding, posts, title and canonical when the page is loaded on bintrove.com. Runs in
+     <head> before paint, so there's no flash and the rendered DOM carries the right canonical. -->
+<script>
+  (function () {
+    try {
+      if (location.hostname.indexOf("bintrove") !== -1) {
+        document.documentElement.setAttribute("data-brand", "bintrove");
+        document.title = "BinTrove Blog — How to Organize, Label, Inventory & Move Your Stuff";
+        var set = function (sel, attr, val) { var el = document.querySelector(sel); if (el) el.setAttribute(attr, val); };
+        set('link#canon', 'href', 'https://bintrove.com/blog/');
+        set('meta[name="description"]', 'content', 'Practical guides for home storage and organizing: labeling bins, home inventory for insurance, packing and labeling moving boxes, and more. From the team behind BinTrove.');
+        set('meta[property="og:title"]', 'content', 'BinTrove Blog');
+        set('meta[property="og:description"]', 'content', 'Guides on labeling storage bins, home inventory for insurance, and packing moving boxes.');
+        set('meta[property="og:url"]', 'content', 'https://bintrove.com/blog/');
+        set('link[rel="icon"]', 'href', '/favicon-bintrove.png');
+      }
+    } catch (e) {}
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--gold:#d4a843;--dark:#0d0b11;--dark2:#15121b;--dark3:#1d1925;--bd:#282333;--bdl:#38324a;--t1:#ede8df;--t2:#9b93a8;--t3:#685f76}
@@ -42,15 +62,48 @@ h1{font-family:'Playfair Display',serif;font-size:clamp(28px,5vw,44px);font-weig
 footer{background:var(--dark2);border-top:1px solid var(--bd);padding:24px;text-align:center;font-size:12px;color:var(--t3)}
 footer a{color:var(--t3)}
 @media(max-width:600px){.wrap{padding:32px 16px 56px}.hero{padding:40px 16px 32px}}
+
+/* ── BinTrove skin (applied only when loaded on bintrove.com) ───────────────── */
+.bt-only{display:none}
+html[data-brand="bintrove"] .t4u-only{display:none}
+html[data-brand="bintrove"] .bt-only{display:revert}
+html[data-brand="bintrove"]{background:#FBF4E6;color:#163230}
+html[data-brand="bintrove"] a{color:#0F6E6B}
+html[data-brand="bintrove"] nav{background:rgba(251,244,230,.92);border-bottom-color:#e7e2d7}
+html[data-brand="bintrove"] .logo{color:#0F6E6B}
+html[data-brand="bintrove"] .nav-cta{background:#0F6E6B;color:#fff}
+html[data-brand="bintrove"] .hero{background:#fff;border-bottom-color:#e7e2d7}
+html[data-brand="bintrove"] .eyebrow{background:rgba(211,161,60,.16);border-color:rgba(211,161,60,.4);color:#a97d22}
+html[data-brand="bintrove"] h1{color:#163230}
+html[data-brand="bintrove"] .sub{color:#50635f}
+html[data-brand="bintrove"] .post{background:#fff;border-color:#e7e2d7}
+html[data-brand="bintrove"] .post:hover{border-color:#cfc7b6}
+html[data-brand="bintrove"] .post .tag{color:#a97d22}
+html[data-brand="bintrove"] .post h2{color:#163230}
+html[data-brand="bintrove"] .post p{color:#50635f}
+html[data-brand="bintrove"] .post .meta{color:#7b8a86}
+html[data-brand="bintrove"] .more{color:#0F6E6B}
+html[data-brand="bintrove"] .cta-box{background:linear-gradient(160deg,#0F6E6B,#0A5450);border:none}
+html[data-brand="bintrove"] .cta-box h2{color:#fff}
+html[data-brand="bintrove"] .cta-box p{color:rgba(255,255,255,.88)}
+html[data-brand="bintrove"] .cta-btn{background:#D3A13C;color:#0A3F3C}
+html[data-brand="bintrove"] footer{background:#fff;border-top-color:#e7e2d7;color:#7b8a86}
+html[data-brand="bintrove"] footer a{color:#7b8a86}
 </style>
 </head>
 <body>
 <nav>
-  <a class="logo" href="https://theatre4u.org"><img src="/favicon-theatre4u.svg" alt="" style="width:28px;height:28px;object-fit:contain;margin-right:6px"/>Theatre4u™</a>
-  <a class="nav-cta" href="https://theatre4u.org?signup=1">Get Started Free →</a>
+  <a class="logo" href="https://theatre4u.org">
+    <img class="t4u-only" src="/favicon-theatre4u.svg" alt="" style="width:28px;height:28px;object-fit:contain;margin-right:6px"/>
+    <img class="bt-only" src="/logo-mark-bintrove.png" alt="" style="width:28px;height:28px;object-fit:contain;margin-right:6px"/>
+    <span class="t4u-only">Theatre4u&#8482;</span><span class="bt-only">BinTrove</span>
+  </a>
+  <a class="nav-cta t4u-only" href="https://theatre4u.org?signup=1">Get Started Free &rarr;</a>
+  <a class="nav-cta bt-only" href="https://bintrove.com">Start Free &rarr;</a>
 </nav>
 
-<div class="hero">
+<!-- Theatre4u hero + posts -->
+<div class="hero t4u-only">
   <div class="hero-inner">
     <span class="eyebrow">The Theatre4u Blog</span>
     <h1>Running an arts program, made simpler</h1>
@@ -58,44 +111,112 @@ footer a{color:var(--t3)}
   </div>
 </div>
 
-<div class="wrap">
-  <div class="posts">
+<!-- BinTrove hero -->
+<div class="hero bt-only">
+  <div class="hero-inner">
+    <span class="eyebrow">The BinTrove Blog</span>
+    <h1>Know what you own — and find it in seconds</h1>
+    <p class="sub">Practical guides on labeling storage bins, building a home inventory for insurance, and packing moving boxes you can actually unpack.</p>
+  </div>
+</div>
 
+<div class="wrap">
+  <!-- Theatre4u posts -->
+  <div class="posts t4u-only">
     <a class="post" href="https://theatre4u.org/blog/qr-labels-for-costumes-and-props.html">
       <span class="tag">Labels &amp; QR Codes</span>
       <h2>How to Get QR Labels onto Your Costumes and Props</h2>
       <p>Every item in Theatre4u gets a permanent QR code. Here's how to get it onto the actual piece — print your own for bins and props, or order pre-printed iron-on and adhesive labels — plus how to choose.</p>
       <div class="meta">September 23, 2026 · 6 min read</div>
-      <span class="more">Read the guide →</span>
+      <span class="more">Read the guide &rarr;</span>
     </a>
-
     <a class="post" href="https://theatre4u.org/blog/how-to-inventory-a-costume-shop.html">
       <span class="tag">Inventory How-To</span>
       <h2>How to Inventory a Costume Shop (Without a Messy Spreadsheet)</h2>
       <p>Every program's costume loft turns into a mountain. Here's how to catalog it so you can find any piece in seconds — photos, sizes, conditions, and QR-labeled racks — and actually keep it that way.</p>
       <div class="meta">September 21, 2026 · 7 min read</div>
-      <span class="more">Read the guide →</span>
+      <span class="more">Read the guide &rarr;</span>
     </a>
-
     <a class="post" href="https://theatre4u.org/blog/prop-28-compliance-for-arts-programs.html">
       <span class="tag">Funding &amp; Compliance</span>
       <h2>Prop 28 Compliance for Arts Programs: A Simple Inventory Approach</h2>
       <p>California's Prop 28 brings ~$1B a year to arts education — and new accountability. Here's an audit-ready way to track the supplies, instruments, and equipment you buy, so reporting and audits are painless.</p>
       <div class="meta">September 21, 2026 · 6 min read</div>
-      <span class="more">Read the guide →</span>
+      <span class="more">Read the guide &rarr;</span>
     </a>
-
   </div>
 
-  <div class="cta-box">
+  <!-- BinTrove posts -->
+  <div class="posts bt-only">
+    <a class="post" href="https://bintrove.com/blog/how-to-label-storage-bins.html">
+      <span class="tag">Organizing How-To</span>
+      <h2>How to Label Storage Bins So You Can Actually Find Things Later</h2>
+      <p>Matching bins, neatly stacked — and six months later you're opening four of them to find one string of lights. A simple labeling system (handwritten, printed, or QR) that keeps a bin's contents findable for years.</p>
+      <div class="meta">November 25, 2026 · 6 min read</div>
+      <span class="more">Read the guide &rarr;</span>
+    </a>
+    <a class="post" href="https://bintrove.com/blog/home-inventory-for-insurance.html">
+      <span class="tag">Home Inventory</span>
+      <h2>How to Make a Home Inventory for Insurance (the Fast, Photo-First Way)</h2>
+      <p>If your home were damaged tomorrow, could you list what you lost? Here's a room-by-room, photo-first method that takes an afternoon — and how to keep it safe and current for a claim.</p>
+      <div class="meta">November 25, 2026 · 7 min read</div>
+      <span class="more">Read the guide &rarr;</span>
+    </a>
+    <a class="post" href="https://bintrove.com/blog/how-to-label-moving-boxes.html">
+      <span class="tag">Moving</span>
+      <h2>How to Pack and Label Moving Boxes So Unpacking Isn't a Nightmare</h2>
+      <p>Number every box, keep one master list, pack an essentials box, and scan to see inside. The system that lets you find the coffee maker on night one instead of day five.</p>
+      <div class="meta">November 25, 2026 · 7 min read</div>
+      <span class="more">Read the guide &rarr;</span>
+    </a>
+    <a class="post" href="https://bintrove.com/blog/how-to-store-holiday-decorations.html">
+      <span class="tag">Seasonal Storage</span>
+      <h2>How to Store Holiday Decorations So Next Year Is Easy</h2>
+      <p>Lights that aren't tangled, ornaments that survive the year, and a wreath that isn't crushed. How to pack, label, and find your holiday decorations the next time the season rolls around.</p>
+      <div class="meta">November 27, 2026 · 6 min read</div>
+      <span class="more">Read the guide &rarr;</span>
+    </a>
+    <a class="post" href="https://bintrove.com/blog/how-to-organize-a-garage.html">
+      <span class="tag">Organizing How-To</span>
+      <h2>How to Organize a Garage (and Keep It That Way)</h2>
+      <p>Zones, clear labeled bins, and a quick inventory so the garage stops being the place things disappear into. A weekend method that actually holds up.</p>
+      <div class="meta">November 27, 2026 · 7 min read</div>
+      <span class="more">Read the guide &rarr;</span>
+    </a>
+    <a class="post" href="https://bintrove.com/blog/storage-unit-inventory.html">
+      <span class="tag">Storage</span>
+      <h2>Storage Unit Inventory: Know What's Inside Without Driving Over</h2>
+      <p>Stop paying rent on boxes you can't remember. Number, label, map, and search your storage unit so you can find anything from your couch.</p>
+      <div class="meta">November 27, 2026 · 6 min read</div>
+      <span class="more">Read the guide &rarr;</span>
+    </a>
+    <a class="post" href="https://bintrove.com/blog/moving-inventory-list.html">
+      <span class="tag">Moving</span>
+      <h2>Moving Inventory List: Track Every Box From Old Home to New</h2>
+      <p>Number it, photograph it, check it off the truck. A moving inventory list that makes nothing go missing and unpacking simple.</p>
+      <div class="meta">November 27, 2026 · 6 min read</div>
+      <span class="more">Read the guide &rarr;</span>
+    </a>
+  </div>
+
+  <!-- Theatre4u CTA -->
+  <div class="cta-box t4u-only">
     <h2>Put your whole program in one place</h2>
     <p>Catalog costumes, props, instruments, and gear, print QR labels, track funding, and share with nearby programs. Free to start.</p>
-    <a class="cta-btn" href="https://theatre4u.org?signup=1">Get Started Free →</a>
+    <a class="cta-btn" href="https://theatre4u.org?signup=1">Get Started Free &rarr;</a>
+  </div>
+
+  <!-- BinTrove CTA -->
+  <div class="cta-box bt-only">
+    <h2>Know what's in every bin</h2>
+    <p>Snap a photo, print a QR label, and scan any bin to see what's inside. Three bins free, forever — no credit card.</p>
+    <a class="cta-btn" href="https://bintrove.com">Start Free &rarr;</a>
   </div>
 </div>
 
 <footer>
-  <p>Theatre4u™ · <a href="https://theatre4u.org">theatre4u.org</a> · <a href="https://theatre4u.org/#privacy">Privacy Policy</a> · <a href="https://theatre4u.org/#terms">Terms of Service</a></p>
+  <p class="t4u-only">Theatre4u&#8482; · <a href="https://theatre4u.org">theatre4u.org</a> · <a href="https://theatre4u.org/#privacy">Privacy Policy</a> · <a href="https://theatre4u.org/#terms">Terms of Service</a></p>
+  <p class="bt-only">BinTrove · <a href="https://bintrove.com">bintrove.com</a> · <a href="https://bintrove.com/privacy.html">Privacy Policy</a> · <a href="https://bintrove.com/terms.html">Terms of Service</a></p>
   <p style="margin-top:8px">© 2026 Artstracker LLC · Garden Grove, California</p>
 </footer>
 </body>

@@ -247,7 +247,13 @@ export function BinTroveAuthScreen({ onAuth }) {
             </button>
           </div>
 
-          <div style={{ textAlign: "center", marginTop: 14, fontSize: 12, color: "#9aa29e" }}>Questions? {APP_EMAIL}</div>
+          <div style={{ textAlign: "center", marginTop: 14, fontSize: 12.5, color: "#7b8a86" }}>
+            <a href="/blog/" style={{ color: TEAL, fontWeight: 600, textDecoration: "none" }}>Blog</a>
+            <span style={{ margin: "0 7px", color: "#c9cfca" }}>·</span>
+            <a href="/help-bintrove.html" style={{ color: TEAL, fontWeight: 600, textDecoration: "none" }}>Help</a>
+            <span style={{ margin: "0 7px", color: "#c9cfca" }}>·</span>
+            Questions? {APP_EMAIL}
+          </div>
         </div>
         {mode === "signup" && <img className="btl-side btl-b" src="/bintrove-ba-hero.jpg" alt="Scan a bin to see what's inside" loading="lazy" />}
         </div>
